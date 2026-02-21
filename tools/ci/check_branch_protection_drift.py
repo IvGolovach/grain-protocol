@@ -30,12 +30,16 @@ def main() -> int:
         return 2
 
     gh_token = os.environ.get("GH_TOKEN", "")
+    allow_permission_fallback = os.environ.get("ALLOW_PERMISSION_FALLBACK", "false").lower() == "true"
     if not gh_token:
-        print(
+        msg = (
             "branch protection drift check failed: GH_TOKEN is missing. "
-            "Provide a token with branch-protection read access.",
-            file=sys.stderr,
+            "Provide a token with branch-protection read access."
         )
+        if allow_permission_fallback:
+            print(f"Branch protection drift check: SKIPPED ({msg})")
+            return 0
+        print(msg, file=sys.stderr)
         return 2
 
     cmd = [
@@ -45,8 +49,14 @@ def main() -> int:
     ]
     proc = subprocess.run(cmd, text=True, capture_output=True, env=os.environ.copy())
     if proc.returncode != 0:
+        stderr = proc.stderr.strip()
+        if allow_permission_fallback:
+            print("Branch protection drift check: SKIPPED (unable to query branch protection).")
+            if stderr:
+                print(f"Reason: {stderr}")
+            return 0
         print("branch protection drift check failed: unable to query branch protection.", file=sys.stderr)
-        print(proc.stderr.strip(), file=sys.stderr)
+        print(stderr, file=sys.stderr)
         return 2
 
     payload = json.loads(proc.stdout)

@@ -35,6 +35,10 @@ jobs:
           GH_FALLBACK_TOKEN: ${{ github.token }}
         run: |
           export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
+          if [ -z "${GH_BOT_TOKEN:-}" ]; then
+            echo "::warning::DEPENDABOT_AUTOMERGE_TOKEN is not configured; branch-protection drift check uses permission fallback."
+            export ALLOW_PERMISSION_FALLBACK=true
+          fi
           python3 tools/ci/check_branch_protection_drift.py \
             --repo "${GITHUB_REPOSITORY}" \
             --branch main \

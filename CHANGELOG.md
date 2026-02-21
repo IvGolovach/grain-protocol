@@ -5,6 +5,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 ## [Unreleased]
 - Branch-protection drift check reliability fix:
   - CI main-branch drift check now uses `DEPENDABOT_AUTOMERGE_TOKEN` with fallback to `github.token`, preventing false red runs when the secret is absent.
+  - When elevated token permissions are unavailable, drift check now emits deterministic `SKIPPED` diagnostics instead of hard-failing unrelated pushes.
 - Dependabot automerge verification fix:
   - `dependabot-automerge.yml` verification now treats already-merged PRs as PASS (prevents false-negative failures after successful quick merge).
 - Dependabot no-friction safe lane (TOR-GH-DEPS-A02):
