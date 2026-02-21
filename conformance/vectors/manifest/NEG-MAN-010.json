@@ -1,0 +1,39 @@
+{
+  "expect": {
+    "out": {
+      "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="
+    },
+    "pass": true
+  },
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "chash_b64": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+        "op": "put"
+      }
+    ],
+    "eligible_tombstones": [],
+    "ineligible_records": [
+      {
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "op": "put",
+        "reason": "quarantined"
+      }
+    ],
+    "ineligible_tombstones": [
+      {
+        "op": "del",
+        "reason": "unauthorized"
+      }
+    ]
+  },
+  "meta": {
+    "desc": "Ineligible (quarantined/unauthorized/conflicted) candidates MUST be excluded from resolution semantics."
+  },
+  "op": "manifest_resolve",
+  "strict": true,
+  "vector_id": "NEG-MAN-010"
+}

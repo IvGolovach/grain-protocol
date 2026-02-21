@@ -1,0 +1,14 @@
+{
+  "vector_id": "POS-UTF8-WA-0002",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJj7oCAZPCfmIBmcmVmX2lkaXV0ZjgtdGVzdGhyZWZfdHlwZWR0ZXN0"
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "raw UTF-8 ordering for U+E000 then U+1F600."
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "expect": {
+    "out": {
+      "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "diag_contains": [
+        "CAP_CHASH_CONFLICT"
+      ]
+    },
+    "pass": true
+  },
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "op": "put"
+      },
+      {
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+        "op": "put"
+      },
+      {
+        "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "chash_b64": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+        "op": "put"
+      }
+    ],
+    "eligible_tombstones": []
+  },
+  "meta": {
+    "desc": "cap_id with multiple distinct chash values MUST be ignored before tie-break."
+  },
+  "op": "manifest_resolve",
+  "strict": true,
+  "vector_id": "NEG-MAN-030"
+}

@@ -1,0 +1,19 @@
+{
+  "vector_id": "NEG-E2E-WA-0005",
+  "op": "e2e_decrypt",
+  "strict": true,
+  "input": {
+    "encrypted_object_b64": "pWF0b0VuY3J5cHRlZE9iamVjdGF2AWJjdFg/6QonObTyO2mAlN7brZAlmiZE1fs/xDAhvvWjZtfIpfXn645rVbLGoWdbokJn3ZBt0oqXulg2Hl8WeR94Br9kY2FsZ2dBMjU2R0NNZmNhcF9pZFggZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4Q=",
+    "sync_secret_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
+    "cid_link_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA=="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "EncryptedObject missing required nonce field MUST be rejected."
+  }
+}

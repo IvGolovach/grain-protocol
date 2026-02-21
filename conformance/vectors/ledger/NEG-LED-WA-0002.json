@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-LED-WA-0002",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "ledger",
+    "cborseq_b64": "oWFhAaFhYgL/"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_CBORSEQ_GARBAGE_TAIL"
+    ]
+  },
+  "meta": {
+    "desc": "Garbage trailing byte after valid items MUST be rejected."
+  }
+}

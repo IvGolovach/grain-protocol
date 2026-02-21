@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_BAD_CID_LINK"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "o2F0ZFRlc3RhdgFjY2lk2CpYJAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA=="
+  },
+  "meta": {
+    "desc": "tag42 CID links must use bstr with 0x00 prefix."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-CID-010"
+}

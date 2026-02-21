@@ -1,0 +1,19 @@
+{
+  "vector_id": "NEG-E2E-WA-0003",
+  "op": "e2e_derive_v1",
+  "strict": true,
+  "input": {
+    "sync_secret_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+    "cap_id_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+    "cid_link_bstr_b64": "AXESIEvcKloiozvC4z1jVxV0/OMQy6H3Lc293bckgnsTQkOw"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_BAD_CID_LINK"
+    ]
+  },
+  "meta": {
+    "desc": "cid_link_bstr must include leading 0x00 CID-link prefix."
+  }
+}

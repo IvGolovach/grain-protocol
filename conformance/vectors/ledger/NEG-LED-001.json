@@ -1,0 +1,50 @@
+{
+  "expect": {
+    "out": {
+      "diag_contains": [
+        "UNAUTHORIZED_GRANT_IGNORED"
+      ],
+      "sum_mean": {
+        "kcal": 0
+      },
+      "sum_var": {
+        "kcal": 0
+      }
+    },
+    "pass": true
+  },
+  "input": {
+    "events": [
+      {
+        "ak": "dev1",
+        "body": {
+          "grant_ak": "dev2"
+        },
+        "payload_cid": "cid-grant-dev2",
+        "seq": 1,
+        "t": "DeviceKeyGrant"
+      },
+      {
+        "ak": "dev2",
+        "body": {
+          "mean": {
+            "kcal": 120
+          },
+          "var": {
+            "kcal": 16
+          }
+        },
+        "payload_cid": "cid-intake-dev2-1",
+        "seq": 1,
+        "t": "IntakeEvent"
+      }
+    ],
+    "root_kid": "root"
+  },
+  "meta": {
+    "desc": "Non-root DeviceKeyGrant must be ignored for authorization; dev2 event remains unauthorized."
+  },
+  "op": "ledger_reduce",
+  "strict": true,
+  "vector_id": "NEG-LED-001"
+}

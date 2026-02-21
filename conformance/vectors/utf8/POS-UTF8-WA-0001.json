@@ -1,0 +1,14 @@
+{
+  "vector_id": "POS-UTF8-WA-0001",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJjZcyBYsOpZnJlZl9pZGl1dGY4LXRlc3RocmVmX3R5cGVkdGVzdA=="
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "crit sorted by raw UTF-8 bytes: NFD e\\u0301 comes before NFC é."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "expect": {
+    "out": {
+      "item_sha256_hex": []
+    },
+    "pass": true
+  },
+  "input": {
+    "cborseq_b64": "",
+    "stream_kind": "manifest"
+  },
+  "meta": {
+    "desc": "Empty CBOR-seq stream is valid and yields zero decoded items."
+  },
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "vector_id": "POS-MAN-WA-0003"
+}

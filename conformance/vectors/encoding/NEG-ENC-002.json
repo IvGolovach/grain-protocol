@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_NONCANONICAL"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "oWFhGAE="
+  },
+  "meta": {
+    "desc": "Reject non-minimal integer encoding: value 1 encoded as 0x18 0x01 instead of 0x01."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-ENC-002"
+}

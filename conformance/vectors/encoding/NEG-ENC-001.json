@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_NONCANONICAL"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "pGF2AWF0bUluZ3JlZGllbnRSZWZocmVmX3R5cGVkdGVzdGZyZWZfaWRlYXBwbGU="
+  },
+  "meta": {
+    "desc": "Non-canonical map key ordering must be rejected."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-ENC-001"
+}

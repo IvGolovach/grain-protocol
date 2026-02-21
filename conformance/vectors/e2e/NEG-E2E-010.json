@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "NONCE_PROFILE_MISMATCH"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cid_link_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "encrypted_object_b64": "pmF0b0VuY3J5cHRlZE9iamVjdGF2AWJjdFg/6QonObTyO2mAlN7brZAlmiZE1fs/xDAhvvWjZtfIpfXn645rVbLGoWdbokJn3ZBt0oqXulg2Hl8WeR94Br9kY2FsZ2dBMjU2R0NNZW5vbmNlTMSwvcaXkAd9NggOsWZjYXBfaWRYIGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOE",
+    "sync_secret_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA="
+  },
+  "meta": {
+    "desc": "nonce in envelope must equal derived nonce; mismatch -> reject."
+  },
+  "op": "e2e_decrypt",
+  "strict": true,
+  "vector_id": "NEG-E2E-010"
+}

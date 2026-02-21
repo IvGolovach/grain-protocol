@@ -1,0 +1,17 @@
+{
+  "vector_id": "NEG-UTF8-WA-0003",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJjZcyBY2XMgWZyZWZfaWRpdXRmOC10ZXN0aHJlZl90eXBlZHRlc3Q="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_DUP"
+    ]
+  },
+  "meta": {
+    "desc": "Set-array duplicate by exact UTF-8 bytes MUST reject."
+  }
+}

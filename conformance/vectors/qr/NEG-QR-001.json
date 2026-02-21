@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_QR_PREFIX"
+    ],
+    "pass": false
+  },
+  "input": {
+    "qr_string": "FP1:6BF-NDJ%B0BD1H2 R2346ATPP*QZOCE+T37W9*R%UD2+OS$CYV4WLOZY84IJ7QTUED/HLSGH-ZHS$C9Y8KKAVQI*RE273Z%J8LA3E2HUS9*K$CJQH30LI0THM68/+6%1H7NG%-VQ+QVQ7P9JQQO% II+QWT7K-5A7EW9HME9R-0CZ7%OEE22AP472BT 2JP51WJCMVRN5%FN%T6.35ZL7ZW01%IY$139QUDTOLBPAD7.8MOORAL%:AZ VSCL$/AMUB5JN:/N0:I: HVQMF*F1PJEKE$9RB19-4O-.NF0N00VH.SC*DPUPHIIMNUJTF7Z0B10BF3Q5"
+  },
+  "meta": {
+    "desc": "Wrong prefix must be rejected (must be GR1:)."
+  },
+  "op": "qr_decode_gr1",
+  "strict": true,
+  "vector_id": "NEG-QR-001"
+}

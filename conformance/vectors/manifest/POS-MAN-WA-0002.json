@@ -1,0 +1,25 @@
+{
+  "vector_id": "POS-MAN-WA-0002",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "manifest",
+    "segments_b64": [
+      "oWFt",
+      "A6Fhbg==",
+      "BA=="
+    ]
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "item_sha256_hex": [
+        "9509b99ef9a0d5c7613aca4727d04e8f21d3e31560c77a0656f372cfaf370710",
+        "b000d284da844211ba64c760e17e53f90b86a160b84d4cf001667f04adea2c28"
+      ]
+    }
+  },
+  "meta": {
+    "desc": "Valid manifest CBOR-seq across three segments."
+  }
+}

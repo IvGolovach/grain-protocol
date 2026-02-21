@@ -1,0 +1,16 @@
+{
+  "expect": {
+    "pass": true
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUIJaoWZaNMq8xsQ/jP3RvsagWKOmYXRsU2VydmluZ09mZmVyYXYBY3ZhcqRka2NhbBoAD0JAZWZhdF9nGgACMoBmY2FyYl9nGgAGGoBpcHJvdGVpbl9nGgAD0JBkbWVhbqRka2NhbBoABVcwZWZhdF9nGS7gZmNhcmJfZxmcQGlwcm90ZWluX2cZYahpc2VydmluZ19nGgACSfBqaXNzdWVyX2tpZFCCWqFmWjTKvMbEP4z90b7GWEAB5lWcmqMBMKwheDxse9pf74paqjpDCvULdUp6pcFc9L2HoiYzI1KK2UEbDq2NLn1Pf9gf3rHdABhraP63grAK",
+    "external_aad_b64": "",
+    "pub_b64": "YHqypLfKbLygpiN7hlth/fzXA25wsf2wOp3LCN5uhas="
+  },
+  "meta": {
+    "desc": "COSE_Sign1 verify under narrow profile (Ed25519, headers exact, external_aad empty)."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "POS-COSE-001"
+}

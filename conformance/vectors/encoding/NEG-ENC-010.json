@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_DUP_MAP_KEY"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "omF0YUFhdGFC"
+  },
+  "meta": {
+    "desc": "Duplicate map keys at any nesting level must be rejected."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-ENC-010"
+}

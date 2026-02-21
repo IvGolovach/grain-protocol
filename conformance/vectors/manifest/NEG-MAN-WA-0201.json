@@ -1,0 +1,41 @@
+{
+  "vector_id": "NEG-MAN-WA-0201",
+  "op": "manifest_resolve",
+  "strict": true,
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "op": "put",
+        "cap_id_b64": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "chash_b64": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "chash_b64": "REREREREREREREREREREREREREREREREREREREREREQ="
+      }
+    ],
+    "eligible_tombstones": [],
+    "ineligible_records": [
+      {
+        "op": "put",
+        "cap_id_b64": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "reason": "conflicted_seq"
+      }
+    ]
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "status": "UNRESOLVABLE",
+      "diag_contains": [
+        "CAP_CHASH_CONFLICT"
+      ]
+    }
+  },
+  "meta": {
+    "desc": "When all eligible puts are eliminated by cap/chash ambiguity, result is UNRESOLVABLE."
+  }
+}

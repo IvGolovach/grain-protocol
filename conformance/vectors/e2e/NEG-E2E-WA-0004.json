@@ -1,0 +1,19 @@
+{
+  "vector_id": "NEG-E2E-WA-0004",
+  "op": "e2e_decrypt",
+  "strict": true,
+  "input": {
+    "encrypted_object_b64": "pmF0b0VuY3J5cHRlZE9iamVjdGF2AWJjdFg/6QonObTyO2mAlN7brZAlmiZE1fs/xDAhvvWjZtfIpfXn645rVbLGoWdbokJn3ZBt0oqXulg2Hl8WeR94Br9kY2FsZ2dBMjU2R0NNZW5vbmNlTMSwvcaXkAd9NggOsWZjYXBfaWRYIGVmZ2hpamtsbW5vcHFyc3R1dnd4eXp7fH1+f4CBgoOE",
+    "sync_secret_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
+    "cid_link_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA=="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "NONCE_PROFILE_MISMATCH"
+    ]
+  },
+  "meta": {
+    "desc": "Envelope nonce must equal derived nonce; mismatch MUST reject."
+  }
+}

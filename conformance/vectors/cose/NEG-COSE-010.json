@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_TAG18_FORBIDDEN"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "0oRVogEyBFCCWqFmWjTKvMbEP4z90b7GoFijpmF0bFNlcnZpbmdPZmZlcmF2AWN2YXKkZGtjYWwaAA9CQGVmYXRfZxoAAjKAZmNhcmJfZxoABhqAaXByb3RlaW5fZxoAA9CQZG1lYW6kZGtjYWwaAAVXMGVmYXRfZxku4GZjYXJiX2cZnEBpcHJvdGVpbl9nGWGoaXNlcnZpbmdfZxoAAknwamlzc3Vlcl9raWRQglqhZlo0yrzGxD+M/dG+xlhAAeZVnJqjATCsIXg8bHvaX++KWqo6Qwr1C3VKeqXBXPS9h6ImMyNSitlBGw6tjS59T3/YH96x3QAYa2j+t4KwCg==",
+    "external_aad_b64": "",
+    "pub_b64": "YHqypLfKbLygpiN7hlth/fzXA25wsf2wOp3LCN5uhas="
+  },
+  "meta": {
+    "desc": "COSE tag18 MUST NOT be used; tag18 input must be rejected."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-010"
+}

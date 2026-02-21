@@ -1,0 +1,20 @@
+{
+  "vector_id": "POS-E2E-WA-0001",
+  "op": "e2e_derive_v1",
+  "strict": true,
+  "input": {
+    "sync_secret_b64": "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",
+    "cap_id_b64": "ZWZnaGlqa2xtbm9wcXJzdHV2d3h5ent8fX5/gIGCg4Q=",
+    "cid_link_bstr_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA=="
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "key_b64": "AldQLUHOt4tqPsGTzLXeNgeQ/WfjjXPDr3RacgbDsbA=",
+      "nonce_b64": "xbC9xpeQB302CA6x"
+    }
+  },
+  "meta": {
+    "desc": "HKDF expected-bytes vector for GrainE2E key/nonce derivation."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "vector_id": "NEG-E2E-WA-0001",
+  "op": "e2e_derive_v1",
+  "strict": true,
+  "input": {
+    "sync_secret_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+    "cap_id_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIg==",
+    "cid_link_bstr_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA=="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_E2E_INPUT_LENGTH"
+    ]
+  },
+  "meta": {
+    "desc": "cap_id length != 32 MUST reject derive input."
+  }
+}

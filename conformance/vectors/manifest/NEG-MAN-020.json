@@ -1,0 +1,29 @@
+{
+  "expect": {
+    "out": {
+      "status": "UNRESOLVABLE"
+    },
+    "pass": true
+  },
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "op": "put"
+      }
+    ],
+    "eligible_tombstones": [
+      {
+        "op": "del"
+      }
+    ]
+  },
+  "meta": {
+    "desc": "Tombstone dominates regardless of puts (order-independent)."
+  },
+  "op": "manifest_resolve",
+  "strict": true,
+  "vector_id": "NEG-MAN-020"
+}

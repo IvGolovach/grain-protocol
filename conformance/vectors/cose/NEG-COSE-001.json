@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUIJaoWZaNMq8xsQ/jP3RvsahBFCCWqFmWjTKvMbEP4z90b7GWKOmYXRsU2VydmluZ09mZmVyYXYBY3ZhcqRka2NhbBoAD0JAZWZhdF9nGgACMoBmY2FyYl9nGgAGGoBpcHJvdGVpbl9nGgAD0JBkbWVhbqRka2NhbBoABVcwZWZhdF9nGS7gZmNhcmJfZxmcQGlwcm90ZWluX2cZYahpc2VydmluZ19nGgACSfBqaXNzdWVyX2tpZFCCWqFmWjTKvMbEP4z90b7GWEAB5lWcmqMBMKwheDxse9pf74paqjpDCvULdUp6pcFc9L2HoiYzI1KK2UEbDq2NLn1Pf9gf3rHdABhraP63grAK",
+    "external_aad_b64": "",
+    "pub_b64": "YHqypLfKbLygpiN7hlth/fzXA25wsf2wOp3LCN5uhas="
+  },
+  "meta": {
+    "desc": "COSE unprotected header MUST be {}. Non-empty must be rejected."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-001"
+}

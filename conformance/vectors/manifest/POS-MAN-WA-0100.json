@@ -1,0 +1,69 @@
+{
+  "vector_id": "POS-MAN-WA-0100",
+  "op": "manifest_resolve",
+  "strict": true,
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "op": "put",
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE="
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "chash_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI="
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "chash_b64": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "chash_b64": "REREREREREREREREREREREREREREREREREREREREREQ="
+      }
+    ],
+    "eligible_tombstones": [],
+    "ineligible_records": [
+      {
+        "op": "put",
+        "cap_id_b64": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "reason": "quarantined"
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+        "chash_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+        "reason": "unauthorized"
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+        "chash_b64": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+        "reason": "conflicted_seq"
+      }
+    ],
+    "ineligible_tombstones": [
+      {
+        "op": "del",
+        "reason": "quarantined"
+      }
+    ]
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "diag_contains": [
+        "CAP_CHASH_CONFLICT"
+      ]
+    }
+  },
+  "meta": {
+    "desc": "Mixed manifest set: ineligible records ignored; conflicting cap_id filtered; deterministic min cap_id tie-break among remaining eligible puts."
+  }
+}

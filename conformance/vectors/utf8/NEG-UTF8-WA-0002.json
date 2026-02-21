@@ -1,0 +1,17 @@
+{
+  "vector_id": "NEG-UTF8-WA-0002",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJk8J+YgGPugIBmcmVmX2lkaXV0ZjgtdGVzdGhyZWZfdHlwZWR0ZXN0"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_ORDER"
+    ]
+  },
+  "meta": {
+    "desc": "Naive JS UTF-16 sort tends to place emoji before U+E000; strict UTF-8 byte order must reject this order."
+  }
+}

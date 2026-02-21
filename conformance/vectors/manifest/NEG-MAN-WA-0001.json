@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-MAN-WA-0001",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "manifest",
+    "cborseq_b64": "oWFtA6Fhbg=="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_CBORSEQ_TRUNCATED"
+    ]
+  },
+  "meta": {
+    "desc": "Truncated manifest stream item MUST reject."
+  }
+}

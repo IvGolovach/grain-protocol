@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "out": {
+      "cid": "bafyreicl3qvfuivdhpbogpldk4kxj7hdcdf2d5znzw653nzeqj5rgqsdwa"
+    },
+    "pass": true
+  },
+  "input": {
+    "bytes_b64": "pGF0bUluZ3JlZGllbnRSZWZhdgFmcmVmX2lkZWFwcGxlaHJlZl90eXBlZHRlc3Q="
+  },
+  "meta": {
+    "desc": "Derive CIDv1 (dag-cbor + sha2-256) from canonical IngredientRef bytes."
+  },
+  "op": "cid_derive",
+  "strict": true,
+  "vector_id": "POS-CID-001"
+}

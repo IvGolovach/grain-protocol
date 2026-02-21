@@ -1,0 +1,51 @@
+{
+  "vector_id": "NEG-MAN-WA-0202",
+  "op": "manifest_resolve",
+  "strict": true,
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "op": "put",
+        "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "chash_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI="
+      }
+    ],
+    "eligible_tombstones": [],
+    "ineligible_records": [
+      {
+        "op": "put",
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "reason": "quarantined"
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+        "reason": "conflicted_seq"
+      },
+      {
+        "op": "put",
+        "cap_id_b64": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "chash_b64": "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+        "reason": "unauthorized"
+      }
+    ],
+    "ineligible_tombstones": [
+      {
+        "op": "del",
+        "reason": "unauthorized"
+      }
+    ]
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI="
+    }
+  },
+  "meta": {
+    "desc": "Conflicted/quarantined/unauthorized records remain non-semantic and MUST NOT perturb deterministic resolution."
+  }
+}

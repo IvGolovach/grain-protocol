@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_ORDER"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJhYmFhZnJlZl9pZGVhcHBsZWhyZWZfdHlwZWR0ZXN0"
+  },
+  "meta": {
+    "desc": "IngredientRef.crit is unsorted ([\"b\",\"a\"]) and MUST be rejected under set-array ordering rules."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-ENC-030"
+}

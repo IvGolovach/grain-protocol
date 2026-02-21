@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-LED-WA-0003",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "ledger",
+    "cborseq_b64": "/wA="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_CBORSEQ_INVALID_INITIAL_BYTE"
+    ]
+  },
+  "meta": {
+    "desc": "Invalid initial break byte (0xFF) MUST be rejected for CBOR-seq item start."
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "vector_id": "POS-LED-WA-0002",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "ledger",
+    "segments_b64": [
+      "oWFhAaE=",
+      "YWIC"
+    ]
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "item_sha256_hex": [
+        "eb989b4a620fd259ae02181bdab4fc3eb6dc6b45eb7322999bb1416bce318926",
+        "467f9180dd71d387d92c36bc3da8d82f34ffdfe40a06a1374fa611b25d42cd7b"
+      ]
+    }
+  },
+  "meta": {
+    "desc": "Valid ledger CBOR-seq split across segment boundary; parser MUST concat and decode deterministically."
+  }
+}

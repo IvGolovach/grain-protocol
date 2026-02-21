@@ -1,0 +1,30 @@
+{
+  "expect": {
+    "out": {
+      "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+    },
+    "pass": true
+  },
+  "input": {
+    "cid_b64": "AAFxEiBL3CpaIqM7wuM9Y1cVdPzjEMuh9y3Nvd23JIJ7E0JDsA==",
+    "eligible_records": [
+      {
+        "cap_id_b64": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "chash_b64": "ERERERERERERERERERERERERERERERERERERERERERE=",
+        "op": "put"
+      },
+      {
+        "cap_id_b64": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "chash_b64": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+        "op": "put"
+      }
+    ],
+    "eligible_tombstones": []
+  },
+  "meta": {
+    "desc": "If no tombstone, choose lexicographically smallest cap_id among eligible puts."
+  },
+  "op": "manifest_resolve",
+  "strict": true,
+  "vector_id": "POS-MAN-001"
+}

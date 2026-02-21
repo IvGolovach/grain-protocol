@@ -1,0 +1,59 @@
+{
+  "expect": {
+    "out": {
+      "diag_contains": [
+        "AK_REVOKED"
+      ],
+      "sum_mean": {
+        "kcal": 0
+      },
+      "sum_var": {
+        "kcal": 0
+      }
+    },
+    "pass": true
+  },
+  "input": {
+    "events": [
+      {
+        "ak": "root",
+        "body": {
+          "grant_ak": "dev1"
+        },
+        "payload_cid": "cid-grant-dev1",
+        "seq": 1,
+        "t": "DeviceKeyGrant"
+      },
+      {
+        "ak": "root",
+        "body": {
+          "revoke_ak": "dev1"
+        },
+        "payload_cid": "cid-revoke-dev1",
+        "seq": 2,
+        "t": "DeviceKeyRevoke"
+      },
+      {
+        "ak": "dev1",
+        "body": {
+          "mean": {
+            "kcal": 330
+          },
+          "var": {
+            "kcal": 49
+          }
+        },
+        "payload_cid": "cid-intake-dev1-after-revoke",
+        "seq": 1,
+        "t": "IntakeEvent"
+      }
+    ],
+    "root_kid": "root"
+  },
+  "meta": {
+    "desc": "Retroactive revoke: all events signed by revoked ak are unauthorized and ignored."
+  },
+  "op": "ledger_reduce",
+  "strict": true,
+  "vector_id": "NEG-LED-010"
+}

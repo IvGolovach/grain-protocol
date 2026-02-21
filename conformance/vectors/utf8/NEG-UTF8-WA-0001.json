@@ -1,0 +1,17 @@
+{
+  "vector_id": "NEG-UTF8-WA-0001",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJiw6ljZcyBZnJlZl9pZGl1dGY4LXRlc3RocmVmX3R5cGVkdGVzdA=="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_ORDER"
+    ]
+  },
+  "meta": {
+    "desc": "crit sorted by Unicode-normalized or locale order would accept this; strict raw-byte order must reject."
+  }
+}
