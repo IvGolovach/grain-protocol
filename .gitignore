@@ -1,0 +1,24 @@
+# build artifacts
+/target/
+/core/rust/target/
+/dist/
+/build/
+*.log
+__pycache__/
+*.pyc
+runner/typescript/.c01-*.json
+runner/typescript/.c01-vectors.txt
+runner/typescript/.divergence-c01.json
+runner/typescript/.divergence-c01.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# local audit workspace (never commit)
+.local-architect-reports/

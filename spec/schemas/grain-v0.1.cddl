@@ -1,0 +1,220 @@
+; Grain Protocol v0.1 — CDDL schemas (machine-readable)
+; Protocol schema major: 1
+;
+; NOTE:
+; - Protocol objects are DAG-CBOR strict with string keys only.
+; - Tags are forbidden except tag 42 for CID links (#6.42).
+; - Closed top-level keys are a NES rule (not fully enforceable in CDDL).
+
+bstr16 = bstr .size 16
+bstr32 = bstr .size 32
+bstr12 = bstr .size 12
+
+; CID link: tag 42 wrapping a bstr. NES additionally requires leading 0x00 prefix.
+cid-link = #6.42(bstr)
+
+crit = [* tstr] ; NES: set-array (sorted, unique), closed field list.
+ext  = { * tstr => any } ; NES: ext is non-critical; size limited by profile.
+
+; ---------- Common nutrient vectors (fixed-point ints) ----------
+; v0.1 normative reducer outputs only sum_mean + sum_var.
+; Units/scales are specified in NES/profiles; values are int64 domains.
+nutrient-map = { * tstr => int } ; nutrient_code => fixed-point int
+
+; ---------- Core protocol objects (CAS-objects) ----------
+IngredientRef = {
+  "v": 1,
+  "t": "IngredientRef",
+  "ref_type": tstr,
+  "ref_id": tstr,
+  ? "ref_version": tstr,
+  ? "name": tstr,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+NutrientProfile = {
+  "v": 1,
+  "t": "NutrientProfile",
+  "dataset_snapshot_id": tstr,
+  "source": tstr,
+  "basis": tstr, ; e.g., "per_100g"
+  "nutr": nutrient-map,
+  ? "uncert": { * tstr => int }, ; optional per-nutrient variance or metadata (fixed-point)
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+CookInput = {
+  "ing": cid-link,      ; -> IngredientRef
+  "amount_g": int,      ; fixed-point grams per NES
+  ? "note": tstr,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+CookRun = {
+  "v": 1,
+  "t": "CookRun",
+  "inputs": [* CookInput], ; NES: set-array (sorted, unique) on canonical bytes
+  ? "yield_g": int,
+  ? "ts_ms": int,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+MapDecision = {
+  "ing": cid-link,      ; IngredientRef
+  "profile": cid-link,  ; NutrientProfile
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+NutritionComputeResult = {
+  "v": 1,
+  "t": "NutritionComputeResult",
+  "cookrun": cid-link,             ; CookRun
+  "engine_id": tstr,
+  "engine_version": tstr,
+  "dataset_snapshot_id": tstr,
+  "map": [* MapDecision],          ; NES: set-array (sorted, unique)
+  "out": nutrient-map,             ; computed totals (fixed-point)
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+IntakeFromCookRun = {
+  "mode": "from_cookrun",
+  "cookrun": cid-link,
+  "amount_g": int,
+}
+
+IntakeFromIngredient = {
+  "mode": "from_ingredient",
+  "ing": cid-link,
+  "amount_g": int,
+}
+
+IntakeFromProfile = {
+  "mode": "from_profile",
+  "profile": cid-link,
+  "servings": int, ; fixed-point servings
+}
+
+IntakeEvent = {
+  "v": 1,
+  "t": "IntakeEvent",
+  "source_class": tstr,   ; "attested" | "measured" | "estimated" (NES)
+  "mean": nutrient-map,
+  "var": nutrient-map,
+  ( IntakeFromCookRun //
+    IntakeFromIngredient //
+    IntakeFromProfile ),
+  ? "ts_ms": int,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+ServingOffer = {
+  "v": 1,
+  "t": "ServingOffer",
+  "issuer_kid": bstr16,
+  "serving_g": int,
+  "mean": nutrient-map,
+  "var": nutrient-map,
+  ? "nonce": bstr, ; UX-only; not an ID
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+; ---------- Ledger event payloads (signed in COSE) ----------
+; LedgerEvent is DAG-CBOR payload inside COSE_Sign1.
+EventRef = { "ak": bstr16, "seq": uint }
+
+LedgerGenesis = {
+  "v": 1,
+  "t": "LedgerGenesis",
+  "root_kid": bstr16,
+  "root_pub": bstr32, ; Ed25519 pubkey
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+DeviceKeyGrant = {
+  "v": 1,
+  "t": "DeviceKeyGrant",
+  "ak": bstr16,
+  "pub": bstr32,
+  "caps": [* tstr], ; NES: set-array (sorted, unique); e.g. "write"
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+DeviceKeyRevoke = {
+  "v": 1,
+  "t": "DeviceKeyRevoke",
+  "ak": bstr16,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+VoidEvent = {
+  "v": 1,
+  "t": "VoidEvent",
+  "target": EventRef,
+  ? "reason": tstr,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+CorrectionEvent = {
+  "v": 1,
+  "t": "CorrectionEvent",
+  "target": EventRef,
+  ? "reason": tstr,
+  ; Replacement is modeled as a separate event; reducer treats target as voided and applies later events.
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+LedgerEvent = {
+  "v": 1,
+  "t": tstr,
+  "ak": bstr16,
+  "seq": uint,
+  ? "ts_ms": int,
+  "body": any,
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+; ---------- E2E envelope + manifest records ----------
+EncryptedObject = {
+  "v": 1,
+  "t": "EncryptedObject",
+  "alg": "A256GCM",
+  "cap_id": bstr32,
+  "nonce": bstr12,
+  "ct": bstr,     ; ciphertext || tag (tag length fixed by profile)
+  ? "ext": ext,
+  ? "crit": crit,
+}
+
+ManifestRecord = {
+  "v": 1,
+  "t": "ManifestRecord",
+  "ak": bstr16,
+  "seq": uint,
+  "cid": cid-link,   ; plaintext CID link (tag42)
+  (
+    "op": "put",
+    "cap_id": bstr32,
+    "chash": bstr32, ; sha2-256(ciphertext bytes)
+    ? "size": uint
+  ) //
+  (
+    "op": "del"
+  ),
+  ? "ext": ext,
+  ? "crit": crit,
+}
