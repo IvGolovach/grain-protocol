@@ -11,6 +11,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - resolves GitHub API `422` caused by stringified booleans with `-f`
 - Fixed CI/release run invocation for `tools/ci/run_runner_suite.py`:
   - CI now invokes `core/rust/target/debug/grain-runner` directly for suite runs (removes Cargo `--` separator ambiguity).
+  - Added explicit `cargo build -p grain-runner` step before suite execution in CI and release workflow.
 - No protocol/conformance semantic changes.
 
 ## [0.3.0] - 2026-02-21

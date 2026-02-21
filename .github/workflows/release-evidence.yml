@@ -34,6 +34,9 @@ jobs:
       - name: Rust tests
         run: cargo test --manifest-path core/rust/Cargo.toml --workspace
 
+      - name: Build grain-runner binary
+        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
       - name: Rust strict conformance suite
         run: |
           python3 tools/ci/run_runner_suite.py \

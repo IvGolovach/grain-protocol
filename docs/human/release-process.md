@@ -17,6 +17,7 @@ This process applies to repository milestones and protocol tags.
    - `python3 tools/check_llm_docs.py`
    - `python3 tools/check_spec_drift.py`
    - `cargo test --manifest-path core/rust/Cargo.toml --workspace`
+   - `cargo build --manifest-path core/rust/Cargo.toml -p grain-runner`
    - `python3 tools/ci/run_runner_suite.py --vectors-root conformance/vectors --commit-sha "$(git rev-parse HEAD)" --out /tmp/suite-run.json --runner-cmd core/rust/target/debug/grain-runner run --strict --vector`
    - `node --experimental-strip-types runner/typescript/scripts/run-c01.ts`
    - `node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts`
