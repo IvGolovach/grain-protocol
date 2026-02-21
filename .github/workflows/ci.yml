@@ -107,13 +107,13 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download rust summary
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: rust-suite-summary
           path: artifacts
 
       - name: Download TS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ts-c01-results
           path: artifacts
