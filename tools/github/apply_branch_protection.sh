@@ -12,20 +12,29 @@ gh api \
   -X PUT \
   -H "Accept: application/vnd.github+json" \
   "repos/${REPO}/branches/main/protection" \
-  -f required_status_checks.strict=true \
-  -f required_status_checks.contexts[]='python-tooling' \
-  -f required_status_checks.contexts[]='rust-core' \
-  -f required_status_checks.contexts[]='ts-c01' \
-  -f required_status_checks.contexts[]='evidence-bundle' \
-  -f enforce_admins=true \
-  -f required_pull_request_reviews.dismiss_stale_reviews=true \
-  -f required_pull_request_reviews.require_code_owner_reviews=true \
-  -f required_pull_request_reviews.required_approving_review_count=1 \
-  -f restrictions= \
-  -f required_linear_history=true \
-  -f allow_force_pushes=false \
-  -f allow_deletions=false \
-  -f block_creations=false \
-  -f required_conversation_resolution=true
+  --input <(
+    cat <<'JSON'
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["python-tooling", "rust-core", "ts-c01", "evidence-bundle"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true,
+    "required_approving_review_count": 1
+  },
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": true,
+  "lock_branch": false,
+  "allow_fork_syncing": false
+}
+JSON
+  )
 
 echo "Branch protection applied for ${REPO}:main"

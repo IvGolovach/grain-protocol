@@ -5,6 +5,12 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 ## [Unreleased]
 - No pending entries.
 
+## [0.3.1] - 2026-02-21
+- Fixed `tools/github/apply_branch_protection.sh`:
+  - branch protection API payload now sent as typed JSON via `--input`
+  - resolves GitHub API `422` caused by stringified booleans with `-f`
+- No protocol/conformance semantic changes.
+
 ## [0.3.0] - 2026-02-21
 - Repository provenance migration and GitHub hardening (TOR-GH-P01):
   - commit-bound evidence artifacts in CI (`evidence-<sha>.zip`)
