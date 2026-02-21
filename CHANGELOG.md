@@ -3,6 +3,8 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Dependabot automerge verification fix:
+  - `dependabot-automerge.yml` verification now treats already-merged PRs as PASS (prevents false-negative failures after successful quick merge).
 - Dependabot no-friction safe lane (TOR-GH-DEPS-A02):
   - Added `/.github/workflows/dependabot-automerge.yml` for Dependabot-only safe auto-approve/auto-merge in strict allowlist paths.
   - Added explicit allowlist/denylist policy document: `docs/human/dependencies-policy.md`.

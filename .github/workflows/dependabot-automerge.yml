@@ -186,7 +186,13 @@ jobs:
         run: |
           set -euo pipefail
           export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          auto_merge_enabled="$(gh api "repos/$REPO/pulls/$PR" --jq 'if .auto_merge == null then "false" else "true" end')"
+          pr_json="$(gh api "repos/$REPO/pulls/$PR")"
+          pr_merged="$(jq -r 'if .merged_at == null then "false" else "true" end' <<<"$pr_json")"
+          if [[ "$pr_merged" == "true" ]]; then
+            echo "Safe-lane PR already merged; verification passes."
+            exit 0
+          fi
+          auto_merge_enabled="$(jq -r 'if .auto_merge == null then "false" else "true" end' <<<"$pr_json")"
           if [[ "$auto_merge_enabled" != "true" ]]; then
             echo "::error::Safe-lane PR did not end with auto-merge enabled."
             gh pr checks "$PR" --repo "$REPO" || true
