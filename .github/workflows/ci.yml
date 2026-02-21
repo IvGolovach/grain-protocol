@@ -31,8 +31,10 @@ jobs:
       - name: Check branch protection drift (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          GH_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+          GH_BOT_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+          GH_FALLBACK_TOKEN: ${{ github.token }}
         run: |
+          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
           python3 tools/ci/check_branch_protection_drift.py \
             --repo "${GITHUB_REPOSITORY}" \
             --branch main \
