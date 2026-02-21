@@ -55,7 +55,7 @@ jobs:
             --vectors-root conformance/vectors \
             --commit-sha "${GITHUB_SHA}" \
             --out artifacts/rust-suite-summary.json \
-            --runner-cmd cargo run -q --manifest-path core/rust/Cargo.toml -p grain-runner -- run --strict --vector
+            --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
 
       - name: Upload rust suite summary
         uses: actions/upload-artifact@v4
