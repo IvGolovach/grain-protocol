@@ -1,0 +1,16 @@
+[package]
+name = "grain-runner"
+version = "0.2.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[[bin]]
+name = "grain-runner"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+base64 = { workspace = true }
+grain-core = { path = "../grain-core" }
