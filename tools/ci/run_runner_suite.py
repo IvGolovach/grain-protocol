@@ -21,9 +21,9 @@ from typing import Any
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--vectors-root", required=True)
-    parser.add_argument("--runner-cmd", nargs="+", required=True)
+    parser.add_argument("--runner-cmd", nargs=argparse.REMAINDER, required=True)
     parser.add_argument("--commit-sha", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--strict", action="store_true", default=True)
@@ -37,6 +37,11 @@ def _load_vector_id(path: pathlib.Path) -> str:
 
 def main() -> int:
     args = _parse_args()
+    runner_cmd = list(args.runner_cmd)
+    if runner_cmd and runner_cmd[0] == "--":
+        runner_cmd = runner_cmd[1:]
+    if not runner_cmd:
+        raise SystemExit("--runner-cmd requires at least one command token")
 
     vectors_root = pathlib.Path(args.vectors_root)
     out_path = pathlib.Path(args.out)
@@ -51,7 +56,7 @@ def main() -> int:
     for vf in files:
         total += 1
         vector_id = _load_vector_id(vf)
-        cmd = [*args.runner_cmd, str(vf)]
+        cmd = [*runner_cmd, str(vf)]
 
         proc = subprocess.run(cmd, capture_output=True, text=True)
         stdout = proc.stdout.strip()
@@ -87,7 +92,7 @@ def main() -> int:
         "passed": passed,
         "failed": failed,
         "failures": failures,
-        "runner_cmd": args.runner_cmd,
+        "runner_cmd": runner_cmd,
     }
 
     out_path.write_text(json.dumps(summary, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
