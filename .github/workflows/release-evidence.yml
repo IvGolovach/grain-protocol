@@ -38,9 +38,9 @@ jobs:
         run: |
           python3 tools/ci/run_runner_suite.py \
             --vectors-root conformance/vectors \
-            --runner-cmd cargo run -q --manifest-path core/rust/Cargo.toml -p grain-runner -- run --strict --vector \
             --commit-sha "${GITHUB_SHA}" \
-            --out artifacts/rust-suite-summary.json
+            --out artifacts/rust-suite-summary.json \
+            --runner-cmd cargo run -q --manifest-path core/rust/Cargo.toml -p grain-runner -- run --strict --vector
 
       - name: Set up Node 22
         uses: actions/setup-node@v4

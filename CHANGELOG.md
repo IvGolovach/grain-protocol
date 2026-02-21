@@ -9,6 +9,8 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 - Fixed `tools/github/apply_branch_protection.sh`:
   - branch protection API payload now sent as typed JSON via `--input`
   - resolves GitHub API `422` caused by stringified booleans with `-f`
+- Fixed CI/release run invocation for `tools/ci/run_runner_suite.py`:
+  - `--runner-cmd` moved to the last argument position to avoid parser capture through Cargo `--` separator.
 - No protocol/conformance semantic changes.
 
 ## [0.3.0] - 2026-02-21
