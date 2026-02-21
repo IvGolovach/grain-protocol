@@ -1,0 +1,197 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python-tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate vectors
+        run: python3 tools/validate_vectors.py
+
+      - name: Check LLM docs mappings
+        run: python3 tools/check_llm_docs.py
+
+      - name: Check spec drift
+        run: python3 tools/check_spec_drift.py
+
+      - name: Ensure no macOS metadata files
+        run: |
+          ! find . -name ".DS_Store" -print | grep -q .
+
+      - name: Ensure no Python cache artifacts
+        run: |
+          ! find . -name "__pycache__" -print | grep -q .
+
+      - name: Compile Python tooling
+        run: python3 -m py_compile tools/*.py tools/ci/*.py
+
+  rust-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust 1.86.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.86.0
+
+      - name: Rust tests
+        run: cargo test --manifest-path core/rust/Cargo.toml --workspace
+
+      - name: Rust strict conformance suite
+        run: |
+          python3 tools/ci/run_runner_suite.py \
+            --vectors-root conformance/vectors \
+            --runner-cmd cargo run -q --manifest-path core/rust/Cargo.toml -p grain-runner -- run --strict --vector \
+            --commit-sha "${GITHUB_SHA}" \
+            --out artifacts/rust-suite-summary.json
+
+      - name: Upload rust suite summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-suite-summary
+          path: artifacts/rust-suite-summary.json
+
+  ts-c01:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: runner/typescript/package-lock.json
+
+      - name: Install TS runner deps
+        run: npm ci --prefix runner/typescript
+
+      - name: Run TS C01 strict profile
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-c01.ts
+
+      - name: Run Rust vs TS divergence (C01)
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
+
+      - name: Collect TS artifacts
+        run: |
+          mkdir -p artifacts
+          cp runner/typescript/.c01-last-run.json artifacts/ts-c01-summary.json
+          cp runner/typescript/.divergence-c01.json artifacts/divergence-c01.json
+          cp runner/typescript/.divergence-c01.md artifacts/divergence-c01.md
+
+      - name: Upload TS C01 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-c01-results
+          path: artifacts/*
+
+  evidence-bundle:
+    runs-on: ubuntu-latest
+    needs: [python-tooling, rust-core, ts-c01]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download rust summary
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-suite-summary
+          path: artifacts
+
+      - name: Download TS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ts-c01-results
+          path: artifacts
+
+      - name: Build deterministic manifests and hashes
+        run: |
+          mkdir -p artifacts/evidence
+          python3 tools/ci/generate_vector_manifest.py \
+            --vectors-root conformance/vectors \
+            --pattern '*.json' \
+            --out artifacts/evidence/vector-manifest.json
+          python3 tools/ci/generate_vector_manifest.py \
+            --vectors-root conformance/vectors \
+            --pattern '*-WA-*.json' \
+            --out artifacts/evidence/vector-manifest-c01.json
+
+          sha256sum core/rust/Cargo.lock | awk '{print $1}' > artifacts/evidence/cargo.lock.sha256
+          sha256sum core/rust/rust-toolchain.toml | awk '{print $1}' > artifacts/evidence/rust-toolchain.sha256
+          sha256sum runner/typescript/package-lock.json | awk '{print $1}' > artifacts/evidence/package-lock.json.sha256
+          sha256sum artifacts/evidence/vector-manifest.json | awk '{print $1}' > artifacts/evidence/vector-manifest.sha256
+          sha256sum artifacts/evidence/vector-manifest-c01.json | awk '{print $1}' > artifacts/evidence/vector-manifest-c01.sha256
+
+      - name: Build suite summary JSON
+        run: |
+          python3 - << 'PY'
+          import json, pathlib, os
+          root = pathlib.Path('artifacts')
+          rust = json.loads((root/'rust-suite-summary.json').read_text())
+          ts = json.loads((root/'ts-c01-summary.json').read_text())
+          div = json.loads((root/'divergence-c01.json').read_text())
+          commit = os.environ['GITHUB_SHA']
+
+          suite_summary = {
+            'commit_sha': commit,
+            'strict': True,
+            'rust_full': {
+              'total': rust['total'],
+              'passed': rust['passed'],
+              'failed': rust['failed']
+            },
+            'ts_c01': {
+              'total': ts['total'],
+              'passed': ts['passed'],
+              'failed': ts['failed']
+            },
+            'divergence_c01': {
+              'total': div['total'],
+              'mismatches': div['mismatches']
+            }
+          }
+
+          suite_run = {
+            'commit_sha': commit,
+            'metadata': {
+              'workflow': os.environ.get('GITHUB_WORKFLOW', 'ci'),
+              'run_id': os.environ.get('GITHUB_RUN_ID', ''),
+              'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT', ''),
+            },
+            'summary': suite_summary,
+          }
+
+          out = root/'evidence'
+          out.mkdir(parents=True, exist_ok=True)
+          (out/'suite-summary.json').write_text(json.dumps(suite_summary, indent=2) + '\n')
+          (out/'suite-run.json').write_text(json.dumps(suite_run, indent=2) + '\n')
+          PY
+
+      - name: Copy run outputs into evidence
+        run: |
+          cp artifacts/rust-suite-summary.json artifacts/evidence/rust-suite-summary.json
+          cp artifacts/ts-c01-summary.json artifacts/evidence/ts-c01-summary.json
+          cp artifacts/divergence-c01.json artifacts/evidence/divergence.json
+          cp artifacts/divergence-c01.md artifacts/evidence/divergence.md
+
+      - name: Archive evidence
+        run: |
+          cd artifacts
+          zip -r "evidence-${GITHUB_SHA}.zip" evidence
+
+      - name: Upload evidence bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-${{ github.sha }}
+          path: artifacts/evidence-${{ github.sha }}.zip

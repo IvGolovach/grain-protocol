@@ -1,0 +1,12 @@
+# Frozen-core areas
+/spec/** @IvGolovach
+/conformance/** @IvGolovach
+/docs/llm/** @IvGolovach
+
+# Implementations
+/core/** @IvGolovach
+/runner/** @IvGolovach
+
+# CI and governance
+/.github/** @IvGolovach
+/adr/** @IvGolovach

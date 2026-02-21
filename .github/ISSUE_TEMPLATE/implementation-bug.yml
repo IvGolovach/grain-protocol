@@ -1,0 +1,48 @@
+name: Implementation Bug
+description: Report divergence between expected conformance result and implementation behavior.
+title: "[impl] "
+labels:
+  - implementation
+  - triage
+body:
+  - type: input
+    id: vector
+    attributes:
+      label: Vector ID
+      description: Which vector demonstrates the issue?
+      placeholder: "NEG-... or POS-..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed Behavior
+      description: Include actual runner JSON output.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: Quote `expect` from vector and required diag/out fields.
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Runner version, commit SHA, toolchain versions.
+      placeholder: "commit, rust/node/python versions"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I reproduced in Strict Conformance Mode.
+          required: true

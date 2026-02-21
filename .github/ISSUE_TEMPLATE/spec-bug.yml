@@ -1,0 +1,50 @@
+name: Spec Bug
+description: Report a normative ambiguity, contradiction, or missing MUST/SHOULD rule.
+title: "[spec] "
+labels:
+  - spec
+  - triage
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the bug in one short paragraph.
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariant
+    attributes:
+      label: Invariant / Rule
+      description: List invariant IDs and exact spec references impacted.
+      placeholder: "INV-..., spec/NES-v0.1.md §..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: divergence
+    attributes:
+      label: Divergence Scenario
+      description: Explain how two independent implementations could diverge.
+    validations:
+      required: true
+
+  - type: textarea
+    id: vectors
+    attributes:
+      label: Conformance Impact
+      description: Which vectors prove the issue now, or which vectors are missing?
+      placeholder: "POS-... / NEG-..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I verified this is not a feature request.
+          required: true
+        - label: I included protocol references and vector IDs.
+          required: true

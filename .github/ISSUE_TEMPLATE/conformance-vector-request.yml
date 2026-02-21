@@ -1,0 +1,50 @@
+name: Conformance Vector Request
+description: Propose a new vector or vector correction for court coverage.
+title: "[conformance] "
+labels:
+  - conformance
+  - triage
+body:
+  - type: textarea
+    id: gap
+    attributes:
+      label: Coverage Gap
+      description: Which behavior is currently unproven by vectors?
+    validations:
+      required: true
+
+  - type: input
+    id: op
+    attributes:
+      label: Operation
+      description: Contract op (for example `manifest_resolve`, `e2e_derive_v1`).
+      placeholder: "op"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Deterministic Outcome
+      description: PASS/REJECT and exact error code / output fields.
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariant
+    attributes:
+      label: Invariants
+      description: Which invariant IDs this vector enforces.
+      placeholder: "INV-..."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I confirmed this does not change frozen-core semantics.
+          required: true
+        - label: I provided deterministic expected outputs/diagnostics.
+          required: true
