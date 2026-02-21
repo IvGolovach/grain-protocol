@@ -1,0 +1,5 @@
+node_modules/
+.c01-last-run.json
+.c01-vectors.txt
+.divergence-c01.json
+.divergence-c01.md

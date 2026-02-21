@@ -1,0 +1,5 @@
+{
+  "profile_id": "c01",
+  "description": "TOR-03 smoke profile: all Wave A vectors",
+  "vector_glob": "conformance/vectors/**/*-WA-*.json"
+}

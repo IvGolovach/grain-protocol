@@ -1,0 +1,18 @@
+{
+  "name": "grain-ts-runner",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Grain TypeScript conformance runner (TOR-03 C01 smoke)",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "grain-ts-runner": "src/cli.ts"
+  },
+  "scripts": {
+    "run:vector": "node --experimental-strip-types src/cli.ts run --strict --vector",
+    "run:c01": "node --experimental-strip-types scripts/run-c01.ts",
+    "divergence:c01": "node --experimental-strip-types scripts/divergence-c01.ts"
+  }
+}
