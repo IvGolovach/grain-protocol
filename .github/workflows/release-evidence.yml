@@ -141,7 +141,7 @@ jobs:
           zip -r "evidence-${GITHUB_SHA}.zip" evidence
 
       - name: Upload evidence artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: evidence-${{ github.sha }}
           path: artifacts/evidence-${{ github.sha }}.zip
