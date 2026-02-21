@@ -25,6 +25,19 @@ jobs:
       - name: Check spec drift
         run: python3 tools/check_spec_drift.py
 
+      - name: Check Dependabot automerge policy consistency
+        run: python3 tools/ci/check_dependabot_policy.py
+
+      - name: Check branch protection drift (main)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+        run: |
+          python3 tools/ci/check_branch_protection_drift.py \
+            --repo "${GITHUB_REPOSITORY}" \
+            --branch main \
+            --expected-contexts "python-tooling,rust-core,ts-c01,evidence-bundle"
+
       - name: Ensure no macOS metadata files
         run: |
           ! find . -name ".DS_Store" -print | grep -q .

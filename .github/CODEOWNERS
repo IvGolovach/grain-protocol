@@ -8,5 +8,6 @@
 /runner/** @IvGolovach
 
 # CI and governance
-/.github/** @IvGolovach
+/tools/** @IvGolovach
+/.github/CODEOWNERS @IvGolovach
 /adr/** @IvGolovach

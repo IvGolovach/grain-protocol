@@ -3,7 +3,13 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
-- No pending entries.
+- Dependabot no-friction safe lane (TOR-GH-DEPS-A02):
+  - Added `/.github/workflows/dependabot-automerge.yml` for Dependabot-only safe auto-approve/auto-merge in strict allowlist paths.
+  - Added explicit allowlist/denylist policy document: `docs/human/dependencies-policy.md`.
+  - Added ADR: `adr/conformance/0003-dependabot-autonomous-safe-lane.md`.
+  - Added preferred automation secret path `DEPENDABOT_AUTOMERGE_TOKEN` for workflow-file PR operations requiring workflow-capable token scopes.
+  - Enabled Dependabot rebase strategy (`rebase-strategy: auto`) across configured ecosystems.
+  - Kept branch-protection posture strict; no protocol/conformance semantic changes.
 
 ## [0.3.1] - 2026-02-21
 - Fixed `tools/github/apply_branch_protection.sh`:

@@ -25,6 +25,7 @@ jobs:
           python3 tools/validate_vectors.py
           python3 tools/check_llm_docs.py
           python3 tools/check_spec_drift.py
+          python3 tools/ci/check_dependabot_policy.py
 
       - name: Set up Rust 1.86.0
         uses: dtolnay/rust-toolchain@master

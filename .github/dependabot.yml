@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -13,6 +14,7 @@ updates:
     directory: "/core/rust"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -22,6 +24,7 @@ updates:
     directory: "/runner/typescript"
     schedule:
       interval: "weekly"
+    rebase-strategy: "auto"
     open-pull-requests-limit: 5
     labels:
       - "dependencies"

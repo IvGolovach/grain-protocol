@@ -10,6 +10,8 @@ Branch protection must require:
 - `ts-c01`
 - `evidence-bundle`
 
+CI push-to-main drift assertion validates that branch protection required checks stay aligned with policy.
+
 ## 2) Apply branch protection
 
 ```bash
@@ -47,6 +49,10 @@ All release tags must be signed.
   - GitHub Actions
   - Rust (`core/rust`)
   - TS runner (`runner/typescript`)
+- Zero-friction safe lane for Dependabot workflow PRs:
+  - `/.github/workflows/dependabot-automerge.yml`
+  - policy: `/docs/human/dependencies-policy.md`
+  - preferred token secret: `DEPENDABOT_AUTOMERGE_TOKEN` (repo + workflow scopes)
 - Issue templates are required:
   - spec bug
   - conformance vector request
