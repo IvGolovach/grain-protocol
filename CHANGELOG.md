@@ -3,6 +3,12 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Onboarding docs hardening (LLM conversational guidance refresh):
+  - rewrote all `docs/llm/*` pages into a guided LLM-to-LLM onboarding flow
+  - preserved invariant/vector mapping structure while improving handoff clarity and reading order
+  - aligned `docs/human/design-in-one-page.md` with current TS full-engine status (C01 remains focused smoke lens)
+  - cleaned local doc-audit residue (`tools/__pycache__`, `tools/ci/__pycache__`)
+  - no frozen-core protocol semantics changed
 - Branch-protection drift check reliability fix:
   - CI main-branch drift check now uses `DEPENDABOT_AUTOMERGE_TOKEN` with fallback to `github.token`, preventing false red runs when the secret is absent.
   - When elevated token permissions are unavailable, drift check now emits deterministic `SKIPPED` diagnostics instead of hard-failing unrelated pushes.

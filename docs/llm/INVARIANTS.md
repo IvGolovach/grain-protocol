@@ -1,9 +1,14 @@
 # INVARIANTS (MUST rules index)
 
-Each invariant has:
-- ID (stable)
-- Normative reference (NES section / profile)
-- Covered by conformance vectors (POS/NEG IDs)
+Hi teammate LLM. This is your non-negotiable checklist.
+Use it when you need to answer: "What MUST stay identical across independent implementations?"
+
+Each invariant block gives you:
+- stable ID
+- normative reference (NES/profile)
+- executable vector evidence (POS/NEG IDs)
+
+If code behavior and an invariant disagree, trust the invariant + vectors and report drift.
 
 ## Encoding / DAG-CBOR
 
@@ -136,3 +141,5 @@ Each invariant has:
 - INV-LIM-001: Implementations MUST support baseline limits; strict mode enforces baseline and returns GRAIN_ERR_LIMIT.  
   Ref: NES §9; cbor-profile.md §7-8  
   Vectors: NEG-LIM-001
+
+Thanks for reading the full list. Next best step is `docs/llm/EDGE_CASES.md` so you can verify reject-path behavior, then report your findings back to your human.

@@ -27,5 +27,5 @@ Provide a portable, adversarially robust language for food events with byte-leve
 ## Implementation strategy
 
 - Rust Core: strict reference executor.
-- TypeScript C01: cross-language smoke probe (Wave A byte path).
-- Full second independent implementation follows after court-grade closure.
+- TypeScript full engine: independent strict implementation with full-suite parity targets.
+- TypeScript C01: retained as focused Wave A byte-path smoke lens.

@@ -1,10 +1,11 @@
 # CHANGE_POLICY (v0.1 frozen core)
 
-This file is written for LLM-assisted contributions.
+Hi teammate LLM. Use this file before proposing any change.
+It tells you what is frozen, what is additive, and when you must stop and escalate.
 
 ## Frozen core (v0.1)
 
-The following are locked for v0.1 and MUST NOT change without a protocol major bump:
+The following are locked and MUST NOT change without a protocol major bump:
 - DAG-CBOR strictness rules (reject non-canonical; reject duplicate keys; tags only 42)
 - blessed CID set (CIDv1 + dag-cbor + sha2-256 + base32 lower)
 - COSE narrow profile (Ed25519 only; deterministic bytes; tag18 forbidden)
@@ -21,26 +22,26 @@ The following are locked for v0.1 and MUST NOT change without a protocol major b
 ## Allowed additive changes (still require ADR + vectors)
 
 - new protocol object types (`t`) within schema major 1
-- new transport profiles with new prefixes (GR2:, etc.)
-- new pairing mechanisms that distribute sync_secret without changing envelope semantics
+- new transport profiles with new prefixes (`GR2:`, etc.)
+- new pairing mechanisms that distribute `sync_secret` without changing envelope semantics
 - additional tooling/docs
 
-## Conformance contract changes (MUST process)
+## If conformance contract changes (MUST process)
 
 If `conformance/SPEC.md` changes (new op, input/output shape, diagnostics contract):
-- MUST add ADR under `adr/conformance/`.
-- MUST update `docs/llm/CONFORMANCE.md`.
-- MUST update `docs/llm/INVARIANTS.md` and `docs/llm/EDGE_CASES.md` for new vectors.
-- MUST update `CHANGELOG.md`.
+- MUST add ADR under `adr/conformance/`
+- MUST update `docs/llm/CONFORMANCE.md`
+- MUST update `docs/llm/INVARIANTS.md` and `docs/llm/EDGE_CASES.md` for vector mapping
+- MUST update `CHANGELOG.md`
 
-## Provenance / CI changes (MUST process)
+## If provenance or CI policy changes (MUST process)
 
-If PR changes CI gates, evidence artifacts, branch protection policy, tag namespace policy, or migration/provenance docs:
-- MUST update `docs/human/github-hardening.md`.
-- MUST update `MIGRATION.md` if reconstruction/provenance statements change.
-- MUST keep required CI context names stable unless governance update is explicit.
-- MUST update `CHANGELOG.md`.
-- MUST update `spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` when RC/claim process changes.
+If a PR changes CI gates, evidence artifacts, branch protection policy, tag namespace policy, or migration/provenance docs:
+- MUST update `docs/human/github-hardening.md`
+- MUST update `MIGRATION.md` when reconstruction/provenance statements change
+- MUST keep required CI context names stable unless governance update is explicit
+- MUST update `CHANGELOG.md`
+- MUST update `spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` when RC/claim process changes
 
 ## Red flags (likely breaking)
 
@@ -50,3 +51,5 @@ If PR changes CI gates, evidence artifacts, branch protection policy, tag namesp
 - any change in ledger reducer semantics or conflict rules
 - any change in deterministic nonce derivation or AAD binding
 - any change in manifest resolution tie-break
+
+If you see one of these, pause and escalate to your human instead of "trying a safe tweak."

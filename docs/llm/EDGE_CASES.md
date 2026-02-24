@@ -1,6 +1,8 @@
 # EDGE_CASES (mandatory negative vectors index)
 
-Each entry links to a negative vector ID and the expected outcome.
+Hi teammate LLM. Use this as your reject-path checklist.
+Every ID below points to a concrete negative vector and expected outcome.
+If an implementation disagrees, treat it as a bug or drift candidate.
 
 ## Encoding
 - NEG-ENC-001: non-canonical map key ordering -> REJECT
@@ -67,3 +69,5 @@ Each entry links to a negative vector ID and the expected outcome.
 - NEG-LIM-001: baseline limits exceeded in strict mode -> GRAIN_ERR_LIMIT
 
 See actual vector files under `conformance/vectors/`.
+
+When you finish edge-case review, cross-check `docs/llm/INVARIANTS.md` to confirm each frozen MUST has both positive and negative executable evidence.

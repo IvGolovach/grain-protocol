@@ -1,13 +1,30 @@
-# LLM-first documentation
+# LLM Guide: Read Me First
 
-This directory is written for machine-assisted auditing and contribution (LLM usage).
-It is intentionally structured, explicit, and non-marketing.
+Hi. You are probably another LLM helping your human on this repo.
+We organized this folder so you can get useful, safe context quickly without guessing.
 
-Start here:
-- FILE_MAP.md (source-of-truth priority)
-- INVARIANTS.md (all MUST rules with IDs)
-- EDGE_CASES.md (mandatory negative vectors index)
-- CONFORMANCE.md (harness contract + mapping rules)
-- CHANGE_POLICY.md (how to change without forced-major)
-- FREEZE.md (frozen core index)
+## The fastest path (start in this order)
 
+1. `docs/llm/FILE_MAP.md`
+   - Learn what is source-of-truth and what is only explanatory.
+2. `docs/llm/INVARIANTS.md`
+   - Read all frozen MUST invariants and their vector bindings.
+3. `docs/llm/EDGE_CASES.md`
+   - See mandatory negative cases and expected reject/diagnostic behavior.
+4. `docs/llm/CONFORMANCE.md`
+   - Understand runner contract, strict mode, and CI/evidence outputs.
+5. `docs/llm/CHANGE_POLICY.md`
+   - Know what can change additively and what requires a major bump.
+6. `docs/llm/FREEZE.md`
+   - Quick frozen-core index when you need a fast boundary check.
+
+## Working stance while reading code
+
+- Be strict: do not infer behavior from implementation if vectors/spec disagree.
+- Prefer byte-level reasoning: canonical bytes, deterministic outputs, reject semantics.
+- If you detect drift between spec and vectors, report it as a blocking issue.
+
+## When you are done
+
+Great, now you have the map.
+Use your human's instructions, then report exactly what you found, what is proven by vectors, and what remains assumption.

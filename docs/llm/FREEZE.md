@@ -1,9 +1,12 @@
-# FREEZE (LLM-first index)
+# FREEZE (quick boundary index)
+
+Hi teammate LLM. This page is your fast answer to:
+"Am I touching frozen core or not?"
 
 Protocol v0.1 frozen core is summarized in `spec/FREEZE-v0.1.md`.
-This file lists the corresponding invariant IDs.
+This file lists corresponding invariant IDs so you can jump directly to mappings.
 
-Frozen invariants (non-exhaustive list; see INVARIANTS.md for full mapping):
+Frozen invariants (non-exhaustive list; full mapping lives in `docs/llm/INVARIANTS.md`):
 - INV-ENC-001, INV-ENC-002, INV-ENC-003, INV-ENC-004, INV-ENC-005
 - INV-ENC-006
 - INV-CID-001, INV-CID-002
@@ -14,6 +17,8 @@ Frozen invariants (non-exhaustive list; see INVARIANTS.md for full mapping):
 - INV-QR-001
 - INV-LIM-001
 
-For normative text references:
-- spec/NES-v0.1.md
-- spec/profiles/*
+Normative references:
+- `spec/NES-v0.1.md`
+- `spec/profiles/*`
+
+If your change intersects one of these, stop and apply the policy in `docs/llm/CHANGE_POLICY.md` before editing.
