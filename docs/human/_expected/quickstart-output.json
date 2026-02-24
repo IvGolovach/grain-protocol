@@ -1,0 +1,58 @@
+{
+  "demo_id": "quickstart-v0.1",
+  "pass": true,
+  "result": {
+    "sum_mean": {
+      "kcal": 260
+    },
+    "sum_var": {
+      "kcal": 14
+    }
+  },
+  "source_vectors": [
+    "POS-QR-001",
+    "POS-COSE-001",
+    "POS-LED-001"
+  ],
+  "steps": {
+    "append_intake_event": {
+      "event": {
+        "ak": "dev1",
+        "body": {
+          "mean": {
+            "kcal": 60
+          },
+          "var": {
+            "kcal": 1
+          }
+        },
+        "payload_cid": "cid-intake-demo-3",
+        "seq": 3,
+        "t": "IntakeEvent"
+      },
+      "pass": true
+    },
+    "cose_verify": {
+      "diag": [],
+      "pass": true
+    },
+    "ledger_reduce": {
+      "diag": [],
+      "out": {
+        "sum_mean": {
+          "kcal": 260
+        },
+        "sum_var": {
+          "kcal": 14
+        }
+      },
+      "pass": true
+    },
+    "qr_decode_gr1": {
+      "cose_bytes_len": 255,
+      "diag": [],
+      "pass": true
+    }
+  },
+  "strict": true
+}

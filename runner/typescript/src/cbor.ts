@@ -53,6 +53,114 @@ export function parseExact(bytes: Uint8Array, options: ParseOptions): CborNode {
   return parsed.node;
 }
 
+export function encodeCanonical(node: CborNode): Uint8Array {
+  const out: number[] = [];
+  encodeNode(node, out);
+  return new Uint8Array(out);
+}
+
+function encodeNode(node: CborNode, out: number[]): void {
+  switch (node.kind) {
+    case "u":
+      writeTypeArg(0, node.value, out);
+      return;
+    case "n": {
+      if (node.value >= 0n) {
+        throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+      }
+      writeTypeArg(1, -1n - node.value, out);
+      return;
+    }
+    case "b":
+      writeTypeArg(2, BigInt(node.value.length), out);
+      pushBytes(out, node.value);
+      return;
+    case "t":
+      writeTypeArg(3, BigInt(node.bytes.length), out);
+      pushBytes(out, node.bytes);
+      return;
+    case "a":
+      writeTypeArg(4, BigInt(node.items.length), out);
+      for (const item of node.items) {
+        encodeNode(item, out);
+      }
+      return;
+    case "m":
+      writeTypeArg(5, BigInt(node.entries.length), out);
+      for (const entry of node.entries) {
+        encodeNode(entry.key, out);
+        encodeNode(entry.value, out);
+      }
+      return;
+    case "tag":
+      writeTypeArg(6, node.tag, out);
+      encodeNode(node.inner, out);
+      return;
+    case "bool":
+      out.push(node.value ? 0xf5 : 0xf4);
+      return;
+    case "null":
+      out.push(0xf6);
+      return;
+    case "undef":
+      out.push(0xf7);
+      return;
+    case "simple":
+      if (node.value < 0 || node.value > 255) {
+        throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+      }
+      if (node.value < 24) {
+        out.push(0xe0 | node.value);
+      } else {
+        out.push(0xf8, node.value);
+      }
+      return;
+    default:
+      throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+}
+
+function writeTypeArg(major: number, value: bigint, out: number[]): void {
+  if (value < 0n) {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+
+  const mt = (major & 0x07) << 5;
+  if (value <= 23n) {
+    out.push(mt | Number(value));
+    return;
+  }
+  if (value <= 0xffn) {
+    out.push(mt | 24);
+    out.push(Number(value));
+    return;
+  }
+  if (value <= 0xffffn) {
+    out.push(mt | 25);
+    out.push(Number((value >> 8n) & 0xffn));
+    out.push(Number(value & 0xffn));
+    return;
+  }
+  if (value <= 0xffffffffn) {
+    out.push(mt | 26);
+    for (let i = 3; i >= 0; i -= 1) {
+      out.push(Number((value >> BigInt(i * 8)) & 0xffn));
+    }
+    return;
+  }
+
+  out.push(mt | 27);
+  for (let i = 7; i >= 0; i -= 1) {
+    out.push(Number((value >> BigInt(i * 8)) & 0xffn));
+  }
+}
+
+function pushBytes(out: number[], bytes: Uint8Array): void {
+  for (const b of bytes) {
+    out.push(b);
+  }
+}
+
 function parseItem(st: ParserState, depth: number): CborNode {
   if (depth > LIMITS.CBL_MAX_CBOR_NESTING_DEPTH) {
     throw new GrainDiagError("GRAIN_ERR_LIMIT");

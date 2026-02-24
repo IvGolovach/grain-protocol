@@ -1,6 +1,6 @@
 # Grain Protocol
 
-**Open Food Infrastructure** — a neutral, verifiable language for food events.
+**Open Verifiable Event Infrastructure** — food is the first production profile.
 
 Grain is not an app. Not a platform. Not a global registry.
 It’s a **frozen-core protocol** + a **conformance suite** so independent implementations can interoperate **byte-for-byte**.
@@ -12,7 +12,7 @@ It’s a **frozen-core protocol** + a **conformance suite** so independent imple
 - **Protocol v0.1:** frozen core (encoding/CID/COSE/ledger/E2E/manifest rules are locked)
 - **Conformance Suite:** shipped in this repo (release gate)
 - **Grain Core (reference, Rust):** implemented in `core/rust` and passing current v0.1 vectors in strict mode
-- **TypeScript runner (smoke):** implemented in `runner/typescript` for C01 (Wave A) cross-language probing
+- **TypeScript full engine:** implemented in `runner/typescript` with full-suite strict mode + divergence checks (C01 profile retained as Wave A smoke lens)
 - **GitHub provenance:** CI-generated evidence artifacts are commit-bound (SHA keyed) on `main` and release tags
 - **Grain SDK:** planned / in progress
 
@@ -20,13 +20,13 @@ It’s a **frozen-core protocol** + a **conformance suite** so independent imple
 
 ## What problem this solves (90 seconds)
 
-Food data is usually:
+Physical-world event data is usually:
 - platform-bound (one vendor DB),
 - non-verifiable offline (no portable signatures),
 - non-deterministic to merge (arrival order / wall-clock dependence),
 - privacy-hostile (servers see plaintext identifiers).
 
-Grain v0.1 defines:
+Grain v0.1 defines a domain-neutral core:
 - **canonical bytes** (strict DAG-CBOR; reject non-canonical; reject duplicate map keys),
 - **content IDs** (CIDv1 blessed set),
 - **offline verification** (COSE_Sign1 + Ed25519 narrow profile),
@@ -44,6 +44,7 @@ Grain v0.1 defines:
 - A signed event ledger with deterministic reduction
 - An E2E private sync model (capability addressing + manifest resolution)
 - An offline QR transport profile (**GR1:**)
+- A base layer that can host multiple domain profiles (food profile is first in v0.1)
 
 ## What Grain is NOT (v0.1)
 
@@ -59,36 +60,35 @@ Grain v0.1 defines:
 
 ## Quickstart (5 minutes)
 
-This repository is protocol-first. The fastest way to engage is via the conformance suite.
+Start with the runnable onboarding flow:
+- `docs/human/start-here.md`
+- `docs/human/quickstart.md`
+- `docs/human/repro-checklist.md`
+- `docs/human/dependencies-policy.md`
 
-**Conformance statement:** Passing the full conformance suite in **Strict Conformance Mode** is the conformance criterion for Grain v0.1.
-A strong interoperability claim becomes valid after **two independent implementations** pass the full suite.
+One-command deterministic demo:
 
 ```bash
-# Read the harness contract (how any implementation plugs in)
-cat conformance/SPEC.md
-
-# See the mandatory vectors (positive + negative)
-find conformance/vectors -maxdepth 3 -type f | sort
-
-# Run the Rust reference runner against one vector
 docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
-  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- run --strict --vector /work/conformance/vectors/cid/POS-CID-001.json'
-
-# Run the full vector set (strict mode)
-docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
-  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; for v in $(find /work/conformance/vectors -name "*.json" | sort); do cargo run -q -p grain-runner -- run --strict --vector "$v" >/dev/null; done'
-
-# Run TS C01 smoke (all Wave A vectors)
-node --experimental-strip-types runner/typescript/scripts/run-c01.ts
-
-# Build Rust↔TS divergence report for C01
-node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
+  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- demo --strict'
 ```
 
-If you have an implementation and want to certify v0.1 compatibility, start here:
+Conformance statement:
+- Passing the full suite in **Strict Conformance Mode** is the conformance criterion for Grain v0.1.
+- A strong interoperability claim becomes valid after **two independent full implementations** pass the full suite.
+
+Implementation-entry references:
 - `conformance/README.md`
+- `conformance/SPEC.md`
 - `docs/llm/CONFORMANCE.md`
+
+TS full engine commands:
+
+```bash
+node --experimental-strip-types runner/typescript/scripts/run-full.ts
+node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+```
 
 ### Court Hardening Wave A
 
@@ -103,6 +103,7 @@ See:
 - `conformance/vectors/**/*-WA-*.json`
 - `.github/workflows/ci.yml` (strict CI release gate)
 - `.github/workflows/release-evidence.yml` (tag evidence release workflow)
+- `.github/workflows/interop-certify.yml` (TOR-CERT-D01 certification gate)
 
 ---
 
@@ -115,6 +116,12 @@ See:
   - repo tags: `repo-*` (implementation/tooling/governance milestones)
 - Local `.local-architect-reports/**` remains local-only and is never committed.
 
+## Dependabot strict lane (source repo)
+
+- Workflow updates are auto-merged only through the strict safe lane.
+- Repository secret `DEPENDABOT_AUTOMERGE_TOKEN` is mandatory for this lane.
+- No fallback token path is allowed; missing/insufficient token fails closed.
+
 ---
 
 ## Repository map
@@ -124,9 +131,10 @@ See:
 2. `spec/schemas/grain-v0.1.cddl` (machine-readable schemas)
 3. `conformance/vectors/` (conformance criterion; release gate)
 4. `spec/profiles/` (CBOR/COSE/E2E/QR profiles)
-5. `docs/llm/` (LLM-first indexes of invariants and edge cases)
-6. `adr/` (decision history)
-7. `core/rust/`, `runner/typescript/`, `core/` and `sdk/` (implementations)
+5. `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
+6. `docs/llm/` (LLM-first indexes of invariants and edge cases)
+7. `adr/` (decision history)
+8. `core/rust/`, `runner/typescript/`, `core/` and `sdk/` (implementations)
 
 ---
 

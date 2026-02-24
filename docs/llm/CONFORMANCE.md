@@ -13,6 +13,10 @@ Wave A introduces byte-path tests that must run in strict mode:
 - `utf8` vector pack for raw UTF-8 sorting/dedup traps
 - mixed manifest sequence vectors under `manifest/*-WA-*`
 
+`parse_cborseq_stream_v1` contract is XOR:
+- accept path: `out.item_sha256_hex` is present and deterministic.
+- reject path: `pass=false` with deterministic framing `diag`; partial item outputs are not part of reject semantics.
+
 Wave A vector ID scheme:
 - `POS-<AREA>-WA-####`
 - `NEG-<AREA>-WA-####`
@@ -50,25 +54,30 @@ grain-runner run --strict --vector <path/to/vector.json>
 Error precedence and diagnostic table:
 - `core/rust/grain-core/docs/errors.md`
 
-## TS runner C01 smoke
+## TS runner profiles
 
-TypeScript smoke runner path:
+TypeScript runner path:
 - `runner/typescript/`
 
-C01 profile definition:
-- `runner/typescript/profiles/c01.json`
-- profile rule: all `conformance/vectors/**/*-WA-*.json`
+Profiles:
+- C01 profile: `runner/typescript/profiles/c01.json` (Wave A only)
+- Full profile: `runner/typescript/profiles/full.json` (all vectors)
 
 Primary commands:
 ```bash
 node --experimental-strip-types runner/typescript/scripts/run-c01.ts
 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
+node --experimental-strip-types runner/typescript/scripts/run-full.ts
+node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+node --experimental-strip-types runner/typescript/scripts/properties-full.ts
 ```
 
-Expected artifacts:
+Artifacts:
 - `runner/typescript/.c01-last-run.json`
 - `runner/typescript/.divergence-c01.json`
-- `runner/typescript/.divergence-c01.md`
+- `runner/typescript/.full-last-run.json`
+- `runner/typescript/.divergence-full.json`
+- `runner/typescript/.properties-full.json`
 
 ## CI provenance contract
 
@@ -76,6 +85,7 @@ Required CI contexts on `main`:
 - `python-tooling`
 - `rust-core`
 - `ts-c01`
+- `ts-full`
 - `evidence-bundle`
 
 Evidence policy:
@@ -84,5 +94,10 @@ Evidence policy:
   - suite summaries
   - vector manifests and hashes
   - lock/toolchain hashes
-  - Rust↔TS divergence summary for C01
+  - Rust↔TS divergence summaries for C01 and full
 - Local `.local-architect-reports/**` are non-normative and MUST NOT be committed.
+
+Interop certification workflow:
+- `/.github/workflows/interop-certify.yml` runs TOR-CERT-D01 certification packaging.
+- Certification script: `tools/interop_certify.sh`.
+- Claim boundaries are normative in `spec/INTEROP-v0.1.md`.

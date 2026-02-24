@@ -1,45 +1,9 @@
-import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
-import { loadC01Vectors, runTsVector, stable } from "./shared.ts";
-
-type RunnerJson = {
-  vector_id: string;
-  pass: boolean;
-  diag: string[];
-  out: Record<string, unknown>;
-};
+import { loadC01Vectors, runRustVectors, runTsVector, stable, type RunnerJson } from "./shared.ts";
 
 const vectors = loadC01Vectors();
-const repo = process.cwd();
-
-const vectorListPath = "runner/typescript/.c01-vectors.txt";
-writeFileSync(`${vectorListPath}`, `${vectors.join("\n")}\n`, "utf-8");
-
-const rustCommand = [
-  "run",
-  "--rm",
-  "-v",
-  `${repo}:/work`,
-  "-w",
-  "/work/core/rust",
-  "rust:1.86",
-  "bash",
-  "-lc",
-  "set -euo pipefail; export PATH=/usr/local/cargo/bin:$PATH; while IFS= read -r v; do out=$(cargo run -q -p grain-runner -- run --strict --vector \"/work/$v\"); printf '%s\\t%s\\n' \"$v\" \"$out\"; done < /work/runner/typescript/.c01-vectors.txt"
-];
-
-const rustRaw = execFileSync("docker", rustCommand, { encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 });
-
-const rustMap = new Map<string, RunnerJson>();
-for (const line of rustRaw.split("\n")) {
-  if (!line.trim()) continue;
-  const tab = line.indexOf("\t");
-  if (tab <= 0) continue;
-  const path = line.slice(0, tab);
-  const payload = line.slice(tab + 1);
-  rustMap.set(path, JSON.parse(payload) as RunnerJson);
-}
+const rustMap = runRustVectors(vectors, "runner/typescript/.c01-vectors.txt");
 
 const mismatches: {
   vector: string;

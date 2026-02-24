@@ -1,0 +1,21 @@
+{
+  "tag": "protocol-rc-v0.1.1-rcN",
+  "commit_sha": "<40-hex-sha>",
+  "evidence_sha256": "<sha256-hex>",
+  "vector_manifest_sha256": "<sha256-hex>",
+  "signers": [
+    {
+      "role": "maintainer",
+      "identity": "<github-login-or-key-id>",
+      "signature_ref": "<signed-tag-or-signature-file-ref>"
+    },
+    {
+      "role": "independent-reviewer",
+      "identity": "<auditor-login-or-key-id>",
+      "signature_ref": "<signed-tag-or-signature-file-ref>"
+    }
+  ],
+  "notes": "Strong interop claim signoff for v0.1.x RC.",
+  "timestamp_utc": "YYYY-MM-DDTHH:MM:SSZ"
+}
+

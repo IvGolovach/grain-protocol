@@ -16,8 +16,8 @@ Version: Protocol v0.1 (schema major = 1)
 4) `spec/profiles/`  
    Normative profiles for CBOR/COSE/E2E/QR.
 
-5) `spec/FREEZE-v0.1.md`  
-   Human-oriented freeze statement.
+5) `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`  
+   Freeze boundaries, scope clarification, interop claim boundaries, and RC signoff/revocation governance.
 
 6) `docs/llm/*`  
    Indexes and mappings (invariants, edge cases, conformance mapping).

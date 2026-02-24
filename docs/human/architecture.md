@@ -1,49 +1,42 @@
 # Architecture
 
-Grain is layered:
+Grain is a layered protocol plus an executable court.
 
-1) **Encoding Layer**
-   - strict DAG-CBOR for protocol objects
-   - reject non-canonical
-   - reject duplicate map keys
+```mermaid
+flowchart TB
+    P["Protocol (NES + CDDL + profiles)\nFrozen core rules"]
+    C["Conformance Court\nVectors + SPEC + strict mode"]
+    R["Rust Core\nReference strict interpreter"]
+    T["TypeScript Full Engine\nIndependent strict interpreter"]
+    A["Applications / SDK"]
+    E["Additive Extensions\nnew t / new QR prefix"]
 
-2) **Identity Layer**
-   - CIDv1 blessed set (dag-cbor + sha2-256)
-   - CID links via tag42(bstr) with 0x00 prefix
+    P --> C
+    C --> R
+    C --> T
+    R --> A
+    T --> A
+    P --> E
 
-3) **Signature Layer**
-   - COSE_Sign1 narrow profile, Ed25519 only
-   - deterministic COSE bytes
-   - tag18 forbidden
+    Q["Deterministic guards\nquarantine / conflict ignore-all / limits"]
+    P --> Q
+    C --> Q
+```
 
-4) **Ledger Layer**
-   - append-only signed events
-   - root-only grant/revoke
-   - retroactive revoke (time-independent)
-   - (ak,seq) uniqueness conflicts ignore-all
-   - reducers are order-independent
-   - normative totals: sum_mean + sum_var
-   - stream ingestion path must be deterministic on raw CBOR-seq framing
+Diagram source: `docs/human/diagrams/architecture.mmd`.
 
-5) **E2E Layer**
-   - capability addressing for private objects
-   - cap_id random (CSPRNG) + single-assignment
-   - HKDF-SHA256 + AES-256-GCM
-   - deterministic nonce; nonce == derived
-   - HKDF key/nonce derivation must match expected bytes exactly
-   - manifest resolution is deterministic and order-independent
+## Layer map
 
-6) **Transport Layer**
-   - GR1 embedded QR: GR1: + Base45(zlib(COSE_BYTES))
+1. Encoding: strict DAG-CBOR, canonical-bytes reject semantics.
+2. Identity: CIDv1 (dag-cbor + sha2-256).
+3. Signature: COSE_Sign1 narrow profile.
+4. Ledger: authorization, revoke/conflict rules, deterministic reducer.
+5. E2E + Manifest: capability addressing and deterministic resolution.
+6. Transport: GR1 QR profile.
+7. Extensibility: additive only inside major version 1.
 
-7) **Extensibility**
-   - new types `t` (additive)
-   - ext/crit mechanism with deterministic quarantine
+## Status clarity
 
-See `spec/NES-v0.1.md` for normative rules.
-See `conformance/SPEC.md` and `conformance/vectors/*-WA-*` for byte-level court checks.
-
-Reference implementation note:
-- Rust Core lives in `core/rust/` and executes the same layers as a strict interpreter.
-- Conformance is still the arbiter; implementation does not redefine protocol semantics.
-- TS smoke runner lives in `runner/typescript/` and is currently scoped to C01 (Wave A byte-level profile) for cross-language drift detection.
+- Rust Core is the reference executor.
+- TS full engine passes full strict suite; C01 remains a focused byte-path smoke profile.
+- Conformance vectors remain the arbiter of behavior.

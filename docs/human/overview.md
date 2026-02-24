@@ -1,6 +1,7 @@
 # Overview
 
-Grain is **Open Food Infrastructure**: a neutral language for food events that can be verified offline and merged deterministically.
+Grain is infrastructure for **verifiable physical events**.
+Food is the first production profile in v0.1.
 
 Grain v0.1 provides:
 - canonical object bytes (strict DAG-CBOR)
@@ -11,12 +12,15 @@ Grain v0.1 provides:
 - offline QR transport (GR1:)
 - byte-level conformance evidence via Wave A vectors (raw streams, HKDF expected-bytes, UTF-8 traps, mixed manifest sequences)
 
+Grain v0.1 core is domain-neutral; current schema profile is food-first.
+
 Grain does **not** provide:
 - a global registry as canonical truth
 - truth guarantees (signatures attest authorship/integrity only)
 - a platform, social graph, or central DB
 
-Start here:
+Start with:
+- `docs/human/start-here.md`
 - `docs/human/quickstart.md`
 - `docs/human/architecture.md`
-- `spec/NES-v0.1.md`
+- `spec/SCOPE-v0.1.md`

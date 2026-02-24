@@ -1,200 +1,186 @@
 name: dependabot-automerge
 
 on:
-  pull_request_target:
-    types: [opened, reopened, synchronize, ready_for_review, labeled, unlabeled]
+  workflow_run:
+    workflows: ["ci"]
+    types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: read
 
 jobs:
   dependabot-safe-lane:
     if: >
-      !github.event.pull_request.draft &&
-      contains(fromJson('["dependabot[bot]","app/dependabot"]'), github.event.pull_request.user.login) &&
-      contains(fromJson('["dependabot[bot]","app/dependabot"]'), github.actor)
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'pull_request'
+      )
     runs-on: ubuntu-latest
     env:
-      GH_BOT_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
-      GH_FALLBACK_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      DEPENDABOT_AUTOMERGE_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+      BLOCK_SEMVER_MAJOR_ACTIONS: "false"
     steps:
-      - name: Evaluate allowlist/denylist policy
-        id: policy
-        env:
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-          TITLE: ${{ github.event.pull_request.title }}
-          # Keep false to ensure zero-friction on safe workflow updates.
-          BLOCK_SEMVER_MAJOR_ACTIONS: "false"
+      - name: Collect candidate PRs from trusted workflow_run
+        id: collect
         run: |
           set -euo pipefail
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
+          rm -f candidate-prs.txt
 
-          gh pr edit "$PR" --repo "$REPO" --add-label dependencies --add-label ci >/dev/null 2>&1 || true
-
-          safe=true
-          reasons=()
-
-          mapfile -t files < <(gh api "repos/$REPO/pulls/$PR/files?per_page=100" --paginate --jq '.[].filename')
-          if [[ "${#files[@]}" -eq 0 ]]; then
-            safe=false
-            reasons+=("no-changed-files")
-          fi
-
-          for f in "${files[@]}"; do
-            case "$f" in
-              .github/workflows/*|.github/dependabot.yml|.github/ISSUE_TEMPLATE/*|.github/actions/*)
-                ;;
-              *)
-                safe=false
-                reasons+=("path-not-allowlisted:$f")
-                ;;
-            esac
-
-            case "$f" in
-              spec/*|conformance/*|core/*|runner/*|docs/llm/*|tools/*)
-                safe=false
-                reasons+=("denylist-hit:$f")
-                ;;
-              *)
-                ;;
-            esac
-          done
-
-          if [[ "${BLOCK_SEMVER_MAJOR_ACTIONS}" == "true" ]]; then
-            if [[ "$TITLE" =~ from[[:space:]]v?([0-9]+)([^[:space:]]*)[[:space:]]to[[:space:]]v?([0-9]+) ]]; then
-              from_major="${BASH_REMATCH[1]}"
-              to_major="${BASH_REMATCH[3]}"
-              if [[ "$from_major" != "$to_major" ]]; then
-                safe=false
-                reasons+=("semver-major:$from_major->$to_major")
-              fi
-            fi
-          fi
-
-          printf '%s\n' "${reasons[@]}" > policy-reasons.txt
-          if [[ "$safe" == "true" ]]; then
-            echo "safe=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "safe=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Manual-review lane comment
-        if: steps.policy.outputs.safe != 'true'
-        env:
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          gh pr edit "$PR" --repo "$REPO" --add-label needs-manual >/dev/null 2>&1 || true
-          body="Dependabot automerge policy: manual-review lane.\n\nReasons:\n$(sed 's/^/- /' policy-reasons.txt)"
-          gh pr comment "$PR" --repo "$REPO" --body "$body" >/dev/null 2>&1 || true
-          echo "Manual lane applied."
-
-      - name: Update stale branch
-        if: steps.policy.outputs.safe == 'true'
-        env:
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          if [[ -z "${GH_BOT_TOKEN:-}" ]]; then
-            echo "::warning::DEPENDABOT_AUTOMERGE_TOKEN is not configured. Fallback to github.token may fail for workflow-file PR updates."
-          fi
-
-          run_with_scope_diagnostic() {
-            local desc="$1"
-            shift
-            local out
-            set +e
-            out="$("$@" 2>&1)"
-            local code=$?
-            set -e
-            if [[ "$code" -ne 0 ]]; then
-              if grep -qiE 'workflow[[:space:]-]*scope|without `workflow` scope|refusing to allow an OAuth App to create or update workflow' <<<"$out"; then
-                echo "::error::${desc} failed: token lacks workflow scope. Configure DEPENDABOT_AUTOMERGE_TOKEN with workflow-capable permissions."
-                echo "$out"
-                exit 1
-              fi
-              echo "::error::${desc} failed."
-              echo "$out"
-              exit 1
-            fi
-          }
-
-          state="$(gh api "repos/$REPO/pulls/$PR" --jq '.mergeable_state')"
-          head_sha="$(gh api "repos/$REPO/pulls/$PR" --jq '.head.sha')"
-          if [[ "$state" == "behind" ]]; then
-            run_with_scope_diagnostic "update-branch" gh api -X PUT "repos/$REPO/pulls/$PR/update-branch" -f expected_head_sha="$head_sha"
-            gh pr comment "$PR" --repo "$REPO" --body "@dependabot rebase" >/dev/null 2>&1 || true
-            gh pr comment "$PR" --repo "$REPO" --body "Dependabot automerge: branch update requested." >/dev/null 2>&1 || true
-          fi
-
-      - name: Auto-approve safe PR
-        if: steps.policy.outputs.safe == 'true'
-        env:
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          gh api -X POST "repos/$REPO/pulls/$PR/reviews" \
-            -f event=APPROVE \
-            -f body="Auto-approved (safe Dependabot allowlist path under TOR-GH-DEPS-A02)." \
-            >/dev/null 2>&1 || true
-
-      - name: Enable auto-merge (rebase)
-        if: steps.policy.outputs.safe == 'true'
-        env:
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          run_with_scope_diagnostic() {
-            local desc="$1"
-            shift
-            local out
-            set +e
-            out="$("$@" 2>&1)"
-            local code=$?
-            set -e
-            if [[ "$code" -ne 0 ]]; then
-              if grep -qiE 'workflow[[:space:]-]*scope|without `workflow` scope|refusing to allow an OAuth App to create or update workflow' <<<"$out"; then
-                echo "::error::${desc} failed: token lacks workflow scope. Configure DEPENDABOT_AUTOMERGE_TOKEN with workflow-capable permissions."
-                echo "$out"
-                exit 1
-              fi
-              echo "::error::${desc} failed."
-              echo "$out"
-              exit 1
-            fi
-          }
-
-          run_with_scope_diagnostic "enable-auto-merge" gh pr merge "$PR" --repo "$REPO" --auto --rebase
-          gh pr comment "$PR" --repo "$REPO" --body "Auto-approved and auto-merge enabled (safe workflow-only Dependabot change)." >/dev/null 2>&1 || true
-
-      - name: Verify auto-merge gate for safe lane
-        if: steps.policy.outputs.safe == 'true'
-        env:
-          REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          pr_json="$(gh api "repos/$REPO/pulls/$PR")"
-          pr_merged="$(jq -r 'if .merged_at == null then "false" else "true" end' <<<"$pr_json")"
-          if [[ "$pr_merged" == "true" ]]; then
-            echo "Safe-lane PR already merged; verification passes."
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "Manual dispatch does not auto-select PRs."
+            echo "has_candidates=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          auto_merge_enabled="$(jq -r 'if .auto_merge == null then "false" else "true" end' <<<"$pr_json")"
-          if [[ "$auto_merge_enabled" != "true" ]]; then
-            echo "::error::Safe-lane PR did not end with auto-merge enabled."
-            gh pr checks "$PR" --repo "$REPO" || true
+
+          actor_login="$(jq -r '.workflow_run.actor.login // empty' "$GITHUB_EVENT_PATH")"
+          if [[ "$actor_login" != "dependabot[bot]" && "$actor_login" != "app/dependabot" ]]; then
+            echo "No Dependabot actor for this run ($actor_login); skipping."
+            echo "has_candidates=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          jq -r '.workflow_run.pull_requests[].number // empty' "$GITHUB_EVENT_PATH" | sort -u > candidate-prs.txt
+          if [[ ! -s candidate-prs.txt ]]; then
+            echo "No PRs attached to workflow_run."
+            echo "has_candidates=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_candidates=true" >> "$GITHUB_OUTPUT"
+
+      - name: Token presence check (strict)
+        if: steps.collect.outputs.has_candidates == 'true'
+        run: |
+          set -euo pipefail
+          if [[ -z "${DEPENDABOT_AUTOMERGE_TOKEN:-}" ]]; then
+            echo "::error::DEPS_ERR_TOKEN_MISSING: repository secret DEPENDABOT_AUTOMERGE_TOKEN is required."
             exit 1
           fi
+
+      - name: Token permission check (strict)
+        if: steps.collect.outputs.has_candidates == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/$REPO/actions/workflows" >/dev/null 2>&1; then
+            echo "::error::DEPS_ERR_TOKEN_INSUFFICIENT_PERMS: token must include workflows write-capable permissions."
+            exit 1
+          fi
+
+      - name: Evaluate policy and execute automerge lane
+        if: steps.collect.outputs.has_candidates == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          bot_login="$(gh api user --jq '.login')"
+          while read -r pr; do
+            [[ -n "$pr" ]] || continue
+
+            pr_user="$(gh api "repos/$REPO/pulls/$pr" --jq '.user.login')"
+            pr_state="$(gh api "repos/$REPO/pulls/$pr" --jq '.state')"
+            base_repo="$(gh api "repos/$REPO/pulls/$pr" --jq '.base.repo.full_name // empty')"
+            head_repo="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.repo.full_name // empty')"
+            pr_title="$(gh api "repos/$REPO/pulls/$pr" --jq '.title')"
+
+            if [[ "$pr_state" != "open" ]]; then
+              continue
+            fi
+
+            if [[ "$pr_user" != "dependabot[bot]" && "$pr_user" != "app/dependabot" ]]; then
+              continue
+            fi
+
+            reasons=()
+            safe=true
+            mapfile -t files < <(gh api "repos/$REPO/pulls/$pr/files?per_page=100" --paginate --jq '.[].filename')
+
+            if [[ "${#files[@]}" -eq 0 ]]; then
+              safe=false
+              reasons+=("no-changed-files")
+            fi
+
+            if [[ "$base_repo" != "$REPO" || "$head_repo" != "$REPO" ]]; then
+              safe=false
+              reasons+=("external-repo-head-or-base")
+            fi
+
+            for f in "${files[@]}"; do
+              case "$f" in
+                .github/workflows/*|.github/dependabot.yml|.github/ISSUE_TEMPLATE/*|.github/actions/*)
+                  ;;
+                *)
+                  safe=false
+                  reasons+=("path-not-allowlisted:$f")
+                  ;;
+              esac
+
+              case "$f" in
+                spec/*|conformance/*|core/*|runner/*|docs/llm/*|tools/*)
+                  safe=false
+                  reasons+=("denylist-hit:$f")
+                  ;;
+                *)
+                  ;;
+              esac
+            done
+
+            if [[ "${BLOCK_SEMVER_MAJOR_ACTIONS}" == "true" ]]; then
+              if [[ "$pr_title" =~ from[[:space:]]v?([0-9]+)([^[:space:]]*)[[:space:]]to[[:space:]]v?([0-9]+) ]]; then
+                from_major="${BASH_REMATCH[1]}"
+                to_major="${BASH_REMATCH[3]}"
+                if [[ "$from_major" != "$to_major" ]]; then
+                  safe=false
+                  reasons+=("semver-major:$from_major->$to_major")
+                fi
+              fi
+            fi
+
+            gh pr edit "$pr" --repo "$REPO" --add-label dependencies --add-label ci >/dev/null
+
+            if [[ "$safe" != "true" ]]; then
+              gh pr edit "$pr" --repo "$REPO" --add-label needs-manual >/dev/null
+              reason_text="$(printf '%s\n' "${reasons[@]}" | sed 's/^/- /')"
+              gh pr comment "$pr" --repo "$REPO" --body "Dependabot automerge policy: manual-review lane.\n\nReasons:\n$reason_text" >/dev/null
+              continue
+            fi
+
+            merge_state="$(gh api "repos/$REPO/pulls/$pr" --jq '.mergeable_state')"
+            if [[ "$merge_state" == "behind" ]]; then
+              head_sha="$(gh api "repos/$REPO/pulls/$pr" --jq '.head.sha')"
+              if ! gh api -X PUT "repos/$REPO/pulls/$pr/update-branch" -f expected_head_sha="$head_sha" >/dev/null; then
+                echo "::error::DEPS_ERR_UPDATE_BRANCH_FAILED: pr=$pr"
+                exit 1
+              fi
+              gh pr comment "$pr" --repo "$REPO" --body "@dependabot rebase" >/dev/null
+              gh pr comment "$pr" --repo "$REPO" --body "Dependabot automerge: branch update requested." >/dev/null
+              continue
+            fi
+
+            approved_state="$(
+              gh api "repos/$REPO/pulls/$pr/reviews?per_page=100" \
+                --paginate \
+                --jq "[.[] | select(.user.login == \"$bot_login\")][-1].state // \"\""
+            )"
+            if [[ "$approved_state" != "APPROVED" ]]; then
+              if ! gh pr review "$pr" --repo "$REPO" --approve --body "Auto-approved (safe Dependabot allowlist path under TOR-DEPS-STRICT-FINAL)."; then
+                echo "::error::DEPS_ERR_APPROVE_FAILED: pr=$pr"
+                exit 1
+              fi
+            fi
+
+            if ! gh pr merge "$pr" --repo "$REPO" --auto --rebase; then
+              echo "::error::DEPS_ERR_ENABLE_AUTOMERGE_FAILED: pr=$pr"
+              exit 1
+            fi
+
+            gh pr comment "$pr" --repo "$REPO" --body "Auto-approved and auto-merge enabled (safe workflow-only Dependabot change)." >/dev/null
+          done < candidate-prs.txt

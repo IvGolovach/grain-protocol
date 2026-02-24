@@ -4,7 +4,8 @@ This document is self-contained. It is written for independent architects/audito
 
 ## 1) Executive technical summary
 
-Grain is an open protocol for representing and exchanging food events in adversarial environments with byte-level interoperability.
+Grain is an open protocol for representing and exchanging verifiable physical events in adversarial environments with byte-level interoperability.  
+v0.1 ships a food-first schema profile while preserving domain-neutral core invariants.
 
 Key properties in v0.1:
 - **Canonical bytes:** strict DAG-CBOR; reject non-canonical; reject duplicate map keys.
@@ -108,8 +109,11 @@ Not protected:
 - Wave A vector ID scheme: `POS/NEG-<AREA>-WA-####`
 - Passing the suite is the conformance criterion for v0.1.
 - A strong interoperability claim becomes valid after two independent implementations pass the full suite.
+- Formal claim boundaries are defined in `spec/INTEROP-v0.1.md`.
+- Freeze boundaries and change classification are defined in `spec/FREEZE-CONFIRMATION-v0.1.md`.
+- Domain scope clarification is defined in `spec/SCOPE-v0.1.md`.
 - Current state: Rust reference runner (`core/rust/grain-runner`) passes the current vector set in Strict Conformance Mode.
-- Cross-language smoke: TS runner (`runner/typescript`) executes C01 profile (all Wave A vectors) and produces Rust↔TS divergence reports.
+- Cross-language parity: TS full engine (`runner/typescript`) executes the full strict suite and produces Rust↔TS divergence reports for both C01 and full profiles.
 - CI evidence artifacts are commit-bound (`evidence-<commit_sha>.zip`) and include suite summary + vector manifest + lock/toolchain hashes.
 
 ## 6) Change governance
@@ -148,6 +152,22 @@ Prohibited without major bump:
 
 None for v0.1, except external cryptographic breaks (future major bump class).
 
+## 12) Interop certification gate (TOR-CERT-D01)
+
+- Certification workflow: `/.github/workflows/interop-certify.yml` (manual or tag-triggered).
+- Script: `tools/interop_certify.sh`.
+- Required evidence pack:
+  - `suite-run-rust.json`
+  - `suite-run-ts.json`
+  - `divergence-c01.json`
+  - `divergence-full.json`
+  - `property-tests.json`
+  - `vector-manifest.json`
+  - `inputs-hashes.json`
+  - `interop-evidence.json`
+  - `interop-report.md`
+  - `evidence.sha256`
+
 ## 11) Provenance migration and release discipline
 
 - Bundle-to-git reconstruction is disclosed in `MIGRATION.md` and ADR `adr/conformance/0002-bundle-provenance-migration.md`.
@@ -158,4 +178,5 @@ None for v0.1, except external cryptographic breaks (future major bump class).
   - `python-tooling`
   - `rust-core`
   - `ts-c01`
+  - `ts-full`
   - `evidence-bundle`

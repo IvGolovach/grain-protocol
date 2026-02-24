@@ -25,8 +25,26 @@ jobs:
       - name: Check spec drift
         run: python3 tools/check_spec_drift.py
 
+      - name: Check .gitattributes policy
+        run: python3 tools/ci/check_gitattributes_policy.py
+
+      - name: Check forbidden tracked files
+        run: python3 tools/ci/check_forbidden_tracked.py
+
+      - name: Check CRLF in tracked text files
+        run: python3 tools/ci/check_crlf_tracked.py
+
+      - name: Check CODEOWNERS critical coverage
+        run: python3 tools/ci/check_codeowners_coverage.py
+
       - name: Check Dependabot automerge policy consistency
         run: python3 tools/ci/check_dependabot_policy.py
+
+      - name: Docs link check
+        run: python3 tools/ci/check_docs_links.py
+
+      - name: Docs flow check
+        run: python3 tools/ci/check_docs_flow.py
 
       - name: Check branch protection drift (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -42,7 +60,7 @@ jobs:
           python3 tools/ci/check_branch_protection_drift.py \
             --repo "${GITHUB_REPOSITORY}" \
             --branch main \
-            --expected-contexts "python-tooling,rust-core,ts-c01,evidence-bundle"
+            --expected-contexts "python-tooling,rust-core,ts-c01,ts-full,evidence-bundle"
 
       - name: Ensure no macOS metadata files
         run: |
@@ -70,6 +88,11 @@ jobs:
 
       - name: Build grain-runner binary
         run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
+      - name: Quickstart smoke (deterministic demo output)
+        run: |
+          python3 tools/ci/check_quickstart_smoke.py \
+            --runner-cmd core/rust/target/debug/grain-runner demo --strict
 
       - name: Rust strict conformance suite
         run: |
@@ -119,9 +142,55 @@ jobs:
           name: ts-c01-results
           path: artifacts/*
 
+  ts-full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: runner/typescript/package-lock.json
+
+      - name: Install TS runner deps
+        run: npm ci --prefix runner/typescript
+
+      - name: Run TS full strict profile
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-full.ts
+
+      - name: TS strict conformance suite (runner contract, full)
+        run: |
+          python3 tools/ci/run_runner_suite.py \
+            --vectors-root conformance/vectors \
+            --commit-sha "${GITHUB_SHA}" \
+            --out artifacts/suite-run-ts.json \
+            --runner-cmd node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector
+
+      - name: Run Rust vs TS divergence (full suite)
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+
+      - name: Run TS property tests (full engine)
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+
+      - name: Collect TS full artifacts
+        run: |
+          mkdir -p artifacts
+          cp runner/typescript/.full-last-run.json artifacts/ts-full-summary.json
+          cp runner/typescript/.divergence-full.json artifacts/divergence-full.json
+          cp runner/typescript/.divergence-full.md artifacts/divergence-full.md
+          cp runner/typescript/.properties-full.json artifacts/properties-full.json
+
+      - name: Upload TS full artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts-full-results
+          path: artifacts/*
+
   evidence-bundle:
     runs-on: ubuntu-latest
-    needs: [python-tooling, rust-core, ts-c01]
+    needs: [python-tooling, rust-core, ts-c01, ts-full]
     steps:
       - uses: actions/checkout@v6
 
@@ -135,6 +204,12 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: ts-c01-results
+          path: artifacts
+
+      - name: Download TS full artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: ts-full-results
           path: artifacts
 
       - name: Build deterministic manifests and hashes
@@ -154,6 +229,10 @@ jobs:
           sha256sum runner/typescript/package-lock.json | awk '{print $1}' > artifacts/evidence/package-lock.json.sha256
           sha256sum artifacts/evidence/vector-manifest.json | awk '{print $1}' > artifacts/evidence/vector-manifest.sha256
           sha256sum artifacts/evidence/vector-manifest-c01.json | awk '{print $1}' > artifacts/evidence/vector-manifest-c01.sha256
+          python3 tools/ci/build_inputs_hashes.py --out artifacts/evidence/inputs-hashes.json
+          python3 tools/ci/audit_invariants.py \
+            --out-json artifacts/evidence/invariants-audit.json \
+            --out-md artifacts/evidence/invariants-audit.md
 
       - name: Build suite summary JSON
         run: |
@@ -163,6 +242,10 @@ jobs:
           rust = json.loads((root/'rust-suite-summary.json').read_text())
           ts = json.loads((root/'ts-c01-summary.json').read_text())
           div = json.loads((root/'divergence-c01.json').read_text())
+          ts_full = json.loads((root/'ts-full-summary.json').read_text())
+          ts_suite = json.loads((root/'suite-run-ts.json').read_text())
+          div_full = json.loads((root/'divergence-full.json').read_text())
+          props_full = json.loads((root/'properties-full.json').read_text())
           commit = os.environ['GITHUB_SHA']
 
           suite_summary = {
@@ -181,6 +264,23 @@ jobs:
             'divergence_c01': {
               'total': div['total'],
               'mismatches': div['mismatches']
+            },
+            'ts_full': {
+              'total': ts_full['total'],
+              'passed': ts_full['passed'],
+              'failed': ts_full['failed']
+            },
+            'ts_suite_runner': {
+              'total': ts_suite['total'],
+              'passed': ts_suite['passed'],
+              'failed': ts_suite['failed']
+            },
+            'divergence_full': {
+              'total': div_full['total'],
+              'mismatches': div_full['mismatches']
+            },
+            'properties_full': {
+              'failed': props_full['failed']
             }
           }
 
@@ -204,8 +304,43 @@ jobs:
         run: |
           cp artifacts/rust-suite-summary.json artifacts/evidence/rust-suite-summary.json
           cp artifacts/ts-c01-summary.json artifacts/evidence/ts-c01-summary.json
-          cp artifacts/divergence-c01.json artifacts/evidence/divergence.json
-          cp artifacts/divergence-c01.md artifacts/evidence/divergence.md
+          cp artifacts/divergence-c01.json artifacts/evidence/divergence-c01.json
+          cp artifacts/divergence-c01.md artifacts/evidence/divergence-c01.md
+          cp artifacts/rust-suite-summary.json artifacts/evidence/suite-run-rust.json
+          cp artifacts/suite-run-ts.json artifacts/evidence/suite-run-ts.json
+          cp artifacts/ts-full-summary.json artifacts/evidence/ts-full-summary.json
+          cp artifacts/divergence-full.json artifacts/evidence/divergence-full.json
+          cp artifacts/divergence-full.md artifacts/evidence/divergence-full.md
+          cp artifacts/properties-full.json artifacts/evidence/properties-full.json
+          cp artifacts/properties-full.json artifacts/evidence/property-tests.json
+
+      - name: Build interop evidence summary
+        run: |
+          python3 tools/ci/build_interop_summary.py \
+            --commit-sha "${GITHUB_SHA}" \
+            --out-dir artifacts/evidence \
+            --suite-rust artifacts/evidence/suite-run-rust.json \
+            --suite-ts artifacts/evidence/suite-run-ts.json \
+            --div-c01 artifacts/evidence/divergence-c01.json \
+            --div-full artifacts/evidence/divergence-full.json \
+            --properties artifacts/evidence/property-tests.json \
+            --invariants-audit artifacts/evidence/invariants-audit.json
+
+      - name: Compute evidence hash
+        run: |
+          python3 tools/ci/compute_evidence_sha.py \
+            --base-dir artifacts/evidence \
+            --out artifacts/evidence/evidence.sha256 \
+            --file divergence-full.json \
+            --file divergence-c01.json \
+            --file inputs-hashes.json \
+            --file interop-evidence.json \
+            --file interop-report.md \
+            --file invariants-audit.json \
+            --file property-tests.json \
+            --file suite-run-rust.json \
+            --file suite-run-ts.json \
+            --file vector-manifest.json
 
       - name: Archive evidence
         run: |

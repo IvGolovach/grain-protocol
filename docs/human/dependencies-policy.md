@@ -1,8 +1,10 @@
-# Dependencies Policy (TOR-GH-DEPS-A02)
+# Dependencies Policy (TOR-DEPS-STRICT-FINAL)
 
 This document defines zero-friction automation boundaries for Dependabot PRs.
 
-ADR reference: `adr/conformance/0003-dependabot-autonomous-safe-lane.md`.
+ADR references:
+- `adr/conformance/0003-dependabot-autonomous-safe-lane.md`
+- `adr/conformance/0004-dependabot-strict-fail-closed.md`
 
 ## Goal
 
@@ -33,28 +35,39 @@ Dependabot safe-lane updates must auto-resolve stale/review/merge friction while
 ## Automation workflow
 
 - Workflow: `/.github/workflows/dependabot-automerge.yml`
-- Trigger: `pull_request_target` for Dependabot PRs only.
+- Trigger: trusted `workflow_run` for successful `ci` pull_request runs.
 - Token strategy:
-  - preferred: repo secret `DEPENDABOT_AUTOMERGE_TOKEN`,
-  - if using Fine-grained PAT:
-    - repository access: only this repository,
-    - permissions:
-      - Contents: Read and Write
-      - Pull requests: Read and Write
-      - Workflows: Read and Write
-      - Metadata: Read
-  - if using Classic PAT:
-    - scopes: `repo`, `workflow`,
-  - fallback: `${{ github.token }}` for environments where it is sufficient.
+  - canonical and required: repository secret `DEPENDABOT_AUTOMERGE_TOKEN`.
+  - no fallback: the lane fails closed when this secret is absent or insufficient.
+- Recommended token permissions:
+  - Fine-grained PAT (repo-scoped):
+    - `Contents: Read & Write`
+    - `Pull requests: Read & Write`
+    - `Workflows: Read & Write`
+    - `Metadata: Read`
+  - Classic PAT:
+    - `repo`
+    - `workflow`
+
+Provisioning path (source repo):
+- GitHub repository -> `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`.
+- Secret name MUST be exactly `DEPENDABOT_AUTOMERGE_TOKEN`.
 - Safety design:
   - does not checkout PR head,
   - uses GitHub API only,
   - validates changed files against allowlist + denylist,
-  - updates branch when behind (`update-branch` + `@dependabot rebase` fallback),
+  - updates branch when behind (`update-branch` + `@dependabot rebase` request),
   - auto-approves safe PR,
   - enables auto-merge (`--auto --rebase`),
   - posts deterministic audit-trail comments.
-  - fails fast with explicit diagnostics when workflow scope is insufficient.
+
+## Strict fail-closed diagnostics
+
+The workflow emits deterministic hard-fail diagnostics:
+- `DEPS_ERR_TOKEN_MISSING` when `DEPENDABOT_AUTOMERGE_TOKEN` is absent.
+- `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS` when token permission probe fails.
+
+No warning-only path and no fallback are allowed.
 
 Default major-bump behavior:
 - semver-major workflow bumps are allowed by default if checks pass.

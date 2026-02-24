@@ -1,6 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use clap::{Parser, Subcommand};
 use grain_core::{execute_operation, OperationResult};
 use serde::Deserialize;
@@ -21,6 +23,10 @@ enum Commands {
         strict: bool,
         #[arg(long)]
         vector: PathBuf,
+    },
+    Demo {
+        #[arg(long)]
+        strict: bool,
     },
 }
 
@@ -48,6 +54,7 @@ fn main() {
     let cli = Cli::parse();
     let (output, exit_code) = match cli.command {
         Commands::Run { strict, vector } => run_vector(strict, vector),
+        Commands::Demo { strict } => run_demo(strict),
     };
 
     println!(
@@ -99,6 +106,146 @@ fn run_vector(strict_flag: bool, vector_path: PathBuf) -> (Value, i32) {
     });
 
     (out, if vector_pass { 0 } else { 1 })
+}
+
+fn run_demo(strict: bool) -> (Value, i32) {
+    const QR_VECTOR: &str = include_str!("../../../../conformance/vectors/qr/POS-QR-001.json");
+    const COSE_VECTOR: &str = include_str!("../../../../conformance/vectors/cose/POS-COSE-001.json");
+    const LEDGER_VECTOR: &str = include_str!("../../../../conformance/vectors/ledger/POS-LED-001.json");
+
+    if !strict {
+        let out = json!({
+            "demo_id": "quickstart-v0.1",
+            "pass": false,
+            "diag": ["GRAIN_ERR_SCHEMA"],
+            "message": "demo requires --strict"
+        });
+        return (out, 1);
+    }
+
+    let qr_vector = match serde_json::from_str::<VectorFile>(QR_VECTOR) {
+        Ok(v) => v,
+        Err(_) => return demo_internal_error("DEMO_VECTOR_PARSE_QR"),
+    };
+    let cose_vector = match serde_json::from_str::<VectorFile>(COSE_VECTOR) {
+        Ok(v) => v,
+        Err(_) => return demo_internal_error("DEMO_VECTOR_PARSE_COSE"),
+    };
+    let ledger_vector = match serde_json::from_str::<VectorFile>(LEDGER_VECTOR) {
+        Ok(v) => v,
+        Err(_) => return demo_internal_error("DEMO_VECTOR_PARSE_LEDGER"),
+    };
+
+    let qr_actual = execute_operation("qr_decode_gr1", &qr_vector.input, true);
+    if !qr_actual.accepted {
+        return demo_step_failed("qr_decode_gr1", &qr_actual);
+    }
+    let cose_b64 = match qr_actual.out.get("cose_b64").and_then(Value::as_str) {
+        Some(v) => v.to_string(),
+        None => return demo_internal_error("DEMO_QR_OUTPUT_SCHEMA"),
+    };
+    let cose_bytes_len = match STANDARD.decode(&cose_b64) {
+        Ok(v) => v.len(),
+        Err(_) => return demo_internal_error("DEMO_QR_OUTPUT_BASE64"),
+    };
+
+    let mut cose_input = cose_vector.input.clone();
+    let Some(cose_obj) = cose_input.as_object_mut() else {
+        return demo_internal_error("DEMO_COSE_INPUT_SCHEMA");
+    };
+    cose_obj.insert("cose_b64".to_string(), Value::String(cose_b64));
+
+    let cose_actual = execute_operation("cose_verify", &cose_input, true);
+    if !cose_actual.accepted {
+        return demo_step_failed("cose_verify", &cose_actual);
+    }
+
+    let mut ledger_input = ledger_vector.input.clone();
+    let append_event = json!({
+        "ak": "dev1",
+        "seq": 3,
+        "t": "IntakeEvent",
+        "payload_cid": "cid-intake-demo-3",
+        "body": {
+            "mean": { "kcal": 60 },
+            "var": { "kcal": 1 }
+        }
+    });
+
+    let Some(ledger_obj) = ledger_input.as_object_mut() else {
+        return demo_internal_error("DEMO_LEDGER_INPUT_SCHEMA");
+    };
+    let Some(events) = ledger_obj.get_mut("events").and_then(Value::as_array_mut) else {
+        return demo_internal_error("DEMO_LEDGER_EVENTS_SCHEMA");
+    };
+    events.push(append_event.clone());
+
+    let ledger_actual = execute_operation("ledger_reduce", &ledger_input, true);
+    if !ledger_actual.accepted {
+        return demo_step_failed("ledger_reduce", &ledger_actual);
+    }
+
+    let sum_mean = match ledger_actual.out.get("sum_mean") {
+        Some(v) => v.clone(),
+        None => return demo_internal_error("DEMO_LEDGER_SUM_MEAN_MISSING"),
+    };
+    let sum_var = match ledger_actual.out.get("sum_var") {
+        Some(v) => v.clone(),
+        None => return demo_internal_error("DEMO_LEDGER_SUM_VAR_MISSING"),
+    };
+
+    let out = json!({
+        "demo_id": "quickstart-v0.1",
+        "pass": true,
+        "strict": true,
+        "source_vectors": ["POS-QR-001", "POS-COSE-001", "POS-LED-001"],
+        "steps": {
+            "qr_decode_gr1": {
+                "pass": true,
+                "diag": qr_actual.diag,
+                "cose_bytes_len": cose_bytes_len
+            },
+            "cose_verify": {
+                "pass": true,
+                "diag": cose_actual.diag
+            },
+            "append_intake_event": {
+                "pass": true,
+                "event": append_event
+            },
+            "ledger_reduce": {
+                "pass": true,
+                "diag": ledger_actual.diag,
+                "out": ledger_actual.out
+            }
+        },
+        "result": {
+            "sum_mean": sum_mean,
+            "sum_var": sum_var
+        }
+    });
+
+    (out, 0)
+}
+
+fn demo_step_failed(step: &str, actual: &OperationResult) -> (Value, i32) {
+    let out = json!({
+        "demo_id": "quickstart-v0.1",
+        "pass": false,
+        "failed_step": step,
+        "diag": actual.diag,
+        "out": actual.out
+    });
+    (out, 1)
+}
+
+fn demo_internal_error(code: &str) -> (Value, i32) {
+    let out = json!({
+        "demo_id": "quickstart-v0.1",
+        "pass": false,
+        "diag": [code]
+    });
+    (out, 1)
 }
 
 fn evaluate_expectation(expect: &Expect, actual: &OperationResult) -> bool {

@@ -3,6 +3,7 @@
 /core/rust/target/
 /dist/
 /build/
+/artifacts/
 *.log
 __pycache__/
 *.pyc
@@ -10,6 +11,11 @@ runner/typescript/.c01-*.json
 runner/typescript/.c01-vectors.txt
 runner/typescript/.divergence-c01.json
 runner/typescript/.divergence-c01.md
+runner/typescript/.full-*.json
+runner/typescript/.full-vectors.txt
+runner/typescript/.divergence-full.json
+runner/typescript/.divergence-full.md
+runner/typescript/.properties-full.json
 
 # IDE
 .idea/

@@ -1,17 +1,32 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+
+type ProfileDef = {
+  profile_id: string;
+  vector_glob: string;
+};
 
 export function loadC01Vectors(): string[] {
-  const profile = JSON.parse(readFileSync("runner/typescript/profiles/c01.json", "utf-8")) as {
-    profile_id: string;
-    vector_glob: string;
-  };
+  return loadProfileVectors("runner/typescript/profiles/c01.json");
+}
 
-  if (profile.profile_id !== "c01") {
-    throw new Error("invalid c01 profile id");
+export function loadFullVectors(): string[] {
+  return loadProfileVectors("runner/typescript/profiles/full.json");
+}
+
+export function loadProfileVectors(profilePath: string): string[] {
+  const profile = JSON.parse(readFileSync(profilePath, "utf-8")) as ProfileDef;
+
+  let findArgs: string[];
+  if (profile.vector_glob === "conformance/vectors/**/*-WA-*.json") {
+    findArgs = ["conformance/vectors", "-name", "*-WA-*.json"];
+  } else if (profile.vector_glob === "conformance/vectors/**/*.json") {
+    findArgs = ["conformance/vectors", "-name", "*.json"];
+  } else {
+    throw new Error(`unsupported profile glob for ${profile.profile_id}: ${profile.vector_glob}`);
   }
 
-  const raw = execFileSync("find", ["conformance/vectors", "-name", "*-WA-*.json"], { encoding: "utf-8" });
+  const raw = execFileSync("find", findArgs, { encoding: "utf-8" });
   return raw
     .split("\n")
     .map((s) => s.trim())
@@ -31,6 +46,42 @@ export function stable(value: unknown): string {
   return JSON.stringify(sortValue(value));
 }
 
+export function writeVectorList(path: string, vectors: string[]): void {
+  writeFileSync(path, `${vectors.join("\n")}\n`, "utf-8");
+}
+
+export function runRustVectors(vectors: string[], listPath: string): Map<string, RunnerJson> {
+  writeVectorList(listPath, vectors);
+
+  const repo = process.cwd();
+  const rustCommand = [
+    "run",
+    "--rm",
+    "-v",
+    `${repo}:/work`,
+    "-w",
+    "/work/core/rust",
+    "rust:1.86",
+    "bash",
+    "-lc",
+    `set -euo pipefail; export PATH=/usr/local/cargo/bin:$PATH; while IFS= read -r v; do out=$(cargo run -q -p grain-runner -- run --strict --vector \"/work/$v\"); printf '%s\\t%s\\n' \"$v\" \"$out\"; done < /work/${listPath}`
+  ];
+
+  const rustRaw = execFileSync("docker", rustCommand, { encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 });
+  const rustMap = new Map<string, RunnerJson>();
+
+  for (const line of rustRaw.split("\n")) {
+    if (!line.trim()) continue;
+    const tab = line.indexOf("\t");
+    if (tab <= 0) continue;
+    const path = line.slice(0, tab);
+    const payload = line.slice(tab + 1);
+    rustMap.set(path, JSON.parse(payload) as RunnerJson);
+  }
+
+  return rustMap;
+}
+
 function sortValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(sortValue);
@@ -43,3 +94,10 @@ function sortValue(value: unknown): unknown {
   }
   return value;
 }
+
+export type RunnerJson = {
+  vector_id: string;
+  pass: boolean;
+  diag: string[];
+  out: Record<string, unknown>;
+};

@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 
 REQUIRED_WORKFLOW_TOKENS = (
-    "pull_request_target",
+    "workflow_run:",
+    "workflows: [\"ci\"]",
     "dependabot[bot]",
     "app/dependabot",
     ".github/workflows/*",
@@ -17,19 +18,31 @@ REQUIRED_WORKFLOW_TOKENS = (
     ".github/actions/*",
     "spec/*|conformance/*|core/*|runner/*|docs/llm/*|tools/*",
     "DEPENDABOT_AUTOMERGE_TOKEN",
-    "GH_BOT_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}",
-    "GH_FALLBACK_TOKEN: ${{ github.token }}",
-    'export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"',
+    "DEPS_ERR_TOKEN_MISSING",
+    "DEPS_ERR_TOKEN_INSUFFICIENT_PERMS",
+    "repos/$REPO/actions/workflows",
     "@dependabot rebase",
     "gh pr merge",
     "--auto --rebase",
-    "Verify auto-merge gate for safe lane",
+)
+
+FORBIDDEN_WORKFLOW_TOKENS = (
+    "pull_request_target",
+    "GH_FALLBACK_TOKEN",
+    "github.token",
+    "${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}",
 )
 
 REQUIRED_DOC_TOKENS = (
     "allowlist",
     ".github/workflows/**",
     ".github/dependabot.yml",
+    "workflow_run",
+    "no fallback",
+    "DEPENDABOT_AUTOMERGE_TOKEN",
+    "Workflows: Read & Write",
+    "DEPS_ERR_TOKEN_MISSING",
+    "DEPS_ERR_TOKEN_INSUFFICIENT_PERMS",
     "manual",
     "spec/**",
     "conformance/**",
@@ -37,9 +50,6 @@ REQUIRED_DOC_TOKENS = (
     "runner/**",
     "docs/llm/**",
     "tools/**",
-    "Workflows: Read and Write",
-    "repo`, `workflow`",
-    "fails fast with explicit diagnostics",
 )
 
 
@@ -61,6 +71,17 @@ def require_tokens(path: Path, tokens: tuple[str, ...], label: str) -> list[str]
     return missing
 
 
+def forbid_tokens(path: Path, tokens: tuple[str, ...], label: str) -> list[str]:
+    if not path.exists():
+        return [f"{label}: missing file {path}"]
+    text = path.read_text(encoding="utf-8")
+    found: list[str] = []
+    for token in tokens:
+        if token in text:
+            found.append(f"{label}: forbidden token present: {token}")
+    return found
+
+
 def main() -> int:
     args = parse_args()
     workflow = Path(args.workflow)
@@ -68,13 +89,8 @@ def main() -> int:
 
     errors: list[str] = []
     errors.extend(require_tokens(workflow, REQUIRED_WORKFLOW_TOKENS, "workflow"))
+    errors.extend(forbid_tokens(workflow, FORBIDDEN_WORKFLOW_TOKENS, "workflow"))
     errors.extend(require_tokens(policy_doc, REQUIRED_DOC_TOKENS, "policy-doc"))
-    if workflow.exists():
-        wf_text = workflow.read_text(encoding="utf-8")
-        if '${GH_FALLBACK_TOKEN:-$GH_BOT_TOKEN}' in wf_text:
-            errors.append(
-                "workflow: fallback token is configured as primary; expected bot token primary."
-            )
 
     if errors:
         print("Dependabot policy check failed:", file=sys.stderr)

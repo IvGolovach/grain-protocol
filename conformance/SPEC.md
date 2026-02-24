@@ -95,14 +95,16 @@ Implementations MUST support these operations for v0.1 conformance:
     - either `cborseq_b64` OR `segments_b64` (array of base64 chunks concatenated in order)
   - output:
     - if accept: `item_sha256_hex` (array, one SHA-256 hex digest per decoded item bytes)
-    - if reject: deterministic framing error diagnostic
+    - if reject: deterministic framing error diagnostic; reject output MUST NOT include partial item hashes
   - semantics:
     - empty stream is valid and MUST return `item_sha256_hex = []`
     - if `segments_b64` is used, implementation MUST parse concatenated bytes as one stream
+    - result mode is XOR: either accept with hashes, or reject with framing diagnostic
     - deterministic framing diagnostics:
       - truncated item -> `GRAIN_ERR_CBORSEQ_TRUNCATED`
       - invalid initial item byte -> `GRAIN_ERR_CBORSEQ_INVALID_INITIAL_BYTE`
       - trailing non-item bytes after valid parse -> `GRAIN_ERR_CBORSEQ_GARBAGE_TAIL`
+      - precedence anchor: when at least one full item was parsed and bytes remain, invalid next-byte classification is `GRAIN_ERR_CBORSEQ_GARBAGE_TAIL`
   - purpose: verify raw CBOR-seq framing path independent of reducer/resolution semantics
 
 - `manifest_resolve`:

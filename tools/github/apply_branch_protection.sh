@@ -17,7 +17,7 @@ gh api \
 {
   "required_status_checks": {
     "strict": true,
-    "contexts": ["python-tooling", "rust-core", "ts-c01", "evidence-bundle"]
+    "contexts": ["python-tooling", "rust-core", "ts-c01", "ts-full", "evidence-bundle"]
   },
   "enforce_admins": true,
   "required_pull_request_reviews": {

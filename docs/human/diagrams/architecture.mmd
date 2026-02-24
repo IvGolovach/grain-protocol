@@ -1,0 +1,18 @@
+flowchart TB
+    P["Protocol (NES + CDDL + profiles)\nFrozen core rules"]
+    C["Conformance Court\nVectors + SPEC + strict mode"]
+    R["Rust Core\nReference strict interpreter"]
+    T["TypeScript Full Engine\nIndependent strict interpreter"]
+    A["Applications / SDK"]
+    E["Additive Extensions\nnew t / new QR prefix"]
+
+    P --> C
+    C --> R
+    C --> T
+    R --> A
+    T --> A
+    P --> E
+
+    Q["Deterministic guards\nquarantine / conflict ignore-all / limits"]
+    P --> Q
+    C --> Q

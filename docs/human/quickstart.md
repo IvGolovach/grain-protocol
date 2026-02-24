@@ -1,55 +1,104 @@
-# Quickstart
+# Quickstart (5 minutes)
 
-This repository is protocol-first. The fastest path is to understand conformance.
+Run one deterministic end-to-end pipeline first. Read internals second.
 
-## 1) Read the protocol boundaries
-- `README.md` (what Grain is / is not)
-- `spec/FREEZE-v0.1.md` (what is frozen)
-
-## 2) Read conformance contract
-- `conformance/SPEC.md` (runner interface)
-- `docs/llm/CONFORMANCE.md` (how invariants map to vectors)
-
-## 3) Inspect v0.1 invariants
-- `docs/llm/INVARIANTS.md`
-- `docs/llm/EDGE_CASES.md`
-
-## 4) Build or plug an implementation
-Your implementation must:
-- decode/encode strict DAG-CBOR
-- compute CIDv1 (dag-cbor + sha2-256)
-- verify COSE_Sign1 narrow profile (Ed25519)
-- apply ledger + E2E + manifest semantics deterministically
-- run in Strict Conformance Mode (baseline limits)
-
-Then run the conformance suite harness (see `conformance/SPEC.md`).
-
-### Rust reference implementation (available now)
-
-`core/rust` ships a reference runner compatible with the harness contract.
+## 1) Run the demo pipeline
 
 ```bash
 docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
-  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- run --strict --vector /work/conformance/vectors/cid/POS-CID-001.json'
+  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- demo --strict'
 ```
 
-### TypeScript smoke runner (C01 / Wave A)
+Expected deterministic output:
+
+```json
+{
+  "demo_id": "quickstart-v0.1",
+  "pass": true,
+  "result": {
+    "sum_mean": {
+      "kcal": 260
+    },
+    "sum_var": {
+      "kcal": 14
+    }
+  },
+  "source_vectors": [
+    "POS-QR-001",
+    "POS-COSE-001",
+    "POS-LED-001"
+  ],
+  "steps": {
+    "append_intake_event": {
+      "event": {
+        "ak": "dev1",
+        "body": {
+          "mean": {
+            "kcal": 60
+          },
+          "var": {
+            "kcal": 1
+          }
+        },
+        "payload_cid": "cid-intake-demo-3",
+        "seq": 3,
+        "t": "IntakeEvent"
+      },
+      "pass": true
+    },
+    "cose_verify": {
+      "diag": [],
+      "pass": true
+    },
+    "ledger_reduce": {
+      "diag": [],
+      "out": {
+        "sum_mean": {
+          "kcal": 260
+        },
+        "sum_var": {
+          "kcal": 14
+        }
+      },
+      "pass": true
+    },
+    "qr_decode_gr1": {
+      "cose_bytes_len": 255,
+      "diag": [],
+      "pass": true
+    }
+  },
+  "strict": true
+}
+```
+
+## 2) What the demo actually did
+
+1. Decoded `GR1:` transport payload.
+2. Verified COSE signature under narrow profile.
+3. Appended one deterministic `IntakeEvent` to a local demo ledger.
+4. Reduced ledger state to deterministic totals (`sum_mean`, `sum_var`).
+
+## 3) Choose your next path
+
+- [Build an app on Grain](./building-on-grain.md)
+- [Implement Grain](./implementing-grain.md)
+- [Start-here overview](./start-here.md)
+
+## 4) Deep protocol references (after first run)
+
+- `conformance/SPEC.md`
+- `spec/NES-v0.1.md`
+- `docs/llm/INVARIANTS.md`
+- `docs/llm/EDGE_CASES.md`
+
+## 5) TS full engine and C01 smoke
 
 ```bash
 node --experimental-strip-types runner/typescript/scripts/run-c01.ts
 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
+node --experimental-strip-types runner/typescript/scripts/run-full.ts
+node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
 ```
 
-## 5) Court-hardening Wave A checks (byte-level)
-Wave A is the mandatory byte-path closure before protocol implementations claim court-grade confidence.
-
-Read:
-- `conformance/SPEC.md` (ops `parse_cborseq_stream_v1`, `e2e_derive_v1`)
-- `conformance/vectors/ledger/*-WA-*` and `conformance/vectors/manifest/*-WA-*` (raw CBOR-seq framing)
-- `conformance/vectors/e2e/*-WA-*` (HKDF key/nonce expected bytes)
-- `conformance/vectors/utf8/*-WA-*` (raw UTF-8 sorting traps)
-
-Evidence output:
-- CI artifact `evidence-<commit_sha>.zip` (`.github/workflows/ci.yml`)
-- Tag release artifact via `.github/workflows/release-evidence.yml`
-- Optional local workspace `.local-architect-reports/**` (never committed)
+TS now has a full strict engine. C01 remains the Wave A byte-path profile for focused drift checks.

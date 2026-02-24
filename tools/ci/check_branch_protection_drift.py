@@ -16,7 +16,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--branch", default="main")
     parser.add_argument(
         "--expected-contexts",
-        default="python-tooling,rust-core,ts-c01,evidence-bundle",
+        default="python-tooling,rust-core,ts-c01,ts-full,evidence-bundle",
         help="Comma-separated required context names in branch protection policy.",
     )
     parser.add_argument("--require-strict", action="store_true", default=True)

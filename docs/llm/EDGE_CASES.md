@@ -33,6 +33,7 @@ Each entry links to a negative vector ID and the expected outcome.
 - NEG-LED-WA-0001: truncated final item -> GRAIN_ERR_CBORSEQ_TRUNCATED
 - NEG-LED-WA-0002: garbage tail after valid items -> GRAIN_ERR_CBORSEQ_GARBAGE_TAIL
 - NEG-LED-WA-0003: invalid initial byte -> GRAIN_ERR_CBORSEQ_INVALID_INITIAL_BYTE
+- Precedence: if at least one full item was parsed, trailing non-item bytes classify as GRAIN_ERR_CBORSEQ_GARBAGE_TAIL.
 
 ## E2E
 - NEG-E2E-010: nonce mismatch (nonce != derived) -> NONCE_PROFILE_MISMATCH (reject)
@@ -57,6 +58,7 @@ Each entry links to a negative vector ID and the expected outcome.
 - NEG-MAN-WA-0001: truncated final item -> GRAIN_ERR_CBORSEQ_TRUNCATED
 - NEG-MAN-WA-0002: garbage tail after valid items -> GRAIN_ERR_CBORSEQ_GARBAGE_TAIL
 - NEG-MAN-WA-0003: invalid initial byte -> GRAIN_ERR_CBORSEQ_INVALID_INITIAL_BYTE
+- Same framing precedence as ledger stream parsing.
 
 ## QR
 - NEG-QR-001: wrong prefix (not GR1:) -> REJECT

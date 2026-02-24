@@ -30,6 +30,12 @@ Use the PR template. You must answer:
 If the PR touches encoding/CID/COSE/ledger/E2E/manifest/limits/conformance/schemas, an ADR is mandatory.
 See `adr/0000-template.md`.
 
+### Dependabot strict lane
+
+Workflow dependency PR automation requires repository secret `DEPENDABOT_AUTOMERGE_TOKEN`.
+Missing or insufficient token permissions are fail-closed by policy (`DEPS_ERR_TOKEN_MISSING`, `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`).
+See `docs/human/dependencies-policy.md`.
+
 ## Style
 
 - Keep docs and code explicit. Avoid “magic” behavior.
@@ -39,4 +45,3 @@ See `adr/0000-template.md`.
 ## Developer Certificate of Origin (optional)
 
 If you want a DCO policy, add SIGNOFF requirements here.
-

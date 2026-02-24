@@ -7,6 +7,9 @@ This directory contains the Rust reference implementation for Protocol v0.1 froz
 - `grain-core`: pure library (strict decoding, CID/COSE/E2E/manifest/ledger semantics)
 - `grain-runner`: conformance runner binary (`grain-runner run --strict --vector ...`)
 
+Quickstart demo command:
+- `grain-runner demo --strict`
+
 ## Build & test
 
 ```bash
@@ -19,6 +22,13 @@ docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
 ```bash
 docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
   bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- run --strict --vector /work/conformance/vectors/cid/POS-CID-001.json'
+```
+
+## Run onboarding demo pipeline
+
+```bash
+docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
+  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- demo --strict'
 ```
 
 ## Run full suite

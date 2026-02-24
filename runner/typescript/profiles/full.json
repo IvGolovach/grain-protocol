@@ -1,0 +1,5 @@
+{
+  "profile_id": "full",
+  "description": "TOR-04 full profile: all conformance vectors",
+  "vector_glob": "conformance/vectors/**/*.json"
+}

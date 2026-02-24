@@ -40,6 +40,7 @@ If PR changes CI gates, evidence artifacts, branch protection policy, tag namesp
 - MUST update `MIGRATION.md` if reconstruction/provenance statements change.
 - MUST keep required CI context names stable unless governance update is explicit.
 - MUST update `CHANGELOG.md`.
+- MUST update `spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` when RC/claim process changes.
 
 ## Red flags (likely breaking)
 

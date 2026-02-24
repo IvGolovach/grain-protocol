@@ -3,3 +3,8 @@ node_modules/
 .c01-vectors.txt
 .divergence-c01.json
 .divergence-c01.md
+.full-last-run.json
+.full-vectors.txt
+.divergence-full.json
+.divergence-full.md
+.properties-full.json

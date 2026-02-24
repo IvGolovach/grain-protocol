@@ -1,52 +1,69 @@
-# grain-ts-runner (TOR-03 / C01 smoke)
+# grain-ts-runner (TOR-04 / Full Engine)
 
-TypeScript conformance runner for Grain, focused on C01 smoke profile (all Wave A vectors).
+TypeScript independent implementation for Grain conformance.
 
 ## Scope
 
-Implemented ops for C01:
+Implemented full conformance op set:
 - `dagcbor_validate`
+- `cid_derive`
+- `cose_verify`
+- `qr_decode_gr1`
 - `parse_cborseq_stream_v1`
+- `ledger_reduce`
+- `manifest_resolve`
 - `e2e_derive_v1`
 - `e2e_decrypt`
-- `manifest_resolve`
 
-Also includes `qr_decode_gr1` helper op.
+## Independence boundary
 
-This runner is a smoke probe for cross-language strictness. It is not the full second independent implementation.
+- No Rust FFI/WASM in engine execution.
+- Rust is used only by divergence tooling as external oracle process comparison.
 
 ## Requirements
 
-- Node >= 22 (tested on Node 23)
-- Rust reference runner available via Docker for divergence comparison
+- Node >= 22
+- Docker available for divergence scripts
 
 ## Commands
 
 Run one vector:
 
 ```bash
-node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector conformance/vectors/e2e/POS-E2E-WA-0001.json
+node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector conformance/vectors/cid/POS-CID-001.json
 ```
 
-Run C01 profile:
+Run C01 (Wave A smoke):
 
 ```bash
 node --experimental-strip-types runner/typescript/scripts/run-c01.ts
-```
-
-Generate Rust↔TS divergence report (C01):
-
-```bash
 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
 ```
 
-Outputs:
+Run full suite + divergence:
+
+```bash
+node --experimental-strip-types runner/typescript/scripts/run-full.ts
+node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+```
+
+Run TS property tests:
+
+```bash
+node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+```
+
+## Artifacts
+
 - `runner/typescript/.c01-last-run.json`
 - `runner/typescript/.divergence-c01.json`
-- `runner/typescript/.divergence-c01.md`
+- `runner/typescript/.full-last-run.json`
+- `runner/typescript/.divergence-full.json`
+- `runner/typescript/.properties-full.json`
 
 ## Determinism notes
 
 - UTF-8 comparisons are raw-byte lexicographic only.
 - HKDF labels are ASCII with explicit `0x00` separators.
 - DAG-CBOR decoding is strict and rejects duplicate map keys/non-canonical forms.
+- Ledger and manifest outputs are order-independent for identical input sets.
