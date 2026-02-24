@@ -3,6 +3,14 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Private autonomous GitHub update mode hardening:
+  - branch protection baseline switched to autonomous profile (`required_approving_review_count=0`, no code-owner review requirement) while preserving strict required checks and linear-history enforcement.
+  - `tools/github/apply_branch_protection.sh` now supports explicit profiles:
+    - `autonomous` (default)
+    - `reviewed`
+  - `tools/ci/check_branch_protection_drift.py` expanded to validate approvals/codeowner/enforce_admins/linear-history/force-push/deletion/conversation-resolution policy fields.
+  - CI `main` drift check now requires `DEPENDABOT_AUTOMERGE_TOKEN` directly (no fallback/warning path).
+  - no frozen-core protocol semantics changed.
 - Onboarding docs hardening (LLM conversational guidance refresh):
   - rewrote all `docs/llm/*` pages into a guided LLM-to-LLM onboarding flow
   - preserved invariant/vector mapping structure while improving handoff clarity and reading order

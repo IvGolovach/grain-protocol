@@ -49,18 +49,19 @@ jobs:
       - name: Check branch protection drift (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          GH_BOT_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
-          GH_FALLBACK_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
         run: |
-          export GH_TOKEN="${GH_BOT_TOKEN:-$GH_FALLBACK_TOKEN}"
-          if [ -z "${GH_BOT_TOKEN:-}" ]; then
-            echo "::warning::DEPENDABOT_AUTOMERGE_TOKEN is not configured; branch-protection drift check uses permission fallback."
-            export ALLOW_PERMISSION_FALLBACK=true
-          fi
           python3 tools/ci/check_branch_protection_drift.py \
             --repo "${GITHUB_REPOSITORY}" \
             --branch main \
-            --expected-contexts "python-tooling,rust-core,ts-c01,ts-full,evidence-bundle"
+            --expected-contexts "python-tooling,rust-core,ts-c01,ts-full,evidence-bundle" \
+            --expected-approvals 0 \
+            --expected-codeowner-reviews false \
+            --expected-enforce-admins true \
+            --expected-linear-history true \
+            --expected-allow-force-pushes false \
+            --expected-allow-deletions false \
+            --expected-conversation-resolution true
 
       - name: Ensure no macOS metadata files
         run: |

@@ -11,7 +11,9 @@ RC policy reference:
 
 1. Local tree is clean.
 2. CI on `main` is green.
-3. Branch protection is enabled.
+3. Branch protection is enabled with the intended profile:
+   - private mode baseline: `PROTECTION_PROFILE=autonomous`
+   - public reviewed mode: `PROTECTION_PROFILE=reviewed`
 4. Tag signing key is configured.
 
 ## Release steps

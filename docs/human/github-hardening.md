@@ -13,10 +13,26 @@ Branch protection must require:
 
 CI push-to-main drift assertion validates that branch protection required checks stay aligned with policy.
 
+Private autonomous baseline (before explicit public switch):
+- pull requests required
+- required approving reviews: `0`
+- code owner review requirement: `false`
+- enforce admins: `true`
+- linear history: `true`
+- force pushes: disabled
+- deletions: disabled
+- conversation resolution: required
+
 ## 2) Apply branch protection
 
 ```bash
-bash tools/github/apply_branch_protection.sh <owner/repo>
+PROTECTION_PROFILE=autonomous bash tools/github/apply_branch_protection.sh <owner/repo>
+```
+
+When explicitly switching to public reviewed mode:
+
+```bash
+PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner/repo>
 ```
 
 ## 3) Tag policy

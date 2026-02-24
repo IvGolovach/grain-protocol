@@ -7,13 +7,29 @@ if [[ $# -ne 1 ]]; then
 fi
 
 REPO="$1"
+PROTECTION_PROFILE="${PROTECTION_PROFILE:-autonomous}"
+
+case "$PROTECTION_PROFILE" in
+  autonomous)
+    REQUIRED_APPROVING_REVIEW_COUNT=0
+    REQUIRE_CODE_OWNER_REVIEWS=false
+    ;;
+  reviewed)
+    REQUIRED_APPROVING_REVIEW_COUNT=1
+    REQUIRE_CODE_OWNER_REVIEWS=true
+    ;;
+  *)
+    echo "unknown PROTECTION_PROFILE: $PROTECTION_PROFILE (expected: autonomous|reviewed)" >&2
+    exit 2
+    ;;
+esac
 
 gh api \
   -X PUT \
   -H "Accept: application/vnd.github+json" \
   "repos/${REPO}/branches/main/protection" \
   --input <(
-    cat <<'JSON'
+    cat <<JSON
 {
   "required_status_checks": {
     "strict": true,
@@ -22,8 +38,8 @@ gh api \
   "enforce_admins": true,
   "required_pull_request_reviews": {
     "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": true,
-    "required_approving_review_count": 1
+    "require_code_owner_reviews": ${REQUIRE_CODE_OWNER_REVIEWS},
+    "required_approving_review_count": ${REQUIRED_APPROVING_REVIEW_COUNT}
   },
   "restrictions": null,
   "required_linear_history": true,
@@ -37,4 +53,4 @@ gh api \
 JSON
   )
 
-echo "Branch protection applied for ${REPO}:main"
+echo "Branch protection applied for ${REPO}:main (${PROTECTION_PROFILE})"
