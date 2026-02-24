@@ -20,6 +20,7 @@ What Grain does not give you:
 - [Run the 5-minute demo](./quickstart.md)
 - [Build an app on Grain](./building-on-grain.md)
 - [Implement Grain itself](./implementing-grain.md)
+- [Build with SDK primitives](./sdk/start-here.md)
 
 ## Current status snapshot
 
@@ -27,3 +28,4 @@ What Grain does not give you:
 - Court: conformance vectors are the execution gate.
 - Reference implementation: Rust Core passes strict suite.
 - TypeScript: full strict engine is available; C01 is retained as a focused Wave A byte-path smoke profile.
+- SDK: TypeScript universal primitives layer is available at `core/ts/grain-sdk`.

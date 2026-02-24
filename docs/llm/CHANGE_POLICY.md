@@ -43,6 +43,21 @@ If a PR changes CI gates, evidence artifacts, branch protection policy, tag name
 - MUST update `CHANGELOG.md`
 - MUST update `spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` when RC/claim process changes
 
+## If SDK strict contracts change (MUST process)
+
+If a PR changes SDK strict orchestration behavior (`core/ts/grain-sdk/**`) in any of these areas:
+- strict enforcement defaults
+- SDK/core diagnostic boundary or mappings
+- sequence allocation/store safety contracts
+- evidence bundle canonical/hash format
+- transport framing helpers
+
+Then the PR MUST:
+- add or update ADR under `adr/sdk/`
+- update `docs/llm/SDK_INVARIANTS.md`
+- update `docs/llm/SDK_CONFORMANCE.md` and `docs/llm/SDK_EDGE_CASES.md` when reject-path behavior changes
+- update `CHANGELOG.md`
+
 ## Red flags (likely breaking)
 
 - any change in canonicalization rules

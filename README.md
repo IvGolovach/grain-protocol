@@ -65,6 +65,7 @@ Start with the runnable onboarding flow:
 - `docs/human/quickstart.md`
 - `docs/human/repro-checklist.md`
 - `docs/human/dependencies-policy.md`
+- `docs/human/sdk/start-here.md`
 
 One-command deterministic demo:
 
@@ -81,6 +82,7 @@ Implementation-entry references:
 - `conformance/README.md`
 - `conformance/SPEC.md`
 - `docs/llm/CONFORMANCE.md`
+- `core/ts/grain-sdk/README.md`
 
 TS full engine commands:
 

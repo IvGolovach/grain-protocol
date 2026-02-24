@@ -17,6 +17,8 @@ We organized this folder so you can get useful, safe context quickly without gue
    - Know what can change additively and what requires a major bump.
 6. `docs/llm/FREEZE.md`
    - Quick frozen-core index when you need a fast boundary check.
+7. `docs/llm/SDK_FILE_MAP.md` (when working on SDK layer)
+   - SDK orchestration invariants and boundary checks.
 
 ## Working stance while reading code
 

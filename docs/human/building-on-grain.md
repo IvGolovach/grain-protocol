@@ -22,6 +22,7 @@ This page is for product/application engineers integrating Grain behavior into a
 4. Run reducer to produce deterministic totals.
 
 Use `docs/human/quickstart.md` first, then wire your app to the same primitives.
+For SDK-first integration, use `docs/human/sdk/start-here.md`.
 
 ## Read later (not first)
 

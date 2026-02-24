@@ -22,5 +22,6 @@ Grain does **not** provide:
 Start with:
 - `docs/human/start-here.md`
 - `docs/human/quickstart.md`
+- `docs/human/sdk/start-here.md`
 - `docs/human/architecture.md`
 - `spec/SCOPE-v0.1.md`

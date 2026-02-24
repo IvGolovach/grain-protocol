@@ -3,6 +3,26 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- TOR-SDK-A01 initial universal primitives SDK layer:
+  - added TypeScript SDK package at `core/ts/grain-sdk`
+  - added strict SDK runner (`core/ts/grain-sdk/src/cli.ts`) for protocol vectors through SDK boundary
+  - added SDK primitives:
+    - identity/key lifecycle helpers
+    - event lifecycle helpers (`append`, `void`, `correct`, deterministic merge/reduce bridge)
+    - E2E primitives (`encrypt`, `decrypt`) with cap_id CSPRNG + single-assignment guards
+    - manifest put/del/resolve wrappers
+    - GR1 transport toolkit
+    - strict codec toolkit + deterministic diagnostics explanation surface
+    - evidence proof bundle builder
+  - added SDK-specific invariants tests (`core/ts/grain-sdk/scripts/test-sdk-invariants.ts`)
+  - added SDK docs for humans and LLM mapping:
+    - `docs/human/sdk/overview.md`
+    - `docs/human/sdk/start-here.md`
+    - `docs/llm/SDK_FILE_MAP.md`
+    - `docs/llm/SDK_INVARIANTS.md`
+    - `docs/llm/SDK_EDGE_CASES.md`
+    - `docs/llm/SDK_CONFORMANCE.md`
+  - no frozen-core protocol semantics changed
 - Private autonomous GitHub update mode hardening:
   - branch protection baseline switched to autonomous profile (`required_approving_review_count=0`, no code-owner review requirement) while preserving strict required checks and linear-history enforcement.
   - `tools/github/apply_branch_protection.sh` now supports explicit profiles:

@@ -84,6 +84,22 @@ Artifacts:
 - `runner/typescript/.divergence-full.json`
 - `runner/typescript/.properties-full.json`
 
+## SDK runner (TOR-SDK-A01)
+
+Path:
+- `core/ts/grain-sdk/`
+
+Primary commands:
+```bash
+node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+```
+
+Contract:
+- protocol vectors are executed through SDK boundary (no bypass path)
+- SDK invariants are additional and MUST NOT weaken protocol vectors
+- CI includes SDK checks inside required context `ts-full`
+
 ## CI and provenance contract
 
 Required CI contexts on `main`:

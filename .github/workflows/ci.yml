@@ -169,6 +169,12 @@ jobs:
             --out artifacts/suite-run-ts.json \
             --runner-cmd node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector
 
+      - name: SDK strict conformance suite (through SDK runner)
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+
+      - name: SDK invariant checks
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+
       - name: Run Rust vs TS divergence (full suite)
         run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
 
@@ -244,6 +250,7 @@ jobs:
           ts = json.loads((root/'ts-c01-summary.json').read_text())
           div = json.loads((root/'divergence-c01.json').read_text())
           ts_full = json.loads((root/'ts-full-summary.json').read_text())
+          sdk_suite = json.loads((root/'sdk-suite-summary.json').read_text())
           ts_suite = json.loads((root/'suite-run-ts.json').read_text())
           div_full = json.loads((root/'divergence-full.json').read_text())
           props_full = json.loads((root/'properties-full.json').read_text())
@@ -270,6 +277,11 @@ jobs:
               'total': ts_full['total'],
               'passed': ts_full['passed'],
               'failed': ts_full['failed']
+            },
+            'sdk_suite': {
+              'total': sdk_suite['total'],
+              'passed': sdk_suite['passed'],
+              'failed': sdk_suite['failed']
             },
             'ts_suite_runner': {
               'total': ts_suite['total'],
@@ -310,6 +322,7 @@ jobs:
           cp artifacts/rust-suite-summary.json artifacts/evidence/suite-run-rust.json
           cp artifacts/suite-run-ts.json artifacts/evidence/suite-run-ts.json
           cp artifacts/ts-full-summary.json artifacts/evidence/ts-full-summary.json
+          cp artifacts/sdk-suite-summary.json artifacts/evidence/sdk-suite-summary.json
           cp artifacts/divergence-full.json artifacts/evidence/divergence-full.json
           cp artifacts/divergence-full.md artifacts/evidence/divergence-full.md
           cp artifacts/properties-full.json artifacts/evidence/properties-full.json
@@ -339,6 +352,7 @@ jobs:
             --file interop-report.md \
             --file invariants-audit.json \
             --file property-tests.json \
+            --file sdk-suite-summary.json \
             --file suite-run-rust.json \
             --file suite-run-ts.json \
             --file vector-manifest.json

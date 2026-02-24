@@ -21,10 +21,10 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 5) `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
    Freeze boundary, scope boundary, interop claim boundary, and RC governance.
 
-6) `docs/llm/*`
+6) `docs/llm/*`, including `SDK_FILE_MAP.md`, `SDK_INVARIANTS.md`, `SDK_EDGE_CASES.md`, `SDK_CONFORMANCE.md`
    Your fast indexes and cross-file mappings.
 
-7) `adr/`
+7) `adr/` (including `adr/sdk/`)
    Why decisions were made; use for rationale, not as normative override.
 
 8) `core/rust/`, `runner/typescript/`, `core/`, `sdk/`
