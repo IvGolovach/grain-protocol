@@ -3,123 +3,38 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
-- TOR-SDK-A01 initial universal primitives SDK layer:
-  - added TypeScript SDK package at `core/ts/grain-sdk`
-  - added strict SDK runner (`core/ts/grain-sdk/src/cli.ts`) for protocol vectors through SDK boundary
-  - added SDK primitives:
-    - identity/key lifecycle helpers
-    - event lifecycle helpers (`append`, `void`, `correct`, deterministic merge/reduce bridge)
-    - E2E primitives (`encrypt`, `decrypt`) with cap_id CSPRNG + single-assignment guards
-    - manifest put/del/resolve wrappers
-    - GR1 transport toolkit
-    - strict codec toolkit + deterministic diagnostics explanation surface
-    - evidence proof bundle builder
-  - added SDK-specific invariants tests (`core/ts/grain-sdk/scripts/test-sdk-invariants.ts`)
-  - added SDK docs for humans and LLM mapping:
-    - `docs/human/sdk/overview.md`
-    - `docs/human/sdk/start-here.md`
-    - `docs/llm/SDK_FILE_MAP.md`
-    - `docs/llm/SDK_INVARIANTS.md`
-    - `docs/llm/SDK_EDGE_CASES.md`
-    - `docs/llm/SDK_CONFORMANCE.md`
-  - no frozen-core protocol semantics changed
-- Private autonomous GitHub update mode hardening:
-  - branch protection baseline switched to autonomous profile (`required_approving_review_count=0`, no code-owner review requirement) while preserving strict required checks and linear-history enforcement.
-  - `tools/github/apply_branch_protection.sh` now supports explicit profiles:
-    - `autonomous` (default)
-    - `reviewed`
-  - `tools/ci/check_branch_protection_drift.py` expanded to validate approvals/codeowner/enforce_admins/linear-history/force-push/deletion/conversation-resolution policy fields.
-  - CI `main` drift check now requires `DEPENDABOT_AUTOMERGE_TOKEN` directly (no fallback/warning path).
-  - no frozen-core protocol semantics changed.
-- Onboarding docs hardening (LLM conversational guidance refresh):
-  - rewrote all `docs/llm/*` pages into a guided LLM-to-LLM onboarding flow
-  - preserved invariant/vector mapping structure while improving handoff clarity and reading order
-  - aligned `docs/human/design-in-one-page.md` with current TS full-engine status (C01 remains focused smoke lens)
-  - cleaned local doc-audit residue (`tools/__pycache__`, `tools/ci/__pycache__`)
-  - no frozen-core protocol semantics changed
-- Branch-protection drift check reliability fix:
-  - CI main-branch drift check now uses `DEPENDABOT_AUTOMERGE_TOKEN` with fallback to `github.token`, preventing false red runs when the secret is absent.
-  - When elevated token permissions are unavailable, drift check now emits deterministic `SKIPPED` diagnostics instead of hard-failing unrelated pushes.
-- Dependabot automerge verification fix:
-  - `dependabot-automerge.yml` verification now treats already-merged PRs as PASS (prevents false-negative failures after successful quick merge).
-- Dependabot no-friction safe lane (TOR-GH-DEPS-A02):
-  - Added `/.github/workflows/dependabot-automerge.yml` for Dependabot-only safe auto-approve/auto-merge in strict allowlist paths.
-  - Added explicit allowlist/denylist policy document: `docs/human/dependencies-policy.md`.
-  - Added ADR: `adr/conformance/0003-dependabot-autonomous-safe-lane.md`.
-  - Added preferred automation secret path `DEPENDABOT_AUTOMERGE_TOKEN` for workflow-file PR operations requiring workflow-capable token scopes.
-  - Enabled Dependabot rebase strategy (`rebase-strategy: auto`) across configured ecosystems.
-  - Kept branch-protection posture strict; no protocol/conformance semantic changes.
-- TOR-DEPS-STRICT-FINAL dependabot strict fail-closed lane:
-  - refactored `/.github/workflows/dependabot-automerge.yml` from `pull_request_target` to trusted `workflow_run` flow for successful `ci` pull_request runs
-  - removed fallback path to `github.token`; canonical auth path is `DEPENDABOT_AUTOMERGE_TOKEN` only
-  - added deterministic hard-fail diagnostics:
-    - `DEPS_ERR_TOKEN_MISSING`
-    - `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`
-    - `DEPS_ERR_UPDATE_BRANCH_FAILED`
-    - `DEPS_ERR_APPROVE_FAILED`
-    - `DEPS_ERR_ENABLE_AUTOMERGE_FAILED`
-  - retained guardrails: no PR checkout, API-only operations, actor/repo/path allowlist checks
-  - added ADR: `adr/conformance/0004-dependabot-strict-fail-closed.md`
-  - updated policy docs and CI policy checker to assert strict model and ban fallback tokens
-  - no frozen-core protocol semantic changes
-- TOR-RC-DISCIPLINE-A01 release-candidate governance:
-  - added `spec/RC-POLICY.md` with RC namespaces, stabilization window, rollback, and signoff rules
-  - added `spec/INTEROP-CLAIM.md` template for bounded claim wording
-  - added ADR: `adr/conformance/0005-rc-discipline-policy.md`
-  - added `spec/rc/README.md` plus signoff/revocation templates:
-    - `spec/rc/SIGNOFFS/template.json`
-    - `spec/rc/REVOCATIONS/template.md`
-  - extended release/cert workflows to include `protocol-rc-*` and `repo-rc-*` tag triggers
-  - updated release/hardening docs and LLM file-map/change-policy references
-  - no frozen-core protocol semantic changes
-- TOR-GH-DEPS-A02 dependabot zero-friction automation:
-  - added `/.github/workflows/dependabot-automerge.yml` for safe Dependabot auto-approve/auto-merge lane
-  - added `docs/human/dependencies-policy.md` with allowlist/manual-lane boundaries
-  - added preferred secret token path `DEPENDABOT_AUTOMERGE_TOKEN` for workflow-file update/merge operations requiring `workflow`-capable auth
-  - updated `.github/dependabot.yml` to explicit `rebase-strategy: auto`
-  - added `tools/ci/check_dependabot_policy.py` and wired it into CI/release/cert checks
-  - semver-major workflow updates are auto-merge eligible by default when checks are green (optional block toggle available)
-  - adjusted CODEOWNERS to keep critical ownership while allowing safe `.github` dependency lane
-  - no frozen-core protocol semantic changes
-- TOR-GH-CLEAN-A01 repository hygiene/repro hardening:
-  - added CI guardrails:
-    - `tools/ci/check_forbidden_tracked.py`
-    - `tools/ci/check_crlf_tracked.py`
-    - `tools/ci/check_gitattributes_policy.py`
-    - `tools/ci/check_codeowners_coverage.py`
-  - wired guardrails into `ci.yml`, `release-evidence.yml`, and `tools/interop_certify.sh`
-  - added `tools/ci/build_git_provenance.py` for branch-protection/checks snapshots
-  - updated `CODEOWNERS` to include `/tools/**`
-  - added reproducibility runbook: `docs/human/repro-checklist.md`
-  - no frozen-core protocol semantic changes
-- TOR-CERT-D01 (TOR-05) interop certification and claim gate:
-  - added `spec/FREEZE-CONFIRMATION-v0.1.md` (frozen/breaking/additive classification for major 1)
-  - added `spec/SCOPE-v0.1.md` (domain-neutral core vs food-first profile clarification)
-  - strengthened `spec/INTEROP-v0.1.md` with claim-level wording (conformance criterion vs strong interop claim vs non-claims)
-  - added dedicated certification workflow `/.github/workflows/interop-certify.yml`
-  - aligned docs and audit packet with TOR-05 evidence/claim boundaries
-  - no frozen-core semantic changes
-- TOR-DOC-A01 onboarding/docs hardening:
-  - added 5-minute deterministic onboarding flow (`docs/human/quickstart.md`) backed by runnable demo pipeline
-  - added human entrypoint docs: `start-here`, `building-on-grain`, `implementing-grain`, `why-not-json`, `design-in-one-page`
-  - added architecture Mermaid source (`docs/human/diagrams/architecture.mmd`) and refreshed architecture page
-  - added `grain-runner demo --strict` deterministic pipeline command for onboarding
-  - added docs CI gates:
-    - quickstart smoke check against golden output
-    - docs link integrity check
-    - quickstart flow check (runnable block before deep spec links)
-  - clarified `parse_cborseq_stream_v1` contract/docs: XOR accept/reject semantics + framing precedence anchor
-  - no frozen-core protocol semantics changed
-- TOR-04 / TOR-TS-IND-C02:
-  - upgraded TypeScript runner to full independent engine (all conformance ops)
-  - added TS full profile + scripts:
-    - `runner/typescript/scripts/run-full.ts`
-    - `runner/typescript/scripts/divergence-full.ts`
-    - `runner/typescript/scripts/properties-full.ts`
-  - added full-suite parity for `cid_derive`, `cose_verify`, `ledger_reduce`
-  - added TS property tests for reducer/manifest order-independence and idempotence
-  - CI/release evidence now includes `ts-full` and `divergence-full` artifacts
-  - no frozen-core protocol semantics changed
+- No entries yet.
+
+## [0.4.0-rc1] - 2026-02-24
+- TOR-04 / TOR-TS-IND-C02 (TypeScript full independent engine):
+  - TypeScript runner upgraded to full strict operation coverage.
+  - Added full profile execution and divergence/property scripts.
+  - Full strict parity reached against Rust on full suite.
+- TOR-CERT-D01 (interop certification and claim gate):
+  - Added formal claim/scope/freeze documents:
+    - `spec/INTEROP-v0.1.md`
+    - `spec/FREEZE-CONFIRMATION-v0.1.md`
+    - `spec/SCOPE-v0.1.md`
+  - Added certification workflow and evidence artifacts pipeline.
+- TOR-GH-CLEAN-A01 + TOR-GH-DEPS-A02 + TOR-DEPS-STRICT-FINAL:
+  - Established strict autonomous GitHub operations lane.
+  - Dependabot lane is fail-closed and workflow-safe (`workflow_run` model, no fallback token path).
+  - Added branch-protection drift checks and repository hygiene guards.
+- TOR-RC-DISCIPLINE-A01:
+  - Added RC governance artifacts:
+    - `spec/RC-POLICY.md`
+    - `spec/INTEROP-CLAIM.md`
+    - `spec/rc/**`
+- TOR-DOC-A01 (onboarding/doc hardening):
+  - Added runnable onboarding flow and deterministic quickstart checks.
+  - Added domain-neutral architecture docs and clarified entry paths.
+  - Rewrote LLM docs into guided handoff style and expanded mapping checks.
+- TOR-SDK-A01 (universal primitives SDK layer):
+  - Added TypeScript SDK package: `core/ts/grain-sdk`.
+  - Added strict SDK runner path for vector execution via SDK boundary.
+  - Added SDK invariants suite and integrated SDK checks into required CI context (`ts-full`).
+  - Added SDK docs (human + LLM) and ADR (`adr/sdk/0001-sdk-universal-primitives-layer.md`).
+- Protocol boundary: frozen-core semantics unchanged.
 
 ## [0.3.1] - 2026-02-21
 - Fixed `tools/github/apply_branch_protection.sh`:

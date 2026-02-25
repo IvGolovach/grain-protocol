@@ -35,17 +35,21 @@ RC policy reference:
    - `node --experimental-strip-types runner/typescript/scripts/divergence-full.ts`
    - `node --experimental-strip-types runner/typescript/scripts/properties-full.ts`
    - `tools/interop_certify.sh --out-dir /tmp/interop-cert --commit-sha "$(git rev-parse HEAD)"`
-3. Create and sign tags:
-   - `git tag -s protocol-v0.1.1 -m "Protocol v0.1.1"`
-   - `git tag -s repo-v0.2.0 -m "Repo v0.2.0"`
-   - `git tag -s repo-v0.3.0 -m "Repo v0.3.0"`
-   - RC tags (when applicable):
-     - `git tag -s protocol-rc-v0.1.1-rc1 -m "Protocol RC v0.1.1-rc1"`
-     - `git tag -s repo-rc-v0.3.1-rc1 -m "Repo RC v0.3.1-rc1"`
-4. Push tags.
-5. Verify tag workflows:
+3. Decide tag type and next version string:
+   - protocol release tag: `protocol-vX.Y.Z`
+   - repo release tag: `repo-vX.Y.Z`
+   - protocol RC tag: `protocol-rc-vX.Y.Z-rcN`
+   - repo RC tag: `repo-rc-vX.Y.Z-rcN`
+4. Verify tag does not already exist:
+   - `git tag --list "<tag-name>"`
+5. Create and sign the tag:
+   - `git tag -s <tag-name> -m "<tag-message>"`
+6. Push tag:
+   - `git push origin <tag-name>`
+7. Verify tag workflows:
    - `release-evidence` attached `evidence-<sha>.zip`.
    - `interop-certify` attached `interop-evidence-<sha>.zip`.
+8. For release tags (`protocol-*`, `repo-*`), verify GitHub release entry and attached assets.
 
 ## Notes
 
