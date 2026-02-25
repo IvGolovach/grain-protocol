@@ -70,6 +70,10 @@ Start with the runnable onboarding flow:
 - `docs/human/domain-adapters.md`
 - `docs/human/dependencies-policy.md`
 - `docs/human/sdk/start-here.md`
+- `docs/human/sdk/overview.md`
+- `docs/human/sdk/architecture.md`
+- `docs/human/sdk/errors.md`
+- `docs/human/sdk/impossible-misuse.md`
 
 One-command deterministic verification from a clean tree:
 

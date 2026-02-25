@@ -3,6 +3,19 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- SDK hardening pass (TOR-SDK-A01 follow-up):
+  - added deterministic SDK error descriptor model (`code/category/nes_ref/vector_refs`) in `core/ts/grain-sdk/src/errors.ts`
+  - expanded canonical explain contract (`core/ts/grain-sdk/src/codec.ts`)
+  - added typed wrappers and set-array strict builder (`core/ts/grain-sdk/src/primitives.ts`)
+  - added deterministic transport bundle API (`bundleExport`/`bundleImport`) in `core/ts/grain-sdk/src/transport.ts`
+  - added SDK demo script (`core/ts/grain-sdk/scripts/demo-end-to-end.ts`)
+  - expanded SDK invariant suite with SDK-INV-0008..0010
+  - added SDK docs:
+    - `docs/human/sdk/architecture.md`
+    - `docs/human/sdk/errors.md`
+    - `docs/human/sdk/impossible-misuse.md`
+    - `docs/human/sdk/cross-lang-bridge.md`
+  - added ADR: `adr/sdk/0002-sdk-error-model-and-transport-bundle-contract.md`
 - TOR-PORTABILITY-A01 (cross-platform reproducibility and portability pack):
   - added one-command containerized verify path:
     - `scripts/verify`
@@ -27,6 +40,9 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `tools/ci/check_capid_csprng.py`
   - expanded CI/release evidence with WASM and portability checks.
   - added portability/domain adapter docs (human + LLM).
+- CI verify smoke fixes:
+  - fix container git trust bootstrap for mounted workspace (`scripts/internal/verify_in_container.sh`)
+  - fix `scripts/verify` out-dir mapping to container-mounted `/work` path so evidence survives CI container run
 - RC release metadata hardening:
   - RC tags (`protocol-rc-*`, `repo-rc-*`) now publish GitHub releases with `prerelease=true`.
   - applied in both workflows:

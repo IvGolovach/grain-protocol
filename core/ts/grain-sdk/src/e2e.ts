@@ -10,6 +10,7 @@ import type { GrainSdkStore } from "./store.ts";
 import type { IdentityManager } from "./identity.ts";
 import type { TsCoreEngine } from "./engine.ts";
 import type { ManifestManager } from "./manifest.ts";
+import type { ManifestResolution } from "./types.ts";
 
 export class E2ePrimitives {
   private readonly store: GrainSdkStore;
@@ -87,6 +88,21 @@ export class E2ePrimitives {
     };
   }
 
+  async encryptObject(input: {
+    plaintext_cid: string;
+    plaintext_bytes: Uint8Array;
+    cid_link_bstr: Uint8Array;
+    cap_id?: Uint8Array;
+  }): Promise<{ cap_id: Uint8Array; envelope_bytes: Uint8Array; chash: Uint8Array }> {
+    if (!input.plaintext_cid || input.plaintext_cid.length === 0) {
+      throw new SdkError("SDK_ERR_E2E_INPUT", "plaintext_cid is required");
+    }
+    return this.encrypt(input.plaintext_bytes, {
+      cid_link_bstr: input.cid_link_bstr,
+      cap_id: input.cap_id
+    });
+  }
+
   async decrypt(capId: Uint8Array, envelopeBytes: Uint8Array, opts: { cid_link_bstr: Uint8Array; expected_chash?: Uint8Array }): Promise<Uint8Array> {
     const syncSecret = await this.identity.getSyncSecret();
 
@@ -118,6 +134,18 @@ export class E2ePrimitives {
     return decodeB64(ptB64);
   }
 
+  async decryptObject(input: {
+    cap_id: Uint8Array;
+    envelope_bytes: Uint8Array;
+    cid_link_bstr: Uint8Array;
+    expected_chash?: Uint8Array;
+  }): Promise<Uint8Array> {
+    return this.decrypt(input.cap_id, input.envelope_bytes, {
+      cid_link_bstr: input.cid_link_bstr,
+      expected_chash: input.expected_chash
+    });
+  }
+
   async putManifest(plaintextCid: string, capId: Uint8Array, chash: Uint8Array): Promise<void> {
     await this.manifest.put(plaintextCid, capId, chash);
   }
@@ -126,7 +154,7 @@ export class E2ePrimitives {
     await this.manifest.del(plaintextCid);
   }
 
-  async resolveManifest(plaintextCid: string): Promise<{ status: "found" | "tombstone" | "not_found"; cap_id_b64?: string; diag: string[] }> {
+  async resolveManifest(plaintextCid: string): Promise<ManifestResolution> {
     try {
       return await this.manifest.resolve(plaintextCid);
     } catch (err) {

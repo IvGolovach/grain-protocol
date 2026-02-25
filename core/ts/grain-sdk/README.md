@@ -7,6 +7,8 @@ Principles:
 - no new protocol semantics
 - core diagnostics preserved
 - fail-closed for risky paths (CSPRNG, cap overwrite)
+- deterministic error descriptors (category + NES/vector refs)
+- deterministic transport bundle import/export (`grain-transport-bundle-v1`)
 
 ## Quick commands
 
@@ -20,6 +22,12 @@ Run SDK invariant tests:
 
 ```bash
 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+```
+
+Run SDK end-to-end demo:
+
+```bash
+node --experimental-strip-types core/ts/grain-sdk/scripts/demo-end-to-end.ts
 ```
 
 Run full protocol suite through SDK runner:

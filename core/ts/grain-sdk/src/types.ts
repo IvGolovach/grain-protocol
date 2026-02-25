@@ -25,6 +25,7 @@ export type ManifestRecord = {
   cap_id?: Uint8Array;
   chash?: Uint8Array;
   eligible?: boolean;
+  reason?: string;
 };
 
 export type DeviceKey = {
@@ -54,4 +55,10 @@ export type ReduceResult = {
   pass: boolean;
   diag: string[];
   out: Record<string, Json>;
+};
+
+export type ManifestResolution = {
+  status: "found" | "tombstone" | "not_found" | "conflicted" | "quarantined";
+  cap_id_b64?: string;
+  diag: string[];
 };

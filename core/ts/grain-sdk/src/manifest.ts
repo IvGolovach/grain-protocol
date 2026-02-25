@@ -1,7 +1,7 @@
 import type { Json } from "./utils.ts";
 import { encodeB64 } from "./utils.ts";
 import type { GrainSdkStore } from "./store.ts";
-import type { ManifestRecord } from "./types.ts";
+import type { ManifestRecord, ManifestResolution } from "./types.ts";
 import type { IdentityManager } from "./identity.ts";
 import type { TsCoreEngine } from "./engine.ts";
 
@@ -52,7 +52,7 @@ export class ManifestManager {
     return rec;
   }
 
-  async resolve(plaintextCid: string): Promise<{ status: "found" | "tombstone" | "not_found"; cap_id_b64?: string; diag: string[] }> {
+  async resolve(plaintextCid: string): Promise<ManifestResolution> {
     const all = await this.store.manifest.listByCid(plaintextCid);
 
     const eligible = all.filter((x) => x.eligible !== false);
@@ -85,6 +85,12 @@ export class ManifestManager {
     if (status === "UNRESOLVABLE") {
       if (eligibleDels.length > 0) {
         return { status: "tombstone", diag: actual.diag };
+      }
+      if (ineligible.some((x) => x.reason === "quarantined")) {
+        return { status: "quarantined", diag: actual.diag };
+      }
+      if (ineligible.some((x) => x.reason === "conflicted_seq" || x.reason === "conflicted")) {
+        return { status: "conflicted", diag: actual.diag };
       }
       return { status: "not_found", diag: actual.diag };
     }

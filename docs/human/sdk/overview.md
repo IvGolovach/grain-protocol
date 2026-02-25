@@ -30,10 +30,15 @@ The SDK is a universal primitives surface for building systems on top of Grain w
 
 - `core/ts/grain-sdk`
 - domain adapter example: `core/ts/grain-sdk/examples/sensor-event-v1.ts`
+- architecture: `docs/human/sdk/architecture.md`
+- error model: `docs/human/sdk/errors.md`
+- impossible misuse checklist: `docs/human/sdk/impossible-misuse.md`
+- cross-language bridge: `docs/human/sdk/cross-lang-bridge.md`
 
 ## Quick commands
 
 ```bash
+node --experimental-strip-types core/ts/grain-sdk/scripts/demo-end-to-end.ts
 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
 node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
 ```

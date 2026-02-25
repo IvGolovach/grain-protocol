@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 
 import { GrainSdk } from "../src/index.ts";
 import { SdkError } from "../src/errors.ts";
+import { buildSetArray } from "../src/primitives.ts";
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 
@@ -105,6 +106,50 @@ async function run(): Promise<number> {
       fail("SDK-INV-0007 canonicalization guard", "invalid CBOR accepted");
     } catch {
       ok("SDK-INV-0007 canonicalization guard");
+    }
+
+    try {
+      buildSetArray(["b", "a", "a"], (x) => new TextEncoder().encode(x));
+      fail("SDK-INV-0008 set-array builder strictness", "duplicate set-array items accepted");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "GRAIN_ERR_SET_ARRAY_DUP") {
+        ok("SDK-INV-0008 set-array builder strictness");
+      } else {
+        fail("SDK-INV-0008 set-array builder strictness", `unexpected code: ${code}`);
+      }
+    }
+
+    const explained = sdk.codec.explain("GRAIN_ERR_NONCANONICAL");
+    if (
+      explained.category !== "CANONICAL"
+      || explained.nes_ref.length === 0
+      || explained.vector_refs.length === 0
+    ) {
+      fail("SDK-INV-0009 deterministic error model", "explain() missing category/refs");
+    } else {
+      ok("SDK-INV-0009 deterministic error model");
+    }
+
+    const bundleBytes = sdk.transport.bundleExport({
+      objects: {
+        "cid:obj:1": new TextEncoder().encode("payload-1")
+      },
+      events: [
+        { t: "IntakeEvent", payload_cid: "cid:intake:1" }
+      ],
+      manifest: [
+        { op: "put", cid: "cid:obj:1" }
+      ],
+      evidence: {
+        strict: true
+      }
+    });
+    const imported = sdk.transport.bundleImport(bundleBytes);
+    if (imported.schema !== "grain-transport-bundle-v1" || imported.strict !== true || !imported.objects["cid:obj:1"]) {
+      fail("SDK-INV-0010 transport bundle determinism", "bundle import/export mismatch");
+    } else {
+      ok("SDK-INV-0010 transport bundle determinism");
     }
 
     const summary = {

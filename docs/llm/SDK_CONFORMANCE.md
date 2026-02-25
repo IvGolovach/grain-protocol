@@ -26,6 +26,7 @@ node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0010`
 
 ## Diagnostics contract
 

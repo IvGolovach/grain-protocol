@@ -83,7 +83,8 @@ export class InMemorySdkStore implements GrainSdkStore {
       this.manifestList.push({
         ...record,
         cap_id: record.cap_id ? copy(record.cap_id) : undefined,
-        chash: record.chash ? copy(record.chash) : undefined
+        chash: record.chash ? copy(record.chash) : undefined,
+        reason: record.reason
       });
     },
     listByCid: async (cid: string): Promise<ManifestRecord[]> => {

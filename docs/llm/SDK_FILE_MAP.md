@@ -12,6 +12,8 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - SDK runner and test bindings
 4. `core/ts/grain-sdk/src/*`
    - implementation modules
+5. `docs/human/sdk/errors.md`
+   - deterministic error contract in human-readable form
 
 ## Source-of-truth hierarchy for SDK decisions
 

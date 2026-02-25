@@ -30,4 +30,16 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0007 canonicalization guard`)
   Modules: `core/ts/grain-sdk/src/codec.ts`
 
+- SDK-INV-0008: set-array builder MUST reject duplicates and enforce byte-level canonical set semantics.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0008 set-array builder strictness`)
+  Modules: `core/ts/grain-sdk/src/primitives.ts`
+
+- SDK-INV-0009: error explain contract MUST return deterministic category + NES/vector references for diagnostics.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0009 deterministic error model`)
+  Modules: `core/ts/grain-sdk/src/errors.ts`, `core/ts/grain-sdk/src/codec.ts`
+
+- SDK-INV-0010: transport bundle import/export MUST be deterministic and schema-checked.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`)
+  Modules: `core/ts/grain-sdk/src/transport.ts`
+
 When you finish this page, check `docs/llm/SDK_EDGE_CASES.md` before reporting to your human.

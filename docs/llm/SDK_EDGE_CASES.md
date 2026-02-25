@@ -7,6 +7,9 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0003: missing CSPRNG during cap generation -> `SDK_ERR_CSPRNG_UNAVAILABLE`
 - SDK-NEG-0004: non-canonical bytes into codec strict validate -> core reject diagnostic (`GRAIN_ERR_NONCANONICAL` or equivalent)
 - SDK-NEG-0005: invalid identity bundle format/version -> `SDK_ERR_IDENTITY_BUNDLE_INVALID` / `SDK_ERR_IDENTITY_BUNDLE_VERSION`
+- SDK-NEG-0006: duplicate entries through set-array builder -> `GRAIN_ERR_SET_ARRAY_DUP`
+- SDK-NEG-0007: malformed bundle import payload/root schema -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
+- SDK-NEG-0008: invalid bundle JSON bytes -> `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
 
 These checks are asserted in:
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`

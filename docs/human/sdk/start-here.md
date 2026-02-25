@@ -2,7 +2,22 @@
 
 If you are building an app on Grain, start with SDK primitives instead of stitching protocol operations manually.
 
-## Fast path
+## 5-minute runnable path
+
+Run:
+
+```bash
+node --experimental-strip-types core/ts/grain-sdk/scripts/demo-end-to-end.ts
+```
+
+Expected output contains deterministic fields:
+
+- `strict: true`
+- `appended_event_id`
+- `reducer_pass`
+- `proof_sha256`
+
+## Fast path in code
 
 1. Initialize identity root.
 2. Append events through `events.append()`.
@@ -20,5 +35,9 @@ If you are building an app on Grain, start with SDK primitives instead of stitch
 ## Source
 
 - `core/ts/grain-sdk/src`
+- `docs/human/sdk/architecture.md`
+- `docs/human/sdk/errors.md`
+- `docs/human/sdk/impossible-misuse.md`
+- `docs/human/sdk/cross-lang-bridge.md`
 - `docs/llm/SDK_FILE_MAP.md`
 - `docs/llm/SDK_INVARIANTS.md`
