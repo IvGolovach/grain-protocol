@@ -1,0 +1,100 @@
+name: rc-stabilization-nightly
+
+on:
+  schedule:
+    - cron: "15 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  deep-stabilization:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Set up Rust 1.86.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.86.0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: runner/typescript/package-lock.json
+
+      - name: Install TS runner deps
+        run: npm ci --prefix runner/typescript
+
+      - name: Build grain-runner binary
+        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
+      - name: Run deep stabilization window (TOR-RC-STAB-A01)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/stabilization/run_rc_stab.py \
+            --mode deep \
+            --out-dir artifacts/rc-stab-deep \
+            --baseline-tag repo-rc-v0.4.0-rc1 \
+            --baseline-evidence-sha 35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd \
+            --rust-runner-cmd core/rust/target/debug/grain-runner \
+            --repo "${GITHUB_REPOSITORY}"
+
+      - name: Upload deep stabilization artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rc-stab-deep-${{ github.sha }}
+          path: artifacts/rc-stab-deep
+
+      - name: Open or update blocker issue on failure
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = 'RC stabilization nightly failure';
+            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const body = [
+              'Nightly deep stabilization failed.',
+              '',
+              `- workflow run: ${runUrl}`,
+              `- commit: ${context.sha}`,
+              '',
+              `Inspect artifact \`rc-stab-deep-${context.sha}\` and remediate before RC promotion.`
+            ].join('\n');
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100,
+            });
+
+            const existing = issues.find((i) => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }

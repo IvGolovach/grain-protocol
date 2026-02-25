@@ -33,6 +33,9 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 9) `.github/workflows/`, `MIGRATION.md`, `docs/human/github-hardening.md`
    Provenance and policy enforcement (CI gates, evidence artifacts, branch protection).
 
+10) `stabilization/RC-STAB-A01/*`, `tools/stabilization/run_rc_stab.py`, `.github/workflows/rc-stabilization-nightly.yml`
+   RC pressure-test contract and execution tooling. Use this when deciding whether RC can be promoted or must be revoked/cut as RC2.
+
 ## If two layers disagree
 
 - Treat conformance vectors as executable interop truth.

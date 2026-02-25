@@ -9,6 +9,21 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `/.github/workflows/release-evidence.yml`
     - `/.github/workflows/interop-certify.yml`
   - updated release runbook verification step to assert RC prerelease flag.
+- TOR-RC-STAB-A01 (deep stabilization window scaffolding):
+  - added stabilization tooling:
+    - `tools/stabilization/run_rc_stab.py`
+    - `tools/stabilization/README.md`
+  - added tracked stabilization docs:
+    - `stabilization/RC-STAB-A01/PLAN.md`
+    - `stabilization/RC-STAB-A01/ATTACK_MATRIX.md`
+    - `stabilization/RC-STAB-A01/PROPERTIES.md`
+    - `stabilization/RC-STAB-A01/REPRO_CHECKLIST.md`
+    - `stabilization/RC-STAB-A01/RESULTS.md`
+  - added corpus location:
+    - `stabilization/RC-STAB-A01/corpus/README.md`
+  - integrated PR smoke stabilization gate into required `ts-full` context.
+  - added nightly deep stabilization workflow:
+    - `/.github/workflows/rc-stabilization-nightly.yml`
 
 ## [0.4.0-rc1] - 2026-02-24
 - TOR-04 / TOR-TS-IND-C02 (TypeScript full independent engine):

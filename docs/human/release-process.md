@@ -52,6 +52,27 @@ RC policy reference:
 8. For release tags (`protocol-*`, `repo-*`), verify GitHub release entry and attached assets.
 9. For RC tags (`protocol-rc-*`, `repo-rc-*`), verify GitHub release entry is marked `prerelease=true`.
 
+## RC stabilization window gate (TOR-RC-STAB-A01)
+
+Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
+
+1. PR smoke gate (already in CI `ts-full` context):
+   - `python3 tools/stabilization/run_rc_stab.py --mode smoke ...`
+2. Deep stabilization (nightly or manual):
+   - workflow: `.github/workflows/rc-stabilization-nightly.yml`
+   - includes deep fuzz, reproducibility check, rollback rehearsal.
+3. Review artifacts:
+   - `fuzz-report.md`
+   - `attack-matrix-results.md`
+   - `reproducibility-report.md`
+   - `rollback-rehearsal.md`
+   - `stabilization-evidence.json`
+4. Update tracked decision log:
+   - `stabilization/RC-STAB-A01/RESULTS.md`
+5. If deep gate fails:
+   - do not cut release,
+   - revoke RC and cut `repo-rc-...-rc2` on blocker-fix commit.
+
 ## Notes
 
 - Protocol and repo tags are intentionally independent.

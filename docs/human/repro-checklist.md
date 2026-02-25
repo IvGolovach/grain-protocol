@@ -64,3 +64,18 @@ sha256sum /tmp/interop-cert/evidence.sha256
 ```
 
 Confirm the first line hash (`evidence_sha256 ...`) matches the reference run for the same commit.
+
+## 6) RC stabilization smoke (when validating RC tags)
+
+```bash
+python3 tools/stabilization/run_rc_stab.py \
+  --mode smoke \
+  --out-dir /tmp/rc-stab-smoke \
+  --baseline-tag repo-rc-v0.4.0-rc1 \
+  --baseline-evidence-sha 35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd
+```
+
+Expected:
+- `stabilization-evidence.json` verdict is `PASS`.
+- no fuzz crash/divergence findings.
+- attack matrix has no `FOUND_BUG`.

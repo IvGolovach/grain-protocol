@@ -118,3 +118,18 @@ Interop certification workflow:
 - `/.github/workflows/interop-certify.yml` runs TOR-CERT-D01 packaging
 - certification script: `tools/interop_certify.sh`
 - claim boundaries: `spec/INTEROP-v0.1.md`
+
+## RC stabilization contract (TOR-RC-STAB-A01)
+
+Paths:
+- `tools/stabilization/run_rc_stab.py`
+- `stabilization/RC-STAB-A01/*`
+- `/.github/workflows/rc-stabilization-nightly.yml`
+
+Modes:
+- `smoke` (PR-safe pressure test, now executed inside `ts-full` context)
+- `deep` (nightly/manual pressure test with clean-clone repro + rollback rehearsal)
+
+Key rule:
+- Stabilization never changes frozen-core semantics.
+- Any failure yields blocker handling (`rc1` revoke + `rc2` cut), not silent weakening.
