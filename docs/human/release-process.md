@@ -50,6 +50,7 @@ RC policy reference:
    - `release-evidence` attached `evidence-<sha>.zip`.
    - `interop-certify` attached `interop-evidence-<sha>.zip`.
 8. For release tags (`protocol-*`, `repo-*`), verify GitHub release entry and attached assets.
+9. For RC tags (`protocol-rc-*`, `repo-rc-*`), verify GitHub release entry is marked `prerelease=true`.
 
 ## Notes
 

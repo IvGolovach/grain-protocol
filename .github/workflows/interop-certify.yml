@@ -53,3 +53,4 @@ jobs:
         with:
           files: artifacts/interop-evidence-${{ github.sha }}.zip
           generate_release_notes: false
+          prerelease: ${{ startsWith(github.ref_name, 'protocol-rc-') || startsWith(github.ref_name, 'repo-rc-') }}

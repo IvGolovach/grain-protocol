@@ -3,7 +3,12 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
-- No entries yet.
+- RC release metadata hardening:
+  - RC tags (`protocol-rc-*`, `repo-rc-*`) now publish GitHub releases with `prerelease=true`.
+  - applied in both workflows:
+    - `/.github/workflows/release-evidence.yml`
+    - `/.github/workflows/interop-certify.yml`
+  - updated release runbook verification step to assert RC prerelease flag.
 
 ## [0.4.0-rc1] - 2026-02-24
 - TOR-04 / TOR-TS-IND-C02 (TypeScript full independent engine):
