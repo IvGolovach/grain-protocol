@@ -163,6 +163,19 @@ jobs:
       - name: Install TS runner deps
         run: npm ci --prefix runner/typescript
 
+      - name: Build grain-runner binary (RC stabilization smoke)
+        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
+      - name: Run RC stabilization smoke (TOR-RC-STAB-A01)
+        run: |
+          python3 tools/stabilization/run_rc_stab.py \
+            --mode smoke \
+            --out-dir artifacts/rc-stab-smoke \
+            --baseline-tag repo-rc-v0.4.0-rc1 \
+            --baseline-evidence-sha 35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd \
+            --rust-runner-cmd core/rust/target/debug/grain-runner \
+            --repo "${GITHUB_REPOSITORY}"
+
       - name: Run TS full strict profile
         run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-full.ts
 
@@ -185,19 +198,6 @@ jobs:
 
       - name: Run TS property tests (full engine)
         run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
-
-      - name: Build grain-runner binary (RC stabilization smoke)
-        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
-
-      - name: Run RC stabilization smoke (TOR-RC-STAB-A01)
-        run: |
-          python3 tools/stabilization/run_rc_stab.py \
-            --mode smoke \
-            --out-dir artifacts/rc-stab-smoke \
-            --baseline-tag repo-rc-v0.4.0-rc1 \
-            --baseline-evidence-sha 35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd \
-            --rust-runner-cmd core/rust/target/debug/grain-runner \
-            --repo "${GITHUB_REPOSITORY}"
 
       - name: Collect TS full artifacts
         run: |
