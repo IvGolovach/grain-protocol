@@ -52,6 +52,19 @@ export function writeVectorList(path: string, vectors: string[]): void {
 
 export function runRustVectors(vectors: string[], listPath: string): Map<string, RunnerJson> {
   writeVectorList(listPath, vectors);
+  const rustBinary = process.env.GRAIN_RUST_RUNNER_BIN;
+  if (rustBinary && rustBinary.length > 0) {
+    const rustMap = new Map<string, RunnerJson>();
+    for (const vectorPath of vectors) {
+      const payload = execFileSync(
+        rustBinary,
+        ["run", "--strict", "--vector", vectorPath],
+        { encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 }
+      ).trim();
+      rustMap.set(vectorPath, JSON.parse(payload) as RunnerJson);
+    }
+    return rustMap;
+  }
 
   const repo = process.cwd();
   const rustCommand = [

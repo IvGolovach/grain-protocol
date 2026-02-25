@@ -1,0 +1,15 @@
+{
+  "version": "runner_v1",
+  "cli": "grain-runner run --strict --vector <path/to/vector.json>",
+  "operations": [
+    "dagcbor_validate",
+    "cid_derive",
+    "cose_verify",
+    "qr_decode_gr1",
+    "e2e_decrypt",
+    "e2e_derive_v1",
+    "parse_cborseq_stream_v1",
+    "manifest_resolve",
+    "ledger_reduce"
+  ]
+}

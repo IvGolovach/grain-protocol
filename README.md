@@ -14,7 +14,8 @@ It’s a **frozen-core protocol** + a **conformance suite** so independent imple
 - **Grain Core (reference, Rust):** implemented in `core/rust` and passing current v0.1 vectors in strict mode
 - **TypeScript full engine:** implemented in `runner/typescript` with full-suite strict mode + divergence checks (C01 profile retained as Wave A smoke lens)
 - **GitHub provenance:** CI-generated evidence artifacts are commit-bound (SHA keyed) on `main` and release tags
-- **Grain SDK:** planned / in progress
+- **Grain SDK:** implemented as strict universal primitives layer in `core/ts/grain-sdk`
+- **Portability pack:** containerized one-command verify path, WASM read/verify smoke, and runner contract compatibility gates
 
 ---
 
@@ -64,14 +65,22 @@ Start with the runnable onboarding flow:
 - `docs/human/start-here.md`
 - `docs/human/quickstart.md`
 - `docs/human/repro-checklist.md`
+- `docs/human/portability-pack.md`
+- `docs/human/porting-grain.md`
+- `docs/human/domain-adapters.md`
 - `docs/human/dependencies-policy.md`
 - `docs/human/sdk/start-here.md`
 
-One-command deterministic demo:
+One-command deterministic verification from a clean tree:
 
 ```bash
-docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
-  bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- demo --strict'
+./scripts/verify
+```
+
+Optional fuzz smoke in the same command path:
+
+```bash
+./scripts/verify --fuzz-smoke
 ```
 
 Conformance statement:
@@ -102,10 +111,12 @@ Wave A is the byte-level closure pack for court-grade confidence:
 
 See:
 - `conformance/SPEC.md`
+- `conformance/contract/runner_v1.md`
 - `conformance/vectors/**/*-WA-*.json`
 - `.github/workflows/ci.yml` (strict CI release gate)
 - `.github/workflows/release-evidence.yml` (tag evidence release workflow)
 - `.github/workflows/interop-certify.yml` (TOR-CERT-D01 certification gate)
+- `.github/workflows/golden-images.yml` (golden container images)
 
 ---
 
@@ -117,6 +128,7 @@ See:
   - protocol tags: `protocol-*` (schema/invariant line)
   - repo tags: `repo-*` (implementation/tooling/governance milestones)
 - Local `.local-architect-reports/**` remains local-only and is never committed.
+- Local verification and CI/release evidence share deterministic `evidence_content.sha256` semantics.
 
 ## Dependabot strict lane (source repo)
 

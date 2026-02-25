@@ -23,5 +23,6 @@ Start with:
 - `docs/human/start-here.md`
 - `docs/human/quickstart.md`
 - `docs/human/sdk/start-here.md`
+- `docs/human/portability-pack.md`
 - `docs/human/architecture.md`
 - `spec/SCOPE-v0.1.md`

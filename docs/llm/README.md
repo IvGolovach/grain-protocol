@@ -19,6 +19,8 @@ We organized this folder so you can get useful, safe context quickly without gue
    - Quick frozen-core index when you need a fast boundary check.
 7. `docs/llm/SDK_FILE_MAP.md` (when working on SDK layer)
    - SDK orchestration invariants and boundary checks.
+8. `docs/llm/PORTING.md`, `docs/llm/DOMAIN_ADAPTERS.md`, `docs/llm/PROHIBITION_ZONE.md` (when working on portability/new language adapters)
+   - Porting traps, adapter contract boundaries, and strict no-go rules.
 
 ## Working stance while reading code
 

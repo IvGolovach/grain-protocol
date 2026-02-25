@@ -21,7 +21,7 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 5) `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
    Freeze boundary, scope boundary, interop claim boundary, and RC governance.
 
-6) `docs/llm/*`, including `SDK_FILE_MAP.md`, `SDK_INVARIANTS.md`, `SDK_EDGE_CASES.md`, `SDK_CONFORMANCE.md`
+6) `docs/llm/*`, including `SDK_FILE_MAP.md`, `SDK_INVARIANTS.md`, `SDK_EDGE_CASES.md`, `SDK_CONFORMANCE.md`, `PORTING.md`, `DOMAIN_ADAPTERS.md`, `PROHIBITION_ZONE.md`
    Your fast indexes and cross-file mappings.
 
 7) `adr/` (including `adr/sdk/`)
@@ -30,7 +30,7 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 8) `core/rust/`, `runner/typescript/`, `core/`, `sdk/`
    Implementations. They must conform to the contract above.
 
-9) `.github/workflows/`, `MIGRATION.md`, `docs/human/github-hardening.md`
+9) `.github/workflows/`, `MIGRATION.md`, `docs/human/github-hardening.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`
    Provenance and policy enforcement (CI gates, evidence artifacts, branch protection).
 
 10) `stabilization/RC-STAB-A01/*`, `tools/stabilization/run_rc_stab.py`, `.github/workflows/rc-stabilization-nightly.yml`

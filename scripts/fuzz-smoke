@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+OUT_DIR="artifacts/fuzz-smoke"
+BASELINE_TAG="${GRAIN_RC_BASELINE_TAG:-repo-rc-v0.4.0-rc1}"
+BASELINE_EVIDENCE_SHA="${GRAIN_RC_BASELINE_EVIDENCE_SHA:-35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --out-dir)
+      OUT_DIR="$2"
+      shift 2
+      ;;
+    --baseline-tag)
+      BASELINE_TAG="$2"
+      shift 2
+      ;;
+    --baseline-evidence-sha)
+      BASELINE_EVIDENCE_SHA="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+python3 tools/stabilization/run_rc_stab.py \
+  --mode smoke \
+  --out-dir "$OUT_DIR" \
+  --baseline-tag "$BASELINE_TAG" \
+  --baseline-evidence-sha "$BASELINE_EVIDENCE_SHA"
+
+echo "fuzz-smoke: PASS"
+echo "results: $OUT_DIR/stabilization-evidence.json"

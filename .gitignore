@@ -16,6 +16,7 @@ runner/typescript/.full-vectors.txt
 runner/typescript/.divergence-full.json
 runner/typescript/.divergence-full.md
 runner/typescript/.properties-full.json
+runner/typescript/.wasm-subset-last-run.json
 
 # IDE
 .idea/

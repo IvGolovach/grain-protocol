@@ -6,6 +6,7 @@ This directory contains the Rust reference implementation for Protocol v0.1 froz
 
 - `grain-core`: pure library (strict decoding, CID/COSE/E2E/manifest/ledger semantics)
 - `grain-runner`: conformance runner binary (`grain-runner run --strict --vector ...`)
+- `grain-core-wasm`: WASM read/verify export (`grain_run_vector` ABI) for portability smoke checks
 
 Quickstart demo command:
 - `grain-runner demo --strict`
@@ -43,6 +44,7 @@ docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
 - error code table + precedence: `core/rust/grain-core/docs/errors.md`
 - invariant mapping: `docs/llm/INVARIANTS.md`
 - conformance contract: `conformance/SPEC.md`
+- frozen runner API: `conformance/contract/runner_v1.md`
 
 ## Notes
 

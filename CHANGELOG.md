@@ -3,6 +3,30 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- TOR-PORTABILITY-A01 (cross-platform reproducibility and portability pack):
+  - added one-command containerized verify path:
+    - `scripts/verify`
+    - `scripts/internal/verify_in_container.sh`
+    - `scripts/fuzz-smoke`
+  - added golden image assets:
+    - `docker/grain-runner.Dockerfile`
+    - `docker/grain-certify.Dockerfile`
+    - `.github/workflows/golden-images.yml`
+    - `scripts/containers/build_golden_images.sh`
+  - added WASM read/verify lane:
+    - `core/rust/grain-core-wasm`
+    - `runner/typescript/profiles/wasm-subset.json`
+    - `runner/typescript/scripts/run-wasm-subset.ts`
+  - added runner contract freeze artifacts:
+    - `conformance/contract/runner_v1.md`
+    - `conformance/contract/runner_v1.ops.json`
+    - `conformance/contract/runner_v1.output.schema.json`
+    - `tools/ci/check_runner_contract_compat.py`
+  - added portability enforcement checks:
+    - `tools/ci/check_prohibition_coverage.py`
+    - `tools/ci/check_capid_csprng.py`
+  - expanded CI/release evidence with WASM and portability checks.
+  - added portability/domain adapter docs (human + LLM).
 - RC release metadata hardening:
   - RC tags (`protocol-rc-*`, `repo-rc-*`) now publish GitHub releases with `prerelease=true`.
   - applied in both workflows:

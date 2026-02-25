@@ -8,6 +8,9 @@ The goal:
 - passing the suite defines v0.1 conformance,
 - a strong interoperability claim is made after two independent implementations pass the full suite.
 
+Runner portability note:
+- frozen CLI/output contract for v0.1 vectors is documented in `conformance/contract/runner_v1.md`.
+
 ## 1. Runner interface (MUST)
 
 An implementation MUST provide a CLI runner executable that supports:

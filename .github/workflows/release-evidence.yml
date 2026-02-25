@@ -34,6 +34,9 @@ jobs:
           python3 tools/ci/check_dependabot_policy.py
           python3 tools/ci/check_docs_links.py
           python3 tools/ci/check_docs_flow.py
+          python3 tools/ci/check_runner_contract_compat.py
+          python3 tools/ci/check_prohibition_coverage.py
+          python3 tools/ci/check_capid_csprng.py
 
       - name: Set up Rust 1.86.0
         uses: dtolnay/rust-toolchain@master
@@ -45,6 +48,12 @@ jobs:
 
       - name: Build grain-runner binary
         run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
+      - name: Add wasm target
+        run: rustup target add wasm32-wasip1
+
+      - name: Build grain-core-wasm
+        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release
 
       - name: Quickstart smoke (deterministic demo output)
         run: |
@@ -92,6 +101,15 @@ jobs:
       - name: Run TS property tests (full engine)
         run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
 
+      - name: Run SDK strict conformance suite
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+
+      - name: Run SDK invariant checks
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+
+      - name: Run WASM subset vectors
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+
       - name: Collect TS artifacts
         run: |
           mkdir -p artifacts
@@ -102,6 +120,8 @@ jobs:
           cp runner/typescript/.divergence-full.json artifacts/divergence-full.json
           cp runner/typescript/.divergence-full.md artifacts/divergence-full.md
           cp runner/typescript/.properties-full.json artifacts/properties-full.json
+          cp runner/typescript/.wasm-subset-last-run.json artifacts/wasm-subset-summary.json
+          sha256sum core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm | awk '{print $1}' > artifacts/wasm.sha256
 
       - name: Build evidence bundle
         run: |
@@ -202,6 +222,9 @@ jobs:
           cp artifacts/divergence-full.md artifacts/evidence/divergence-full.md
           cp artifacts/properties-full.json artifacts/evidence/properties-full.json
           cp artifacts/properties-full.json artifacts/evidence/property-tests.json
+          cp artifacts/sdk-suite-summary.json artifacts/evidence/sdk-suite-summary.json
+          cp artifacts/wasm-subset-summary.json artifacts/evidence/wasm-subset-summary.json
+          cp artifacts/wasm.sha256 artifacts/evidence/wasm.sha256
 
           python3 tools/ci/build_interop_summary.py \
             --commit-sha "${GITHUB_SHA}" \
@@ -223,9 +246,11 @@ jobs:
             --file interop-report.md \
             --file invariants-audit.json \
             --file property-tests.json \
+            --file sdk-suite-summary.json \
             --file suite-run-rust.json \
             --file suite-run-ts.json \
-            --file vector-manifest.json
+            --file vector-manifest.json \
+            --file wasm.sha256
 
           cd artifacts
           zip -r "evidence-${GITHUB_SHA}.zip" evidence

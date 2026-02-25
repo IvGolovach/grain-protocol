@@ -46,6 +46,12 @@ jobs:
       - name: Docs flow check
         run: python3 tools/ci/check_docs_flow.py
 
+      - name: Check runner_v1 contract compatibility
+        run: python3 tools/ci/check_runner_contract_compat.py
+
+      - name: Check prohibition-zone coverage
+        run: python3 tools/ci/check_prohibition_coverage.py
+
       - name: Check branch protection drift (main)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -73,6 +79,19 @@ jobs:
 
       - name: Compile Python tooling
         run: python3 -m py_compile tools/*.py tools/ci/*.py
+
+  capid-csprng-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: cap_id CSPRNG static audit
+        run: python3 tools/ci/check_capid_csprng.py
 
   rust-core:
     runs-on: ubuntu-latest
@@ -215,9 +234,105 @@ jobs:
           name: ts-full-results
           path: artifacts/*
 
+  wasm-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Rust 1.86.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.86.0
+
+      - name: Add wasm target
+        run: rustup target add wasm32-wasip1
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: runner/typescript/package-lock.json
+
+      - name: Install TS runner deps
+        run: npm ci --prefix runner/typescript
+
+      - name: Build grain-core-wasm
+        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release
+
+      - name: Run WASM subset vectors
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+
+      - name: Collect WASM artifacts
+        run: |
+          mkdir -p artifacts
+          cp runner/typescript/.wasm-subset-last-run.json artifacts/wasm-subset-summary.json
+          sha256sum core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm | awk '{print $1}' > artifacts/wasm.sha256
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: wasm-smoke-results
+          path: artifacts/wasm*
+
+  fuzz-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Set up Rust 1.86.0
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.86.0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: runner/typescript/package-lock.json
+
+      - name: Install TS runner deps
+        run: npm ci --prefix runner/typescript
+
+      - name: Build grain-runner binary
+        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
+      - name: Run deterministic fuzz smoke corpus
+        run: ./scripts/fuzz-smoke --out-dir artifacts/fuzz-smoke
+
+      - name: Upload fuzz smoke artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: fuzz-smoke-results
+          path: artifacts/fuzz-smoke
+
+  verify-script-smoke:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build grain-certify container locally
+        run: docker build -f docker/grain-certify.Dockerfile -t grain-certify-ci:${GITHUB_SHA} .
+
+      - name: Run one-command verify smoke
+        run: ./scripts/verify --image grain-certify-ci:${GITHUB_SHA} --out-dir artifacts/verify-smoke
+
+      - name: Verify evidence hash exists
+        run: test -f artifacts/verify-smoke/evidence/evidence_content.sha256
+
   evidence-bundle:
     runs-on: ubuntu-latest
-    needs: [python-tooling, rust-core, ts-c01, ts-full]
+    needs: [python-tooling, capid-csprng-audit, rust-core, ts-c01, ts-full, wasm-smoke]
     steps:
       - uses: actions/checkout@v6
 
@@ -237,6 +352,12 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           name: ts-full-results
+          path: artifacts
+
+      - name: Download WASM artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: wasm-smoke-results
           path: artifacts
 
       - name: Build deterministic manifests and hashes
@@ -347,6 +468,8 @@ jobs:
           cp artifacts/divergence-full.md artifacts/evidence/divergence-full.md
           cp artifacts/properties-full.json artifacts/evidence/properties-full.json
           cp artifacts/properties-full.json artifacts/evidence/property-tests.json
+          cp artifacts/wasm-subset-summary.json artifacts/evidence/wasm-subset-summary.json
+          cp artifacts/wasm.sha256 artifacts/evidence/wasm.sha256
 
       - name: Build interop evidence summary
         run: |
@@ -375,7 +498,8 @@ jobs:
             --file sdk-suite-summary.json \
             --file suite-run-rust.json \
             --file suite-run-ts.json \
-            --file vector-manifest.json
+            --file vector-manifest.json \
+            --file wasm.sha256
 
       - name: Archive evidence
         run: |

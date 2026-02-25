@@ -53,6 +53,12 @@ Run TS property tests:
 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
 ```
 
+Run WASM subset portability smoke:
+
+```bash
+node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+```
+
 ## Artifacts
 
 - `runner/typescript/.c01-last-run.json`
@@ -60,6 +66,7 @@ node --experimental-strip-types runner/typescript/scripts/properties-full.ts
 - `runner/typescript/.full-last-run.json`
 - `runner/typescript/.divergence-full.json`
 - `runner/typescript/.properties-full.json`
+- `runner/typescript/.wasm-subset-last-run.json`
 
 ## Determinism notes
 

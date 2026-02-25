@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grain.spec/conformance/contract/runner_v1.output.schema.json",
+  "title": "Grain Runner v1 output",
+  "type": "object",
+  "required": [
+    "vector_id",
+    "pass",
+    "diag",
+    "out"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "vector_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pass": {
+      "type": "boolean"
+    },
+    "diag": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "out": {
+      "type": "object"
+    }
+  }
+}

@@ -30,6 +30,7 @@ The following are locked and MUST NOT change without a protocol major bump:
 
 If `conformance/SPEC.md` changes (new op, input/output shape, diagnostics contract):
 - MUST add ADR under `adr/conformance/`
+- MUST update `conformance/contract/runner_v1.md` and bump contract version if incompatible
 - MUST update `docs/llm/CONFORMANCE.md`
 - MUST update `docs/llm/INVARIANTS.md` and `docs/llm/EDGE_CASES.md` for vector mapping
 - MUST update `CHANGELOG.md`

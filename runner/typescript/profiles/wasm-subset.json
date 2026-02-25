@@ -1,0 +1,19 @@
+{
+  "name": "wasm-read-verify-v1",
+  "description": "Deterministic subset for WASM read/verify path portability checks",
+  "vector_ids": [
+    "NEG-ENC-001",
+    "POS-UTF8-WA-0001",
+    "POS-CID-001",
+    "POS-COSE-001",
+    "NEG-COSE-010",
+    "POS-QR-001",
+    "NEG-QR-001",
+    "POS-LED-WA-0001",
+    "NEG-LED-WA-0002",
+    "POS-MAN-WA-0001",
+    "NEG-MAN-WA-0002",
+    "POS-LED-001",
+    "NEG-LED-010"
+  ]
+}

@@ -10,6 +10,10 @@ cd grain-clean
 git fetch --all --tags --prune
 ```
 
+Prerequisite:
+- Docker or Podman installed locally.
+- No host Rust/Node/Python toolchain is required for `./scripts/verify`.
+
 ## 2) Git parity checks
 
 ```bash
@@ -41,26 +45,27 @@ python3 tools/validate_vectors.py
 Expected:
 - all commands print `OK` and exit `0`.
 
-## 4) Certification run
+## 4) One-command strict verification run
 
 ```bash
-tools/interop_certify.sh --out-dir /tmp/interop-cert --commit-sha "$(git rev-parse HEAD)"
+./scripts/verify --out-dir artifacts/verify-local
 ```
 
 Expected:
 - Rust strict suite PASS
 - TS strict suite PASS
+- SDK strict suite PASS
 - divergence C01/full = 0
 - property tests failed = 0
 - invariants audit PASS
-- `evidence.sha256` produced.
+- `evidence_content.sha256` produced.
 
 ## 5) Compare with CI artifact
 
 Download evidence artifact from latest successful CI/release run and compare:
 
 ```bash
-sha256sum /tmp/interop-cert/evidence.sha256
+cat artifacts/verify-local/evidence/evidence_content.sha256
 ```
 
 Confirm the first line hash (`evidence_sha256 ...`) matches the reference run for the same commit.

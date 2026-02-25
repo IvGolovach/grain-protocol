@@ -16,6 +16,7 @@
     "divergence:c01": "node --experimental-strip-types scripts/divergence-c01.ts",
     "run:full": "node --experimental-strip-types scripts/run-full.ts",
     "divergence:full": "node --experimental-strip-types scripts/divergence-full.ts",
+    "run:wasm-subset": "node --experimental-strip-types scripts/run-wasm-subset.ts",
     "test:properties": "node --experimental-strip-types scripts/properties-full.ts"
   }
 }

@@ -21,6 +21,7 @@ What Grain does not give you:
 - [Build an app on Grain](./building-on-grain.md)
 - [Implement Grain itself](./implementing-grain.md)
 - [Build with SDK primitives](./sdk/start-here.md)
+- [Run portability verification](./portability-pack.md)
 
 ## Current status snapshot
 

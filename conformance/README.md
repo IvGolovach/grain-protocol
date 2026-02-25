@@ -23,13 +23,14 @@ A strong interoperability claim is made after two independent implementations pa
 
 - `vectors/` — test vectors grouped by area
 - `SPEC.md` — runner interface
+- `contract/runner_v1.md` — frozen CLI/output contract for portability
 - `harness/` — optional tooling for vector validation (format-level)
 
 Reference runner implementation:
 - `core/rust/grain-runner`
 
-Cross-language smoke runner:
-- `runner/typescript` (C01 profile / Wave A only)
+Cross-language independent implementation:
+- `runner/typescript` (full strict suite; C01 retained as Wave A smoke lens)
 
 ## Wave A byte-level coverage
 

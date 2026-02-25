@@ -20,21 +20,13 @@ RC policy reference:
 
 1. Sync `main`.
 2. Verify local checks:
-   - `python3 tools/validate_vectors.py`
-   - `python3 tools/check_llm_docs.py`
-   - `python3 tools/check_spec_drift.py`
-   - `python3 tools/ci/check_gitattributes_policy.py`
-   - `python3 tools/ci/check_forbidden_tracked.py`
-   - `python3 tools/ci/check_crlf_tracked.py`
-   - `cargo test --manifest-path core/rust/Cargo.toml --workspace`
-   - `cargo build --manifest-path core/rust/Cargo.toml -p grain-runner`
-   - `python3 tools/ci/run_runner_suite.py --vectors-root conformance/vectors --commit-sha "$(git rev-parse HEAD)" --out /tmp/suite-run.json --runner-cmd core/rust/target/debug/grain-runner run --strict --vector`
-   - `node --experimental-strip-types runner/typescript/scripts/run-c01.ts`
-   - `node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts`
-   - `node --experimental-strip-types runner/typescript/scripts/run-full.ts`
-   - `node --experimental-strip-types runner/typescript/scripts/divergence-full.ts`
-   - `node --experimental-strip-types runner/typescript/scripts/properties-full.ts`
-   - `tools/interop_certify.sh --out-dir /tmp/interop-cert --commit-sha "$(git rev-parse HEAD)"`
+   - `./scripts/verify --out-dir artifacts/verify-local`
+   - `cat artifacts/verify-local/evidence/evidence_content.sha256`
+   - `python3 tools/ci/check_runner_contract_compat.py`
+   - `python3 tools/ci/check_prohibition_coverage.py`
+   - `python3 tools/ci/check_capid_csprng.py`
+   - `cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release`
+   - `node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts`
 3. Decide tag type and next version string:
    - protocol release tag: `protocol-vX.Y.Z`
    - repo release tag: `repo-vX.Y.Z`
@@ -49,6 +41,7 @@ RC policy reference:
 7. Verify tag workflows:
    - `release-evidence` attached `evidence-<sha>.zip`.
    - `interop-certify` attached `interop-evidence-<sha>.zip`.
+   - `golden-images` published digests for `grain-runner` and `grain-certify`.
 8. For release tags (`protocol-*`, `repo-*`), verify GitHub release entry and attached assets.
 9. For RC tags (`protocol-rc-*`, `repo-rc-*`), verify GitHub release entry is marked `prerelease=true`.
 

@@ -1,0 +1,12 @@
+[package]
+name = "grain-core-wasm"
+version = "0.4.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+grain-core = { path = "../grain-core" }
+serde_json = { workspace = true }

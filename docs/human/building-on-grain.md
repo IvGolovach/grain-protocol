@@ -23,6 +23,7 @@ This page is for product/application engineers integrating Grain behavior into a
 
 Use `docs/human/quickstart.md` first, then wire your app to the same primitives.
 For SDK-first integration, use `docs/human/sdk/start-here.md`.
+For domain mapping patterns, use `docs/human/domain-adapters.md`.
 
 ## Read later (not first)
 

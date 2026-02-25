@@ -4,10 +4,11 @@ This page is for protocol implementers (new Core/SDK/runner).
 
 ## Recommended order
 
-1. `conformance/SPEC.md` (runner contract)
-2. `conformance/vectors/**` (expected behavior)
-3. `spec/NES-v0.1.md` + `spec/profiles/*` (normative rules)
-4. `spec/FREEZE-CONFIRMATION-v0.1.md` + `spec/SCOPE-v0.1.md` + `spec/INTEROP-v0.1.md`
+1. `conformance/contract/runner_v1.md` (frozen runner API)
+2. `conformance/SPEC.md` (runner semantics)
+3. `conformance/vectors/**` (expected behavior)
+4. `spec/NES-v0.1.md` + `spec/profiles/*` (normative rules)
+5. `spec/FREEZE-CONFIRMATION-v0.1.md` + `spec/SCOPE-v0.1.md` + `spec/INTEROP-v0.1.md`
 
 Conformance is the executable court. Implementation must follow vectors, not vice versa.
 
@@ -28,12 +29,18 @@ Conformance is the executable court. Implementation must follow vectors, not vic
 - COSE accepted but not deterministic-bytes checked.
 - HKDF labels with incorrect `0x00` separators.
 - `parse_cborseq_stream_v1` treated as partial-success instead of XOR accept/reject framing verdict.
+- Silent dependency on host toolchain/runtime instead of containerized verify path.
 
 ## Conformance statements
 
 - Passing the suite is the conformance criterion.
 - A strong interoperability claim is valid only after two independent full implementations pass the full suite.
 - TS full engine now targets full-suite parity; C01 remains a byte-path smoke profile.
+
+## Portability references
+
+- `docs/human/portability-pack.md`
+- `docs/human/porting-grain.md`
 
 ## Domain scope note
 

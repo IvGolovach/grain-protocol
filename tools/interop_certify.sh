@@ -36,6 +36,9 @@ python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
+python3 tools/ci/check_runner_contract_compat.py
+python3 tools/ci/check_prohibition_coverage.py
+python3 tools/ci/check_capid_csprng.py
 python3 -m py_compile tools/*.py tools/ci/*.py
 
 if ! command -v docker >/dev/null 2>&1; then

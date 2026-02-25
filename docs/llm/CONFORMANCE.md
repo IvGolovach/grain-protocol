@@ -7,6 +7,7 @@ Grain v0.1 compatibility is defined by passing the conformance suite in **Strict
 
 - Vectors live in `conformance/vectors/`
 - Runner interface is defined in `conformance/SPEC.md`
+- Frozen runner API is in `conformance/contract/runner_v1.md`
 
 ## Wave A (byte-level closure)
 
@@ -67,6 +68,7 @@ Path:
 Profiles:
 - C01 profile: `runner/typescript/profiles/c01.json` (Wave A focused smoke lens)
 - Full profile: `runner/typescript/profiles/full.json` (all vectors)
+- WASM subset profile: `runner/typescript/profiles/wasm-subset.json` (read/verify portability lane)
 
 Primary commands:
 ```bash
@@ -75,6 +77,7 @@ node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
 node --experimental-strip-types runner/typescript/scripts/run-full.ts
 node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
 ```
 
 Artifacts:
@@ -83,6 +86,7 @@ Artifacts:
 - `runner/typescript/.full-last-run.json`
 - `runner/typescript/.divergence-full.json`
 - `runner/typescript/.properties-full.json`
+- `runner/typescript/.wasm-subset-last-run.json`
 
 ## SDK runner (TOR-SDK-A01)
 
@@ -113,6 +117,7 @@ Evidence policy:
 - CI emits commit-bound bundle `evidence-<commit_sha>.zip`
 - bundle includes suite summaries, vector manifests/hashes, toolchain/lock hashes, Rust↔TS divergence summaries
 - local `.local-architect-reports/**` are non-normative and MUST NOT be committed
+- containerized portability verify path: `scripts/verify` (strict, fail-closed, clean-tree required)
 
 Interop certification workflow:
 - `/.github/workflows/interop-certify.yml` runs TOR-CERT-D01 packaging
