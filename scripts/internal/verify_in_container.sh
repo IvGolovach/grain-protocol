@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="/work"
 cd "$ROOT"
 
+# GitHub Actions mounts the workspace with host ownership; mark mount as trusted for git helpers.
+git config --global --add safe.directory "$ROOT"
+
 OUT_DIR="${GRAIN_VERIFY_OUT_DIR:-$ROOT/artifacts/verify}"
 COMMIT_SHA="${GRAIN_VERIFY_COMMIT_SHA:-$(git rev-parse HEAD)}"
 ENABLE_FUZZ_SMOKE="${GRAIN_VERIFY_FUZZ_SMOKE:-0}"
