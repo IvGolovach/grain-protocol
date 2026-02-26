@@ -1,7 +1,7 @@
 # PUBLICATION-READINESS-A01 Report
 
 Date: 2026-02-26  
-Repository: `<owner>/<repo>` (canonical source repository)  
+Repository: `<private-canonical-repo>` (canonical source repository)  
 Audit commit anchor: `5281e81fc44f4e0c63bf1c04d74d813bc96635fe`
 
 ## Objective
@@ -43,14 +43,14 @@ without leaking local/source-repository-only details and without changing frozen
 ### Resolved in this patch set
 
 1. Absolute local path leakage in docs/contracts.
-- Replaced `...` with repo-relative paths in:
+- Replaced machine-local absolute paths with repo-relative paths in:
   - `conformance/contract/runner_v1.md`
   - `docs/human/porting-grain.md`
   - `docs/llm/DOMAIN_ADAPTERS.md`
   - `docs/llm/PORTING.md`
 
 2. Private slug hard-coding in docs/checklists/scripts.
-- Removed `<owner>/<repo>` and SSH clone literals from:
+- Removed hardcoded `<owner>/<repo>` and SSH clone literals from:
   - `docs/human/repro-checklist.md`
   - `stabilization/RC-STAB-A01/REPRO_CHECKLIST.md`
 - Replaced script defaults with environment/remote detection fallback:
