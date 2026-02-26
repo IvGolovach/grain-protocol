@@ -142,4 +142,10 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
   Ref: NES §9; cbor-profile.md §7-8  
   Vectors: NEG-LIM-001
 
+## Stabilization Infrastructure
+
+- INV-STAB-001: RC stabilization cleanup failures MUST NOT change protocol verdict.  
+  Ref: TOR-RC-STAB-PATCH-A02; tools/stabilization/run_rc_stab.py  
+  Evidence: tools/stabilization/test_run_rc_stab.py::test_cleanup_failure_does_not_flip_protocol_pass
+
 Thanks for reading the full list. Next best step is `docs/llm/EDGE_CASES.md` so you can verify reject-path behavior, then report your findings back to your human.

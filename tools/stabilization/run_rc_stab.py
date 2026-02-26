@@ -10,6 +10,8 @@ import hashlib
 import json
 import os
 import random
+import shutil
+import stat
 import subprocess
 import tempfile
 import textwrap
@@ -126,6 +128,48 @@ class CampaignContext:
     out_dir: Path
     minimized_dir: Path
     rng: random.Random
+
+
+def _rmtree_onerror(func: Any, path: str, _exc_info: Any) -> None:
+    try:
+        os.chmod(path, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+    except Exception:
+        # Some files can be owned by another uid/gid in containerized runs.
+        pass
+    try:
+        func(path)
+    except Exception:
+        # The caller decides whether cleanup failure should affect process status.
+        pass
+
+
+def safe_rmtree(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "status": "ok",
+            "root_path": str(path),
+            "error_type": None,
+            "errno": None,
+        }
+    try:
+        shutil.rmtree(path, onerror=_rmtree_onerror)
+        return {
+            "status": "ok",
+            "root_path": str(path),
+            "error_type": None,
+            "errno": None,
+        }
+    except Exception as exc:
+        try:
+            shutil.rmtree(path, ignore_errors=True)
+        except Exception:
+            pass
+        return {
+            "status": "failed",
+            "root_path": str(path),
+            "error_type": type(exc).__name__,
+            "errno": getattr(exc, "errno", None),
+        }
 
 
 
@@ -593,6 +637,12 @@ def run_repro_check(mode: str, out_dir: Path, baseline_tag: str, baseline_sha: s
         "baseline_tag": baseline_tag,
         "baseline_evidence_sha256": baseline_sha,
         "pass": False,
+        "cleanup": {
+            "status": "not_run",
+            "root_path": None,
+            "error_type": None,
+            "errno": None,
+        },
     }
 
     md_path = out_dir / "reproducibility-report.md"
@@ -607,10 +657,10 @@ def run_repro_check(mode: str, out_dir: Path, baseline_tag: str, baseline_sha: s
     baseline_commit = git_rev_parse(baseline_tag)
     report["baseline_commit"] = baseline_commit
 
-    with tempfile.TemporaryDirectory(prefix="grain-rc-stab-repro-") as td:
-        temp = Path(td)
-        clone = temp / "clone"
+    temp = Path(tempfile.mkdtemp(prefix="grain-rc-stab-repro-"))
+    clone = temp / "clone"
 
+    try:
         clone_cmd = ["git", "clone", "--quiet", str(ROOT), str(clone)]
         if run(clone_cmd, cwd=ROOT, timeout=120).returncode != 0:
             report["error"] = "clone_failed"
@@ -672,6 +722,14 @@ def run_repro_check(mode: str, out_dir: Path, baseline_tag: str, baseline_sha: s
             + "\n",
             encoding="utf-8",
         )
+    finally:
+        cleanup = safe_rmtree(temp)
+        report["cleanup"] = cleanup
+        if cleanup["status"] == "failed":
+            print(
+                "STAB_CLEANUP_WARN: repro temp cleanup failed "
+                f"(type={cleanup['error_type']} errno={cleanup['errno']} root={cleanup['root_path']})"
+            )
 
     return report
 
@@ -864,12 +922,30 @@ def main() -> int:
         "rollback_rehearsal_pass": True if args.mode == "smoke" else bool(rollback.get("pass", False)),
     }
 
-    verdict = "PASS" if all(gates.values()) else "FAIL"
+    protocol_verdict = "PASS" if all(gates.values()) else "FAIL"
+    cleanup_report = repro.get("cleanup", {})
+    cleanup_state = cleanup_report.get("status", "not_run")
+    cleanup_failed = cleanup_state == "failed"
+    cleanup_warnings = []
+    if cleanup_failed:
+        cleanup_warnings.append(
+            {
+                "code": "STAB_CLEANUP_WARN",
+                "root_path": cleanup_report.get("root_path"),
+                "error_type": cleanup_report.get("error_type"),
+                "errno": cleanup_report.get("errno"),
+            }
+        )
+
+    # INV-STAB-001:
+    # Cleanup failures are recorded as warnings and MUST NOT flip protocol verdict.
+    verdict = protocol_verdict
 
     evidence_core = {
         "tor": "TOR-RC-STAB-A01",
         "mode": args.mode,
         "verdict": verdict,
+        "protocol_verdict": protocol_verdict,
         "repo_head": git_rev_parse("HEAD"),
         "repo": args.repo,
         "seed": args.seed,
@@ -886,6 +962,11 @@ def main() -> int:
             "minimized_repros": len(saved_vectors),
         },
         "gates": gates,
+        "cleanup": {
+            "status": cleanup_state,
+            "warnings": cleanup_warnings,
+            "repro_temp_dir": cleanup_report.get("root_path"),
+        },
         "artifacts": {
             "fuzz_report": str((out_dir / "fuzz-report.md").relative_to(ROOT)),
             "attack_matrix_report": str((out_dir / "attack-matrix-results.md").relative_to(ROOT)),
@@ -912,7 +993,7 @@ def main() -> int:
     if findings_total > 0:
         dump_json(out_dir / "findings.json", {"attack": attack_findings, "fuzz": fuzz_findings})
 
-    return 0 if verdict == "PASS" else 1
+    return 0 if protocol_verdict == "PASS" else 1
 
 
 if __name__ == "__main__":

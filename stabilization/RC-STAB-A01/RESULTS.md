@@ -32,3 +32,8 @@ Update this section from CI artifact `stabilization-evidence.json` after each de
   - mark `repo-rc-v0.4.0-rc1` as revoked in `spec/rc/REVOCATIONS/`
   - cut `repo-rc-v0.4.0-rc2` on blocker-fix commit
   - rerun full stabilization window.
+
+## Stabilization invariants
+- `INV-STAB-001`: cleanup failures in stabilization infrastructure are warning-only and MUST NOT flip protocol verdict.
+  - Protocol verdict still depends only on attack/fuzz/properties/repro/rollback gates.
+  - Cleanup state is tracked in `stabilization-evidence.json.cleanup`.

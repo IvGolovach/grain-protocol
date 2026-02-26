@@ -3,6 +3,18 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- TOR-RC-STAB-PATCH-A02 (deterministic cleanup / non-blocking stabilization):
+  - hardened `tools/stabilization/run_rc_stab.py` with best-effort `safe_rmtree` cleanup.
+  - split protocol verdict from cleanup warnings:
+    - protocol verdict now remains authoritative for exit code.
+    - cleanup failures are recorded as `STAB_CLEANUP_WARN` in `stabilization-evidence.json.cleanup`.
+  - added stabilization invariant `INV-STAB-001` in `docs/llm/INVARIANTS.md`.
+  - updated stabilization docs:
+    - `stabilization/RC-STAB-A01/RESULTS.md`
+    - `tools/stabilization/README.md`
+  - added tests in `tools/stabilization/test_run_rc_stab.py`:
+    - read-only cleanup handling
+    - cleanup failure does not flip `PASS`.
 - SDK hardening pass (TOR-SDK-A01 follow-up):
   - added deterministic SDK error descriptor model (`code/category/nes_ref/vector_refs`) in `core/ts/grain-sdk/src/errors.ts`
   - expanded canonical explain contract (`core/ts/grain-sdk/src/codec.ts`)
