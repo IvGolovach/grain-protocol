@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
 
 import { GrainSdk } from "../src/index.ts";
 import { SdkError } from "../src/errors.ts";
@@ -47,12 +46,11 @@ async function run(): Promise<number> {
       ok("SDK-INV-0004 deterministic nonce lifecycle");
     }
 
-    // cap single-assignment corruption guard
+    // cap single-assignment corruption guard through public API (no direct store bypass)
     try {
       const randomCap = e1.cap_id;
-      const badCipher = new TextEncoder().encode("bad-cipher");
-      const badChash = new Uint8Array(createHash("sha256").update(Buffer.from(badCipher)).digest());
-      await sdk.store.blobs.put(randomCap, badCipher, badChash);
+      const differentPt = new TextEncoder().encode("hello-world-mutated");
+      await sdk.e2e.encrypt(differentPt, { cid_link_bstr: cidLink, cap_id: randomCap });
       fail("SDK-INV-0006 cap_id single-assignment", "overwrite did not fail");
     } catch (err) {
       const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";

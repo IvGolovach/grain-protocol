@@ -89,6 +89,174 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
     nes_ref: "docs/human/sdk/overview.md",
     vector_refs: ["SDK-NEG-0005"]
   },
+  SDK_ERR_AI_ENVELOPE_INVALID: {
+    category: "VALIDATION",
+    summary: "AI candidate envelope is malformed.",
+    human_hint: "Use candidate_version=1 envelope with required fields.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_ENVELOPE_VERSION: {
+    category: "CONTRACT",
+    summary: "AI candidate version is unsupported.",
+    human_hint: "Use candidate_version=1 for TOR-SDK-A03 boundary.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_SCHEMA_MAJOR: {
+    category: "CONTRACT",
+    summary: "AI candidate targets unsupported schema major.",
+    human_hint: "Use target_schema_major=1 with protocol major 1.",
+    nes_ref: "spec/FREEZE-CONFIRMATION-v0.1.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_KIND_INVALID: {
+    category: "VALIDATION",
+    summary: "AI candidate kind is invalid.",
+    human_hint: "kind must be object or event.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_TARGET_TYPE: {
+    category: "VALIDATION",
+    summary: "AI candidate target_type is invalid.",
+    human_hint: "Provide a non-empty target_type string.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_PAYLOAD_FORMAT: {
+    category: "VALIDATION",
+    summary: "AI candidate payload_format is invalid.",
+    human_hint: "payload_format must be structured_v1 or dagcbor_b64.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_DAGCBOR_B64: {
+    category: "VALIDATION",
+    summary: "AI DAG-CBOR payload must be base64 standard bytes.",
+    human_hint: "Encode bytes using standard base64 and keep padding canonical.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0002"]
+  },
+  SDK_ERR_AI_STRUCTURED_INVALID: {
+    category: "VALIDATION",
+    summary: "structured_v1 payload is invalid.",
+    human_hint: "Use structured_v1 payload with data and optional pointer maps.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0002"]
+  },
+  SDK_ERR_AI_NUMERIC_FIELDS: {
+    category: "VALIDATION",
+    summary: "numeric_fields configuration is invalid.",
+    human_hint: "numeric_fields must map json-pointer paths to u63|i64.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0003"]
+  },
+  SDK_ERR_AI_NUMERIC_NOT_DECIMAL_STRING: {
+    category: "VALIDATION",
+    summary: "Numeric ingestion field is not a decimal string.",
+    human_hint: "Provide numeric values as decimal strings in structured_v1.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0003"]
+  },
+  SDK_ERR_AI_NUMERIC_RANGE: {
+    category: "VALIDATION",
+    summary: "Numeric ingestion field is out of allowed range.",
+    human_hint: "Keep u63/i64 fields inside protocol integer bounds.",
+    nes_ref: "spec/NES-v0.1.md §3",
+    vector_refs: ["SDK-NEG-AI-0003"]
+  },
+  SDK_ERR_AI_BYTES_B64: {
+    category: "VALIDATION",
+    summary: "Bytes ingestion field is not valid base64 standard.",
+    human_hint: "Use standard base64 for bytes_fields in structured_v1.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0004"]
+  },
+  SDK_ERR_AI_POINTER_INVALID: {
+    category: "CONTRACT",
+    summary: "JSON pointer format is invalid.",
+    human_hint: "Use RFC6901 pointers beginning with '/'.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0005"]
+  },
+  SDK_ERR_AI_POINTER_MISSING: {
+    category: "VALIDATION",
+    summary: "JSON pointer path does not exist in structured payload.",
+    human_hint: "Update pointer maps to match the structured payload shape.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0005"]
+  },
+  SDK_ERR_AI_PROFILE_ID: {
+    category: "VALIDATION",
+    summary: "structured_v1 profile_id is invalid.",
+    human_hint: "Provide a non-empty profile_id string or omit profile_id.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0012"]
+  },
+  SDK_ERR_AI_PROFILE_MISSING: {
+    category: "CONTRACT",
+    summary: "structured_v1 candidate is missing explicit field profile metadata.",
+    human_hint: "Set profile_id or provide explicit numeric/bytes/set field maps.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0012"]
+  },
+  SDK_ERR_AI_PROFILE_UNKNOWN: {
+    category: "CONTRACT",
+    summary: "structured_v1 profile_id is unknown.",
+    human_hint: "Use an exported profile_id from sdk.ai.exportContract() or explicit field maps.",
+    nes_ref: "docs/human/sdk/ai-ingestion.md",
+    vector_refs: ["SDK-NEG-AI-0012"]
+  },
+  SDK_ERR_AI_SET_ARRAY_INVALID: {
+    category: "CANONICAL",
+    summary: "Set-array ingestion field is invalid.",
+    human_hint: "Set-array fields must be arrays of strings; duplicates reject.",
+    nes_ref: "spec/NES-v0.1.md §3.5",
+    vector_refs: ["SDK-NEG-AI-0006"]
+  },
+  SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL: {
+    category: "QUARANTINE",
+    summary: "Candidate references unknown critical extensions and is quarantined.",
+    human_hint: "Register/allow known critical extensions or keep candidate in quarantine lane.",
+    nes_ref: "spec/NES-v0.1.md §5",
+    vector_refs: ["SDK-NEG-AI-0007"]
+  },
+  SDK_ERR_AI_CID_DERIVE: {
+    category: "CONTRACT",
+    summary: "CID derivation output is malformed.",
+    human_hint: "Treat as SDK/core contract regression and block apply.",
+    nes_ref: "conformance/contract/runner_v1.md",
+    vector_refs: ["SDK-NEG-AI-0008"]
+  },
+  SDK_ERR_ACCEPT_TOKEN_FORGED: {
+    category: "CONTRACT",
+    summary: "Accepted token is forged or external to SDK registry.",
+    human_hint: "Only pass opaque token returned by sdk.ai.accept().",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0009"]
+  },
+  SDK_ERR_ACCEPT_TOKEN_UNKNOWN: {
+    category: "CONTRACT",
+    summary: "Accepted token is unknown or already consumed.",
+    human_hint: "Do not reuse apply tokens; request a fresh accept().",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0009"]
+  },
+  SDK_ERR_ACCEPT_TOKEN_EXPIRED: {
+    category: "CONTRACT",
+    summary: "Accepted token expired before apply.",
+    human_hint: "Re-run accept() and apply the new token within TTL.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0010"]
+  },
+  SDK_ERR_ACCEPT_TOKEN_CAP_REACHED: {
+    category: "LIMITS",
+    summary: "Accepted token registry capacity exceeded.",
+    human_hint: "Apply or discard pending tokens before issuing more.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0011"]
+  },
   GRAIN_ERR_NONCANONICAL: {
     category: "CANONICAL",
     summary: "Input bytes are non-canonical under strict DAG-CBOR.",

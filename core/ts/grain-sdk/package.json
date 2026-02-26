@@ -1,6 +1,6 @@
 {
   "name": "grain-sdk-ts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Grain SDK universal primitives layer (TOR-SDK-A01)",
   "type": "module",
@@ -14,6 +14,7 @@
     "run:vector": "node --experimental-strip-types src/cli.ts run --strict --vector",
     "run:protocol-suite": "node --experimental-strip-types scripts/run-protocol-suite.ts",
     "test:invariants": "node --experimental-strip-types scripts/test-sdk-invariants.ts",
+    "test:ai-boundary": "node --experimental-strip-types scripts/test-sdk-ai-boundary.ts",
     "demo:e2e": "node --experimental-strip-types scripts/demo-end-to-end.ts"
   }
 }
