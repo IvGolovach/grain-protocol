@@ -30,7 +30,7 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 8) `core/rust/`, `runner/typescript/`, `core/`, `sdk/`
    Implementations. They must conform to the contract above.
 
-9) `.github/workflows/`, `MIGRATION.md`, `docs/human/github-hardening.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`
+9) `.github/workflows/`, `MIGRATION.md`, `TOR-PORTABILITY-A01.md`, `docs/human/github-hardening.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`
    Provenance and policy enforcement (CI gates, evidence artifacts, branch protection).
 
 10) `stabilization/RC-STAB-A01/*`, `tools/stabilization/run_rc_stab.py`, `.github/workflows/rc-stabilization-nightly.yml`

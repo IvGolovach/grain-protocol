@@ -37,3 +37,4 @@ Update this section from CI artifact `stabilization-evidence.json` after each de
 - `INV-STAB-001`: cleanup failures in stabilization infrastructure are warning-only and MUST NOT flip protocol verdict.
   - Protocol verdict still depends only on attack/fuzz/properties/repro/rollback gates.
   - Cleanup state is tracked in `stabilization-evidence.json.cleanup`.
+- Addendum A02: when SDK strict suite is part of required CI context, deep reproducibility includes SDK strict-suite parity checks in evidence review.

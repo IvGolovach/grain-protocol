@@ -43,6 +43,11 @@ All MUST be true:
 - `repro_pass=true` (deep only)
 - `rollback_rehearsal_pass=true` (deep only)
 
+### Addendum A02 (non-breaking)
+- Reproducibility lane MUST include SDK strict suite summary when SDK is present in required CI contexts (`ts-full` path).
+- Stabilization runner MUST enforce `INV-STAB-001`:
+  cleanup failures are warning-only (`STAB_CLEANUP_WARN`) and MUST NOT flip protocol verdict.
+
 ## 7) Outputs
 Tracked docs:
 - `stabilization/RC-STAB-A01/PLAN.md`

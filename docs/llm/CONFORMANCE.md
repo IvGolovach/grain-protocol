@@ -138,3 +138,19 @@ Modes:
 Key rule:
 - Stabilization never changes frozen-core semantics.
 - Any failure yields blocker handling (`rc1` revoke + `rc2` cut), not silent weakening.
+- Addendum A02: deep reproducibility includes SDK strict suite parity when SDK lane is required.
+- Addendum A02 / `INV-STAB-001`: cleanup failures are warning-only (`STAB_CLEANUP_WARN`) and MUST NOT flip protocol verdict.
+
+## Portability pack contract (TOR-PORTABILITY-A01)
+
+Primary anchors:
+- `TOR-PORTABILITY-A01.md`
+- `scripts/verify`
+- `docker/grain-runner.Dockerfile`
+- `docker/grain-certify.Dockerfile`
+
+Required portability checks:
+- containerized strict verify path
+- runner contract compatibility checks
+- prohibition-zone coverage checks
+- cap_id CSPRNG policy audit
