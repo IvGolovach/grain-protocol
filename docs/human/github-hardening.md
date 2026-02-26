@@ -1,4 +1,4 @@
-# GitHub Hardening Runbook (Private)
+# GitHub Hardening Runbook
 
 This runbook defines the minimum governance baseline after bundle-to-git migration.
 
@@ -13,7 +13,7 @@ Branch protection must require:
 
 CI push-to-main drift assertion validates that branch protection required checks stay aligned with policy.
 
-Private autonomous baseline (before explicit public switch):
+Autonomous baseline profile:
 - pull requests required
 - required approving reviews: `0`
 - code owner review requirement: `false`

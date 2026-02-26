@@ -1,4 +1,4 @@
-# Release Process (Private)
+# Release Process
 
 This process applies to repository milestones and protocol tags.
 

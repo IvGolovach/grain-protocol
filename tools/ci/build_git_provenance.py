@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -26,9 +27,35 @@ def maybe_json(cmd: list[str]) -> dict | list | None:
         return None
 
 
+def detect_repo_slug() -> str:
+    env_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if env_repo and "/" in env_repo:
+        return env_repo
+
+    try:
+        remote = subprocess.check_output(
+            ["git", "config", "--get", "remote.origin.url"], text=True
+        ).strip()
+    except Exception:
+        return "<owner>/<repo>"
+
+    slug = ""
+    if remote.startswith("git@github.com:"):
+        slug = remote.split("git@github.com:", 1)[1]
+    elif "github.com/" in remote:
+        slug = remote.split("github.com/", 1)[1]
+
+    if slug.endswith(".git"):
+        slug = slug[:-4]
+    slug = slug.strip("/")
+    if "/" not in slug:
+        return "<owner>/<repo>"
+    return slug
+
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(allow_abbrev=False)
-    p.add_argument("--repo", default="<owner>/<repo>")
+    p.add_argument("--repo", default=detect_repo_slug())
     p.add_argument("--out", required=True)
     return p.parse_args()
 

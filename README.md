@@ -134,7 +134,7 @@ See:
 - Local `.local-architect-reports/**` remains local-only and is never committed.
 - Local verification and CI/release evidence share deterministic `evidence_content.sha256` semantics.
 
-## Dependabot strict lane (source repo)
+## Dependabot strict lane
 
 - Workflow updates are auto-merged only through the strict safe lane.
 - Repository secret `DEPENDABOT_AUTOMERGE_TOKEN` is mandatory for this lane.

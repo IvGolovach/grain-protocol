@@ -197,6 +197,10 @@ def git_rev_parse(ref: str) -> str:
 
 
 def detect_repo_slug() -> str:
+    env_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
+    if env_repo and "/" in env_repo:
+        return env_repo
+
     out = run(["git", "config", "--get", "remote.origin.url"], cwd=ROOT)
     if out.returncode != 0:
         return "<owner>/<repo>"

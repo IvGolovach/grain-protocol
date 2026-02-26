@@ -50,7 +50,7 @@ class StabilizationRunnerTests(unittest.TestCase):
             baseline_evidence_sha="deadbeef",
             rust_runner_cmd=["core/rust/target/debug/grain-runner"],
             ts_runner_cmd=["node", "--experimental-strip-types", "runner/typescript/src/cli.ts"],
-            repo="<owner>/<repo>",
+            repo="acme/grain",
             seed=20260225,
         )
 
