@@ -24,6 +24,7 @@ Expected output contains deterministic fields:
 3. Use `events.reduce()` for deterministic totals.
 4. Use `e2e.encrypt()/decrypt()` for private payload paths.
 5. Use `manifest.put()/resolve()` for private graph resolution.
+6. For model-generated suggestions, use `sdk.ai.accept()` then `sdk.ai.applyAccepted()`.
 
 ## Safety baseline
 
@@ -31,6 +32,7 @@ Expected output contains deterministic fields:
 - unauthorized appends are rejected.
 - cap_id generation is CSPRNG-only and fail-closed.
 - cap_id overwrite/corruption is rejected.
+- AI candidates are suggestion-only until accepted via deterministic firewall.
 
 ## Source
 
@@ -39,5 +41,7 @@ Expected output contains deterministic fields:
 - `docs/human/sdk/errors.md`
 - `docs/human/sdk/impossible-misuse.md`
 - `docs/human/sdk/cross-lang-bridge.md`
+- `docs/human/sdk/ai-boundary.md`
+- `docs/human/sdk/ai-ingestion.md`
 - `docs/llm/SDK_FILE_MAP.md`
 - `docs/llm/SDK_INVARIANTS.md`

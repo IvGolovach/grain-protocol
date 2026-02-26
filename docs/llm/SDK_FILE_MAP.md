@@ -8,11 +8,13 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - what SDK MUST enforce and never hide
 2. `docs/llm/SDK_EDGE_CASES.md`
    - mandatory negative outcomes at SDK boundary
-3. `docs/llm/SDK_CONFORMANCE.md`
+3. `docs/llm/SDK_AI_BOUNDARY.md`
+   - deterministic AI ingestion firewall and token boundary
+4. `docs/llm/SDK_CONFORMANCE.md`
    - SDK runner and test bindings
-4. `core/ts/grain-sdk/src/*`
+5. `core/ts/grain-sdk/src/*`
    - implementation modules
-5. `docs/human/sdk/errors.md`
+6. `docs/human/sdk/errors.md`
    - deterministic error contract in human-readable form
 
 ## Source-of-truth hierarchy for SDK decisions

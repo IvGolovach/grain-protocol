@@ -22,11 +22,21 @@ This checklist documents what public SDK APIs reject by construction.
 6. Invalid transport bundle payload/schema
    - rejected by `transport.bundleImport(...)`
    - code: `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA` / `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
+7. Forged/expired/unknown AI accepted token
+   - rejected by `ai.applyAccepted(...)`
+   - code: `SDK_ERR_ACCEPT_TOKEN_FORGED` / `SDK_ERR_ACCEPT_TOKEN_UNKNOWN` / `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
+8. AI candidate bypass around deterministic firewall
+   - no public `sdk.store` access; side effects require `accept()` then opaque token apply
+   - code path: `SDK-AI-001` gate suite
+9. Unknown critical AI candidate extensions
+   - quarantined deterministically
+   - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
 
 ## Validation command
 
 ```bash
 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
 ```
 
 This command is the executable proof for `SDK-INV-*` mappings in `docs/llm/SDK_INVARIANTS.md`.

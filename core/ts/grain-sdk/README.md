@@ -1,4 +1,4 @@
-# grain-sdk-ts (TOR-SDK-A01)
+# grain-sdk-ts (TOR-SDK-A01 + TOR-SDK-A03)
 
 Universal, domain-neutral SDK primitives for building on Grain without changing protocol semantics.
 
@@ -9,6 +9,8 @@ Principles:
 - fail-closed for risky paths (CSPRNG, cap overwrite)
 - deterministic error descriptors (category + NES/vector refs)
 - deterministic transport bundle import/export (`grain-transport-bundle-v1`)
+- deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
+- no outbound network behavior in SDK core
 
 ## Quick commands
 
@@ -22,6 +24,7 @@ Run SDK invariant tests:
 
 ```bash
 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
 ```
 
 Run SDK end-to-end demo:

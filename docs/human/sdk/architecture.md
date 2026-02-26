@@ -1,4 +1,4 @@
-# SDK Architecture (TOR-SDK-A01)
+# SDK Architecture (TOR-SDK-A01 + TOR-SDK-A03)
 
 This page defines boundaries. SDK is a strict orchestration layer, not a protocol semantics layer.
 
@@ -13,6 +13,7 @@ This page defines boundaries. SDK is a strict orchestration layer, not a protoco
 3. SDK (`core/ts/grain-sdk`)
    - typed primitives + safe builders
    - orchestration for identity/events/e2e/manifest/transport/evidence
+   - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
    - no rule rewrites
 
 ## SDK contract
@@ -32,6 +33,7 @@ This page defines boundaries. SDK is a strict orchestration layer, not a protoco
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK proof bundle
 - `src/primitives.ts`: typed wrappers and set-array builder
+- `src/ai/*`: model-agnostic candidate ingestion, deterministic accept/apply, opaque token registry
 
 ## Non-goals (enforced)
 
@@ -43,6 +45,7 @@ This page defines boundaries. SDK is a strict orchestration layer, not a protoco
 ## Audit anchors
 
 - ADR: `adr/sdk/0001-sdk-universal-primitives-layer.md`
+- ADR: `adr/sdk/0003-ai-boundary-deterministic-ingestion.md`
 - Invariants: `docs/llm/SDK_INVARIANTS.md`
 - Reject paths: `docs/llm/SDK_EDGE_CASES.md`
 - Conformance binding: `docs/llm/SDK_CONFORMANCE.md`

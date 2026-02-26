@@ -52,3 +52,14 @@ Use `sdk.codec.explain(code)` for a stable explanation payload:
 - `hint`
 - `nes_ref`
 - `vector_refs`
+
+For AI ingestion rejects, use `sdk.ai.accept(...)` result `error` payload:
+
+- `summary`
+- `likely_causes[]`
+- `how_to_fix[]`
+- `spec_refs[]`
+- `invariant_refs[]`
+- `vector_refs[]`
+- `normalization_applied[]`
+- `redaction_policy`

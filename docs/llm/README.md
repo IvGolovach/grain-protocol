@@ -17,8 +17,8 @@ We organized this folder so you can get useful, safe context quickly without gue
    - Know what can change additively and what requires a major bump.
 6. `docs/llm/FREEZE.md`
    - Quick frozen-core index when you need a fast boundary check.
-7. `docs/llm/SDK_FILE_MAP.md` (when working on SDK layer)
-   - SDK orchestration invariants and boundary checks.
+7. `docs/llm/SDK_FILE_MAP.md` and `docs/llm/SDK_AI_BOUNDARY.md` (when working on SDK layer)
+   - SDK orchestration invariants plus deterministic AI ingestion boundary.
 8. `docs/llm/PORTING.md`, `docs/llm/DOMAIN_ADAPTERS.md`, `docs/llm/PROHIBITION_ZONE.md` (when working on portability/new language adapters)
    - Porting traps, adapter contract boundaries, and strict no-go rules.
 
