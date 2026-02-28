@@ -126,7 +126,7 @@ jobs:
             --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
 
       - name: Upload rust suite summary
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: rust-suite-summary
           path: artifacts/rust-suite-summary.json
@@ -160,7 +160,7 @@ jobs:
           cp runner/typescript/.divergence-c01.md artifacts/divergence-c01.md
 
       - name: Upload TS C01 artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ts-c01-results
           path: artifacts/*
@@ -235,7 +235,7 @@ jobs:
           cp runner/typescript/.properties-full.json artifacts/properties-full.json
 
       - name: Upload TS full artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ts-full-results
           path: artifacts/*
@@ -276,7 +276,7 @@ jobs:
           sha256sum core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm | awk '{print $1}' > artifacts/wasm.sha256
 
       - name: Upload WASM artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: wasm-smoke-results
           path: artifacts/wasm*
@@ -316,7 +316,7 @@ jobs:
         run: ./scripts/fuzz-smoke --out-dir artifacts/fuzz-smoke
 
       - name: Upload fuzz smoke artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-smoke-results
           path: artifacts/fuzz-smoke
@@ -513,7 +513,7 @@ jobs:
           zip -r "evidence-${GITHUB_SHA}.zip" evidence
 
       - name: Upload evidence bundle
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: evidence-${{ github.sha }}
           path: artifacts/evidence-${{ github.sha }}.zip
