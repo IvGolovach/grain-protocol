@@ -196,6 +196,11 @@ def git_rev_parse(ref: str) -> str:
     return out.stdout.strip()
 
 
+def git_commit_rev_parse(ref: str) -> str:
+    # Peel annotated tags to commit SHA so evidence anchors are stable and comparable.
+    return git_rev_parse(f"{ref}^{{commit}}")
+
+
 def detect_repo_slug() -> str:
     env_repo = os.environ.get("GITHUB_REPOSITORY", "").strip()
     if env_repo and "/" in env_repo:
@@ -658,7 +663,7 @@ def run_repro_check(mode: str, out_dir: Path, baseline_tag: str, baseline_sha: s
         )
         return report
 
-    baseline_commit = git_rev_parse(baseline_tag)
+    baseline_commit = git_commit_rev_parse(baseline_tag)
     report["baseline_commit"] = baseline_commit
 
     temp = Path(tempfile.mkdtemp(prefix="grain-rc-stab-repro-"))
@@ -896,7 +901,7 @@ def main() -> int:
     )
 
     started = time.time()
-    baseline_commit = git_rev_parse(args.baseline_tag)
+    baseline_commit = git_commit_rev_parse(args.baseline_tag)
 
     attack_rows, attack_findings = run_attack_matrix(ctx)
     write_attack_markdown(out_dir / "attack-matrix-results.md", attack_rows)
