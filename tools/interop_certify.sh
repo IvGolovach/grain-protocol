@@ -34,11 +34,13 @@ python3 tools/ci/check_forbidden_tracked.py
 python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
+python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
 python3 tools/ci/check_runner_contract_compat.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
+python3 tools/ci/check_sdk_no_network.py
 python3 -m py_compile tools/*.py tools/ci/*.py
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -91,6 +93,7 @@ NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run
 NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts >/dev/null
 NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-full.ts >/dev/null
 NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts >/dev/null
+NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts >/dev/null
 
 cp runner/typescript/.divergence-c01.json "$OUT_DIR/divergence-c01.json"
 cp runner/typescript/.divergence-full.json "$OUT_DIR/divergence-full.json"

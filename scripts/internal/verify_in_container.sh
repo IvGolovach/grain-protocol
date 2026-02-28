@@ -21,11 +21,13 @@ python3 tools/ci/check_forbidden_tracked.py
 python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
+python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
 python3 tools/ci/check_runner_contract_compat.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
+python3 tools/ci/check_sdk_no_network.py
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
 
@@ -44,6 +46,7 @@ GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner NODE_NO_WARNINGS=1 nod
 NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
 NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
 NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
 
 python3 tools/ci/run_runner_suite.py \
   --vectors-root conformance/vectors \

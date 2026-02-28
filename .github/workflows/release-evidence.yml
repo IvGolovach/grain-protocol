@@ -15,10 +15,10 @@ jobs:
   build-and-publish-evidence:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.11"
 
@@ -32,14 +32,16 @@ jobs:
           python3 tools/ci/check_crlf_tracked.py
           python3 tools/ci/check_codeowners_coverage.py
           python3 tools/ci/check_dependabot_policy.py
+          python3 tools/ci/check_workflow_action_pinning.py
           python3 tools/ci/check_docs_links.py
           python3 tools/ci/check_docs_flow.py
           python3 tools/ci/check_runner_contract_compat.py
           python3 tools/ci/check_prohibition_coverage.py
           python3 tools/ci/check_capid_csprng.py
+          python3 tools/ci/check_sdk_no_network.py
 
       - name: Set up Rust 1.86.0
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
         with:
           toolchain: 1.86.0
 
@@ -69,7 +71,7 @@ jobs:
             --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
 
       - name: Set up Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -106,6 +108,9 @@ jobs:
 
       - name: Run SDK invariant checks
         run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+
+      - name: Run SDK AI boundary checks
+        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
 
       - name: Run WASM subset vectors
         run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
@@ -256,14 +261,33 @@ jobs:
           zip -r "evidence-${GITHUB_SHA}.zip" evidence
 
       - name: Upload evidence artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: evidence-${{ github.sha }}
           path: artifacts/evidence-${{ github.sha }}.zip
 
       - name: Attach evidence to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/evidence-${{ github.sha }}.zip
-          generate_release_notes: true
-          prerelease: ${{ startsWith(github.ref_name, 'protocol-rc-') || startsWith(github.ref_name, 'repo-rc-') }}
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          asset="artifacts/evidence-${GITHUB_SHA}.zip"
+          is_rc=0
+          if [[ "${tag}" == protocol-rc-* || "${tag}" == repo-rc-* ]]; then
+            is_rc=1
+          fi
+
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${asset}" --clobber
+            if [[ "${is_rc}" -eq 1 ]]; then
+              gh release edit "${tag}" --prerelease
+            fi
+          else
+            if [[ "${is_rc}" -eq 1 ]]; then
+              gh release create "${tag}" "${asset}" --title "${tag}" --generate-notes --prerelease
+            else
+              gh release create "${tag}" "${asset}" --title "${tag}" --generate-notes
+            fi
+          fi

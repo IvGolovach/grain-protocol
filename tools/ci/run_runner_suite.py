@@ -26,7 +26,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--runner-cmd", nargs=argparse.REMAINDER, required=True)
     parser.add_argument("--commit-sha", required=True)
     parser.add_argument("--out", required=True)
-    parser.add_argument("--strict", action="store_true", default=True)
+    parser.add_argument(
+        "--timeout-seconds",
+        type=int,
+        default=120,
+        help="Per-vector command timeout in seconds. Set <=0 to disable timeout.",
+    )
+    parser.add_argument("--strict", dest="strict", action="store_true")
+    parser.add_argument("--no-strict", dest="strict", action="store_false")
+    parser.set_defaults(strict=True)
     return parser.parse_args()
 
 
@@ -57,8 +65,25 @@ def main() -> int:
         total += 1
         vector_id = _load_vector_id(vf)
         cmd = [*runner_cmd, str(vf)]
+        timeout_seconds = args.timeout_seconds if args.timeout_seconds > 0 else None
 
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        try:
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_seconds)
+        except subprocess.TimeoutExpired as exc:
+            failed += 1
+            failures.append(
+                {
+                    "vector_id": vector_id,
+                    "path": str(vf),
+                    "exit_code": 124,
+                    "timeout": True,
+                    "stdout": (exc.stdout or "").strip(),
+                    "stderr": (exc.stderr or "").strip(),
+                    "parsed": None,
+                }
+            )
+            continue
+
         stdout = proc.stdout.strip()
         stderr = proc.stderr.strip()
 
@@ -79,6 +104,7 @@ def main() -> int:
                 "vector_id": vector_id,
                 "path": str(vf),
                 "exit_code": proc.returncode,
+                "timeout": False,
                 "stdout": stdout,
                 "stderr": stderr,
                 "parsed": parsed,
@@ -93,6 +119,7 @@ def main() -> int:
         "failed": failed,
         "failures": failures,
         "runner_cmd": runner_cmd,
+        "timeout_seconds": args.timeout_seconds,
     }
 
     out_path.write_text(json.dumps(summary, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")

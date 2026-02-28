@@ -5,14 +5,18 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   python-tooling:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: '3.11'
 
@@ -39,6 +43,9 @@ jobs:
 
       - name: Check Dependabot automerge policy consistency
         run: python3 tools/ci/check_dependabot_policy.py
+
+      - name: Check workflow action pinning
+        run: python3 tools/ci/check_workflow_action_pinning.py
 
       - name: Docs link check
         run: python3 tools/ci/check_docs_links.py
@@ -86,10 +93,10 @@ jobs:
   capid-csprng-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: '3.11'
 
@@ -99,10 +106,10 @@ jobs:
   rust-core:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Rust 1.86.0
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
         with:
           toolchain: 1.86.0
 
@@ -126,7 +133,7 @@ jobs:
             --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
 
       - name: Upload rust suite summary
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: rust-suite-summary
           path: artifacts/rust-suite-summary.json
@@ -134,10 +141,10 @@ jobs:
   ts-c01:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -160,7 +167,7 @@ jobs:
           cp runner/typescript/.divergence-c01.md artifacts/divergence-c01.md
 
       - name: Upload TS C01 artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: ts-c01-results
           path: artifacts/*
@@ -168,17 +175,17 @@ jobs:
   ts-full:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
 
       - name: Set up Rust 1.86.0
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
         with:
           toolchain: 1.86.0
 
       - name: Set up Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -235,7 +242,7 @@ jobs:
           cp runner/typescript/.properties-full.json artifacts/properties-full.json
 
       - name: Upload TS full artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: ts-full-results
           path: artifacts/*
@@ -243,10 +250,10 @@ jobs:
   wasm-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Set up Rust 1.86.0
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
         with:
           toolchain: 1.86.0
 
@@ -254,7 +261,7 @@ jobs:
         run: rustup target add wasm32-wasip1
 
       - name: Set up Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -276,7 +283,7 @@ jobs:
           sha256sum core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm | awk '{print $1}' > artifacts/wasm.sha256
 
       - name: Upload WASM artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: wasm-smoke-results
           path: artifacts/wasm*
@@ -285,22 +292,22 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
         with:
           python-version: "3.11"
 
       - name: Set up Rust 1.86.0
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@efa25f7f19611383d5b0ccf2d1c8914531636bf9
         with:
           toolchain: 1.86.0
 
       - name: Set up Node 22
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -316,7 +323,7 @@ jobs:
         run: ./scripts/fuzz-smoke --out-dir artifacts/fuzz-smoke
 
       - name: Upload fuzz smoke artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: fuzz-smoke-results
           path: artifacts/fuzz-smoke
@@ -325,7 +332,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Build grain-certify container locally
         run: docker build -f docker/grain-certify.Dockerfile -t grain-certify-ci:${GITHUB_SHA} .
@@ -340,31 +347,18 @@ jobs:
     runs-on: ubuntu-latest
     needs: [python-tooling, capid-csprng-audit, rust-core, ts-c01, ts-full, wasm-smoke]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Download rust summary
-        uses: actions/download-artifact@v8
-        with:
-          name: rust-suite-summary
-          path: artifacts
-
-      - name: Download TS artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: ts-c01-results
-          path: artifacts
-
-      - name: Download TS full artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: ts-full-results
-          path: artifacts
-
-      - name: Download WASM artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: wasm-smoke-results
-          path: artifacts
+      - name: Download upstream artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name rust-suite-summary --dir artifacts
+          gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name ts-c01-results --dir artifacts
+          gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name ts-full-results --dir artifacts
+          gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name wasm-smoke-results --dir artifacts
 
       - name: Build deterministic manifests and hashes
         run: |
@@ -513,7 +507,7 @@ jobs:
           zip -r "evidence-${GITHUB_SHA}.zip" evidence
 
       - name: Upload evidence bundle
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: evidence-${{ github.sha }}
           path: artifacts/evidence-${{ github.sha }}.zip

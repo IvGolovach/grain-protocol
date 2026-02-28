@@ -40,6 +40,8 @@ python3 tools/ci/check_crlf_tracked.py
 python3 tools/check_spec_drift.py
 python3 tools/check_llm_docs.py
 python3 tools/validate_vectors.py
+python3 tools/ci/check_sdk_no_network.py
+node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
 ```
 
 Expected:
