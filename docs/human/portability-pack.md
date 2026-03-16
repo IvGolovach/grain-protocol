@@ -10,6 +10,12 @@ Run from a clean clone:
 ./scripts/verify
 ```
 
+Compatibility alias for legacy/operator paths:
+
+```bash
+./scripts/ops/run_verification_pack_v1.sh
+```
+
 Properties:
 - strict mode only
 - container-only execution (`docker` or `podman`)
@@ -52,3 +58,5 @@ node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
 
 `evidence_content.sha256` is computed from deterministic artifacts only (vector manifests, suite outputs, divergence outputs, invariant audit).  
 `metadata.json` may contain timestamps/host details and is intentionally excluded from `evidence_content.sha256`.
+
+`inputs-hashes.json` records `node -v`, so evidence-generating paths must use the exact Node patch version pinned in `.nvmrc`. The same exact version must also be pinned in `docker/grain-certify.Dockerfile`; `python3 tools/ci/check_node_runtime_pin.py` enforces that parity.

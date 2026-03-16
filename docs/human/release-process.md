@@ -22,6 +22,7 @@ RC policy reference:
 2. Verify local checks:
    - `./scripts/verify --out-dir artifacts/verify-local`
    - `cat artifacts/verify-local/evidence/evidence_content.sha256`
+   - `python3 tools/ci/check_node_runtime_pin.py`
    - `python3 tools/ci/check_runner_contract_compat.py`
    - `python3 tools/ci/check_prohibition_coverage.py`
    - `python3 tools/ci/check_capid_csprng.py`
@@ -62,6 +63,7 @@ Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
    - `reproducibility-report.md`
    - `rollback-rehearsal.md`
    - `stabilization-evidence.json`
+   - if reproducibility fails, compare `Observed node version` in `reproducibility-report.md` with `.nvmrc`
 4. Update tracked decision log:
    - `stabilization/RC-STAB-A01/RESULTS.md`
 5. If deep gate fails:

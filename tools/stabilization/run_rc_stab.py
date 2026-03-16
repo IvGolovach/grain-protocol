@@ -713,6 +713,11 @@ def run_repro_check(mode: str, out_dir: Path, baseline_tag: str, baseline_sha: s
         parts = line.split()
         observed = parts[1] if len(parts) > 1 else ""
 
+        inputs_hashes = repro_out / "inputs-hashes.json"
+        if inputs_hashes.exists():
+            inputs_data = load_json(inputs_hashes)
+            report["observed_node_version"] = inputs_data.get("node_version")
+
         report["observed_evidence_sha256"] = observed
         report["pass"] = observed == baseline_sha
 
@@ -725,6 +730,7 @@ def run_repro_check(mode: str, out_dir: Path, baseline_tag: str, baseline_sha: s
                 - Baseline commit: `{baseline_commit}`
                 - Baseline evidence sha: `{baseline_sha}`
                 - Observed evidence sha: `{observed}`
+                - Observed node version: `{report.get('observed_node_version', 'unknown')}`
                 - Verdict: {'PASS' if report['pass'] else 'FAIL'}
                 """
             ).strip()

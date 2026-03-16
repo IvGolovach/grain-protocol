@@ -1,6 +1,6 @@
 FROM rust:1.86-bookworm
 
-ARG NODE_VERSION=22.13.1
+ARG NODE_VERSION=22.22.0
 ARG TARGETARCH
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

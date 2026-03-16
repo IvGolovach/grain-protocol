@@ -34,6 +34,7 @@ python3 tools/ci/check_forbidden_tracked.py
 python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
+python3 tools/ci/check_node_runtime_pin.py
 python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py

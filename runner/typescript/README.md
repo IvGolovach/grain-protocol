@@ -22,7 +22,7 @@ Implemented full conformance op set:
 
 ## Requirements
 
-- Node >= 22
+- Node `22.22.0` for evidence-generating and stabilization paths (`.nvmrc` is the source of truth)
 - Docker available for divergence scripts
 
 ## Commands

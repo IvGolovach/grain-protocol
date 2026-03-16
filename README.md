@@ -81,6 +81,8 @@ One-command deterministic verification from a clean tree:
 ./scripts/verify
 ```
 
+For host-side TS commands, certification runs, and RC stabilization runs, use the exact Node patch version pinned in `.nvmrc`. Evidence generation records `node -v`, so floating `22.x` resolution will change `inputs-hashes.json` and the resulting evidence hash.
+
 Optional fuzz smoke in the same command path:
 
 ```bash

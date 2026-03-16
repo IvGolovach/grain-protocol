@@ -13,6 +13,7 @@ git fetch --all --tags --prune
 Prerequisite:
 - Docker or Podman installed locally.
 - No host Rust/Node/Python toolchain is required for `./scripts/verify`.
+- If you run host-side TS commands or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`.
 
 ## 2) Git parity checks
 
@@ -40,6 +41,7 @@ python3 tools/ci/check_crlf_tracked.py
 python3 tools/check_spec_drift.py
 python3 tools/check_llm_docs.py
 python3 tools/validate_vectors.py
+python3 tools/ci/check_node_runtime_pin.py
 python3 tools/ci/check_sdk_no_network.py
 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
 ```
@@ -86,3 +88,4 @@ Expected:
 - `stabilization-evidence.json` verdict is `PASS`.
 - no fuzz crash/divergence findings.
 - attack matrix has no `FOUND_BUG`.
+- `reproducibility-report.md` shows `Observed node version` equal to the exact patch pinned in `.nvmrc`.
