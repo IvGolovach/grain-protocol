@@ -15,9 +15,12 @@ What Grain does not give you:
 - A global canonical registry.
 - A hosted product platform.
 
+If you want the bold but repo-grounded product direction, read [Future Vision](./future-vision.md).
+
 ## Choose your entry path
 
 - [Run the 5-minute demo](./quickstart.md)
+- [Read the future vision](./future-vision.md)
 - [Build an app on Grain](./building-on-grain.md)
 - [Implement Grain itself](./implementing-grain.md)
 - [Build with SDK primitives](./sdk/start-here.md)

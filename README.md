@@ -5,6 +5,8 @@
 Grain is not an app. Not a platform. Not a global registry.
 It’s a **frozen-core protocol** + a **conformance suite** so independent implementations can interoperate **byte-for-byte**.
 
+If you want the long-range product direction, read [Future Vision](docs/human/future-vision.md).
+
 ---
 
 ## Status
@@ -63,6 +65,7 @@ Grain v0.1 defines a domain-neutral core:
 
 Start with the runnable onboarding flow:
 - `docs/human/start-here.md`
+- `docs/human/future-vision.md`
 - `docs/human/quickstart.md`
 - `docs/human/repro-checklist.md`
 - `docs/human/portability-pack.md`
