@@ -1,7 +1,7 @@
-import type { GrainSdkStore } from "./store.ts";
-import type { DeviceKey, IdentityBundleV1, LedgerEvent } from "./types.ts";
-import { SdkError } from "./errors.ts";
-import { randomBytes32, encodeB64, sha256Hex, decodeB64 } from "./utils.ts";
+import type { GrainSdkStore } from "./store.js";
+import type { DeviceKey, IdentityBundleV1, LedgerEvent } from "./types.js";
+import { SdkError } from "./errors.js";
+import { randomBytes32, encodeB64, sha256Hex, decodeB64 } from "./utils.js";
 
 export class IdentityManager {
   private readonly store: GrainSdkStore;

@@ -1,7 +1,6 @@
-import { executeOperation } from "../../../../runner/typescript/src/ops.ts";
-import { evaluateVector } from "../../../../runner/typescript/src/expect.ts";
-import type { Json, OperationActual, RunnerOutput, VectorFile } from "../../../../runner/typescript/src/types.ts";
-import { SdkError, toSdkError } from "./errors.ts";
+import type { Json, OperationActual, RunnerOutput, VectorFile } from "../../../../runner/typescript/dist/src/types.js";
+import { SdkError, toSdkError } from "./errors.js";
+import { evaluateVector, executeOperation } from "./runner-bridge.js";
 
 export class TsCoreEngine {
   execute(op: string, input: Record<string, Json>, strict = true): OperationActual {

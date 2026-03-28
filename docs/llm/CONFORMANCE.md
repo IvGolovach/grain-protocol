@@ -72,12 +72,12 @@ Profiles:
 
 Primary commands:
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-c01.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
-node --experimental-strip-types runner/typescript/scripts/run-full.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
-node --experimental-strip-types runner/typescript/scripts/properties-full.ts
-node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+npm --prefix runner/typescript run run:c01
+npm --prefix runner/typescript run divergence:c01
+npm --prefix runner/typescript run run:full
+npm --prefix runner/typescript run divergence:full
+npm --prefix runner/typescript run test:properties
+npm --prefix runner/typescript run run:wasm-subset
 ```
 
 Artifacts:
@@ -95,8 +95,8 @@ Path:
 
 Primary commands:
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+npm --prefix core/ts/grain-sdk run run:protocol-suite
+npm --prefix core/ts/grain-sdk run test:invariants
 ```
 
 Contract:
@@ -117,7 +117,7 @@ Evidence policy:
 - CI emits commit-bound bundle `evidence-<commit_sha>.zip`
 - bundle includes suite summaries, vector manifests/hashes, toolchain/lock hashes, Rust↔TS divergence summaries
 - local `.local-architect-reports/**` are non-normative and MUST NOT be committed
-- containerized portability verify path: `scripts/verify` (strict, fail-closed, clean-tree required)
+- containerized portability certify path: `scripts/certify` (strict, fail-closed, clean-tree required)
 
 Interop certification workflow:
 - `/.github/workflows/interop-certify.yml` runs TOR-CERT-D01 packaging
@@ -146,6 +146,7 @@ Key rule:
 Primary anchors:
 - `TOR-PORTABILITY-A01.md`
 - `scripts/verify`
+- `scripts/certify`
 - `docker/grain-runner.Dockerfile`
 - `docker/grain-certify.Dockerfile`
 

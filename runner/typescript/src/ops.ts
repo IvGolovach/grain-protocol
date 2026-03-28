@@ -10,8 +10,8 @@ import {
   GrainDiagError,
   LIMITS,
   type ParseOptions
-} from "./types.ts";
-import type { CborNode, Json, OperationActual } from "./types.ts";
+} from "./types.js";
+import type { CborNode, Json, OperationActual } from "./types.js";
 import {
   encodeCanonical,
   GENERIC_CBOR_CANONICAL_OPTIONS,
@@ -24,8 +24,8 @@ import {
   parseExact,
   parseOne,
   validateSetArrayUtf8
-} from "./cbor.ts";
-import { base45Decode } from "./base45.ts";
+} from "./cbor.js";
+import { base45Decode } from "./base45.js";
 import {
   bytesEq,
   compareBytesLex,
@@ -34,7 +34,7 @@ import {
   normalizeDiag,
   sha256,
   sha256Hex
-} from "./utils.ts";
+} from "./utils.js";
 
 const KEY_INFO = Buffer.from("GrainE2E\0v0.1\0A256GCM\0key", "ascii");
 const NONCE_INFO_PREFIX = Buffer.from("GrainE2E\0v0.1\0A256GCM\0nonce\0", "ascii");

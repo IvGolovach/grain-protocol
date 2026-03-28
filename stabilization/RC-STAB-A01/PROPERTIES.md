@@ -26,7 +26,7 @@ cargo test --manifest-path core/rust/Cargo.toml -p grain-core --test properties
 
 - TypeScript full-engine properties:
 ```bash
-NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+npm --prefix runner/typescript run test:properties
 ```
 
 ## Evidence requirement

@@ -1,16 +1,15 @@
-import { encodeCanonical } from "../../../../../runner/typescript/src/cbor.ts";
-import type { CborNode, Json } from "../../../../../runner/typescript/src/types.ts";
-import { compareCanonicalMapKey } from "../../../../../runner/typescript/src/utils.ts";
-import type { TsCoreEngine } from "../engine.ts";
-import { SdkError, toSdkError } from "../errors.ts";
-import type { GrainSdkStore } from "../store.ts";
-import { compareBytesLex, decodeB64, encodeB64, sha256Hex, toUtf8 } from "../utils.ts";
-import type { AICandidateEnvelopeV1 } from "./adapter.ts";
-import { parseCandidateEnvelopeV1, parseStructuredPayloadV1, type NumericKind } from "./candidate_v1.ts";
-import { exportAiContract, type ContractExportV1 } from "./contract_export.ts";
-import { buildAiExplain, type AIExplainPayload } from "./diagnostics.ts";
-import { listProfiles, resolveDefaultProfileForTarget, resolveProfileById } from "./profiles.ts";
-import { AcceptedToken, AcceptedTokenRegistry, type AcceptedPayload } from "./token_registry.ts";
+import type { CborNode, Json } from "../../../../../runner/typescript/dist/src/types.js";
+import type { TsCoreEngine } from "../engine.js";
+import { SdkError, toSdkError } from "../errors.js";
+import { compareCanonicalMapKey, encodeCanonical } from "../runner-bridge.js";
+import type { GrainSdkStore } from "../store.js";
+import { compareBytesLex, decodeB64, encodeB64, sha256Hex, toUtf8 } from "../utils.js";
+import type { AICandidateEnvelopeV1 } from "./adapter.js";
+import { parseCandidateEnvelopeV1, parseStructuredPayloadV1, type NumericKind } from "./candidate_v1.js";
+import { exportAiContract, type ContractExportV1 } from "./contract_export.js";
+import { buildAiExplain, type AIExplainPayload } from "./diagnostics.js";
+import { listProfiles, resolveDefaultProfileForTarget, resolveProfileById } from "./profiles.js";
+import { AcceptedToken, AcceptedTokenRegistry, type AcceptedPayload } from "./token_registry.js";
 
 type InternalValue = null | boolean | string | bigint | Uint8Array | InternalValue[] | { [k: string]: InternalValue };
 

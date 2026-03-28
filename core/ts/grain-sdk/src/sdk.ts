@@ -1,14 +1,14 @@
-import { CanonicalizationToolkit } from "./codec.ts";
-import { TsCoreEngine } from "./engine.ts";
-import { E2ePrimitives } from "./e2e.ts";
-import { EvidenceBuilder } from "./evidence.ts";
-import { EventLifecycle } from "./events.ts";
-import { IdentityManager } from "./identity.ts";
-import { InMemorySdkStore } from "./memory-store.ts";
-import { ManifestManager } from "./manifest.ts";
-import type { GrainSdkStore } from "./store.ts";
-import { TransportToolkit } from "./transport.ts";
-import { AiBoundary } from "./ai/accept.ts";
+import { CanonicalizationToolkit } from "./codec.js";
+import { TsCoreEngine } from "./engine.js";
+import { E2ePrimitives } from "./e2e.js";
+import { EvidenceBuilder } from "./evidence.js";
+import { EventLifecycle } from "./events.js";
+import { IdentityManager } from "./identity.js";
+import { InMemorySdkStore } from "./memory-store.js";
+import { ManifestManager } from "./manifest.js";
+import type { GrainSdkStore } from "./store.js";
+import { TransportToolkit } from "./transport.js";
+import { AiBoundary } from "./ai/accept.js";
 
 export type GrainSdkOptions = {
   ai?: {

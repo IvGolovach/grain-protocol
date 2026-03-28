@@ -7,7 +7,7 @@ If you are building an app on Grain, start with SDK primitives instead of stitch
 Run:
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/demo-end-to-end.ts
+npm --prefix core/ts/grain-sdk run demo:e2e
 ```
 
 Expected output contains deterministic fields:

@@ -24,39 +24,46 @@ Implemented full conformance op set:
 
 - Node `22.22.0` for evidence-generating and stabilization paths (`.nvmrc` is the source of truth)
 - Docker available for divergence scripts
+- `npm ci --prefix runner/typescript`
 
 ## Commands
 
 Run one vector:
 
 ```bash
-node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector conformance/vectors/cid/POS-CID-001.json
+npm --prefix runner/typescript run run:vector -- conformance/vectors/cid/POS-CID-001.json
 ```
 
 Run C01 (Wave A smoke):
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-c01.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
+npm --prefix runner/typescript run run:c01
+npm --prefix runner/typescript run divergence:c01
 ```
 
 Run full suite + divergence:
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-full.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+npm --prefix runner/typescript run run:full
+npm --prefix runner/typescript run divergence:full
 ```
 
 Run TS property tests:
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+npm --prefix runner/typescript run test:properties
 ```
 
 Run WASM subset portability smoke:
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+npm --prefix runner/typescript run run:wasm-subset
+```
+
+Build the stable JS output explicitly:
+
+```bash
+npm --prefix runner/typescript run build
 ```
 
 ## Artifacts

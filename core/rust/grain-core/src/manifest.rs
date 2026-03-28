@@ -111,3 +111,67 @@ fn validate_record_shape(rec: &ManifestRecord) -> GrainResult<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn record(op: &str, cap_id: Option<&[u8]>, chash: Option<&[u8]>) -> ManifestRecord {
+        ManifestRecord {
+            op: op.to_string(),
+            cap_id: cap_id.map(|v| v.to_vec()),
+            chash: chash.map(|v| v.to_vec()),
+        }
+    }
+
+    #[test]
+    fn selects_lowest_cap_id_among_eligible_puts() {
+        let out = resolve_manifest(ManifestResolveInput {
+            eligible_records: vec![
+                record("put", Some(&[0x02]), Some(&[0x10])),
+                record("put", Some(&[0x01]), Some(&[0x10])),
+            ],
+            eligible_tombstones: vec![],
+            ineligible_records: vec![],
+            ineligible_tombstones: vec![],
+        })
+        .unwrap();
+
+        assert!(!out.status_unresolvable);
+        assert_eq!(out.cap_id, Some(vec![0x01]));
+        assert!(out.diagnostics.is_empty());
+    }
+
+    #[test]
+    fn conflicting_chash_marks_cap_conflict_and_becomes_unresolvable() {
+        let out = resolve_manifest(ManifestResolveInput {
+            eligible_records: vec![
+                record("put", Some(&[0x01]), Some(&[0x10])),
+                record("put", Some(&[0x01]), Some(&[0x11])),
+            ],
+            eligible_tombstones: vec![],
+            ineligible_records: vec![],
+            ineligible_tombstones: vec![],
+        })
+        .unwrap();
+
+        assert!(out.status_unresolvable);
+        assert_eq!(out.cap_id, None);
+        assert_eq!(out.diagnostics, vec![Diag::CapChashConflict]);
+    }
+
+    #[test]
+    fn eligible_tombstone_short_circuits_resolution() {
+        let out = resolve_manifest(ManifestResolveInput {
+            eligible_records: vec![record("put", Some(&[0x02]), Some(&[0x10]))],
+            eligible_tombstones: vec![record("del", None, None)],
+            ineligible_records: vec![],
+            ineligible_tombstones: vec![],
+        })
+        .unwrap();
+
+        assert!(out.status_unresolvable);
+        assert_eq!(out.cap_id, None);
+        assert!(out.diagnostics.is_empty());
+    }
+}

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { SdkError } from "./errors.ts";
+import { SdkError } from "./errors.js";
 
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 

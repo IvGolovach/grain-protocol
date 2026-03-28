@@ -1,4 +1,4 @@
-import { describeError, type ErrorCategory } from "../errors.ts";
+import { describeError, type ErrorCategory } from "../errors.js";
 
 export type AIExplainPayload = {
   code: string;

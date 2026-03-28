@@ -1,7 +1,7 @@
-import type { Json } from "./utils.ts";
-import { encodeB64 } from "./utils.ts";
-import { describeError, toSdkError } from "./errors.ts";
-import type { TsCoreEngine } from "./engine.ts";
+import type { Json } from "./utils.js";
+import { encodeB64 } from "./utils.js";
+import { describeError, toSdkError } from "./errors.js";
+import type { TsCoreEngine } from "./engine.js";
 
 export class CanonicalizationToolkit {
   private readonly engine: TsCoreEngine;

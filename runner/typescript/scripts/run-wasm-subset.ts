@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 import { WASI } from "node:wasi";
 
-import { evaluateVector } from "../src/expect.ts";
-import type { OperationActual, VectorFile } from "../src/types.ts";
+import { evaluateVector } from "../src/expect.js";
+import type { Json, OperationActual, VectorFile } from "../src/types.js";
+import { repoPath, repoRoot, runnerPath } from "./runtime.js";
 
 type WasmExports = {
   memory: WebAssembly.Memory;
@@ -40,7 +40,7 @@ function toActual(raw: unknown): OperationActual {
   return {
     accepted: accepted === true,
     diag: Array.isArray(diag) ? diag.filter((d): d is string => typeof d === "string") : ["GRAIN_ERR_SCHEMA"],
-    out: typeof out === "object" && out !== null && !Array.isArray(out) ? (out as Record<string, unknown>) : {}
+    out: typeof out === "object" && out !== null && !Array.isArray(out) ? (out as Record<string, Json>) : {}
   };
 }
 
@@ -67,11 +67,10 @@ function runVector(exportsObj: WasmExports, vector: VectorFile): OperationActual
 }
 
 async function main(): Promise<number> {
-  const here = fileURLToPath(new URL(".", import.meta.url));
-  const root = resolve(here, "../../../");
-  const profilePath = resolve(root, "runner/typescript/profiles/wasm-subset.json");
-  const wasmPath = resolve(root, "core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm");
-  const outPath = resolve(root, "runner/typescript/.wasm-subset-last-run.json");
+  const root = repoRoot;
+  const profilePath = repoPath("runner", "typescript", "profiles", "wasm-subset.json");
+  const wasmPath = repoPath("core", "rust", "target", "wasm32-wasip1", "release", "grain_core_wasm.wasm");
+  const outPath = runnerPath(".wasm-subset-last-run.json");
 
   const profile = JSON.parse(readFileSync(profilePath, "utf8")) as { vector_ids: string[]; name?: string };
   const vectors = listVectors(root);

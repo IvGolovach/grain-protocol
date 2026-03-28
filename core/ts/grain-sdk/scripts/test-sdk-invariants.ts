@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { GrainSdk } from "../src/index.ts";
-import { SdkError } from "../src/errors.ts";
-import { buildSetArray } from "../src/primitives.ts";
+import { GrainSdk } from "../src/index.js";
+import { SdkError } from "../src/errors.js";
+import { buildSetArray } from "../src/primitives.js";
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 

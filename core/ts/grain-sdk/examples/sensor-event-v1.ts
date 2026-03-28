@@ -1,4 +1,4 @@
-import type { AppendEventInput } from "../src/types.ts";
+import type { AppendEventInput } from "../src/types.js";
 
 export type SensorEventV1 = {
   sensor_id: string;

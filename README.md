@@ -61,35 +61,46 @@ Grain v0.1 defines a domain-neutral core:
 
 ---
 
-## Quickstart (5 minutes)
+## Start here by role
 
-Start with the runnable onboarding flow:
+- Evaluate Grain quickly: `docs/human/quickstart.md`
+- Integrate Grain into an app: `docs/human/building-on-grain.md`
+- Implement a new runner/core/SDK: `docs/human/implementing-grain.md`
+- Build on SDK primitives: `docs/human/sdk/start-here.md`
+- Run release-grade portability checks: `docs/human/portability-pack.md`
+
+Runnable onboarding references:
 - `docs/human/start-here.md`
 - `docs/human/future-vision.md`
-- `docs/human/quickstart.md`
 - `docs/human/repro-checklist.md`
-- `docs/human/portability-pack.md`
 - `docs/human/porting-grain.md`
 - `docs/human/domain-adapters.md`
 - `docs/human/dependencies-policy.md`
-- `docs/human/sdk/start-here.md`
 - `docs/human/sdk/overview.md`
 - `docs/human/sdk/architecture.md`
 - `docs/human/sdk/errors.md`
 - `docs/human/sdk/impossible-misuse.md`
 
-One-command deterministic verification from a clean tree:
+## Verification paths
+
+Fast developer verification on host toolchains:
 
 ```bash
 ./scripts/verify
 ```
 
-For host-side TS commands, certification runs, and RC stabilization runs, use the exact Node patch version pinned in `.nvmrc`. Evidence generation records `node -v`, so floating `22.x` resolution will change `inputs-hashes.json` and the resulting evidence hash.
-
-Optional fuzz smoke in the same command path:
+Release-grade certification with deterministic evidence:
 
 ```bash
-./scripts/verify --fuzz-smoke
+./scripts/certify
+```
+
+For host-side TS commands, developer verification, certification runs, and RC stabilization runs, use the exact Node patch version pinned in `.nvmrc`. Evidence generation records `node -v`, so floating `22.x` resolution will change `inputs-hashes.json` and the resulting evidence hash.
+
+Optional fuzz smoke in the certification path:
+
+```bash
+./scripts/certify --fuzz-smoke
 ```
 
 Conformance statement:
@@ -105,9 +116,9 @@ Implementation-entry references:
 TS full engine commands:
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-full.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
-node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+npm --prefix runner/typescript run run:full
+npm --prefix runner/typescript run divergence:full
+npm --prefix runner/typescript run test:properties
 ```
 
 ### Court Hardening Wave A
@@ -137,7 +148,7 @@ See:
   - protocol tags: `protocol-*` (schema/invariant line)
   - repo tags: `repo-*` (implementation/tooling/governance milestones)
 - Local `.local-architect-reports/**` remains local-only and is never committed.
-- Local verification and CI/release evidence share deterministic `evidence_content.sha256` semantics.
+- Local certification and CI/release evidence share deterministic `evidence_content.sha256` semantics.
 
 ## Dependabot strict lane
 

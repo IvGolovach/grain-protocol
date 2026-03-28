@@ -12,8 +12,9 @@ git fetch --all --tags --prune
 
 Prerequisite:
 - Docker or Podman installed locally.
-- No host Rust/Node/Python toolchain is required for `./scripts/verify`.
-- If you run host-side TS commands or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`.
+- No host Rust/Node/Python toolchain is required for `./scripts/certify`.
+- `./scripts/verify` uses host Rust/Node/Python toolchains.
+- If you run host-side TS commands, developer verification, or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`.
 
 ## 2) Git parity checks
 
@@ -43,16 +44,16 @@ python3 tools/check_llm_docs.py
 python3 tools/validate_vectors.py
 python3 tools/ci/check_node_runtime_pin.py
 python3 tools/ci/check_sdk_no_network.py
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
+npm --prefix core/ts/grain-sdk run test:ai-boundary
 ```
 
 Expected:
 - all commands print `OK` and exit `0`.
 
-## 4) One-command strict verification run
+## 4) Fast developer verification
 
 ```bash
-./scripts/verify --out-dir artifacts/verify-local
+./scripts/verify --out-dir artifacts/dev-verify-local
 ```
 
 Expected:
@@ -61,10 +62,20 @@ Expected:
 - SDK strict suite PASS
 - divergence C01/full = 0
 - property tests failed = 0
-- invariants audit PASS
-- `evidence_content.sha256` produced.
+- AI boundary checks PASS
+- summary artifacts produced under `artifacts/dev-verify-local`
 
-## 5) Compare with CI artifact
+## 5) Release-grade certification
+
+```bash
+./scripts/certify --out-dir artifacts/verify-local
+```
+
+Expected:
+- containerized strict verification PASS
+- `evidence_content.sha256` produced
+
+## 6) Compare with CI artifact
 
 Download evidence artifact from latest successful CI/release run and compare:
 
@@ -74,7 +85,7 @@ cat artifacts/verify-local/evidence/evidence_content.sha256
 
 Confirm the first line hash (`evidence_sha256 ...`) matches the reference run for the same commit.
 
-## 6) RC stabilization smoke (when validating RC tags)
+## 7) RC stabilization smoke (when validating RC tags)
 
 ```bash
 python3 tools/stabilization/run_rc_stab.py \

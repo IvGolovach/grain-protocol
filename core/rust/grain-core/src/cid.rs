@@ -71,4 +71,15 @@ mod tests {
         assert_eq!(base32_lower_no_pad(&[0xff]), "74");
         assert_eq!(base32_lower_no_pad(b""), "");
     }
+
+    #[test]
+    fn ensure_cid_link_prefix_0_accepts_prefixed_bytes() {
+        assert!(ensure_cid_link_prefix_0(&[0x00, 0x11, 0x22]).is_ok());
+    }
+
+    #[test]
+    fn ensure_cid_link_prefix_0_rejects_missing_prefix() {
+        let err = ensure_cid_link_prefix_0(&[0x01, 0x11, 0x22]).unwrap_err();
+        assert_eq!(err.diag(), Diag::BadCidLink);
+    }
 }

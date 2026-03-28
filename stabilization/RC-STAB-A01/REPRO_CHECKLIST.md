@@ -18,8 +18,8 @@ tools/interop_certify.sh --out-dir artifacts/interop-repro --commit-sha "$(git r
 Run the required CI-equivalent SDK lane locally:
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+npm --prefix core/ts/grain-sdk run run:protocol-suite
+npm --prefix core/ts/grain-sdk run test:invariants
 ```
 
 Expected:

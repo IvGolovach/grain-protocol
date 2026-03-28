@@ -1,9 +1,9 @@
-import type { Json } from "./utils.ts";
-import { encodeB64 } from "./utils.ts";
-import type { GrainSdkStore } from "./store.ts";
-import type { ManifestRecord, ManifestResolution } from "./types.ts";
-import type { IdentityManager } from "./identity.ts";
-import type { TsCoreEngine } from "./engine.ts";
+import type { Json } from "./utils.js";
+import { encodeB64 } from "./utils.js";
+import type { GrainSdkStore } from "./store.js";
+import type { ManifestRecord, ManifestResolution } from "./types.js";
+import type { IdentityManager } from "./identity.js";
+import type { TsCoreEngine } from "./engine.js";
 
 export class ManifestManager {
   private readonly store: GrainSdkStore;

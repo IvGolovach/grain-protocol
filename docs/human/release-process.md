@@ -20,14 +20,15 @@ RC policy reference:
 
 1. Sync `main`.
 2. Verify local checks:
-   - `./scripts/verify --out-dir artifacts/verify-local`
+   - `./scripts/verify --out-dir artifacts/dev-verify-local`
+   - `./scripts/certify --out-dir artifacts/verify-local`
    - `cat artifacts/verify-local/evidence/evidence_content.sha256`
    - `python3 tools/ci/check_node_runtime_pin.py`
    - `python3 tools/ci/check_runner_contract_compat.py`
    - `python3 tools/ci/check_prohibition_coverage.py`
    - `python3 tools/ci/check_capid_csprng.py`
    - `cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release`
-   - `node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts`
+   - `npm --prefix runner/typescript run run:wasm-subset`
 3. Decide tag type and next version string:
    - protocol release tag: `protocol-vX.Y.Z`
    - repo release tag: `repo-vX.Y.Z`

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { GrainSdk } from "../src/index.ts";
-import { encodeB64 } from "../src/utils.ts";
+import { GrainSdk } from "../src/index.js";
+import { encodeB64 } from "../src/utils.js";
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 

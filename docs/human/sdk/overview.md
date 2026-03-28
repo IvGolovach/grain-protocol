@@ -47,7 +47,7 @@ The SDK is a universal primitives surface for building systems on top of Grain w
 ## Quick commands
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/demo-end-to-end.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+npm --prefix core/ts/grain-sdk run demo:e2e
+npm --prefix core/ts/grain-sdk run test:invariants
+npm --prefix core/ts/grain-sdk run run:protocol-suite
 ```

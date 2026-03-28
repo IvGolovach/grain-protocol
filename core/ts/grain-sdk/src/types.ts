@@ -1,4 +1,4 @@
-import type { Json } from "./utils.ts";
+import type { Json } from "./utils.js";
 
 export type SdkDiagCode = `SDK_ERR_${string}`;
 

@@ -8,15 +8,21 @@
     "node": ">=22"
   },
   "bin": {
-    "grain-ts-runner": "src/cli.ts"
+    "grain-ts-runner": "dist/src/cli.js"
   },
   "scripts": {
-    "run:vector": "node --experimental-strip-types src/cli.ts run --strict --vector",
-    "run:c01": "node --experimental-strip-types scripts/run-c01.ts",
-    "divergence:c01": "node --experimental-strip-types scripts/divergence-c01.ts",
-    "run:full": "node --experimental-strip-types scripts/run-full.ts",
-    "divergence:full": "node --experimental-strip-types scripts/divergence-full.ts",
-    "run:wasm-subset": "node --experimental-strip-types scripts/run-wasm-subset.ts",
-    "test:properties": "node --experimental-strip-types scripts/properties-full.ts"
+    "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
+    "build": "npm run clean --silent && tsc -p tsconfig.build.json",
+    "run:vector": "npm run build --silent && node dist/src/cli.js run --strict --vector",
+    "run:c01": "npm run build --silent && node dist/scripts/run-c01.js",
+    "divergence:c01": "npm run build --silent && node dist/scripts/divergence-c01.js",
+    "run:full": "npm run build --silent && node dist/scripts/run-full.js",
+    "divergence:full": "npm run build --silent && node dist/scripts/divergence-full.js",
+    "run:wasm-subset": "npm run build --silent && node dist/scripts/run-wasm-subset.js",
+    "test:properties": "npm run build --silent && node dist/scripts/properties-full.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "typescript": "^5.9.2"
   }
 }

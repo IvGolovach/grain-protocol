@@ -565,7 +565,7 @@ def run_fuzz(ctx: CampaignContext, mode: str) -> tuple[list[dict[str, Any]], lis
 def run_properties(out_dir: Path) -> dict[str, Any]:
     result: dict[str, Any] = {
         "rust_properties": {"pass": False, "command": "cargo test --manifest-path core/rust/Cargo.toml -p grain-core --test properties"},
-        "ts_properties": {"pass": False, "command": "node --experimental-strip-types runner/typescript/scripts/properties-full.ts"},
+        "ts_properties": {"pass": False, "command": "npm --prefix runner/typescript run test:properties"},
     }
 
     if command_exists("cargo"):
@@ -611,9 +611,11 @@ def run_properties(out_dir: Path) -> dict[str, Any]:
 
     ts = run(
         [
-            "node",
-            "--experimental-strip-types",
-            "runner/typescript/scripts/properties-full.ts",
+            "npm",
+            "--prefix",
+            "runner/typescript",
+            "run",
+            "test:properties",
         ],
         cwd=ROOT,
         timeout=300,
@@ -887,7 +889,7 @@ def main() -> int:
     parser.add_argument(
         "--ts-runner-cmd",
         nargs="+",
-        default=["node", "--experimental-strip-types", "runner/typescript/src/cli.ts"],
+        default=["node", "runner/typescript/dist/src/cli.js"],
     )
     parser.add_argument("--repo", default=detect_repo_slug())
     parser.add_argument("--seed", type=int, default=20260225)
@@ -897,6 +899,14 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     minimized_dir = out_dir / "minimized-repros"
     minimized_dir.mkdir(parents=True, exist_ok=True)
+
+    ts_build = run(
+        ["npm", "--prefix", "runner/typescript", "run", "build", "--silent"],
+        cwd=ROOT,
+        timeout=900,
+    )
+    if ts_build.returncode != 0:
+        raise RuntimeError("npm --prefix runner/typescript run build --silent failed")
 
     ctx = CampaignContext(
         rust_cmd=list(args.rust_runner_cmd),

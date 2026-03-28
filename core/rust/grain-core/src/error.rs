@@ -93,3 +93,52 @@ impl GrainError {
 }
 
 pub type GrainResult<T> = Result<T, GrainError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn diag_codes_are_unique_and_stable() {
+        let variants = [
+            Diag::NonCanonical,
+            Diag::DupMapKey,
+            Diag::SetArrayOrder,
+            Diag::SetArrayDup,
+            Diag::TagForbidden,
+            Diag::UnknownTopLevelKey,
+            Diag::BadCidLink,
+            Diag::CoseProfile,
+            Diag::CoseTag18Forbidden,
+            Diag::Schema,
+            Diag::E2eInputLength,
+            Diag::E2eBadLabel,
+            Diag::AeadAuth,
+            Diag::ManifestOp,
+            Diag::QrPrefix,
+            Diag::CborseqTruncated,
+            Diag::CborseqGarbageTail,
+            Diag::CborseqInvalidInitialByte,
+            Diag::Limit,
+            Diag::Overflow,
+            Diag::SeqConflict,
+            Diag::AkRevoked,
+            Diag::UnauthorizedGrantIgnored,
+            Diag::CapChashConflict,
+            Diag::CapIdOverwrite,
+            Diag::ChashMismatch,
+            Diag::NonceProfileMismatch,
+        ];
+
+        let mut seen = BTreeSet::new();
+        for diag in &variants {
+            assert!(seen.insert(diag.code()), "duplicate diagnostic code: {}", diag.code());
+        }
+
+        assert_eq!(variants.len(), seen.len());
+        assert_eq!(Diag::SeqConflict.code(), "SEQ_CONFLICT");
+        assert_eq!(Diag::UnauthorizedGrantIgnored.code(), "UNAUTHORIZED_GRANT_IGNORED");
+        assert_eq!(Diag::NonceProfileMismatch.code(), "NONCE_PROFILE_MISMATCH");
+    }
+}

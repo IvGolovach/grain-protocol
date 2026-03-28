@@ -1,5 +1,5 @@
-import type { Json, OperationActual, RunnerOutput, VectorFile } from "./types.ts";
-import { normalizeDiag } from "./utils.ts";
+import type { Json, OperationActual, RunnerOutput, VectorFile } from "./types.js";
+import { normalizeDiag } from "./utils.js";
 
 export function evaluateVector(vector: VectorFile, actual: OperationActual): RunnerOutput {
   const requiredDiags = new Set<string>(vector.expect.diag_contains ?? []);

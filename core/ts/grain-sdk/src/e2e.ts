@@ -1,16 +1,15 @@
 import { createCipheriv } from "node:crypto";
 
-import { encodeCanonical } from "../../../../runner/typescript/src/cbor.ts";
-import { compareCanonicalMapKey } from "../../../../runner/typescript/src/utils.ts";
-import type { CborNode, Json } from "../../../../runner/typescript/src/types.ts";
+import type { CborNode, Json } from "../../../../runner/typescript/dist/src/types.js";
 
-import { SdkError, toSdkError } from "./errors.ts";
-import { randomBytes32, decodeB64, encodeB64, sha256, bytesEq } from "./utils.ts";
-import type { GrainSdkStore } from "./store.ts";
-import type { IdentityManager } from "./identity.ts";
-import type { TsCoreEngine } from "./engine.ts";
-import type { ManifestManager } from "./manifest.ts";
-import type { ManifestResolution } from "./types.ts";
+import { SdkError, toSdkError } from "./errors.js";
+import { compareCanonicalMapKey, encodeCanonical } from "./runner-bridge.js";
+import { randomBytes32, decodeB64, encodeB64, sha256, bytesEq } from "./utils.js";
+import type { GrainSdkStore } from "./store.js";
+import type { IdentityManager } from "./identity.js";
+import type { TsCoreEngine } from "./engine.js";
+import type { ManifestManager } from "./manifest.js";
+import type { ManifestResolution } from "./types.js";
 
 export class E2ePrimitives {
   private readonly store: GrainSdkStore;
@@ -110,14 +109,18 @@ export class E2ePrimitives {
       throw new SdkError("CHASH_MISMATCH", "Ciphertext hash mismatch");
     }
 
+    const input: Record<string, Json> = {
+      encrypted_object_b64: encodeB64(envelopeBytes) as Json,
+      sync_secret_b64: encodeB64(syncSecret) as Json,
+      cid_link_b64: encodeB64(opts.cid_link_bstr) as Json
+    };
+    if (opts.expected_chash) {
+      input.manifest_chash_b64 = encodeB64(opts.expected_chash) as Json;
+    }
+
     const actual = this.engine.execute(
       "e2e_decrypt",
-      {
-        encrypted_object_b64: encodeB64(envelopeBytes) as Json,
-        sync_secret_b64: encodeB64(syncSecret) as Json,
-        cid_link_b64: encodeB64(opts.cid_link_bstr) as Json,
-        manifest_chash_b64: opts.expected_chash ? (encodeB64(opts.expected_chash) as Json) : undefined
-      },
+      input,
       true
     );
 
@@ -177,7 +180,7 @@ function uintNode(value: bigint): CborNode {
 
 function textMap(values: Record<string, CborNode>): CborNode {
   const entries = Object.entries(values).map(([k, v]) => {
-    const key = textNode(k);
+    const key = textNode(k) as Extract<CborNode, { kind: "t" }>;
     return {
       key,
       keyBytes: key.bytes,

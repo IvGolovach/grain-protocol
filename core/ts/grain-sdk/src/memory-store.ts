@@ -1,7 +1,7 @@
-import { SdkError } from "./errors.ts";
-import type { GrainSdkStore } from "./store.ts";
-import type { IdentityBundleV1, LedgerEvent, ManifestRecord } from "./types.ts";
-import { bytesEq, encodeB64 } from "./utils.ts";
+import { SdkError } from "./errors.js";
+import type { GrainSdkStore } from "./store.js";
+import type { IdentityBundleV1, LedgerEvent, ManifestRecord } from "./types.js";
+import { bytesEq, encodeB64 } from "./utils.js";
 
 function keyHex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex");

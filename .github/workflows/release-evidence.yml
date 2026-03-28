@@ -17,78 +17,26 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      - uses: ./.github/actions/python-policy-checks
+
+      - uses: ./.github/actions/rust-core-verification
         with:
-          python-version: "3.11"
+          build_wasm: "true"
 
-      - name: Python tooling checks
-        run: |
-          python3 tools/validate_vectors.py
-          python3 tools/check_llm_docs.py
-          python3 tools/check_spec_drift.py
-          python3 tools/ci/check_gitattributes_policy.py
-          python3 tools/ci/check_forbidden_tracked.py
-          python3 tools/ci/check_crlf_tracked.py
-          python3 tools/ci/check_codeowners_coverage.py
-          python3 tools/ci/check_dependabot_policy.py
-          python3 tools/ci/check_node_runtime_pin.py
-          python3 tools/ci/check_workflow_action_pinning.py
-          python3 tools/ci/check_docs_links.py
-          python3 tools/ci/check_docs_flow.py
-          python3 tools/ci/check_runner_contract_compat.py
-          python3 tools/ci/check_prohibition_coverage.py
-          python3 tools/ci/check_capid_csprng.py
-          python3 tools/ci/check_sdk_no_network.py
+      - uses: ./.github/actions/setup-node-typescript
 
-      - name: Set up Rust 1.86.0
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+      - uses: ./.github/actions/run-node-package-script
         with:
-          toolchain: 1.86.0
-
-      - name: Rust tests
-        run: cargo test --manifest-path core/rust/Cargo.toml --workspace
-
-      - name: Build grain-runner binary
-        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
-
-      - name: Add wasm target
-        run: rustup target add wasm32-wasip1
-
-      - name: Build grain-core-wasm
-        run: cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release
-
-      - name: Quickstart smoke (deterministic demo output)
-        run: |
-          python3 tools/ci/check_quickstart_smoke.py \
-            --runner-cmd core/rust/target/debug/grain-runner demo --strict
-
-      - name: Rust strict conformance suite
-        run: |
-          python3 tools/ci/run_runner_suite.py \
-            --vectors-root conformance/vectors \
-            --commit-sha "${GITHUB_SHA}" \
-            --out artifacts/rust-suite-summary.json \
-            --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
-
-      - name: Set up Node 22
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: runner/typescript/package-lock.json
-
-      - name: Install TS runner deps
-        run: npm ci --prefix runner/typescript
-
-      - name: Run TS C01 strict profile
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-c01.ts
+          prefix: runner/typescript
+          script: run:c01
 
       - name: Run Rust vs TS divergence (C01)
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
+        run: GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:c01
 
-      - name: Run TS full strict profile
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-full.ts
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: run:full
 
       - name: TS strict conformance suite (runner contract, full)
         run: |
@@ -96,25 +44,35 @@ jobs:
             --vectors-root conformance/vectors \
             --commit-sha "${GITHUB_SHA}" \
             --out artifacts/suite-run-ts.json \
-            --runner-cmd node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector
+            --runner-cmd node runner/typescript/dist/src/cli.js run --strict --vector
 
       - name: Run Rust vs TS divergence (full suite)
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+        run: GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:full
 
-      - name: Run TS property tests (full engine)
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: test:properties
 
-      - name: Run SDK strict conformance suite
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: core/ts/grain-sdk
+          script: run:protocol-suite
 
-      - name: Run SDK invariant checks
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: core/ts/grain-sdk
+          script: test:invariants
 
-      - name: Run SDK AI boundary checks
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: core/ts/grain-sdk
+          script: test:ai-boundary
 
-      - name: Run WASM subset vectors
-        run: NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: run:wasm-subset
 
       - name: Collect TS artifacts
         run: |
@@ -129,137 +87,11 @@ jobs:
           cp runner/typescript/.wasm-subset-last-run.json artifacts/wasm-subset-summary.json
           sha256sum core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm | awk '{print $1}' > artifacts/wasm.sha256
 
-      - name: Build evidence bundle
-        run: |
-          mkdir -p artifacts/evidence
-          python3 tools/ci/generate_vector_manifest.py \
-            --vectors-root conformance/vectors \
-            --pattern '*.json' \
-            --out artifacts/evidence/vector-manifest.json
-          python3 tools/ci/generate_vector_manifest.py \
-            --vectors-root conformance/vectors \
-            --pattern '*-WA-*.json' \
-            --out artifacts/evidence/vector-manifest-c01.json
-
-          sha256sum core/rust/Cargo.lock | awk '{print $1}' > artifacts/evidence/cargo.lock.sha256
-          sha256sum core/rust/rust-toolchain.toml | awk '{print $1}' > artifacts/evidence/rust-toolchain.sha256
-          sha256sum runner/typescript/package-lock.json | awk '{print $1}' > artifacts/evidence/package-lock.json.sha256
-          sha256sum artifacts/evidence/vector-manifest.json | awk '{print $1}' > artifacts/evidence/vector-manifest.sha256
-          sha256sum artifacts/evidence/vector-manifest-c01.json | awk '{print $1}' > artifacts/evidence/vector-manifest-c01.sha256
-          python3 tools/ci/build_inputs_hashes.py --out artifacts/evidence/inputs-hashes.json
-          python3 tools/ci/audit_invariants.py \
-            --out-json artifacts/evidence/invariants-audit.json \
-            --out-md artifacts/evidence/invariants-audit.md
-
-          python3 - << 'PY'
-          import json, pathlib, os
-          root = pathlib.Path('artifacts')
-          rust = json.loads((root/'rust-suite-summary.json').read_text())
-          ts = json.loads((root/'ts-c01-summary.json').read_text())
-          div = json.loads((root/'divergence-c01.json').read_text())
-          ts_full = json.loads((root/'ts-full-summary.json').read_text())
-          ts_suite = json.loads((root/'suite-run-ts.json').read_text())
-          div_full = json.loads((root/'divergence-full.json').read_text())
-          props_full = json.loads((root/'properties-full.json').read_text())
-          commit = os.environ['GITHUB_SHA']
-          tag = os.environ.get('GITHUB_REF_NAME', '')
-
-          suite_summary = {
-            'commit_sha': commit,
-            'tag': tag,
-            'strict': True,
-            'rust_full': {
-              'total': rust['total'],
-              'passed': rust['passed'],
-              'failed': rust['failed']
-            },
-            'ts_c01': {
-              'total': ts['total'],
-              'passed': ts['passed'],
-              'failed': ts['failed']
-            },
-            'divergence_c01': {
-              'total': div['total'],
-              'mismatches': div['mismatches']
-            },
-            'ts_full': {
-              'total': ts_full['total'],
-              'passed': ts_full['passed'],
-              'failed': ts_full['failed']
-            },
-            'ts_suite_runner': {
-              'total': ts_suite['total'],
-              'passed': ts_suite['passed'],
-              'failed': ts_suite['failed']
-            },
-            'divergence_full': {
-              'total': div_full['total'],
-              'mismatches': div_full['mismatches']
-            },
-            'properties_full': {
-              'failed': props_full['failed']
-            }
-          }
-
-          suite_run = {
-            'commit_sha': commit,
-            'tag': tag,
-            'metadata': {
-              'workflow': os.environ.get('GITHUB_WORKFLOW', 'release-evidence'),
-              'run_id': os.environ.get('GITHUB_RUN_ID', ''),
-              'run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT', ''),
-            },
-            'summary': suite_summary,
-          }
-
-          out = root/'evidence'
-          (out/'suite-summary.json').write_text(json.dumps(suite_summary, indent=2) + '\n')
-          (out/'suite-run.json').write_text(json.dumps(suite_run, indent=2) + '\n')
-          PY
-
-          cp artifacts/rust-suite-summary.json artifacts/evidence/rust-suite-summary.json
-          cp artifacts/ts-c01-summary.json artifacts/evidence/ts-c01-summary.json
-          cp artifacts/divergence-c01.json artifacts/evidence/divergence-c01.json
-          cp artifacts/divergence-c01.md artifacts/evidence/divergence-c01.md
-          cp artifacts/rust-suite-summary.json artifacts/evidence/suite-run-rust.json
-          cp artifacts/suite-run-ts.json artifacts/evidence/suite-run-ts.json
-          cp artifacts/ts-full-summary.json artifacts/evidence/ts-full-summary.json
-          cp artifacts/divergence-full.json artifacts/evidence/divergence-full.json
-          cp artifacts/divergence-full.md artifacts/evidence/divergence-full.md
-          cp artifacts/properties-full.json artifacts/evidence/properties-full.json
-          cp artifacts/properties-full.json artifacts/evidence/property-tests.json
-          cp artifacts/sdk-suite-summary.json artifacts/evidence/sdk-suite-summary.json
-          cp artifacts/wasm-subset-summary.json artifacts/evidence/wasm-subset-summary.json
-          cp artifacts/wasm.sha256 artifacts/evidence/wasm.sha256
-
-          python3 tools/ci/build_interop_summary.py \
-            --commit-sha "${GITHUB_SHA}" \
-            --out-dir artifacts/evidence \
-            --suite-rust artifacts/evidence/suite-run-rust.json \
-            --suite-ts artifacts/evidence/suite-run-ts.json \
-            --div-c01 artifacts/evidence/divergence-c01.json \
-            --div-full artifacts/evidence/divergence-full.json \
-            --properties artifacts/evidence/property-tests.json \
-            --invariants-audit artifacts/evidence/invariants-audit.json
-
-          python3 tools/ci/compute_evidence_sha.py \
-            --base-dir artifacts/evidence \
-            --out artifacts/evidence/evidence.sha256 \
-            --file divergence-c01.json \
-            --file divergence-full.json \
-            --file inputs-hashes.json \
-            --file interop-evidence.json \
-            --file interop-report.md \
-            --file invariants-audit.json \
-            --file property-tests.json \
-            --file sdk-suite-summary.json \
-            --file suite-run-rust.json \
-            --file suite-run-ts.json \
-            --file vector-manifest.json \
-            --file wasm.sha256
-
-          cd artifacts
-          zip -r "evidence-${GITHUB_SHA}.zip" evidence
+      - uses: ./.github/actions/build-evidence-bundle
+        with:
+          workflow_name: release-evidence
+          tag: ${{ github.ref_name }}
+          hash_order: c01-first
 
       - name: Upload evidence artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f

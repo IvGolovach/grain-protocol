@@ -50,6 +50,10 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 npm ci --prefix runner/typescript >/dev/null
+if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
+  npm ci --prefix core/ts/grain-sdk >/dev/null
+fi
+npm --prefix runner/typescript run build --silent >/dev/null
 
 RUST_SUITE_OUT="$OUT_DIR/suite-run-rust.json"
 if command -v cargo >/dev/null 2>&1; then
@@ -87,14 +91,14 @@ python3 tools/ci/run_runner_suite.py \
   --vectors-root conformance/vectors \
   --commit-sha "$COMMIT_SHA" \
   --out "$OUT_DIR/suite-run-ts.json" \
-  --runner-cmd node --experimental-strip-types runner/typescript/src/cli.ts run --strict --vector
+  --runner-cmd node runner/typescript/dist/src/cli.js run --strict --vector
 
-NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-c01.ts >/dev/null
-NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/run-full.ts >/dev/null
-NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts >/dev/null
-NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/divergence-full.ts >/dev/null
-NODE_NO_WARNINGS=1 node --experimental-strip-types runner/typescript/scripts/properties-full.ts >/dev/null
-NODE_NO_WARNINGS=1 node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts >/dev/null
+npm --prefix runner/typescript run run:c01 >/dev/null
+npm --prefix runner/typescript run run:full >/dev/null
+npm --prefix runner/typescript run divergence:c01 >/dev/null
+npm --prefix runner/typescript run divergence:full >/dev/null
+npm --prefix runner/typescript run test:properties >/dev/null
+npm --prefix core/ts/grain-sdk run test:ai-boundary >/dev/null
 
 cp runner/typescript/.divergence-c01.json "$OUT_DIR/divergence-c01.json"
 cp runner/typescript/.divergence-full.json "$OUT_DIR/divergence-full.json"

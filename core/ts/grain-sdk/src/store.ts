@@ -1,4 +1,4 @@
-import type { IdentityBundleV1, LedgerEvent, ManifestRecord } from "./types.ts";
+import type { IdentityBundleV1, LedgerEvent, ManifestRecord } from "./types.js";
 
 export interface SequenceStore {
   reserveNextSeq(ak: string): Promise<bigint>;

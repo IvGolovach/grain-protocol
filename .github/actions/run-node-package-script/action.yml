@@ -1,0 +1,25 @@
+name: Run Node package script
+description: Execute a package.json script through the pinned Node runtime and stable JS build path.
+inputs:
+  prefix:
+    description: Package prefix passed to npm.
+    required: true
+  script:
+    description: Package.json script name to run.
+    required: true
+  args:
+    description: Additional arguments passed after `npm run <script> --`.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Run package script
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -n "${{ inputs.args }}" ]]; then
+          npm --prefix "${{ inputs.prefix }}" run "${{ inputs.script }}" -- ${{ inputs.args }}
+        else
+          npm --prefix "${{ inputs.prefix }}" run "${{ inputs.script }}"
+        fi

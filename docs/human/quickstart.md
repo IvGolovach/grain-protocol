@@ -83,6 +83,7 @@ Expected deterministic output:
 
 - [Build an app on Grain](./building-on-grain.md)
 - [Implement Grain](./implementing-grain.md)
+- [Run fast developer verification](./start-here.md#verification-paths)
 - [Start-here overview](./start-here.md)
 
 ## 4) Deep protocol references (after first run)
@@ -95,10 +96,10 @@ Expected deterministic output:
 ## 5) TS full engine and C01 smoke
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-c01.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-c01.ts
-node --experimental-strip-types runner/typescript/scripts/run-full.ts
-node --experimental-strip-types runner/typescript/scripts/divergence-full.ts
+npm --prefix runner/typescript run run:c01
+npm --prefix runner/typescript run divergence:c01
+npm --prefix runner/typescript run run:full
+npm --prefix runner/typescript run divergence:full
 ```
 
 TS now has a full strict engine. C01 remains the Wave A byte-path profile for focused drift checks.

@@ -36,6 +36,9 @@ Workflow dependency PR automation requires repository secret `DEPENDABOT_AUTOMER
 Missing or insufficient token permissions are fail-closed by policy (`DEPS_ERR_TOKEN_MISSING`, `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`).
 See `docs/human/dependencies-policy.md`.
 
+If you are working in a sandbox where `.git` is readable but not writable, use
+`scripts/git-sandbox-safe ...` to run git via a writable mirror in `/tmp`.
+
 ## Style
 
 - Keep docs and code explicit. Avoid “magic” behavior.

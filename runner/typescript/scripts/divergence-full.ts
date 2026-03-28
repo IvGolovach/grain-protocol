@@ -1,9 +1,10 @@
 import { writeFileSync } from "node:fs";
 
-import { loadFullVectors, runRustVectors, runTsVector, stable, type RunnerJson } from "./shared.ts";
+import { runnerPath } from "./runtime.js";
+import { loadFullVectors, runRustVectors, runTsVector, stable, type RunnerJson } from "./shared.js";
 
 const vectors = loadFullVectors();
-const rustMap = runRustVectors(vectors, "runner/typescript/.full-vectors.txt");
+const rustMap = runRustVectors(vectors, runnerPath(".full-vectors.txt"));
 
 const mismatches: {
   vector: string;
@@ -45,7 +46,7 @@ const divergence = {
   items: mismatches
 };
 
-writeFileSync("runner/typescript/.divergence-full.json", `${JSON.stringify(divergence, null, 2)}\n`, "utf-8");
+writeFileSync(runnerPath(".divergence-full.json"), `${JSON.stringify(divergence, null, 2)}\n`, "utf-8");
 
 const md = [
   "# Full Divergence (Rust vs TS)",
@@ -66,7 +67,7 @@ if (mismatches.length === 0) {
   }
 }
 
-writeFileSync("runner/typescript/.divergence-full.md", `${md.join("\n")}\n`, "utf-8");
+writeFileSync(runnerPath(".divergence-full.md"), `${md.join("\n")}\n`, "utf-8");
 process.stdout.write(`${JSON.stringify(divergence, null, 2)}\n`);
 
 if (mismatches.length > 0) {

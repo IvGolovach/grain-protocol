@@ -1,9 +1,9 @@
 import { deflateSync } from "node:zlib";
 
-import { SdkError } from "./errors.ts";
-import { decodeB64, encodeB64, stableStringify, toUtf8 } from "./utils.ts";
-import type { TsCoreEngine } from "./engine.ts";
-import type { Json } from "./utils.ts";
+import { SdkError } from "./errors.js";
+import { decodeB64, encodeB64, stableStringify, toUtf8 } from "./utils.js";
+import type { TsCoreEngine } from "./engine.js";
+import type { Json } from "./utils.js";
 
 const BASE45_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
 

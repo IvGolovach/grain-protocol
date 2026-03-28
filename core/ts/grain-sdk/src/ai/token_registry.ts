@@ -1,5 +1,5 @@
-import { SdkError } from "../errors.ts";
-import { bytesEq, sha256Hex } from "../utils.ts";
+import { SdkError } from "../errors.js";
+import { bytesEq, sha256Hex } from "../utils.js";
 
 const TOKEN_SECRET = Symbol("sdk-ai-accepted-token-secret");
 

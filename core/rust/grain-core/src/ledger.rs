@@ -146,3 +146,99 @@ pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<Ledg
         diag_contains,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn intake_event(ak: &str, seq: u64, payload_cid: &str, mean: i64, var: i64) -> LedgerEvent {
+        LedgerEvent {
+            t: "IntakeEvent".to_string(),
+            ak: ak.to_string(),
+            seq,
+            payload_cid: payload_cid.to_string(),
+            body: json!({
+                "mean": { "kcal": mean },
+                "var": { "kcal": var },
+            }),
+        }
+    }
+
+    #[test]
+    fn exact_duplicate_intake_event_is_idempotent() {
+        let event = intake_event("root", 1, "cid-1", 7, 3);
+        let totals = reduce_ledger("root", &[event.clone(), event]).unwrap();
+
+        assert_eq!(totals.sum_mean.get("kcal"), Some(&7));
+        assert_eq!(totals.sum_var.get("kcal"), Some(&3));
+        assert!(totals.diag_contains.is_empty());
+    }
+
+    #[test]
+    fn conflicting_sequence_is_dropped_and_flagged() {
+        let totals = reduce_ledger(
+            "root",
+            &[
+                intake_event("root", 1, "cid-a", 7, 3),
+                intake_event("root", 1, "cid-b", 9, 5),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(totals.sum_mean.get("kcal"), Some(&0));
+        assert_eq!(totals.sum_var.get("kcal"), Some(&0));
+        assert!(totals.diag_contains.contains(&Diag::SeqConflict.code().to_string()));
+    }
+
+    #[test]
+    fn unauthorized_grant_is_ignored_and_authorized_events_still_reduce() {
+        let totals = reduce_ledger(
+            "root",
+            &[
+                LedgerEvent {
+                    t: "DeviceKeyGrant".to_string(),
+                    ak: "intruder".to_string(),
+                    seq: 1,
+                    payload_cid: "grant-cid".to_string(),
+                    body: json!({ "grant_ak": "kid-1" }),
+                },
+                intake_event("root", 2, "cid-1", 7, 3),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(totals.sum_mean.get("kcal"), Some(&7));
+        assert_eq!(totals.sum_var.get("kcal"), Some(&3));
+        assert!(totals.diag_contains.contains(&Diag::UnauthorizedGrantIgnored.code().to_string()));
+    }
+
+    #[test]
+    fn revoked_authorized_events_are_flagged_and_dropped() {
+        let totals = reduce_ledger(
+            "root",
+            &[
+                LedgerEvent {
+                    t: "DeviceKeyGrant".to_string(),
+                    ak: "root".to_string(),
+                    seq: 1,
+                    payload_cid: "grant-cid".to_string(),
+                    body: json!({ "grant_ak": "kid-1" }),
+                },
+                LedgerEvent {
+                    t: "DeviceKeyRevoke".to_string(),
+                    ak: "root".to_string(),
+                    seq: 2,
+                    payload_cid: "revoke-cid".to_string(),
+                    body: json!({ "revoke_ak": "kid-1" }),
+                },
+                intake_event("kid-1", 3, "cid-1", 7, 3),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(totals.sum_mean.get("kcal"), Some(&0));
+        assert_eq!(totals.sum_var.get("kcal"), Some(&0));
+        assert!(totals.diag_contains.contains(&Diag::AkRevoked.code().to_string()));
+    }
+}

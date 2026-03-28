@@ -1,6 +1,6 @@
-import { GrainDiagError, LIMITS } from "./types.ts";
-import type { CborNode, ParseOptions } from "./types.ts";
-import { compareBytesLex, compareCanonicalMapKey, decodeUtf8 } from "./utils.ts";
+import { GrainDiagError, LIMITS } from "./types.js";
+import type { CborNode, ParseOptions } from "./types.js";
+import { compareBytesLex, compareCanonicalMapKey, decodeUtf8 } from "./utils.js";
 
 type ParseResult = {
   node: CborNode;

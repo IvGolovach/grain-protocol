@@ -8,13 +8,19 @@
     "node": ">=22"
   },
   "bin": {
-    "grain-sdk-runner": "src/cli.ts"
+    "grain-sdk-runner": "dist/src/cli.js"
   },
   "scripts": {
-    "run:vector": "node --experimental-strip-types src/cli.ts run --strict --vector",
-    "run:protocol-suite": "node --experimental-strip-types scripts/run-protocol-suite.ts",
-    "test:invariants": "node --experimental-strip-types scripts/test-sdk-invariants.ts",
-    "test:ai-boundary": "node --experimental-strip-types scripts/test-sdk-ai-boundary.ts",
-    "demo:e2e": "node --experimental-strip-types scripts/demo-end-to-end.ts"
+    "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
+    "build": "npm --prefix ../../../runner/typescript run build --silent && npm run clean --silent && tsc -p tsconfig.build.json",
+    "run:vector": "npm run build --silent && node dist/src/cli.js run --strict --vector",
+    "run:protocol-suite": "npm run build --silent && node dist/scripts/run-protocol-suite.js",
+    "test:invariants": "npm run build --silent && node dist/scripts/test-sdk-invariants.js",
+    "test:ai-boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-boundary.js",
+    "demo:e2e": "npm run build --silent && node dist/scripts/demo-end-to-end.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "typescript": "^5.9.2"
   }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { GrainSdk } from "../src/index.ts";
+import { GrainSdk } from "../src/index.js";
 
 async function main(): Promise<void> {
   const sdk = new GrainSdk();

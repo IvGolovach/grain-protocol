@@ -1,6 +1,6 @@
-import type { GrainSdkStore } from "./store.ts";
-import type { EvidenceBundle } from "./types.ts";
-import { encodeB64, sha256Hex, stableStringify, toUtf8, type Json } from "./utils.ts";
+import type { GrainSdkStore } from "./store.js";
+import type { EvidenceBundle } from "./types.js";
+import { encodeB64, sha256Hex, stableStringify, toUtf8, type Json } from "./utils.js";
 
 export class EvidenceBuilder {
   private readonly store: GrainSdkStore;
@@ -21,8 +21,8 @@ export class EvidenceBuilder {
       cid: r.cid,
       ak: r.ak,
       seq: r.seq.toString(),
-      cap_id_b64: r.cap_id ? encodeB64(r.cap_id) : undefined,
-      chash_b64: r.chash ? encodeB64(r.chash) : undefined,
+      cap_id_b64: r.cap_id ? encodeB64(r.cap_id) : null,
+      chash_b64: r.chash ? encodeB64(r.chash) : null,
       eligible: r.eligible !== false
     }));
 

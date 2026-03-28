@@ -2,12 +2,26 @@
 
 This document defines the cross-platform reproducibility baseline.
 
-## One-command verification
+## Verification paths
+
+Fast developer verification:
+
+```bash
+./scripts/verify
+```
+
+Properties:
+- host toolchains required (Rust, Node, Python)
+- no clean-tree requirement
+- no container image build
+- no evidence bundle generation
+
+Release-grade certification:
 
 Run from a clean clone:
 
 ```bash
-./scripts/verify
+./scripts/certify
 ```
 
 Compatibility alias for legacy/operator paths:
@@ -25,7 +39,7 @@ Properties:
 Optional fuzz smoke:
 
 ```bash
-./scripts/verify --fuzz-smoke
+./scripts/certify --fuzz-smoke
 ```
 
 ## Golden images
@@ -51,7 +65,7 @@ cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target was
 Run subset vectors in Node runtime:
 
 ```bash
-node --experimental-strip-types runner/typescript/scripts/run-wasm-subset.ts
+npm --prefix runner/typescript run run:wasm-subset
 ```
 
 ## Evidence model

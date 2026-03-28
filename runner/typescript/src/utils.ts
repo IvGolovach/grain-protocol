@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { GrainDiagError } from "./types.ts";
+import { GrainDiagError } from "./types.js";
 
 export function decodeB64(value: unknown): Uint8Array {
   if (typeof value !== "string") {

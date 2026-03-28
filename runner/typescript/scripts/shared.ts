@@ -1,5 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
+import { relative } from "node:path";
+
+import { repoPath, repoRoot, runnerDistPath } from "./runtime.js";
 
 type ProfileDef = {
   profile_id: string;
@@ -7,11 +10,11 @@ type ProfileDef = {
 };
 
 export function loadC01Vectors(): string[] {
-  return loadProfileVectors("runner/typescript/profiles/c01.json");
+  return loadProfileVectors(repoPath("runner", "typescript", "profiles", "c01.json"));
 }
 
 export function loadFullVectors(): string[] {
-  return loadProfileVectors("runner/typescript/profiles/full.json");
+  return loadProfileVectors(repoPath("runner", "typescript", "profiles", "full.json"));
 }
 
 export function loadProfileVectors(profilePath: string): string[] {
@@ -26,7 +29,7 @@ export function loadProfileVectors(profilePath: string): string[] {
     throw new Error(`unsupported profile glob for ${profile.profile_id}: ${profile.vector_glob}`);
   }
 
-  const raw = execFileSync("find", findArgs, { encoding: "utf-8" });
+  const raw = execFileSync("find", findArgs, { cwd: repoRoot, encoding: "utf-8" });
   return raw
     .split("\n")
     .map((s) => s.trim())
@@ -37,8 +40,8 @@ export function loadProfileVectors(profilePath: string): string[] {
 export function runTsVector(vectorPath: string): string {
   return execFileSync(
     process.execPath,
-    ["--experimental-strip-types", "runner/typescript/src/cli.ts", "run", "--strict", "--vector", vectorPath],
-    { encoding: "utf-8", env: { ...process.env, NODE_NO_WARNINGS: "1" } }
+    [runnerDistPath("src", "cli.js"), "run", "--strict", "--vector", vectorPath],
+    { cwd: repoRoot, encoding: "utf-8", env: { ...process.env, NODE_NO_WARNINGS: "1" } }
   ).trim();
 }
 
@@ -52,6 +55,7 @@ export function writeVectorList(path: string, vectors: string[]): void {
 
 export function runRustVectors(vectors: string[], listPath: string): Map<string, RunnerJson> {
   writeVectorList(listPath, vectors);
+  const listPathRel = relative(repoRoot, listPath);
   const rustBinary = process.env.GRAIN_RUST_RUNNER_BIN;
   if (rustBinary && rustBinary.length > 0) {
     const rustMap = new Map<string, RunnerJson>();
@@ -59,25 +63,24 @@ export function runRustVectors(vectors: string[], listPath: string): Map<string,
       const payload = execFileSync(
         rustBinary,
         ["run", "--strict", "--vector", vectorPath],
-        { encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 }
+        { cwd: repoRoot, encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 }
       ).trim();
       rustMap.set(vectorPath, JSON.parse(payload) as RunnerJson);
     }
     return rustMap;
   }
 
-  const repo = process.cwd();
   const rustCommand = [
     "run",
     "--rm",
     "-v",
-    `${repo}:/work`,
+    `${repoRoot}:/work`,
     "-w",
     "/work/core/rust",
     "rust:1.86",
     "bash",
     "-lc",
-    `set -euo pipefail; export PATH=/usr/local/cargo/bin:$PATH; while IFS= read -r v; do out=$(cargo run -q -p grain-runner -- run --strict --vector \"/work/$v\"); printf '%s\\t%s\\n' \"$v\" \"$out\"; done < /work/${listPath}`
+    `set -euo pipefail; export PATH=/usr/local/cargo/bin:$PATH; while IFS= read -r v; do out=$(cargo run -q -p grain-runner -- run --strict --vector \"/work/$v\"); printf '%s\\t%s\\n' \"$v\" \"$out\"; done < /work/${listPathRel}`
   ];
 
   const rustRaw = execFileSync("docker", rustCommand, { encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 });

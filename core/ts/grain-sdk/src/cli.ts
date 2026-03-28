@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-import type { RunnerOutput, VectorFile } from "../../../../runner/typescript/src/types.ts";
-import { GrainSdk } from "./sdk.ts";
+import type { RunnerOutput, VectorFile } from "../../../../runner/typescript/dist/src/types.js";
+import { repoRoot } from "../scripts/runtime.js";
+import { GrainSdk } from "./sdk.js";
 
 function main(argv: string[]): number {
   const cmd = argv[2];
@@ -26,7 +28,7 @@ function main(argv: string[]): number {
     }, 2);
   }
 
-  const vectorPath = argv[vectorArgIdx + 1];
+  const vectorPath = resolveVectorPath(argv[vectorArgIdx + 1]);
   const vector = JSON.parse(readFileSync(vectorPath, "utf8")) as VectorFile;
 
   const sdk = new GrainSdk();
@@ -52,6 +54,13 @@ function main(argv: string[]): number {
 function printAndExit(output: RunnerOutput, code: number): never {
   process.stdout.write(`${JSON.stringify(output)}\n`);
   process.exit(code);
+}
+
+function resolveVectorPath(candidate: string): string {
+  if (existsSync(candidate)) {
+    return candidate;
+  }
+  return resolve(repoRoot, candidate);
 }
 
 main(process.argv);

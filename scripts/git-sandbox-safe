@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+CACHE_BASE="${GIT_SANDBOX_CACHE_DIR:-/tmp/grain-git-sandbox}"
+KEY="$(printf '%s' "$ROOT" | shasum -a 256 | awk '{print $1}')"
+ALT_ROOT="$CACHE_BASE/$KEY"
+ALT_GIT_DIR="$ALT_ROOT/.git"
+REFRESH=0
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/git-sandbox-safe [--refresh] <git args...>
+
+Runs git against a writable mirror of .git stored in /tmp while keeping the
+current repository as the working tree. Useful when the repository's .git
+directory is readable but not writable in a sandbox.
+
+Examples:
+  scripts/git-sandbox-safe status --short --branch
+  scripts/git-sandbox-safe add -A
+  scripts/git-sandbox-safe commit -m "Message"
+  scripts/git-sandbox-safe push origin HEAD
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --refresh)
+      REFRESH=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [[ $# -eq 0 ]]; then
+  usage >&2
+  exit 2
+fi
+
+sync_git_dir() {
+  rm -rf "$ALT_ROOT"
+  mkdir -p "$ALT_ROOT"
+  cp -R "$ROOT/.git" "$ALT_GIT_DIR"
+}
+
+if [[ ! -d "$ALT_GIT_DIR" || "$REFRESH" -eq 1 ]]; then
+  sync_git_dir
+fi
+
+exec git --git-dir="$ALT_GIT_DIR" --work-tree="$ROOT" "$@"

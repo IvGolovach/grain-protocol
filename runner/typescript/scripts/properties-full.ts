@@ -1,7 +1,9 @@
 import { writeFileSync } from "node:fs";
 
-import { executeOperation } from "../src/ops.ts";
-import { stable } from "./shared.ts";
+import { executeOperation } from "../src/ops.js";
+import type { Json } from "../src/types.js";
+import { runnerPath } from "./runtime.js";
+import { stable } from "./shared.js";
 
 const rng = makeRng(0x5eedc0de);
 
@@ -10,7 +12,7 @@ type LedgerEvent = {
   ak: string;
   seq: number;
   payload_cid: string;
-  body: Record<string, unknown>;
+  body: Record<string, Json>;
 };
 
 const results: { name: string; cases: number; pass: boolean; failure?: string }[] = [];
@@ -19,8 +21,8 @@ runProperty("ledger_order_independence", 120, () => {
   const base = generateLedgerCase(rng);
   const shuffled = shuffle([...base], rng);
 
-  const r1 = executeOperation("ledger_reduce", { root_kid: "root", events: base }, true);
-  const r2 = executeOperation("ledger_reduce", { root_kid: "root", events: shuffled }, true);
+  const r1 = executeOperation("ledger_reduce", { root_kid: "root", events: base as Json }, true);
+  const r2 = executeOperation("ledger_reduce", { root_kid: "root", events: shuffled as Json }, true);
 
   assertSameOperation(r1, r2, "ledger order independence mismatch");
 });
@@ -29,8 +31,8 @@ runProperty("ledger_idempotence", 120, () => {
   const base = generateLedgerCase(rng);
   const dup = [...base, ...base];
 
-  const r1 = executeOperation("ledger_reduce", { root_kid: "root", events: base }, true);
-  const r2 = executeOperation("ledger_reduce", { root_kid: "root", events: dup }, true);
+  const r1 = executeOperation("ledger_reduce", { root_kid: "root", events: base as Json }, true);
+  const r2 = executeOperation("ledger_reduce", { root_kid: "root", events: dup as Json }, true);
 
   assertSameOperation(r1, r2, "ledger idempotence mismatch");
 });
@@ -43,8 +45,8 @@ runProperty("manifest_order_independence", 120, () => {
     "manifest_resolve",
     {
       ...input,
-      eligible_records: shuffle([...(input.eligible_records as unknown[])], rng),
-      eligible_tombstones: shuffle([...(input.eligible_tombstones as unknown[])], rng)
+      eligible_records: shuffle([...(input.eligible_records as Json[])], rng) as Json[],
+      eligible_tombstones: shuffle([...(input.eligible_tombstones as Json[])], rng) as Json[]
     },
     true
   );
@@ -79,7 +81,7 @@ const summary = {
   failed: failed.length
 };
 
-writeFileSync("runner/typescript/.properties-full.json", `${JSON.stringify(summary, null, 2)}\n`, "utf-8");
+writeFileSync(runnerPath(".properties-full.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf-8");
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 
 if (failed.length > 0) {
@@ -143,10 +145,10 @@ function generateLedgerCase(rand: () => number): LedgerEvent[] {
   return events;
 }
 
-function generateManifestCase(rand: () => number): Record<string, unknown> {
+function generateManifestCase(rand: () => number): Record<string, Json> {
   const cid = toB64(fillBytes(32, 0xaa));
-  const eligibleRecords: Record<string, unknown>[] = [];
-  const ineligibleRecords: Record<string, unknown>[] = [];
+  const eligibleRecords: Record<string, Json>[] = [];
+  const ineligibleRecords: Record<string, Json>[] = [];
 
   const puts = 1 + Math.floor(rand() * 4);
   for (let i = 0; i < puts; i += 1) {
@@ -171,8 +173,8 @@ function generateManifestCase(rand: () => number): Record<string, unknown> {
     });
   }
 
-  const tombstones: Record<string, unknown>[] = rand() < 0.2 ? [{ op: "del" }] : [];
-  const ineligibleTombstones: Record<string, unknown>[] = rand() < 0.2 ? [{ op: "del" }] : [];
+  const tombstones: Record<string, Json>[] = rand() < 0.2 ? [{ op: "del" }] : [];
+  const ineligibleTombstones: Record<string, Json>[] = rand() < 0.2 ? [{ op: "del" }] : [];
 
   return {
     cid_b64: cid,

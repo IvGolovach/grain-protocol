@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT"
+
+history_mode=0
+base_ref=""
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/ledger/check
+  scripts/ledger/check --history --base <git-ref>
+
+Checks repository hygiene for the current tree and verifies that commits in the
+specified history range each carry exactly one Ledger-Id trailer.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --history)
+      history_mode=1
+      shift
+      ;;
+    --base)
+      base_ref="${2:-}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if [[ "$history_mode" -eq 0 ]]; then
+  git diff --check
+  git diff --cached --check
+  python3 tools/ci/check_forbidden_tracked.py
+
+  echo "ledger check: OK"
+  exit 0
+fi
+
+if [[ -z "$base_ref" ]]; then
+  echo "LEDGER_CHECK_ERR_BASE_REQUIRED: --history requires --base <git-ref>" >&2
+  exit 2
+fi
+
+git rev-parse --verify "$base_ref" >/dev/null
+
+mapfile -t commits < <(git rev-list --reverse "${base_ref}..HEAD")
+
+for sha in "${commits[@]}"; do
+  [[ -n "$sha" ]] || continue
+  trailer_count="$(
+    git log -1 --format=%B "$sha" | grep -c '^Ledger-Id: ' || true
+  )"
+
+  if [[ "$trailer_count" -ne 1 ]]; then
+    echo "LEDGER_CHECK_ERR_TRAILER_COUNT: commit $sha has $trailer_count Ledger-Id trailers" >&2
+    exit 1
+  fi
+done
+
+echo "ledger history check: OK (${#commits[@]} commits since ${base_ref})"

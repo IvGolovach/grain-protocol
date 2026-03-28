@@ -1,5 +1,5 @@
-import { SdkError } from "./errors.ts";
-import { compareBytesLex } from "./utils.ts";
+import { SdkError } from "./errors.js";
+import { compareBytesLex } from "./utils.js";
 
 type Brand<T, K extends string> = T & { readonly __brand: K };
 
@@ -41,5 +41,5 @@ export function buildSetArray<T>(items: readonly T[], toBytes: (item: T) => Uint
     }
   }
 
-  return rows.map((r) => r.item) as SetArray<T>;
+  return rows.map((r) => r.item) as unknown as SetArray<T>;
 }

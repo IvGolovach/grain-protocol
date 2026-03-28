@@ -35,8 +35,8 @@ This checklist documents what public SDK APIs reject by construction.
 ## Validation command
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
+npm --prefix core/ts/grain-sdk run test:invariants
+npm --prefix core/ts/grain-sdk run test:ai-boundary
 ```
 
 This command is the executable proof for `SDK-INV-*` mappings in `docs/llm/SDK_INVARIANTS.md`.

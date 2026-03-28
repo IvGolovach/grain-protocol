@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 
-import { loadFullVectors, runTsVector } from "./shared.ts";
+import { runnerPath } from "./runtime.js";
+import { loadFullVectors, runTsVector } from "./shared.js";
 
 const vectors = loadFullVectors();
 
@@ -34,7 +35,7 @@ const summary = {
   failures
 };
 
-writeFileSync("runner/typescript/.full-last-run.json", `${JSON.stringify(summary, null, 2)}\n`, "utf-8");
+writeFileSync(runnerPath(".full-last-run.json"), `${JSON.stringify(summary, null, 2)}\n`, "utf-8");
 process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
 
 if (failed > 0) {

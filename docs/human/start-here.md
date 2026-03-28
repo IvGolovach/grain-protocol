@@ -19,12 +19,18 @@ If you want the bold but repo-grounded product direction, read [Future Vision](.
 
 ## Choose your entry path
 
-- [Run the 5-minute demo](./quickstart.md)
-- [Read the future vision](./future-vision.md)
+- [Evaluate Grain in 5 minutes](./quickstart.md)
 - [Build an app on Grain](./building-on-grain.md)
 - [Implement Grain itself](./implementing-grain.md)
 - [Build with SDK primitives](./sdk/start-here.md)
-- [Run portability verification](./portability-pack.md)
+- [Read the future vision](./future-vision.md)
+- [Run release-grade portability verification](./portability-pack.md)
+
+## Verification paths
+
+- `./scripts/verify` for fast developer verification on host toolchains.
+- `./scripts/certify` for clean-tree, containerized evidence generation.
+- `./scripts/ops/run_verification_pack_v1.sh` remains the operator alias for the certification path.
 
 ## Current status snapshot
 

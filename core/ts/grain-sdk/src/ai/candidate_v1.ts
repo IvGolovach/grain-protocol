@@ -1,5 +1,5 @@
-import { SdkError } from "../errors.ts";
-import type { AICandidateEnvelopeV1 } from "./adapter.ts";
+import { SdkError } from "../errors.js";
+import type { AICandidateEnvelopeV1 } from "./adapter.js";
 
 export type NumericKind = "u63" | "i64";
 

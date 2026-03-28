@@ -9,19 +9,19 @@ SDK runner path:
 
 Runner contract:
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/src/cli.ts run --strict --vector <vector.json>
+npm --prefix core/ts/grain-sdk run run:vector -- <vector.json>
 ```
 
 Full protocol suite execution through SDK runner:
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+npm --prefix core/ts/grain-sdk run run:protocol-suite
 ```
 
 ## SDK-specific invariants suite
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
+npm --prefix core/ts/grain-sdk run test:invariants
+npm --prefix core/ts/grain-sdk run test:ai-boundary
 ```
 
 Expected contract:

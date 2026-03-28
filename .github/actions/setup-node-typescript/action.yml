@@ -1,0 +1,39 @@
+name: Set up Node TypeScript dependencies
+description: Install the pinned Node runtime plus runner and SDK TypeScript dependencies.
+inputs:
+  node-version-file:
+    description: Node version file to use for setup-node.
+    required: false
+    default: .nvmrc
+  cache-dependency-path:
+    description: Package lockfile path(s) used for npm cache keying.
+    required: false
+    default: |
+      runner/typescript/package-lock.json
+      core/ts/grain-sdk/package-lock.json
+  prefix:
+    description: Prefix passed to npm ci.
+    required: false
+    default: runner/typescript
+  extra-prefix:
+    description: Optional second prefix passed to npm ci.
+    required: false
+    default: core/ts/grain-sdk
+runs:
+  using: composite
+  steps:
+    - name: Set up Node 22
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+      with:
+        node-version-file: ${{ inputs.node-version-file }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Install primary TypeScript deps
+      shell: bash
+      run: npm ci --prefix "${{ inputs.prefix }}"
+
+    - name: Install secondary TypeScript deps
+      if: inputs.extra-prefix != ''
+      shell: bash
+      run: npm ci --prefix "${{ inputs.extra-prefix }}"

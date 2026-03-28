@@ -50,7 +50,7 @@ class StabilizationRunnerTests(unittest.TestCase):
             baseline_tag="repo-rc-v0.4.0-rc1",
             baseline_evidence_sha="deadbeef",
             rust_runner_cmd=["core/rust/target/debug/grain-runner"],
-            ts_runner_cmd=["node", "--experimental-strip-types", "runner/typescript/src/cli.ts"],
+            ts_runner_cmd=["node", "runner/typescript/dist/src/cli.js"],
             repo="acme/grain",
             seed=20260225,
         )
@@ -69,6 +69,7 @@ class StabilizationRunnerTests(unittest.TestCase):
             mock.patch.object(run_rc_stab, "run_properties", return_value={"rust_properties": {"pass": True}, "ts_properties": {"pass": True}}),
             mock.patch.object(run_rc_stab, "run_repro_check", return_value={"pass": True, "cleanup": {"status": "failed", "root_path": "/tmp/mock", "error_type": "PermissionError", "errno": 1}}),
             mock.patch.object(run_rc_stab, "run_rollback_rehearsal", return_value={"pass": True}),
+            mock.patch.object(run_rc_stab, "run", return_value=subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")),
         ):
             exit_code = run_rc_stab.main()
 

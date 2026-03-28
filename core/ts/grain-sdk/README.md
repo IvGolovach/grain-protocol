@@ -14,27 +14,39 @@ Principles:
 
 ## Quick commands
 
+Install SDK build-time dependencies:
+
+```bash
+npm ci --prefix core/ts/grain-sdk
+```
+
 Run one conformance vector through SDK runner:
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/src/cli.ts run --strict --vector conformance/vectors/cid/POS-CID-001.json
+npm --prefix core/ts/grain-sdk run run:vector -- conformance/vectors/cid/POS-CID-001.json
 ```
 
 Run SDK invariant tests:
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-invariants.ts
-node --experimental-strip-types core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts
+npm --prefix core/ts/grain-sdk run test:invariants
+npm --prefix core/ts/grain-sdk run test:ai-boundary
 ```
 
 Run SDK end-to-end demo:
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/demo-end-to-end.ts
+npm --prefix core/ts/grain-sdk run demo:e2e
 ```
 
 Run full protocol suite through SDK runner:
 
 ```bash
-node --experimental-strip-types core/ts/grain-sdk/scripts/run-protocol-suite.ts
+npm --prefix core/ts/grain-sdk run run:protocol-suite
+```
+
+Build the stable JS output explicitly:
+
+```bash
+npm --prefix core/ts/grain-sdk run build
 ```

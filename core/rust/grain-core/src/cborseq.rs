@@ -58,3 +58,29 @@ pub fn parse_cborseq_stream(bytes: &[u8]) -> GrainResult<Vec<String>> {
 
     Ok(out)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sha2::{Digest, Sha256};
+
+    #[test]
+    fn parses_items_in_order_and_hashes_each_item() {
+        let bytes = [0x01, 0x02, 0x03];
+        let hashes = parse_cborseq_stream(&bytes).unwrap();
+
+        let expected = vec![
+            hex::encode(Sha256::digest([0x01])),
+            hex::encode(Sha256::digest([0x02])),
+            hex::encode(Sha256::digest([0x03])),
+        ];
+
+        assert_eq!(hashes, expected);
+    }
+
+    #[test]
+    fn rejects_truncated_first_item() {
+        let err = parse_cborseq_stream(&[0x18]).unwrap_err();
+        assert_eq!(err.diag(), Diag::CborseqTruncated);
+    }
+}

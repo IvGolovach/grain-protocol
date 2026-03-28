@@ -135,3 +135,43 @@ fn map_find_unsigned(map: &[(crate::cbor::CborValue, crate::cbor::CborValue)], k
 fn map_find_bytes(map: &[(crate::cbor::CborValue, crate::cbor::CborValue)], key: &str) -> Option<Vec<u8>> {
     map_find(map, key).and_then(|v| v.as_bytes().map(|b| b.to_vec()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn derive_key_nonce_is_deterministic_for_same_inputs() {
+        let sync_secret = [0u8; 32];
+        let cap_id = [1u8; 32];
+        let cid_link = [0x00, 0x42, 0x99];
+
+        let first = derive_key_nonce(&sync_secret, &cap_id, &cid_link).unwrap();
+        let second = derive_key_nonce(&sync_secret, &cap_id, &cid_link).unwrap();
+
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn derive_key_nonce_rejects_bad_cid_link_prefix() {
+        let sync_secret = [0u8; 32];
+        let cap_id = [1u8; 32];
+        let cid_link = [0x01, 0x42, 0x99];
+
+        let err = derive_key_nonce(&sync_secret, &cap_id, &cid_link).unwrap_err();
+        assert_eq!(err.diag(), Diag::BadCidLink);
+    }
+
+    #[test]
+    fn decrypt_encrypted_object_rejects_manifest_chash_mismatch() {
+        let err = decrypt_encrypted_object(
+            b"not-an-encrypted-object",
+            &[0u8; 32],
+            &[0x00, 0x42],
+            Some(&[0xaa, 0xbb]),
+        )
+        .unwrap_err();
+
+        assert_eq!(err.diag(), Diag::ChashMismatch);
+    }
+}

@@ -1,0 +1,121 @@
+name: Python policy checks
+description: Run the shared Python policy and repository hygiene checks.
+inputs:
+  run_branch_protection_drift:
+    description: Run the branch protection drift check for main.
+    required: false
+    default: "false"
+  gh_token:
+    description: Token used by the branch protection drift check.
+    required: false
+    default: ""
+  branch_protection_branch:
+    description: Branch name to validate when drift checks are enabled.
+    required: false
+    default: main
+  branch_protection_contexts:
+    description: Comma-separated required status contexts.
+    required: false
+    default: python-tooling,rust-core,ts-c01,ts-full,evidence-bundle
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+      with:
+        python-version: "3.11"
+
+    - name: Validate vectors
+      shell: bash
+      run: python3 tools/validate_vectors.py
+
+    - name: Check LLM docs mappings
+      shell: bash
+      run: python3 tools/check_llm_docs.py
+
+    - name: Check spec drift
+      shell: bash
+      run: python3 tools/check_spec_drift.py
+
+    - name: Check .gitattributes policy
+      shell: bash
+      run: python3 tools/ci/check_gitattributes_policy.py
+
+    - name: Check forbidden tracked files
+      shell: bash
+      run: python3 tools/ci/check_forbidden_tracked.py
+
+    - name: Check CRLF in tracked text files
+      shell: bash
+      run: python3 tools/ci/check_crlf_tracked.py
+
+    - name: Check CODEOWNERS critical coverage
+      shell: bash
+      run: python3 tools/ci/check_codeowners_coverage.py
+
+    - name: Check Dependabot automerge policy consistency
+      shell: bash
+      run: python3 tools/ci/check_dependabot_policy.py
+
+    - name: Check Node runtime pin consistency
+      shell: bash
+      run: python3 tools/ci/check_node_runtime_pin.py
+
+    - name: Check workflow action pinning
+      shell: bash
+      run: python3 tools/ci/check_workflow_action_pinning.py
+
+    - name: Docs link check
+      shell: bash
+      run: python3 tools/ci/check_docs_links.py
+
+    - name: Docs flow check
+      shell: bash
+      run: python3 tools/ci/check_docs_flow.py
+
+    - name: Check runner_v1 contract compatibility
+      shell: bash
+      run: python3 tools/ci/check_runner_contract_compat.py
+
+    - name: Check prohibition-zone coverage
+      shell: bash
+      run: python3 tools/ci/check_prohibition_coverage.py
+
+    - name: Check SDK no-network guard
+      shell: bash
+      run: python3 tools/ci/check_sdk_no_network.py
+
+    - name: Check branch protection drift (main)
+      if: inputs.run_branch_protection_drift == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+      run: |
+        set -euo pipefail
+        python3 tools/ci/check_branch_protection_drift.py \
+          --repo "${GITHUB_REPOSITORY}" \
+          --branch "${{ inputs.branch_protection_branch }}" \
+          --expected-contexts "${{ inputs.branch_protection_contexts }}" \
+          --expected-approvals 0 \
+          --expected-codeowner-reviews false \
+          --expected-enforce-admins true \
+          --expected-linear-history true \
+          --expected-allow-force-pushes false \
+          --expected-allow-deletions false \
+          --expected-conversation-resolution true
+
+    - name: Ensure no macOS metadata files
+      shell: bash
+      run: |
+        set -euo pipefail
+        ! find . -name ".DS_Store" -print | grep -q .
+
+    - name: Ensure no Python cache artifacts
+      shell: bash
+      run: |
+        set -euo pipefail
+        ! find . -name "__pycache__" -print | grep -q .
+
+    - name: Compile Python tooling
+      shell: bash
+      run: python3 -m py_compile tools/*.py tools/ci/*.py

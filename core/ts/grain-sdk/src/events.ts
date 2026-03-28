@@ -1,10 +1,10 @@
-import type { Json } from "./utils.ts";
-import { compareBytesLex, sha256Hex, toUtf8 } from "./utils.ts";
-import { SdkError } from "./errors.ts";
-import type { GrainSdkStore } from "./store.ts";
-import type { AppendEventInput, LedgerEvent, ReduceResult } from "./types.ts";
-import type { IdentityManager } from "./identity.ts";
-import type { TsCoreEngine } from "./engine.ts";
+import type { Json } from "./utils.js";
+import { compareBytesLex, sha256Hex, toUtf8 } from "./utils.js";
+import { SdkError } from "./errors.js";
+import type { GrainSdkStore } from "./store.js";
+import type { AppendEventInput, LedgerEvent, ReduceResult } from "./types.js";
+import type { IdentityManager } from "./identity.js";
+import type { TsCoreEngine } from "./engine.js";
 
 export class EventLifecycle {
   private readonly store: GrainSdkStore;

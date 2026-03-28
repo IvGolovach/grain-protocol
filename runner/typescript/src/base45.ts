@@ -1,4 +1,4 @@
-import { GrainDiagError } from "./types.ts";
+import { GrainDiagError } from "./types.js";
 
 const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
 const MAP = new Map<string, number>([...ALPHABET].map((c, i) => [c, i]));

@@ -183,3 +183,57 @@ fn allowed_top_level_keys(t: &str) -> Option<&'static [&'static str]> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cbor::{encode_canonical, CborValue};
+
+    fn encode(value: CborValue) -> Vec<u8> {
+        let mut out = Vec::new();
+        encode_canonical(&value, &mut out);
+        out
+    }
+
+    #[test]
+    fn accepts_known_top_level_shape() {
+        let bytes = encode(CborValue::Map(vec![
+            (
+                CborValue::Text(b"t".to_vec()),
+                CborValue::Text(b"IngredientRef".to_vec()),
+            ),
+            (CborValue::Text(b"v".to_vec()), CborValue::Unsigned(1)),
+        ]));
+
+        let value = validate_strict_dagcbor(&bytes).unwrap();
+        assert!(matches!(value, CborValue::Map(_)));
+    }
+
+    #[test]
+    fn rejects_non_text_top_level_key() {
+        let bytes = encode(CborValue::Map(vec![
+            (
+                CborValue::Unsigned(1),
+                CborValue::Text(b"IngredientRef".to_vec()),
+            ),
+        ]));
+
+        let err = validate_strict_dagcbor(&bytes).unwrap_err();
+        assert_eq!(err.diag(), Diag::NonCanonical);
+    }
+
+    #[test]
+    fn rejects_unknown_top_level_key() {
+        let bytes = encode(CborValue::Map(vec![
+            (
+                CborValue::Text(b"t".to_vec()),
+                CborValue::Text(b"IngredientRef".to_vec()),
+            ),
+            (CborValue::Text(b"v".to_vec()), CborValue::Unsigned(1)),
+            (CborValue::Text(b"bogus".to_vec()), CborValue::Unsigned(2)),
+        ]));
+
+        let err = validate_strict_dagcbor(&bytes).unwrap_err();
+        assert_eq!(err.diag(), Diag::UnknownTopLevelKey);
+    }
+}

@@ -1,0 +1,47 @@
+name: Rust core verification
+description: Run the Rust reference implementation tests and conformance suite.
+inputs:
+  build_wasm:
+    description: Build the wasm target after the Rust suite.
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Set up Rust toolchain
+      uses: ./.github/actions/setup-rust-toolchain
+
+    - name: Rust tests
+      shell: bash
+      run: cargo test --manifest-path core/rust/Cargo.toml --workspace
+
+    - name: Build grain-runner binary
+      shell: bash
+      run: cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
+
+    - name: Quickstart smoke (deterministic demo output)
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 tools/ci/check_quickstart_smoke.py \
+          --runner-cmd core/rust/target/debug/grain-runner demo --strict
+
+    - name: Rust strict conformance suite
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 tools/ci/run_runner_suite.py \
+          --vectors-root conformance/vectors \
+          --commit-sha "${GITHUB_SHA}" \
+          --out artifacts/rust-suite-summary.json \
+          --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
+
+    - name: Add wasm target
+      if: inputs.build_wasm == 'true'
+      shell: bash
+      run: rustup target add wasm32-wasip1
+
+    - name: Build grain-core-wasm
+      if: inputs.build_wasm == 'true'
+      shell: bash
+      run: cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release
