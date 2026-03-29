@@ -19,7 +19,8 @@
     "run:full": "npm run build --silent && node dist/scripts/run-full.js",
     "divergence:full": "npm run build --silent && node dist/scripts/divergence-full.js",
     "run:wasm-subset": "npm run build --silent && node dist/scripts/run-wasm-subset.js",
-    "test:properties": "npm run build --silent && node dist/scripts/properties-full.js"
+    "test:properties": "npm run build --silent && node dist/scripts/properties-full.js",
+    "test:integer-precision": "npm run build --silent && node dist/scripts/test-integer-precision.js"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

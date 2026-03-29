@@ -42,6 +42,14 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`)
   Modules: `core/ts/grain-sdk/src/transport.ts`
 
+- SDK-INV-0011: raw ledger CBOR-seq export MUST be deterministic and parseable as canonical CBOR sequence.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0011 raw CBOR-seq export determinism`)
+  Modules: `core/ts/grain-sdk/src/events.ts`
+
+- SDK-INV-0012: public device lifecycle APIs MUST keep bundle authorization state synchronized with persisted grant/revoke ledger events.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0012 identity lifecycle stays synced with ledger`)
+  Modules: `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/events.ts`
+
 - SDK-AI-001: AI candidate MUST pass `accept()` before any apply side effect; opaque token only.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-001 no public sdk.store`, `SDK-AI-001 apply accepted token`, `SDK-AI-001 forged token reject`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai/token_registry.ts`, `core/ts/grain-sdk/src/ai/accept.ts`

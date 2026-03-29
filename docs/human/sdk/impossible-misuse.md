@@ -32,6 +32,11 @@ This checklist documents what public SDK APIs reject by construction.
    - quarantined deterministically
    - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
 
+## Consistency guarantees
+
+- `identity.addDeviceKey()` and `identity.revokeDeviceKey()` persist their matching ledger lifecycle events before returning.
+- Public SDK callers do not need a second manual `events.append()` step to keep authorization state aligned with reducer-visible ledger history.
+
 ## Validation command
 
 ```bash

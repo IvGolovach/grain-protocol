@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { repoRoot } from "../scripts/runtime.js";
 import { evaluateVector } from "./expect.js";
 import { executeOperation } from "./ops.js";
+import { parseVectorFile } from "./vector-json.js";
 import { GrainDiagError } from "./types.js";
 import type { OperationActual, RunnerOutput, VectorFile } from "./types.js";
 
@@ -24,7 +25,7 @@ function main(): void {
   const vectorPath = resolveVectorPath(argv[vectorIdx + 1]);
   let vector: VectorFile;
   try {
-    vector = JSON.parse(readFileSync(vectorPath, "utf-8")) as VectorFile;
+    vector = parseVectorFile(readFileSync(vectorPath, "utf-8"));
   } catch {
     printAndExit({ vector_id: "unknown", pass: false, diag: ["GRAIN_ERR_SCHEMA"], out: {} }, 1);
     return;

@@ -52,6 +52,7 @@ Run TS property tests:
 
 ```bash
 npm --prefix runner/typescript run test:properties
+npm --prefix runner/typescript run test:integer-precision
 ```
 
 Run WASM subset portability smoke:

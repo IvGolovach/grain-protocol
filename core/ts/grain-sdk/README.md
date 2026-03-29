@@ -9,6 +9,7 @@ Principles:
 - fail-closed for risky paths (CSPRNG, cap overwrite)
 - deterministic error descriptors (category + NES/vector refs)
 - deterministic transport bundle import/export (`grain-transport-bundle-v1`)
+- device lifecycle APIs persist matching grant/revoke ledger events before returning
 - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
 - no outbound network behavior in SDK core
 

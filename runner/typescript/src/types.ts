@@ -29,6 +29,7 @@ export type RunnerOutput = {
 export type CborNode =
   | { kind: "u"; value: bigint }
   | { kind: "n"; value: bigint }
+  | { kind: "f"; value: number }
   | { kind: "b"; value: Uint8Array }
   | { kind: "t"; bytes: Uint8Array }
   | { kind: "a"; items: CborNode[] }

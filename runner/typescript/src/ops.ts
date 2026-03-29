@@ -819,10 +819,10 @@ function textFromObjectField(obj: Record<string, Json>, key: string): string | u
 
 function parseInteger(value: Json | undefined, code: string): bigint {
   if (typeof value === "number") {
-    if (!Number.isFinite(value) || !Number.isInteger(value)) {
+    if (!Number.isSafeInteger(value)) {
       throw new GrainDiagError(code);
     }
-    return BigInt(numberToIntString(value));
+    return BigInt(value);
   }
 
   if (typeof value === "string") {
@@ -833,26 +833,6 @@ function parseInteger(value: Json | undefined, code: string): bigint {
   }
 
   throw new GrainDiagError(code);
-}
-
-function numberToIntString(value: number): string {
-  if (!Number.isFinite(value) || !Number.isInteger(value)) {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-
-  const asString = value.toString();
-  if (!asString.includes("e") && !asString.includes("E")) {
-    return asString;
-  }
-
-  const wide = value.toLocaleString("en-US", {
-    useGrouping: false,
-    maximumFractionDigits: 0
-  });
-  if (!/^-?[0-9]+$/.test(wide)) {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-  return wide;
 }
 
 function toText(value: Json | undefined, code: string): string {

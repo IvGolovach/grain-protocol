@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk run test:ai-boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0010` and `SDK-AI-001` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0012` and `SDK-AI-001` through `SDK-AI-007`
 
 ## Diagnostics contract
 

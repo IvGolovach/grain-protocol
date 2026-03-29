@@ -139,6 +139,11 @@ jobs:
           prefix: runner/typescript
           script: test:properties
 
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: test:integer-precision
+
       - name: Collect TS full artifacts
         run: |
           mkdir -p artifacts

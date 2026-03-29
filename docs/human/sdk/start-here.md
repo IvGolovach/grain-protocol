@@ -20,16 +20,18 @@ Expected output contains deterministic fields:
 ## Fast path in code
 
 1. Initialize identity root.
-2. Append events through `events.append()`.
-3. Use `events.reduce()` for deterministic totals.
-4. Use `e2e.encrypt()/decrypt()` for private payload paths.
-5. Use `manifest.put()/resolve()` for private graph resolution.
-6. For model-generated suggestions, use `sdk.ai.accept()` then `sdk.ai.applyAccepted()`.
+2. Use `identity.addDeviceKey()` / `identity.revokeDeviceKey()` when you need device lifecycle changes; these APIs persist their grant/revoke ledger events before returning.
+3. Append events through `events.append()`.
+4. Use `events.reduce()` for deterministic totals.
+5. Use `e2e.encrypt()/decrypt()` for private payload paths.
+6. Use `manifest.put()/resolve()` for private graph resolution.
+7. For model-generated suggestions, use `sdk.ai.accept()` then `sdk.ai.applyAccepted()`.
 
 ## Safety baseline
 
 - SDK runs strict mode by default.
 - unauthorized appends are rejected.
+- device lifecycle APIs keep bundle state and ledger-visible authorization in sync.
 - cap_id generation is CSPRNG-only and fail-closed.
 - cap_id overwrite/corruption is rejected.
 - AI candidates are suggestion-only until accepted via deterministic firewall.

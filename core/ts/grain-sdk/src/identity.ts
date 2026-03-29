@@ -43,19 +43,20 @@ export class IdentityManager {
 
   async addDeviceKey(label = "device"): Promise<{ device: DeviceKey; grant_event: LedgerEvent }> {
     const bundle = await this.requireBundle();
-    const rootKid = bundle.root_kid;
+    const nextBundle = cloneIdentityBundle(bundle);
+    const rootKid = nextBundle.root_kid;
 
     const pub = randomBytes32();
     const ak = deriveKid(pub);
 
-    if (bundle.device_keys.some((k) => k.ak === ak)) {
+    if (nextBundle.device_keys.some((k) => k.ak === ak)) {
       throw new SdkError("SDK_ERR_DEVICE_EXISTS", "Derived device key already exists");
     }
 
-    bundle.device_keys.push({ ak, label, pub_b64: encodeB64(pub) });
-    await this.store.identity.save(bundle);
-
     const seq = await this.store.sequence.reserveNextSeq(rootKid);
+    nextBundle.seq_state[rootKid] = seq.toString();
+    nextBundle.device_keys.push({ ak, label, pub_b64: encodeB64(pub) });
+
     const grantEvent: LedgerEvent = {
       t: "DeviceKeyGrant",
       ak: rootKid,
@@ -64,31 +65,33 @@ export class IdentityManager {
       body: { grant_ak: ak }
     };
 
+    await this.persistIdentityAndEvent(bundle, nextBundle, grantEvent);
+
     return { device: { ak, label, pub_b64: encodeB64(pub) }, grant_event: grantEvent };
   }
 
   async revokeDeviceKey(ak: string): Promise<{ revoked_ak: string; revoke_event: LedgerEvent }> {
     const bundle = await this.requireBundle();
-    const rootKid = bundle.root_kid;
+    const nextBundle = cloneIdentityBundle(bundle);
+    const rootKid = nextBundle.root_kid;
 
     if (ak === rootKid) {
       throw new SdkError("SDK_ERR_REVOKE_ROOT_FORBIDDEN", "Root key cannot be revoked in v0.1");
     }
-    if (!bundle.device_keys.some((k) => k.ak === ak)) {
+    if (!nextBundle.device_keys.some((k) => k.ak === ak)) {
       throw new SdkError("SDK_ERR_DEVICE_UNKNOWN", "Device key not found");
     }
-    if (!bundle.revoked_aks.includes(ak)) {
-      bundle.revoked_aks.push(ak);
-      bundle.revoked_aks.sort();
+    if (!nextBundle.revoked_aks.includes(ak)) {
+      nextBundle.revoked_aks.push(ak);
+      nextBundle.revoked_aks.sort();
     }
 
-    if (bundle.active_ak === ak) {
-      bundle.active_ak = rootKid;
+    if (nextBundle.active_ak === ak) {
+      nextBundle.active_ak = rootKid;
     }
-
-    await this.store.identity.save(bundle);
 
     const seq = await this.store.sequence.reserveNextSeq(rootKid);
+    nextBundle.seq_state[rootKid] = seq.toString();
     const revokeEvent: LedgerEvent = {
       t: "DeviceKeyRevoke",
       ak: rootKid,
@@ -96,6 +99,8 @@ export class IdentityManager {
       payload_cid: `revoke:${ak}`,
       body: { revoke_ak: ak }
     };
+
+    await this.persistIdentityAndEvent(bundle, nextBundle, revokeEvent);
 
     return { revoked_ak: ak, revoke_event: revokeEvent };
   }
@@ -164,6 +169,20 @@ export class IdentityManager {
     return decodeB64(bundle.sync_secret_b64);
   }
 
+  private async persistIdentityAndEvent(
+    previous: IdentityBundleV1,
+    next: IdentityBundleV1,
+    event: LedgerEvent
+  ): Promise<void> {
+    try {
+      await this.store.identity.save(next);
+      await this.store.events.append(event);
+    } catch (err) {
+      await this.store.identity.save(previous);
+      throw err;
+    }
+  }
+
   private async requireBundle(): Promise<IdentityBundleV1> {
     const bundle = await this.store.identity.load();
     if (!bundle) {
@@ -185,4 +204,8 @@ function isAuthorized(bundle: IdentityBundleV1, ak: string): boolean {
     return false;
   }
   return bundle.device_keys.some((k) => k.ak === ak);
+}
+
+function cloneIdentityBundle(bundle: IdentityBundleV1): IdentityBundleV1 {
+  return JSON.parse(JSON.stringify(bundle)) as IdentityBundleV1;
 }

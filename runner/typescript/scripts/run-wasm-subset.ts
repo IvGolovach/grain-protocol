@@ -51,8 +51,8 @@ function decodePacked(raw: bigint | number): { ptr: number; len: number } {
   return { ptr, len };
 }
 
-function runVector(exportsObj: WasmExports, vector: VectorFile): OperationActual {
-  const input = Buffer.from(JSON.stringify(vector), "utf8");
+function runVector(exportsObj: WasmExports, vectorBytes: Uint8Array): OperationActual {
+  const input = Buffer.from(vectorBytes);
   const inputPtr = exportsObj.grain_alloc(input.length);
   const memoryIn = new Uint8Array(exportsObj.memory.buffer, inputPtr, input.length);
   memoryIn.set(input);
@@ -91,7 +91,8 @@ async function main(): Promise<number> {
       continue;
     }
     const vector = JSON.parse(readFileSync(path, "utf8")) as VectorFile;
-    const actual = runVector(exportsObj, vector);
+    const vectorBytes = readFileSync(path);
+    const actual = runVector(exportsObj, vectorBytes);
     const verdict = evaluateVector(vector, actual);
     if (verdict.pass) {
       passed += 1;

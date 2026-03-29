@@ -101,15 +101,164 @@ export class EventLifecycle {
   async exportDeterministicCborSeq(events?: LedgerEvent[]): Promise<Uint8Array> {
     const resolved = events ?? (await this.store.events.list());
     const sorted = [...resolved].sort((a, b) => compareBytesLex(toUtf8(eventId(a)), toUtf8(eventId(b))));
-
-    const rows = sorted
-      .map((ev) => JSON.stringify({ ...ev, seq: ev.seq.toString() }))
-      .join("\n");
-
-    return toUtf8(rows);
+    const out: number[] = [];
+    for (const ev of sorted) {
+      encodeLedgerEvent(ev, out);
+    }
+    return new Uint8Array(out);
   }
 }
 
 function eventId(ev: LedgerEvent): string {
   return sha256Hex(toUtf8(`${ev.ak}|${ev.seq.toString()}|${ev.payload_cid}|${ev.t}`));
+}
+
+function encodeLedgerEvent(ev: LedgerEvent, out: number[]): void {
+  encodeCanonicalMap(
+    [
+      { key: "ak", value: ev.ak },
+      { key: "body", value: ev.body },
+      { key: "payload_cid", value: ev.payload_cid },
+      { key: "seq", value: ev.seq },
+      { key: "t", value: ev.t }
+    ],
+    out
+  );
+}
+
+function encodeJsonValue(value: Json, out: number[]): void {
+  if (value === null) {
+    out.push(0xf6);
+    return;
+  }
+
+  if (typeof value === "boolean") {
+    out.push(value ? 0xf5 : 0xf4);
+    return;
+  }
+
+  if (typeof value === "string") {
+    encodeText(value, out);
+    return;
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new SdkError("SDK_ERR_INTERNAL", "exportDeterministicCborSeq cannot encode non-finite numbers");
+    }
+    if (Number.isSafeInteger(value)) {
+      if (value >= 0) {
+        encodeUnsigned(BigInt(value), out);
+      } else {
+        encodeNegative(BigInt(value), out);
+      }
+      return;
+    }
+
+    pushFloat64(value, out);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    writeTypeArg(4, BigInt(value.length), out);
+    for (const item of value) {
+      encodeJsonValue(item as Json, out);
+    }
+    return;
+  }
+
+  if (value !== null && typeof value === "object") {
+    encodeCanonicalMap(
+      Object.entries(value as Record<string, Json>).map(([key, entry]) => ({ key, value: entry })),
+      out
+    );
+    return;
+  }
+
+  throw new SdkError("SDK_ERR_INTERNAL", "exportDeterministicCborSeq encountered unsupported JSON value");
+}
+
+function encodeCanonicalMap(entries: Array<{ key: string; value: Json | bigint }>, out: number[]): void {
+  const sorted = entries
+    .map((entry) => ({
+      ...entry,
+      keyBytes: toUtf8(entry.key)
+    }))
+    .sort((a, b) => compareBytesLex(a.keyBytes, b.keyBytes));
+
+  writeTypeArg(5, BigInt(sorted.length), out);
+  for (const entry of sorted) {
+    encodeText(entry.key, out);
+    if (typeof entry.value === "bigint") {
+      if (entry.value >= 0n) {
+        encodeUnsigned(entry.value, out);
+      } else {
+        encodeNegative(entry.value, out);
+      }
+    } else {
+      encodeJsonValue(entry.value, out);
+    }
+  }
+}
+
+function encodeText(value: string, out: number[]): void {
+  const bytes = toUtf8(value);
+  writeTypeArg(3, BigInt(bytes.length), out);
+  pushBytes(out, bytes);
+}
+
+function encodeUnsigned(value: bigint, out: number[]): void {
+  writeTypeArg(0, value, out);
+}
+
+function encodeNegative(value: bigint, out: number[]): void {
+  writeTypeArg(1, -1n - value, out);
+}
+
+function pushFloat64(value: number, out: number[]): void {
+  out.push(0xfb);
+  const buf = Buffer.allocUnsafe(8);
+  buf.writeDoubleBE(value, 0);
+  pushBytes(out, buf);
+}
+
+function writeTypeArg(major: number, value: bigint, out: number[]): void {
+  if (value < 0n) {
+    throw new SdkError("SDK_ERR_INTERNAL", "exportDeterministicCborSeq encountered negative CBOR length");
+  }
+
+  const mt = (major & 0x07) << 5;
+  if (value <= 23n) {
+    out.push(mt | Number(value));
+    return;
+  }
+  if (value <= 0xffn) {
+    out.push(mt | 24);
+    out.push(Number(value));
+    return;
+  }
+  if (value <= 0xffffn) {
+    out.push(mt | 25);
+    out.push(Number((value >> 8n) & 0xffn));
+    out.push(Number(value & 0xffn));
+    return;
+  }
+  if (value <= 0xffffffffn) {
+    out.push(mt | 26);
+    for (let i = 3; i >= 0; i -= 1) {
+      out.push(Number((value >> BigInt(i * 8)) & 0xffn));
+    }
+    return;
+  }
+
+  out.push(mt | 27);
+  for (let i = 7; i >= 0; i -= 1) {
+    out.push(Number((value >> BigInt(i * 8)) & 0xffn));
+  }
+}
+
+function pushBytes(out: number[], bytes: Uint8Array): void {
+  for (const b of bytes) {
+    out.push(b);
+  }
 }

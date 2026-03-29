@@ -71,6 +71,10 @@ function encodeNode(node: CborNode, out: number[]): void {
       writeTypeArg(1, -1n - node.value, out);
       return;
     }
+    case "f":
+      out.push(0xfb);
+      pushFloat64(node.value, out);
+      return;
     case "b":
       writeTypeArg(2, BigInt(node.value.length), out);
       pushBytes(out, node.value);
@@ -273,7 +277,25 @@ function parseItem(st: ParserState, depth: number): CborNode {
       const v = readU8(st, "GRAIN_ERR_NONCANONICAL");
       return { kind: "simple", value: v };
     }
-    if (ai === 25 || ai === 26 || ai === 27 || ai === 31) {
+    if (ai === 25) {
+      if (st.options.dagCborStrict) {
+        throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+      }
+      return { kind: "f", value: decodeFloat16(readExact(st, 2, "GRAIN_ERR_NONCANONICAL")) };
+    }
+    if (ai === 26) {
+      if (st.options.dagCborStrict) {
+        throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+      }
+      return { kind: "f", value: decodeFloat32(readExact(st, 4, "GRAIN_ERR_NONCANONICAL")) };
+    }
+    if (ai === 27) {
+      if (st.options.dagCborStrict) {
+        throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+      }
+      return { kind: "f", value: decodeFloat64(readExact(st, 8, "GRAIN_ERR_NONCANONICAL")) };
+    }
+    if (ai === 31) {
       throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
     }
     return { kind: "simple", value: ai };
@@ -347,6 +369,37 @@ function toSafeNumber(v: bigint): number {
     throw new GrainDiagError("GRAIN_ERR_LIMIT");
   }
   return n;
+}
+
+function decodeFloat16(bytes: Uint8Array): number {
+  const half = (bytes[0] << 8) | bytes[1];
+  const sign = (half & 0x8000) ? -1 : 1;
+  const exp = (half & 0x7c00) >> 10;
+  const frac = half & 0x03ff;
+
+  if (exp === 0) {
+    if (frac === 0) return sign * 0;
+    return sign * Math.pow(2, -14) * (frac / 0x400);
+  }
+  if (exp === 0x1f) {
+    if (frac === 0) return sign * Infinity;
+    return Number.NaN;
+  }
+  return sign * Math.pow(2, exp - 15) * (1 + frac / 0x400);
+}
+
+function decodeFloat32(bytes: Uint8Array): number {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getFloat32(0, false);
+}
+
+function decodeFloat64(bytes: Uint8Array): number {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getFloat64(0, false);
+}
+
+function pushFloat64(value: number, out: number[]): void {
+  const buf = Buffer.allocUnsafe(8);
+  buf.writeDoubleBE(value, 0);
+  pushBytes(out, buf);
 }
 
 export function mapGet(node: CborNode, key: string): CborNode | undefined {

@@ -3,6 +3,7 @@
 import { GrainSdk } from "../src/index.js";
 import { SdkError } from "../src/errors.js";
 import { buildSetArray } from "../src/primitives.js";
+import type { LedgerEvent } from "../src/index.js";
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 
@@ -150,6 +151,81 @@ async function run(): Promise<number> {
       ok("SDK-INV-0010 transport bundle determinism");
     }
 
+    const seqEvents: LedgerEvent[] = [
+      {
+        t: "IntakeEvent",
+        ak: "alpha",
+        seq: 2n,
+        payload_cid: "cid:intake:2",
+        body: {
+          nested: { z: 2, a: 1 },
+          tags: ["beta", "alpha"]
+        }
+      },
+      {
+        t: "IntakeEvent",
+        ak: "alpha",
+        seq: 1n,
+        payload_cid: "cid:intake:1",
+        body: {
+          nested: { y: 4, x: 3 },
+          tags: ["gamma"]
+        }
+      }
+    ];
+
+    try {
+      const exportedA = await sdk.events.exportDeterministicCborSeq(seqEvents);
+      const exportedB = await sdk.events.exportDeterministicCborSeq([...seqEvents].reverse());
+
+      if (!Buffer.from(exportedA).equals(Buffer.from(exportedB))) {
+        fail("SDK-INV-0011 raw CBOR-seq export determinism", "export bytes changed when input order changed");
+      } else {
+        const actual = sdk.core.execute(
+          "parse_cborseq_stream_v1",
+          {
+            stream_kind: "ledger",
+            cborseq_b64: Buffer.from(exportedA).toString("base64")
+          },
+          true
+        );
+        const items = actual.out.item_sha256_hex;
+        if (!Array.isArray(items) || items.length !== seqEvents.length) {
+          fail("SDK-INV-0011 raw CBOR-seq export determinism", "export did not parse as a 2-item CBOR-seq stream");
+        } else {
+          ok("SDK-INV-0011 raw CBOR-seq export determinism");
+        }
+      }
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      fail("SDK-INV-0011 raw CBOR-seq export determinism", `unexpected code: ${code}`);
+    }
+
+    const lifecycleSdk = new GrainSdk();
+    await lifecycleSdk.identity.createRoot();
+    const lifecycleDevice = await lifecycleSdk.identity.addDeviceKey("device-b");
+    await lifecycleSdk.identity.setActiveAk(lifecycleDevice.device.ak);
+    await lifecycleSdk.events.append({
+      t: "IntakeEvent",
+      payload_cid: "cid:intake:lifecycle",
+      body: { mean: { kcal: 1 }, var: { kcal: 0 } }
+    });
+
+    const reducedBeforeRevoke = await lifecycleSdk.events.reduce();
+    await lifecycleSdk.identity.revokeDeviceKey(lifecycleDevice.device.ak);
+    const reducedAfterRevoke = await lifecycleSdk.events.reduce();
+
+    const sumBefore = extractKcal(reducedBeforeRevoke.out.sum_mean);
+    const sumAfter = extractKcal(reducedAfterRevoke.out.sum_mean);
+    if (sumBefore !== 1 || sumAfter !== 0) {
+      fail(
+        "SDK-INV-0012 identity lifecycle stays synced with ledger",
+        `unexpected sums before/after revoke: ${sumBefore}/${sumAfter}`
+      );
+    } else {
+      ok("SDK-INV-0012 identity lifecycle stays synced with ledger");
+    }
+
     const summary = {
       total: checks.length,
       failed: checks.filter((c) => !c.pass).length,
@@ -166,3 +242,11 @@ async function run(): Promise<number> {
 }
 
 run().then((code) => process.exit(code));
+
+function extractKcal(value: unknown): number | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const kcal = (value as Record<string, unknown>).kcal;
+  return typeof kcal === "number" ? kcal : null;
+}

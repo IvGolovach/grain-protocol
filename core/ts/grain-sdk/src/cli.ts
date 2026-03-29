@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import type { RunnerOutput, VectorFile } from "../../../../runner/typescript/dist/src/types.js";
 import { repoRoot } from "../scripts/runtime.js";
 import { GrainSdk } from "./sdk.js";
+import { parseVectorFile } from "./vector-json.js";
 
 function main(argv: string[]): number {
   const cmd = argv[2];
@@ -29,7 +30,7 @@ function main(argv: string[]): number {
   }
 
   const vectorPath = resolveVectorPath(argv[vectorArgIdx + 1]);
-  const vector = JSON.parse(readFileSync(vectorPath, "utf8")) as VectorFile;
+  const vector = parseVectorFile(readFileSync(vectorPath, "utf8")) as VectorFile;
 
   const sdk = new GrainSdk();
   let output: RunnerOutput;
