@@ -1,37 +1,46 @@
 # Building On Grain
 
-This page is for product/application engineers integrating Grain behavior into an app.
+This page is for app builders. It shows the shortest path from "I want to use Grain" to "I have a small working app".
 
-## What you can rely on
+## Start with the smallest win
 
-- Integrity and authorship verification for signed payloads.
-- Deterministic reducer output (`sum_mean`, `sum_var`) from the same valid input set.
-- E2E private object sync semantics (capability addressing + manifest resolution).
+If you want the easiest first step, read [Minimal app example](./sdk/minimal-app-example.md).
 
-## What you cannot rely on
+That example does four things:
+- creates an in-memory SDK
+- creates a root identity
+- appends one event
+- reduces the event list into a deterministic result
 
-- Truthfulness of payload content.
-- Server-side plaintext visibility for private objects.
-- Any behavior outside strict conformance semantics.
+## What you can count on
 
-## Minimal integration path
+- Signed data can be checked for integrity and authorship.
+- The same valid event set produces the same reducer output every time.
+- Private sync uses capabilities, which are secret references, plus manifest resolution.
 
-1. Decode transport payload (`GR1:` for embedded QR).
-2. Verify COSE signature under narrow profile.
-3. Append normalized event to local ledger store.
-4. Run reducer to produce deterministic totals.
+## What you should not expect
 
-Use `docs/human/quickstart.md` first, then wire your app to the same primitives.
-For SDK-first integration, use `docs/human/sdk/start-here.md`.
-For domain mapping patterns, use `docs/human/domain-adapters.md`.
+- Grain does not tell you whether the content is true.
+- Private data is not visible to the server in plaintext.
+- Grain does not guess outside strict conformance rules.
 
-## Read later (not first)
+## A simple app path
 
-You usually do not need to read full NES first.
+1. Decode the transport payload. `GR1:` is the QR transport prefix.
+2. Verify the COSE signature under the narrow profile.
+3. Add the normalized event to your local ledger store.
+4. Run the reducer to get the same totals every time.
+
+If you are building with the SDK, go to [SDK Start Here](./sdk/start-here.md).
+If you are mapping a domain object into Grain, use [Domain Adapters](./domain-adapters.md).
+If you want the deeper protocol rules, read the conformance spec after your first run.
+
+## Read later
+
+Most app builders do not need the full NES on day one.
 Start with:
-- `conformance/SPEC.md` (what must be executable)
-- `docs/llm/INVARIANTS.md` (what cannot drift)
+- `conformance/SPEC.md`
 
-Then deep-dive into:
+Then go deeper if you need protocol detail:
 - `spec/NES-v0.1.md`
 - `spec/profiles/*`

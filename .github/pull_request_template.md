@@ -1,8 +1,15 @@
 ## What changed
-Describe the change in one paragraph.
+Describe the change in one short paragraph.
 
 ## Why
 Technical rationale. Link ADR(s) if required.
+
+## Docs sync (required)
+- [ ] I read `docs/llm/DOC_SYNC.md`
+- [ ] I updated the matching `docs/llm/*` docs for any contract or behavior change
+- [ ] I updated human docs if this affects onboarding, user flow, or maintainer workflow
+- [ ] I updated `CONTRIBUTING.md` or this template if the process changed
+- [ ] I did not leave code, tests, and docs describing different behavior
 
 ## Scope
 - [ ] Protocol (NES / CDDL / profiles)
@@ -34,5 +41,5 @@ If this PR touches any of: encoding / CID / COSE / ledger / E2E / manifest / lim
 ## Checklist
 - [ ] Conformance suite passes in Strict Conformance Mode
 - [ ] NES and CDDL are consistent (no drift)
-- [ ] docs/llm updated (FILE_MAP / INVARIANTS / EDGE_CASES / CONFORMANCE / CHANGE_POLICY)
+- [ ] docs/llm updated as needed, including `DOC_SYNC` for contract changes
 - [ ] Rationale documented (ADR or spec rationale)

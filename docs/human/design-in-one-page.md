@@ -2,30 +2,32 @@
 
 ## Mission
 
-Provide a portable, adversarially robust language for food events with byte-level interoperability.
+Give people a small, portable protocol for real-world events that can be verified byte-for-byte.
 
-## Frozen core
+## What stays fixed
 
 - Encoding: strict DAG-CBOR.
-- Identity: CIDv1 blessed set.
-- Signature: COSE_Sign1 narrow profile (Ed25519).
-- Ledger: append-only events with deterministic reducer semantics.
+- Identity: CIDv1.
+- Signature: COSE_Sign1 with Ed25519.
+- Ledger: append-only events with deterministic reduction.
 - E2E: capability-addressed ciphertext with deterministic derivation rules.
-- Transport: GR1 QR format.
+- Transport: `GR1:` QR format.
 
 ## Security boundary
 
-- Guarantees: integrity + authorship + deterministic semantics.
-- Not guaranteed: truthfulness of content.
+- Grain guarantees integrity, authorship, and deterministic behavior.
+- Grain does not guarantee that the content is true.
 
-## Governance model
+## How the repo is split
 
-- Conformance vectors are release gate.
-- Frozen invariants do not change inside major version 1.
-- Additive evolution only (new `t`, new transport prefix, extensions).
+- Protocol specs define the rules.
+- Conformance vectors check those rules.
+- Rust Core is the reference executor.
+- TypeScript full engine is the independent strict implementation.
+- The SDK is the friendly layer for apps.
 
-## Implementation strategy
+## Change rule
 
-- Rust Core: strict reference executor.
-- TypeScript full engine: independent strict implementation with full-suite parity targets.
-- TypeScript C01: retained as focused Wave A byte-path smoke lens.
+- Core rules stay frozen in major version 1.
+- New behavior is added, not rewritten.
+- C01 stays as a small smoke profile for byte-path checks.

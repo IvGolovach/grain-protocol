@@ -1,6 +1,6 @@
 # Quickstart (5 minutes)
 
-Run one deterministic end-to-end pipeline first. Read internals second.
+Run one working flow first. Read internals second.
 
 ## 1) Run the demo pipeline
 
@@ -81,7 +81,9 @@ Expected deterministic output:
 
 ## 3) Choose your next path
 
+- [Build the smallest app with the SDK](./sdk/minimal-app-example.md)
 - [Build an app on Grain](./building-on-grain.md)
+- [Use the SDK path](./sdk/start-here.md)
 - [Implement Grain](./implementing-grain.md)
 - [Run fast developer verification](./start-here.md#verification-paths)
 - [Start-here overview](./start-here.md)
@@ -93,7 +95,10 @@ Expected deterministic output:
 - `docs/llm/INVARIANTS.md`
 - `docs/llm/EDGE_CASES.md`
 
-## 5) TS full engine and C01 smoke
+## 5) Going deeper
+
+If you are just evaluating Grain, you can stop here.
+If you are implementing or testing Grain itself, these TypeScript engine commands are useful:
 
 ```bash
 npm --prefix runner/typescript run run:c01
@@ -102,4 +107,4 @@ npm --prefix runner/typescript run run:full
 npm --prefix runner/typescript run divergence:full
 ```
 
-TS now has a full strict engine. C01 remains the Wave A byte-path profile for focused drift checks.
+TS now has a full strict engine. C01 stays as a small byte-path smoke profile.

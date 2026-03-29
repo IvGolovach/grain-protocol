@@ -1,41 +1,48 @@
 # Start Here
 
+## If you are new
+
+Read this page first if you want the shortest path into the repo.
+
 ## 90-second orientation
 
-Grain is a frozen-core protocol for verifiable physical events.
-Food is the first production profile in v0.1.
+Grain is a protocol for recording physical events in a way other tools can verify later.
+Food is the first shipped profile in v0.1.
 
 What Grain gives you:
-- Canonical bytes (strict DAG-CBOR) for stable hashes and signatures.
-- Portable verification (CID + COSE) without central APIs.
-- Deterministic merge/reduce semantics for ledger + manifest.
+- Stable bytes for hashes and signatures.
+- Portable verification without a central API.
+- Deterministic results when the same valid input is reduced again.
 
 What Grain does not give you:
-- Truth of content (only integrity/authorship).
-- A global canonical registry.
+- Truth of content.
+- A global registry.
 - A hosted product platform.
 
-If you want the bold but repo-grounded product direction, read [Future Vision](./future-vision.md).
+If you want the longer product direction, read [Future Vision](./future-vision.md).
 
-## Choose your entry path
+## Choose your path
 
-- [Evaluate Grain in 5 minutes](./quickstart.md)
+If you only read one more page, read [Quickstart](./quickstart.md).
+
+- [Quickstart: run the demo first](./quickstart.md)
+- [Build the smallest app with the SDK](./sdk/minimal-app-example.md)
 - [Build an app on Grain](./building-on-grain.md)
+- [Use the SDK primitives](./sdk/start-here.md)
 - [Implement Grain itself](./implementing-grain.md)
-- [Build with SDK primitives](./sdk/start-here.md)
-- [Read the future vision](./future-vision.md)
 - [Run release-grade portability verification](./portability-pack.md)
+- [Read the future vision](./future-vision.md)
 
 ## Verification paths
 
-- `./scripts/verify` for fast developer verification on host toolchains.
-- `./scripts/certify` for clean-tree, containerized evidence generation.
-- `./scripts/ops/run_verification_pack_v1.sh` remains the operator alias for the certification path.
+- `./scripts/verify` is the fast local check on host toolchains.
+- `./scripts/certify` is the clean-tree, containerized evidence path.
+- `./scripts/ops/run_verification_pack_v1.sh` is the operator alias for certification.
 
 ## Current status snapshot
 
 - Protocol: frozen v0.1 core (`schema_major=1`).
-- Court: conformance vectors are the execution gate.
+- Conformance: vectors are the execution gate.
 - Reference implementation: Rust Core passes strict suite.
-- TypeScript: full strict engine is available; C01 is retained as a focused Wave A byte-path smoke profile.
+- TypeScript: full strict engine is available; C01 is kept as one small extra drift check.
 - SDK: TypeScript universal primitives layer is available at `core/ts/grain-sdk`.

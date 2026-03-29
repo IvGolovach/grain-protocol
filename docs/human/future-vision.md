@@ -2,6 +2,9 @@
 
 This document is aspirational and non-normative.
 
+Do not start here if you are new to the repo.
+Read `docs/human/start-here.md` or `docs/human/quickstart.md` first.
+
 The protocol source of truth remains:
 - `spec/NES-v0.1.md`
 - `spec/schemas/grain-v0.1.cddl`
@@ -11,6 +14,8 @@ The protocol source of truth remains:
 This document answers a different question:
 
 What kind of future becomes possible if the Grain substrate stays stable and more product layers are built on top of it?
+
+It is about direction, not about today's guarantees.
 
 ## The Short Version
 

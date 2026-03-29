@@ -1,34 +1,59 @@
 # LLM Guide: Read Me First
 
-Hi. You are probably another LLM helping your human on this repo.
-We organized this folder so you can get useful, safe context quickly without guessing.
+Hi. If you are an LLM helping on this repo, start here.
+This folder is written to help you avoid guessing.
 
-## The fastest path (start in this order)
+## Safe read order
 
 1. `docs/llm/FILE_MAP.md`
-   - Learn what is source-of-truth and what is only explanatory.
+   - Learn what is source of truth and what is only explanatory.
 2. `docs/llm/INVARIANTS.md`
-   - Read all frozen MUST invariants and their vector bindings.
+   - Read the frozen MUST rules and their vector bindings.
 3. `docs/llm/EDGE_CASES.md`
-   - See mandatory negative cases and expected reject/diagnostic behavior.
+   - Read the required reject paths and diagnostics.
 4. `docs/llm/CONFORMANCE.md`
-   - Understand runner contract, strict mode, and CI/evidence outputs.
-5. `docs/llm/CHANGE_POLICY.md`
-   - Know what can change additively and what requires a major bump.
-6. `docs/llm/FREEZE.md`
+   - Read the runner contract, strict mode, and CI / evidence rules.
+5. `docs/llm/DOC_SYNC.md`
+   - Use this before editing docs or contract-visible behavior.
+6. `docs/llm/CHANGE_POLICY.md`
+   - Learn what can change and what needs escalation.
+7. `docs/llm/FREEZE.md`
    - Quick frozen-core index when you need a fast boundary check.
-7. `docs/llm/SDK_FILE_MAP.md` and `docs/llm/SDK_AI_BOUNDARY.md` (when working on SDK layer)
-   - SDK orchestration invariants plus deterministic AI ingestion boundary.
-8. `docs/llm/PORTING.md`, `docs/llm/DOMAIN_ADAPTERS.md`, `docs/llm/PROHIBITION_ZONE.md` (when working on portability/new language adapters)
-   - Porting traps, adapter contract boundaries, and strict no-go rules.
+8. `docs/llm/SDK_FILE_MAP.md` and `docs/llm/SDK_AI_BOUNDARY.md`
+   - Read these when you touch the SDK layer.
+9. `docs/llm/PORTING.md`, `docs/llm/DOMAIN_ADAPTERS.md`, `docs/llm/PROHIBITION_ZONE.md`
+   - Read these for portability and adapter work.
 
-## Working stance while reading code
+## Task bundles
 
-- Be strict: do not infer behavior from implementation if vectors/spec disagree.
-- Prefer byte-level reasoning: canonical bytes, deterministic outputs, reject semantics.
-- If you detect drift between spec and vectors, report it as a blocking issue.
+Use these shortcuts when you already know the job:
+
+- Repo orientation or review:
+  - `docs/llm/FILE_MAP.md`
+  - `docs/llm/INVARIANTS.md`
+  - `docs/llm/EDGE_CASES.md`
+- Protocol or conformance change:
+  - `docs/llm/FILE_MAP.md`
+  - `docs/llm/CONFORMANCE.md`
+  - `docs/llm/CHANGE_POLICY.md`
+  - `docs/llm/DOC_SYNC.md`
+- SDK change:
+  - `docs/llm/SDK_FILE_MAP.md`
+  - `docs/llm/SDK_INVARIANTS.md`
+  - `docs/llm/SDK_EDGE_CASES.md`
+  - `docs/llm/DOC_SYNC.md`
+- CI, release, or provenance change:
+  - `docs/llm/FILE_MAP.md`
+  - `docs/llm/CHANGE_POLICY.md`
+  - `docs/llm/DOC_SYNC.md`
+
+## Working stance
+
+- Treat spec and vectors as the top truth.
+- If implementation and docs disagree, report the drift and do not guess.
+- Prefer exact byte-level behavior over interpretation.
+- If you are editing a contract, update the matching docs in the same change.
 
 ## When you are done
 
-Great, now you have the map.
-Use your human's instructions, then report exactly what you found, what is proven by vectors, and what remains assumption.
+Report what you proved, what you inferred, and what still needs a human decision.

@@ -1,89 +1,88 @@
 # Grain Protocol
 
-**Open Verifiable Event Infrastructure** — food is the first production profile.
+Portable, verifiable records for real-world events.
+Food is the first production profile in v0.1.
 
-Grain is not an app. Not a platform. Not a global registry.
-It’s a **frozen-core protocol** + a **conformance suite** so independent implementations can interoperate **byte-for-byte**.
+Grain is a protocol plus a conformance suite.
+It is not an app, not a hosted platform, and not a global registry.
 
-If you want the long-range product direction, read [Future Vision](docs/human/future-vision.md).
-
----
-
-## Status
-
-- **Protocol v0.1:** frozen core (encoding/CID/COSE/ledger/E2E/manifest rules are locked)
-- **Conformance Suite:** shipped in this repo (release gate)
-- **Grain Core (reference, Rust):** implemented in `core/rust` and passing current v0.1 vectors in strict mode
-- **TypeScript full engine:** implemented in `runner/typescript` with full-suite strict mode + divergence checks (C01 profile retained as Wave A smoke lens)
-- **GitHub provenance:** CI-generated evidence artifacts are commit-bound (SHA keyed) on `main` and release tags
-- **Grain SDK:** implemented as strict universal primitives layer in `core/ts/grain-sdk`
-- **Portability pack:** containerized one-command verify path, WASM read/verify smoke, and runner contract compatibility gates
+The goal is simple:
+if two independent implementations read the same valid input, they should agree on the bytes, the verdict, and the result.
 
 ---
 
-## What problem this solves (90 seconds)
+## New Here?
 
-Physical-world event data is usually:
-- platform-bound (one vendor DB),
-- non-verifiable offline (no portable signatures),
-- non-deterministic to merge (arrival order / wall-clock dependence),
-- privacy-hostile (servers see plaintext identifiers).
+If you are new, start with one of these:
 
-Grain v0.1 defines a domain-neutral core:
-- **canonical bytes** (strict DAG-CBOR; reject non-canonical; reject duplicate map keys),
-- **content IDs** (CIDv1 blessed set),
-- **offline verification** (COSE_Sign1 + Ed25519 narrow profile),
-- **deterministic merge** (append-only ledger + explicit conflicts),
-- **privacy-by-default** (E2E sync; capability addressing; ciphertext is not a CAS-object),
-- **forward compatibility** (unknown types stored opaque and forwarded; unknown critical quarantined deterministically).
-
-**Security boundary:** Grain verifies **integrity** and **authorship**. Grain does **not** guarantee that the content is true.
+- See the project quickly: `docs/human/start-here.md`
+- Run one happy-path demo: `docs/human/quickstart.md`
+- Build the smallest possible app: `docs/human/sdk/minimal-app-example.md`
+- Build an app on top of Grain: `docs/human/building-on-grain.md`
+- Use the SDK path: `docs/human/sdk/start-here.md`
+- Implement Grain itself: `docs/human/implementing-grain.md`
+- Run release-grade verification: `docs/human/portability-pack.md`
 
 ---
 
-## What Grain is
+## Project Zones
 
-- A strict protocol for immutable, content-addressed objects (**CID**)
-- A signed event ledger with deterministic reduction
-- An E2E private sync model (capability addressing + manifest resolution)
-- An offline QR transport profile (**GR1:**)
-- A base layer that can host multiple domain profiles (food profile is first in v0.1)
-
-## What Grain is NOT (v0.1)
-
-- No global registry as canonical truth
-- No delegated admin
-- No transparency log as MUST
-- No trusted global time
-- No BigNum / arbitrary precision core
-- No social layer
-- No “truth” guarantees (signature indicates source, not reality)
+- Onboarding
+  - `docs/human/start-here.md`
+  - `docs/human/quickstart.md`
+  - `docs/human/overview.md`
+- Build
+  - `docs/human/building-on-grain.md`
+  - `docs/human/sdk/start-here.md`
+  - `docs/human/sdk/minimal-app-example.md`
+  - `core/ts/grain-sdk/README.md`
+- Implement
+  - `docs/human/implementing-grain.md`
+  - `conformance/SPEC.md`
+  - `conformance/contract/runner_v1.md`
+- Operate
+  - `docs/human/portability-pack.md`
+  - `docs/human/repro-checklist.md`
+  - `docs/human/release-process.md`
+- Governance
+  - `docs/human/github-hardening.md`
+  - `docs/human/dependencies-policy.md`
+  - `docs/llm/CHANGE_POLICY.md`
+- Vision
+  - `docs/human/future-vision.md` (read this after the current-state docs above)
 
 ---
 
-## Start here by role
+## What Grain Guarantees
 
-- Evaluate Grain quickly: `docs/human/quickstart.md`
-- Integrate Grain into an app: `docs/human/building-on-grain.md`
-- Implement a new runner/core/SDK: `docs/human/implementing-grain.md`
-- Build on SDK primitives: `docs/human/sdk/start-here.md`
-- Run release-grade portability checks: `docs/human/portability-pack.md`
+- Stable, canonical bytes for protocol objects
+- Portable verification through CID + COSE
+- Deterministic ledger and manifest behavior
+- Private sync semantics for encrypted objects
+- Strict conformance checks that independent implementations can run
 
-Runnable onboarding references:
-- `docs/human/start-here.md`
-- `docs/human/future-vision.md`
-- `docs/human/repro-checklist.md`
-- `docs/human/porting-grain.md`
-- `docs/human/domain-adapters.md`
-- `docs/human/dependencies-policy.md`
-- `docs/human/sdk/overview.md`
-- `docs/human/sdk/architecture.md`
-- `docs/human/sdk/errors.md`
-- `docs/human/sdk/impossible-misuse.md`
+## What Grain Does Not Guarantee
+
+- That the content is true
+- That one server or vendor is the source of truth
+- That Grain itself is a hosted product platform
+- That anything outside strict conformance semantics will interoperate
+
+---
+
+## Status Snapshot
+
+- Protocol v0.1 frozen core: encoding, CID, COSE, ledger, E2E, and manifest rules are locked inside major version 1.
+- Conformance suite: shipped in this repo and used as the release gate.
+- Rust Core: implemented in `core/rust` and passing the strict suite.
+- TypeScript full engine: implemented in `runner/typescript` and checked against the full suite plus drift checks.
+- SDK: implemented as a strict primitives layer in `core/ts/grain-sdk`.
+- Provenance: CI evidence is commit-bound on `main` and release tags.
+- Portability pack: available through `./scripts/certify`.
 
 ## Verification paths
 
-Fast developer verification on host toolchains:
+Fast local verification on host toolchains:
 
 ```bash
 ./scripts/verify
@@ -95,89 +94,52 @@ Release-grade certification with deterministic evidence:
 ./scripts/certify
 ```
 
-For host-side TS commands, developer verification, certification runs, and RC stabilization runs, use the exact Node patch version pinned in `.nvmrc`. Evidence generation records `node -v`, so floating `22.x` resolution will change `inputs-hashes.json` and the resulting evidence hash.
+Compatibility operator alias:
 
-Optional fuzz smoke in the certification path:
+```bash
+./scripts/ops/run_verification_pack_v1.sh
+```
+
+If you generate evidence, use the exact Node patch version pinned in `.nvmrc`.
+Evidence records `node -v`, so floating `22.x` resolution changes `inputs-hashes.json` and the final evidence hash.
+
+Optional fuzz smoke:
 
 ```bash
 ./scripts/certify --fuzz-smoke
 ```
 
 Conformance statement:
-- Passing the full suite in **Strict Conformance Mode** is the conformance criterion for Grain v0.1.
-- A strong interoperability claim becomes valid after **two independent full implementations** pass the full suite.
-
-Implementation-entry references:
-- `conformance/README.md`
-- `conformance/SPEC.md`
-- `docs/llm/CONFORMANCE.md`
-- `core/ts/grain-sdk/README.md`
-
-TS full engine commands:
-
-```bash
-npm --prefix runner/typescript run run:full
-npm --prefix runner/typescript run divergence:full
-npm --prefix runner/typescript run test:properties
-```
-
-### Court Hardening Wave A
-
-Wave A is the byte-level closure pack for court-grade confidence:
-- raw CBOR-seq framing vectors for ledger/manifest streams
-- HKDF key/nonce expected-bytes vectors
-- UTF-8 raw-byte sorting traps
-- mixed manifest sequence vectors
-
-See:
-- `conformance/SPEC.md`
-- `conformance/contract/runner_v1.md`
-- `conformance/vectors/**/*-WA-*.json`
-- `.github/workflows/ci.yml` (strict CI release gate)
-- `.github/workflows/release-evidence.yml` (tag evidence release workflow)
-- `.github/workflows/interop-certify.yml` (TOR-CERT-D01 certification gate)
-- `.github/workflows/golden-images.yml` (golden container images)
+- Passing the full suite in Strict Conformance Mode is the conformance criterion for Grain v0.1.
+- A strong interoperability claim becomes valid after two independent full implementations pass the full suite.
 
 ---
 
-## Provenance and release model
+## Source Of Truth
 
-- Bundle-era outputs are documented as reconstructed history in `MIGRATION.md`.
-- Source provenance is commit-based and CI-anchored (artifact name `evidence-<commit_sha>.zip`).
-- Tag namespaces are split:
-  - protocol tags: `protocol-*` (schema/invariant line)
-  - repo tags: `repo-*` (implementation/tooling/governance milestones)
-- Local `.local-architect-reports/**` remains local-only and is never committed.
-- Local certification and CI/release evidence share deterministic `evidence_content.sha256` semantics.
+If two layers disagree, trust them in this order:
 
-## Dependabot strict lane
-
-- Workflow updates are auto-merged only through the strict safe lane.
-- Repository secret `DEPENDABOT_AUTOMERGE_TOKEN` is mandatory for this lane.
-- No fallback token path is allowed; missing/insufficient token fails closed.
-
----
-
-## Repository map
-
-**Source of truth priority (highest first):**
 1. `spec/NES-v0.1.md` (normative MUST/SHOULD/MAY)
 2. `spec/schemas/grain-v0.1.cddl` (machine-readable schemas)
 3. `conformance/vectors/` (conformance criterion; release gate)
 4. `spec/profiles/` (CBOR/COSE/E2E/QR profiles)
 5. `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
-6. `docs/llm/` (LLM-first indexes of invariants and edge cases)
+6. `docs/llm/` (LLM-first indexes and cross-file maps)
 7. `adr/` (decision history)
 8. `core/rust/`, `runner/typescript/`, `core/` and `sdk/` (implementations)
 
 ---
 
-## Protocol / Core / SDK
+## Deep References
 
-- **Protocol:** defines what is valid (bytes, IDs, signatures, ledger/E2E semantics)
-- **Conformance:** executable truth (vectors + harness contract)
-- **Core:** reference implementation of the protocol
-- **SDK:** adoption layer (developer-friendly API), must still pass conformance
+- `conformance/README.md`
+- `conformance/SPEC.md`
+- `conformance/contract/runner_v1.md`
+- `docs/llm/README.md`
+- `docs/llm/CONFORMANCE.md`
+- `docs/llm/INVARIANTS.md`
+- `docs/llm/EDGE_CASES.md`
+- `core/ts/grain-sdk/README.md`
 
 ---
 

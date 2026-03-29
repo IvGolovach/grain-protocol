@@ -4,18 +4,26 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 
 ## Read order
 
-1. `docs/llm/SDK_INVARIANTS.md`
-   - what SDK MUST enforce and never hide
-2. `docs/llm/SDK_EDGE_CASES.md`
-   - mandatory negative outcomes at SDK boundary
-3. `docs/llm/SDK_AI_BOUNDARY.md`
-   - deterministic AI ingestion firewall and token boundary
+1. `docs/llm/DOC_SYNC.md`
+   - Use this before changing SDK behavior or the docs that describe it.
+2. `docs/llm/SDK_INVARIANTS.md`
+   - What the SDK must enforce and never hide.
+3. `docs/llm/SDK_EDGE_CASES.md`
+   - Mandatory negative outcomes at the SDK boundary.
 4. `docs/llm/SDK_CONFORMANCE.md`
-   - SDK runner and test bindings
-5. `core/ts/grain-sdk/src/*`
-   - implementation modules
-6. `docs/human/sdk/errors.md`
-   - deterministic error contract in human-readable form
+   - SDK runner and test bindings.
+5. `docs/llm/SDK_AI_BOUNDARY.md`
+   - Deterministic AI ingestion firewall and token boundary.
+6. `docs/human/sdk/start-here.md`
+   - Plain-language entry point for app builders.
+7. `core/ts/grain-sdk/README.md`
+   - Package-level overview with copyable commands.
+8. `docs/human/sdk/impossible-misuse.md`
+   - Human-readable reject-path summary.
+9. `docs/human/sdk/errors.md`
+   - Human-readable error contract.
+10. `core/ts/grain-sdk/src/*`
+   - Implementation modules.
 
 ## Source-of-truth hierarchy for SDK decisions
 
@@ -24,5 +32,7 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 3. `conformance/vectors/*`
 4. `runner/typescript/src/*` (TS full engine behavior)
 5. `core/ts/grain-sdk/src/*` (orchestration only)
+6. `docs/llm/*` (maintainer maps, sync rules, and indexes)
+7. `docs/human/sdk/*` (explanatory, not normative)
 
-If SDK behavior diverges from protocol vectors, treat it as a bug in SDK.
+If SDK behavior diverges from protocol vectors, treat it as a bug in SDK and update the matching docs and tests in the same change.
