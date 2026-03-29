@@ -6,8 +6,14 @@ If you are building an app on Grain, start here. Keep the first version small an
 
 1. Read [Minimal app example](./minimal-app-example.md).
 2. Run the ready-made demo if you want a quick confidence check.
+3. On a fresh checkout, install both `runner/typescript` and
+   `core/ts/grain-sdk` dependencies before the first SDK build.
+4. If you build manually, use the SDK build; it will build the shared runner
+   output first.
 
 ```bash
+npm ci --prefix runner/typescript
+npm ci --prefix core/ts/grain-sdk
 npm --prefix core/ts/grain-sdk run demo:e2e
 ```
 

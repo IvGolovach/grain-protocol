@@ -46,7 +46,12 @@ The SDK is a universal primitives surface for building systems on top of Grain w
 
 ## Quick commands
 
+On a fresh checkout, the SDK build will compile the shared runner output first,
+because `core/ts/grain-sdk` consumes it during build.
+
 ```bash
+npm ci --prefix runner/typescript
+npm ci --prefix core/ts/grain-sdk
 npm --prefix core/ts/grain-sdk run demo:e2e
 npm --prefix core/ts/grain-sdk run test:invariants
 npm --prefix core/ts/grain-sdk run run:protocol-suite

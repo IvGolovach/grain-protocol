@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-LED-WA-0004",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "bogus",
+    "cborseq_b64": "oWFhAaFhYgI="
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "Unknown stream_kind MUST be rejected as schema invalid."
+  }
+}

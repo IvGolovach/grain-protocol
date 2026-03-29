@@ -21,6 +21,10 @@ Wave A is the byte-path hardening pack:
 - accept path: `out.item_sha256_hex` is present and deterministic
 - reject path: `pass=false` with deterministic framing `diag`
 - partial item outputs are not part of reject semantics
+- `stream_kind` is exactly `ledger` or `manifest`; any other value is schema reject
+- `cborseq_b64` and `segments_b64` are mutually exclusive
+- empty `segments_b64` is a valid empty stream and must yield `item_sha256_hex = []`
+- current vector schema only admits canonical `stream_kind` values and one input form, so the schema-invalid reject cases remain contract-only until vector validation is widened
 
 Wave A vector ID scheme:
 - `POS-<AREA>-WA-####`

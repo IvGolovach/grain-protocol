@@ -84,7 +84,7 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
 
 - INV-LED-006: Raw CBOR-seq ledger framing is deterministic and malformed framing MUST reject.  
   Ref: NES §3.2; NES §9.1 (CBOR-seq limits); spec/profiles/cbor-profile.md §7  
-  Vectors: POS-LED-WA-0001, POS-LED-WA-0002, POS-LED-WA-0003, NEG-LED-WA-0001, NEG-LED-WA-0002, NEG-LED-WA-0003
+  Vectors: POS-LED-WA-0001, POS-LED-WA-0002, POS-LED-WA-0003, POS-LED-WA-0004, NEG-LED-WA-0001, NEG-LED-WA-0002, NEG-LED-WA-0003
 
 ## E2E semantics
 

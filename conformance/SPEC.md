@@ -94,14 +94,15 @@ Implementations MUST support these operations for v0.1 conformance:
 
 - `parse_cborseq_stream_v1`:
   - input:
-    - `stream_kind` (`ledger` or `manifest`)
-    - either `cborseq_b64` OR `segments_b64` (array of base64 chunks concatenated in order)
+    - `stream_kind` MUST be exactly `ledger` or `manifest`; any other value is rejected
+    - exactly one of `cborseq_b64` OR `segments_b64` (array of base64 chunks concatenated in order)
   - output:
     - if accept: `item_sha256_hex` (array, one SHA-256 hex digest per decoded item bytes)
     - if reject: deterministic framing error diagnostic; reject output MUST NOT include partial item hashes
   - semantics:
     - empty stream is valid and MUST return `item_sha256_hex = []`
     - if `segments_b64` is used, implementation MUST parse concatenated bytes as one stream
+    - `segments_b64` MAY be empty; empty concatenated input is a valid empty stream
     - result mode is XOR: either accept with hashes, or reject with framing diagnostic
     - deterministic framing diagnostics:
       - truncated item -> `GRAIN_ERR_CBORSEQ_TRUNCATED`

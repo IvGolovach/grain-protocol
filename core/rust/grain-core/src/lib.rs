@@ -143,25 +143,28 @@ fn op_e2e_decrypt(input: &Value) -> Result<(Value, Vec<Diag>), GrainError> {
 }
 
 fn op_parse_cborseq_stream_v1(input: &Value) -> Result<(Value, Vec<Diag>), GrainError> {
-    let _stream_kind = input
+    let stream_kind = input
         .get("stream_kind")
         .and_then(Value::as_str)
         .ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
-
-    let bytes = if let Some(v) = input.get("cborseq_b64") {
-        decode_b64_value(v)?
-    } else if let Some(v) = input.get("segments_b64") {
-        let mut all = Vec::new();
-        let segs = v
-            .as_array()
-            .ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
-        for seg in segs {
-            let b = decode_b64_value(seg)?;
-            all.extend_from_slice(&b);
-        }
-        all
-    } else {
+    if stream_kind != "ledger" && stream_kind != "manifest" {
         return Err(GrainError::from_diag(Diag::Schema));
+    }
+
+    let bytes = match (input.get("cborseq_b64"), input.get("segments_b64")) {
+        (Some(v), None) => decode_b64_value(v)?,
+        (None, Some(v)) => {
+            let mut all = Vec::new();
+            let segs = v
+                .as_array()
+                .ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
+            for seg in segs {
+                let b = decode_b64_value(seg)?;
+                all.extend_from_slice(&b);
+            }
+            all
+        }
+        _ => return Err(GrainError::from_diag(Diag::Schema)),
     };
 
     let hashes = parse_cborseq_stream(&bytes)?;
@@ -284,4 +287,44 @@ fn normalize_diag(diag: Vec<Diag>) -> Vec<String> {
         set.insert(d.code().to_string());
     }
     set.into_iter().collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_cborseq_stream_rejects_invalid_stream_kind() {
+        let err = op_parse_cborseq_stream_v1(&json!({
+            "stream_kind": "bogus",
+            "cborseq_b64": "oWFhAaFhYgI=",
+        }))
+        .unwrap_err();
+
+        assert_eq!(err.diag(), Diag::Schema);
+    }
+
+    #[test]
+    fn parse_cborseq_stream_requires_xor_input_fields() {
+        let err = op_parse_cborseq_stream_v1(&json!({
+            "stream_kind": "ledger",
+            "cborseq_b64": "oWFhAaFhYgI=",
+            "segments_b64": ["oQ==", "YWEB"],
+        }))
+        .unwrap_err();
+
+        assert_eq!(err.diag(), Diag::Schema);
+    }
+
+    #[test]
+    fn parse_cborseq_stream_accepts_empty_segments_as_empty_stream() {
+        let (out, diag) = op_parse_cborseq_stream_v1(&json!({
+            "stream_kind": "manifest",
+            "segments_b64": [],
+        }))
+        .unwrap();
+
+        assert!(diag.is_empty());
+        assert_eq!(out, json!({ "item_sha256_hex": [] }));
+    }
 }

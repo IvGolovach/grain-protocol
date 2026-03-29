@@ -1,0 +1,20 @@
+{
+  "vector_id": "POS-LED-WA-0004",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "ledger",
+    "segments_b64": [
+      ""
+    ]
+  },
+  "expect": {
+    "pass": true,
+    "out": {
+      "item_sha256_hex": []
+    }
+  },
+  "meta": {
+    "desc": "An empty segment payload decodes to an empty ledger CBOR-seq stream."
+  }
+}

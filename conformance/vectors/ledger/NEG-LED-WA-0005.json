@@ -1,0 +1,22 @@
+{
+  "vector_id": "NEG-LED-WA-0005",
+  "op": "parse_cborseq_stream_v1",
+  "strict": true,
+  "input": {
+    "stream_kind": "ledger",
+    "cborseq_b64": "oWFhAaFhYgI=",
+    "segments_b64": [
+      "oQ==",
+      "YWEB"
+    ]
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "cborseq_b64 and segments_b64 are mutually exclusive and MUST reject when both are supplied."
+  }
+}

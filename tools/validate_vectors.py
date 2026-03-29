@@ -189,17 +189,21 @@ def main() -> int:
                         bad.append((rel, f"{bucket}[{i}]: {err}"))
 
         if op == "parse_cborseq_stream_v1":
+            expect_pass = bool(obj.get("expect", {}).get("pass"))
+            expected_diags = obj.get("expect", {}).get("diag_contains", [])
+            allow_schema_shape_negative = (not expect_pass) and ("GRAIN_ERR_SCHEMA" in expected_diags)
+
             stream_kind = obj["input"].get("stream_kind")
-            if stream_kind not in {"ledger", "manifest"}:
+            if (not allow_schema_shape_negative) and stream_kind not in {"ledger", "manifest"}:
                 bad.append((rel, "stream_kind must be 'ledger' or 'manifest'"))
             has_seq = "cborseq_b64" in obj["input"]
             has_segments = "segments_b64" in obj["input"]
-            if has_seq == has_segments:
+            if (not allow_schema_shape_negative) and has_seq == has_segments:
                 bad.append((rel, "parse_cborseq_stream_v1 requires exactly one of cborseq_b64 or segments_b64"))
             if has_segments:
                 segments = obj["input"].get("segments_b64")
-                if not isinstance(segments, list) or not segments:
-                    bad.append((rel, "segments_b64 must be a non-empty array"))
+                if not isinstance(segments, list):
+                    bad.append((rel, "segments_b64 must be array"))
                 else:
                     for i, seg in enumerate(segments):
                         if not isinstance(seg, str):

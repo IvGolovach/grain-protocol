@@ -8,13 +8,17 @@ It does four things:
 - appends one event
 - reduces the event list into a deterministic result
 
-## 1) Install SDK dependencies
+## 1) Install build dependencies
 
 ```bash
+npm ci --prefix runner/typescript
 npm ci --prefix core/ts/grain-sdk
 ```
 
 ## 2) Build the SDK once
+
+The SDK build is not self-contained: it uses the shared TypeScript runner
+output first, then emits the SDK files.
 
 ```bash
 npm --prefix core/ts/grain-sdk run build

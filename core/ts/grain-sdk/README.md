@@ -24,11 +24,15 @@ What it does for you:
 
 ## Copy these commands
 
-Install SDK build-time dependencies:
+Install the shared runner and SDK build-time dependencies:
 
 ```bash
+npm ci --prefix runner/typescript
 npm ci --prefix core/ts/grain-sdk
 ```
+
+Build output is not fully self-contained: the SDK build first builds the shared
+TypeScript runner in `runner/typescript`, then emits SDK files.
 
 Try the smallest end-to-end demo:
 

@@ -238,11 +238,17 @@ function opParseCborSeq(input: Record<string, Json>): OperationActual {
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
 
+  const hasCborseq = Object.hasOwn(input, "cborseq_b64");
+  const hasSegments = Object.hasOwn(input, "segments_b64");
+  if (hasCborseq === hasSegments) {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+
   let stream: Uint8Array;
-  if ("cborseq_b64" in input && !("segments_b64" in input)) {
+  if (hasCborseq) {
     stream = decodeB64(input.cborseq_b64);
-  } else if (!("cborseq_b64" in input) && "segments_b64" in input) {
-    if (!Array.isArray(input.segments_b64) || input.segments_b64.length === 0) {
+  } else {
+    if (!Array.isArray(input.segments_b64)) {
       throw new GrainDiagError("GRAIN_ERR_SCHEMA");
     }
     const all: number[] = [];
@@ -251,8 +257,6 @@ function opParseCborSeq(input: Record<string, Json>): OperationActual {
       for (const x of b) all.push(x);
     }
     stream = new Uint8Array(all);
-  } else {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
 
   if (stream.length > LIMITS.CBL_MAX_CBORSEQ_SEGMENT_BYTES) {
