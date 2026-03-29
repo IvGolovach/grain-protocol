@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ],
+    "pass": false
+  },
+  "input": {
+    "qr_string": "GR1:00"
+  },
+  "meta": {
+    "desc": "QR body may decode as Base45 yet still be malformed if zlib inflate fails; invalid compressed payload must be rejected."
+  },
+  "op": "qr_decode_gr1",
+  "strict": true,
+  "vector_id": "NEG-QR-003"
+}

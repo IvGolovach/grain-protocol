@@ -20,6 +20,9 @@ pub fn decode_gr1_to_cose(qr: &str) -> GrainResult<Vec<u8>> {
     let mut out = Vec::new();
     z.read_to_end(&mut out)
         .map_err(|_| GrainError::from_diag(Diag::Schema))?;
+    if out.is_empty() {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
 
     Ok(out)
 }
@@ -66,4 +69,21 @@ fn base45_decode(s: &str) -> Result<Vec<u8>, ()> {
     }
 
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_invalid_base45_body() {
+        let err = decode_gr1_to_cose("GR1:0?").expect_err("invalid Base45 must reject");
+        assert_eq!(err.diag(), Diag::Schema);
+    }
+
+    #[test]
+    fn rejects_invalid_zlib_body_that_yields_empty_output() {
+        let err = decode_gr1_to_cose("GR1:00").expect_err("invalid zlib payload must reject");
+        assert_eq!(err.diag(), Diag::Schema);
+    }
 }

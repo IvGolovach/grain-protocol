@@ -50,7 +50,7 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
 
 - INV-COSE-001: COSE_Sign1 only; Ed25519 only; headers exact; external_aad empty; unprotected {}.  
   Ref: NES §5; spec/profiles/cose-profile.md  
-  Vectors: POS-COSE-001, NEG-COSE-001
+  Vectors: POS-COSE-001, NEG-COSE-001, NEG-COSE-002, NEG-COSE-003
 
 - INV-COSE-002: COSE tag 18 forbidden; tag18 input -> reject.  
   Ref: NES §5.1  
@@ -135,6 +135,10 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
 - INV-QR-001: Prefix MUST be GR1: ; incompatible future formats use new prefix.  
   Ref: NES §8.1; qr-profile.md  
   Vectors: NEG-QR-001
+
+- INV-QR-002: After the `GR1:` prefix, body MUST be valid Base45 of a zlib-compressed COSE blob; malformed body bytes -> reject.
+  Ref: NES §8.1; qr-profile.md
+  Vectors: POS-QR-001, NEG-QR-002, NEG-QR-003
 
 ## Limits / Strict mode
 

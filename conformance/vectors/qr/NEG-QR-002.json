@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ],
+    "pass": false
+  },
+  "input": {
+    "qr_string": "GR1:0?"
+  },
+  "meta": {
+    "desc": "QR body must be valid Base45 after the GR1: prefix; invalid alphabet characters must be rejected."
+  },
+  "op": "qr_decode_gr1",
+  "strict": true,
+  "vector_id": "NEG-QR-002"
+}

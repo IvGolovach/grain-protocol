@@ -21,7 +21,9 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-CID-010: tag42 CID link missing 0x00 prefix -> REJECT
 
 ## COSE
-- NEG-COSE-001: wrong headers / external_aad not empty / unprotected not {} -> REJECT
+- NEG-COSE-001: unprotected header not {} -> REJECT
+- NEG-COSE-002: external_aad not empty -> REJECT
+- NEG-COSE-003: public key length != 32 bytes -> REJECT
 - NEG-COSE-010: tag18 present -> REJECT
 - NEG-COSE-020: non-deterministic COSE encoding -> REJECT in core contexts
 
@@ -67,6 +69,8 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 
 ## QR
 - NEG-QR-001: wrong prefix (not GR1:) -> REJECT
+- NEG-QR-002: invalid Base45 body after `GR1:` -> REJECT
+- NEG-QR-003: invalid zlib payload after Base45 decode -> REJECT
 
 ## Limits
 - NEG-LIM-001: baseline limits exceeded in strict mode -> GRAIN_ERR_LIMIT
