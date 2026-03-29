@@ -47,6 +47,7 @@ npm --prefix runner/typescript run run:c01
 npm --prefix runner/typescript run run:full
 GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:c01
 GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:full
+npm --prefix runner/typescript run test:cborseq-contract
 npm --prefix runner/typescript run test:properties
 npm --prefix runner/typescript run test:integer-precision
 npm --prefix core/ts/grain-sdk run run:protocol-suite

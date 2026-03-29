@@ -36,9 +36,8 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-LED-WA-0002: garbage tail after valid items -> GRAIN_ERR_CBORSEQ_GARBAGE_TAIL
 - NEG-LED-WA-0003: invalid initial byte -> GRAIN_ERR_CBORSEQ_INVALID_INITIAL_BYTE
 - POS-LED-WA-0004: empty segment payload via `segments_b64` -> empty stream, `item_sha256_hex = []`
-- Schema-only reject cases for `parse_cborseq_stream_v1` are specified in `conformance/SPEC.md`:
-  invalid `stream_kind` and supplying both `cborseq_b64` + `segments_b64`.
-  They are currently documented, but not vectorized, because the vector validator only admits canonical input shapes.
+- NEG-LED-WA-0004: invalid `stream_kind` -> GRAIN_ERR_SCHEMA
+- NEG-LED-WA-0005: supplying both `cborseq_b64` + `segments_b64` -> GRAIN_ERR_SCHEMA
 - Precedence: if at least one full item was parsed, trailing non-item bytes classify as GRAIN_ERR_CBORSEQ_GARBAGE_TAIL.
 
 ## E2E

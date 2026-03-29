@@ -191,14 +191,21 @@ def main() -> int:
         if op == "parse_cborseq_stream_v1":
             expect_pass = bool(obj.get("expect", {}).get("pass"))
             expected_diags = obj.get("expect", {}).get("diag_contains", [])
-            allow_schema_shape_negative = (not expect_pass) and ("GRAIN_ERR_SCHEMA" in expected_diags)
-
             stream_kind = obj["input"].get("stream_kind")
-            if (not allow_schema_shape_negative) and stream_kind not in {"ledger", "manifest"}:
-                bad.append((rel, "stream_kind must be 'ledger' or 'manifest'"))
             has_seq = "cborseq_b64" in obj["input"]
             has_segments = "segments_b64" in obj["input"]
-            if (not allow_schema_shape_negative) and has_seq == has_segments:
+            stream_kind_valid = stream_kind in {"ledger", "manifest"}
+            xor_input_form_valid = has_seq != has_segments
+            schema_shape_violation_count = int(not stream_kind_valid) + int(not xor_input_form_valid)
+            allow_single_schema_shape_negative = (
+                (not expect_pass)
+                and ("GRAIN_ERR_SCHEMA" in expected_diags)
+                and schema_shape_violation_count == 1
+            )
+
+            if (not allow_single_schema_shape_negative) and not stream_kind_valid:
+                bad.append((rel, "stream_kind must be 'ledger' or 'manifest'"))
+            if (not allow_single_schema_shape_negative) and not xor_input_form_valid:
                 bad.append((rel, "parse_cborseq_stream_v1 requires exactly one of cborseq_b64 or segments_b64"))
             if has_segments:
                 segments = obj["input"].get("segments_b64")
