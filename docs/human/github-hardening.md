@@ -12,10 +12,12 @@ Branch protection must require:
 - `evidence-bundle`
 
 CI push-to-main drift assertion validates that branch protection required checks stay aligned with policy.
+`GOVERNANCE.md` must describe the same live baseline.
 
 Autonomous baseline profile:
 - pull requests required
 - required approving reviews: `0`
+- dismiss stale reviews: `true`
 - code owner review requirement: `false`
 - enforce admins: `true`
 - linear history: `true`

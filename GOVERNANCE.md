@@ -43,14 +43,31 @@ Roles can be defined/updated via PR to this file.
 
 ### Branch protection (source repo baseline)
 
+The live private-repo baseline MUST match the `autonomous` profile in:
+- `docs/human/github-hardening.md`
+- `tools/github/apply_branch_protection.sh`
+- `tools/ci/check_branch_protection_drift.py`
+
+Current baseline on `main`:
 - `main` is protected.
 - Direct pushes to `main` are disabled.
 - Required checks:
   - `python-tooling`
   - `rust-core`
   - `ts-c01`
+  - `ts-full`
   - `evidence-bundle`
-- At least one approving review is required.
+- Required approving reviews: `0`
+- Dismiss stale reviews: `true`
+- Code owner reviews: `false`
+- Enforce admins: `true`
+- Linear history: `true`
+- Force pushes: disabled
+- Deletions: disabled
+- Conversation resolution: required
+
+If the repository intentionally changes branch-protection mode, update the
+runbook, apply script, and drift checker in the same change as this file.
 
 ### Tag policy
 
