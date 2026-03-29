@@ -31,11 +31,15 @@ Expected output includes stable fields like:
 3. Reduce the event list into a deterministic result.
 4. Only then add device keys, private sync, manifests, or AI helpers.
 
+For that first event, `payload_cid` can be a stable application identifier for the payload.
+If you later persist the payload as its own canonical Grain object, switch to using that real CID.
+
 If you need device lifecycle changes, use `identity.addDeviceKey()` and `identity.revokeDeviceKey()`. These APIs keep the SDK's local authorization view and the ledger in sync.
+If you are adapting another domain into Grain, read `docs/human/domain-adapters.md` after the first success.
 
 ## What the SDK handles for you
 
-- strict mode by default
+- strict-by-default execution
 - rejected unauthorized appends
 - CSPRNG-only `cap_id` generation
 - rejected `cap_id` overwrite or corruption

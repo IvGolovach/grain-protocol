@@ -37,7 +37,7 @@ async function main() {
 
   const appended = await sdk.events.append({
     t: "IntakeEvent",
-    payload_cid: "cid:minimal-app:1",
+    payload_cid: "meal:minimal-app:1",
     body: {
       mean: { kcal: 42 },
       var: { kcal: 0 }
@@ -77,6 +77,10 @@ You should get a JSON object with:
 - `reducer_diag: []`
 
 If you see an error, start over from the build step and make sure you are running the file from the repo root.
+
+In this first example, `payload_cid` is just a stable application identifier for the payload.
+It does not need to be a literal CID here.
+If you later store the payload as its own canonical Grain object, then using that real CID is the stronger pattern.
 
 ## Why this example is small
 

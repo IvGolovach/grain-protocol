@@ -7,6 +7,8 @@ If you are new here, start with:
 - [Minimal app example](../../../docs/human/sdk/minimal-app-example.md)
 - Run `npm --prefix core/ts/grain-sdk run demo:e2e` for the smallest demo.
 
+Use this README as a package map after the first demo.
+
 What this package is for:
 - helping apps use Grain safely
 - keeping protocol rules unchanged
@@ -21,6 +23,9 @@ What it does for you:
 - device lifecycle APIs that keep local authorization and ledger history in sync
 - deterministic AI ingestion (`accept` -> `applyAccepted`)
 - no outbound network behavior in the SDK core
+
+For first examples, `payload_cid` can be a stable application identifier for the payload.
+If you later store that payload as its own canonical Grain object, then using the real CID is the stronger pattern.
 
 ## Copy these commands
 

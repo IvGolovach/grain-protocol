@@ -7,12 +7,14 @@ This page is for protocol implementers (new Core/SDK/runner).
 1. `conformance/contract/runner_v1.md` (frozen runner API)
 2. `conformance/SPEC.md` (runner semantics)
 3. `conformance/vectors/**` (expected behavior)
-4. `spec/NES-v0.1.md` + `spec/profiles/*` (normative rules)
+4. `spec/NES-v0.1.md` + `spec/profiles/*` (normative rules; `NES` = Normative Encoding & Semantics)
 5. `spec/FREEZE-CONFIRMATION-v0.1.md` + `spec/SCOPE-v0.1.md` + `spec/INTEROP-v0.1.md`
 
 Conformance is the executable court. Implementation must follow vectors, not vice versa.
 
-## TS Full Engine constraints (TOR-04)
+## TS full engine constraints
+
+Internal project tracking label for this lane: `TOR-04`.
 
 - Independence: no Rust FFI/WASM inside TS execution logic.
 - Strict mode only for conformance runs.
@@ -35,7 +37,7 @@ Conformance is the executable court. Implementation must follow vectors, not vic
 
 - Passing the suite is the conformance criterion.
 - A strong interoperability claim is valid only after two independent full implementations pass the full suite.
-- TS full engine now targets full-suite parity; C01 remains a byte-path smoke profile.
+- TS full engine now targets full-suite parity; `C01` remains the smaller byte-path smoke profile.
 
 ## Portability references
 

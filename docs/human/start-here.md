@@ -44,5 +44,9 @@ If you only read one more page, read [Quickstart](./quickstart.md).
 - Protocol: frozen v0.1 core (`schema_major=1`).
 - Conformance: vectors are the execution gate.
 - Reference implementation: Rust Core passes strict suite.
-- TypeScript: full strict engine is available; C01 is kept as one small extra drift check.
+- TypeScript: full strict engine is available; `C01` is the small smoke profile kept for byte-path regressions.
 - SDK: TypeScript universal primitives layer is available at `core/ts/grain-sdk`.
+
+Repo shorthand you may see later:
+- `NES` = the normative spec file `spec/NES-v0.1.md`
+- `C01` = the small TypeScript smoke profile, not the main conformance criterion

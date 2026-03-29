@@ -1,6 +1,14 @@
-# SDK Architecture (TOR-SDK-A01 + TOR-SDK-A03)
+# SDK Architecture
 
-This page defines boundaries. SDK is a strict orchestration layer, not a protocol semantics layer.
+`TOR-SDK-A01` and `TOR-SDK-A03` are internal tracking IDs for this work. You can ignore them unless you are reading ADRs or project plans.
+
+This page defines boundaries. The SDK is a strict orchestration layer, not a new protocol semantics layer.
+
+## Practical reading
+
+- If you are building an app, start with `identity`, `events`, `manifest`, `e2e`, and `transport`.
+- If you need byte validation or diagnostics explanation, use `codec`.
+- If you are handling model output, the safe path is `ai.accept()` then `ai.applyAccepted()`.
 
 ## Layer boundaries
 
@@ -16,12 +24,19 @@ This page defines boundaries. SDK is a strict orchestration layer, not a protoco
    - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
    - no rule rewrites
 
-## SDK contract
+## What the SDK is allowed to do
 
 - strict by default
 - fail-closed for unsafe paths
 - preserve core diagnostics (SDK-only codes stay in `SDK_ERR_*`)
 - surface conflict/quarantine/unauthorized status explicitly
+
+## What the SDK is not allowed to do
+
+- invent new protocol semantics
+- add soft fallback modes
+- silently "repair" non-canonical data
+- hide conflict, quarantine, revoke, or unauthorized states
 
 ## Module map
 
@@ -38,9 +53,8 @@ This page defines boundaries. SDK is a strict orchestration layer, not a protoco
 ## Non-goals (enforced)
 
 - no domain semantics
-- no soft fallback mode
-- no hidden canonicalization repair
-- no alternative conflict/revoke semantics
+- no alternative conflict or revoke semantics
+- no vendor model clients or outbound network calls in SDK core
 
 ## Audit anchors
 

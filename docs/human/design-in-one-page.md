@@ -30,4 +30,4 @@ Give people a small, portable protocol for real-world events that can be verifie
 
 - Core rules stay frozen in major version 1.
 - New behavior is added, not rewritten.
-- C01 stays as a small smoke profile for byte-path checks.
+- `C01` stays as a small smoke profile for byte-path checks, not as the main compatibility criterion.

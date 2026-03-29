@@ -12,6 +12,9 @@ That example does four things:
 - appends one event
 - reduces the event list into a deterministic result
 
+For that first app, `payload_cid` can simply be a stable identifier for the source payload.
+If you later store the payload as its own canonical Grain object, then using that real CID is the stronger pattern.
+
 ## What you can count on
 
 - Signed data can be checked for integrity and authorship.
@@ -31,13 +34,16 @@ That example does four things:
 3. Add the normalized event to your local ledger store.
 4. Run the reducer to get the same totals every time.
 
+If you want shipped v0.1 reducer behavior today, stay on the existing `IntakeEvent` path.
+If you want to preserve an app-defined event type, treat that as a store/forward lane unless you have added explicit semantics on top.
+
 If you are building with the SDK, go to [SDK Start Here](./sdk/start-here.md).
 If you are mapping a domain object into Grain, use [Domain Adapters](./domain-adapters.md).
 If you want the deeper protocol rules, read the conformance spec after your first run.
 
 ## Read later
 
-Most app builders do not need the full NES on day one.
+Most app builders do not need the full `NES` (`Normative Encoding & Semantics`) document on day one.
 Start with:
 - `conformance/SPEC.md`
 

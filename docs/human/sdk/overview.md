@@ -1,6 +1,11 @@
-# Grain SDK Overview (TOR-SDK-A01)
+# Grain SDK Overview
+
+`TOR-SDK-A01` is an internal tracking label for this SDK work. You can ignore it unless you are reading ADRs or project plans.
 
 The SDK is a universal primitives surface for building systems on top of Grain without changing protocol semantics.
+
+If you want one first success, start with `docs/human/sdk/start-here.md`.
+This page is the capability map after that first run.
 
 ## Design contract
 
@@ -8,6 +13,12 @@ The SDK is a universal primitives surface for building systems on top of Grain w
 - no new protocol semantics
 - fail-closed behavior on risky boundaries
 - core diagnostics preserved (SDK does not translate away protocol error codes)
+
+## Practical defaults
+
+- For a first app, append one event and reduce it before reaching for device keys, manifests, or AI helpers.
+- In that first app, `payload_cid` can be a stable app-level identifier.
+- If you later store the payload as its own canonical Grain object, then using that real CID is the stronger pattern.
 
 ## Modules
 

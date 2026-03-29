@@ -2,6 +2,8 @@
 
 Run one working flow first. Read internals second.
 
+This path uses Docker so you can get a first success without setting up a local Rust toolchain.
+
 ## 1) Run the demo pipeline
 
 ```bash
@@ -72,6 +74,9 @@ Expected deterministic output:
 }
 ```
 
+The demo uses stable placeholder labels such as `cid-intake-demo-3` for `payload_cid`.
+Those are demo identifiers inside the sample ledger, not separately derived protocol-object CIDs.
+
 ## 2) What the demo actually did
 
 1. Decoded `GR1:` transport payload.
@@ -79,7 +84,14 @@ Expected deterministic output:
 3. Appended one deterministic `IntakeEvent` to a local demo ledger.
 4. Reduced ledger state to deterministic totals (`sum_mean`, `sum_var`).
 
-## 3) Choose your next path
+## 3) What the terms mean
+
+- `strict: true`: the demo ran in fail-closed mode with no permissive fallback behavior.
+- `GR1:`: fixed QR transport prefix for Grain v0.1.
+- `COSE narrow profile`: the small fixed signature profile Grain uses for deterministic verification.
+- `C01`: a small TypeScript smoke profile for byte-path checks; it is not a second protocol mode.
+
+## 4) Choose your next path
 
 - [Build the smallest app with the SDK](./sdk/minimal-app-example.md)
 - [Build an app on Grain](./building-on-grain.md)
@@ -88,14 +100,14 @@ Expected deterministic output:
 - [Run fast developer verification](./start-here.md#verification-paths)
 - [Start-here overview](./start-here.md)
 
-## 4) Deep protocol references (after first run)
+## 5) Deep protocol references (after first run)
 
 - `conformance/SPEC.md`
-- `spec/NES-v0.1.md`
+- `spec/NES-v0.1.md` (the normative rules document)
 - `docs/llm/INVARIANTS.md`
 - `docs/llm/EDGE_CASES.md`
 
-## 5) Going deeper
+## 6) Going deeper
 
 If you are just evaluating Grain, you can stop here.
 If you are implementing or testing Grain itself, these TypeScript engine commands are useful:
@@ -107,4 +119,5 @@ npm --prefix runner/typescript run run:full
 npm --prefix runner/typescript run divergence:full
 ```
 
-TS now has a full strict engine. C01 stays as a small byte-path smoke profile.
+TS now has a full strict engine. `C01` stays as the smaller smoke profile for byte-path regressions.
+If you want the broader local verification pass after this demo, run `./scripts/verify`.
