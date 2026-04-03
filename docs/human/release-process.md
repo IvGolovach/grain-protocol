@@ -12,8 +12,8 @@ RC policy reference:
 1. Local tree is clean.
 2. CI on `main` is green.
 3. Branch protection is enabled with the intended profile:
-   - private mode baseline: `PROTECTION_PROFILE=autonomous`
-   - public reviewed mode: `PROTECTION_PROFILE=reviewed`
+   - autonomous maintenance baseline: `PROTECTION_PROFILE=autonomous`
+   - reviewed publication baseline: `PROTECTION_PROFILE=reviewed`
 4. Tag signing key is configured.
 
 ## Release steps
@@ -74,6 +74,6 @@ Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
 ## Notes
 
 - Protocol and repo tags are intentionally independent.
-- Reconstructed-history disclaimer is mandatory (`MIGRATION.md`).
+- Repository provenance note (`MIGRATION.md`) must stay accurate when release governance changes.
 - RC tags are readiness checkpoints, not GA/public release declarations.
 - RC rollback uses signed revocation records; history and tags are not rewritten.

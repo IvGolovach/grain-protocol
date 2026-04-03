@@ -38,4 +38,4 @@ See `spec/FREEZE-v0.1.md`.
 ## Provenance requirement
 
 - Releases are valid only when CI evidence artifacts are bound to commit SHA.
-- Reconstructed bundle history is disclosed in `MIGRATION.md`.
+- Repository provenance expectations are summarized in `MIGRATION.md`.

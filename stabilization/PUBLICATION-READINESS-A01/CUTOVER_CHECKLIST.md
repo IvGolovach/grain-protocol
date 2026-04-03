@@ -1,18 +1,18 @@
 # PUBLICATION-READINESS-A01 Cutover Checklist
 
-Use this checklist when creating the new public repository from private canonical source.
+Use this checklist when preparing the publication repository from the vetted source history.
 
 ## A. Decide publication model
 
 1. Choose one:
-- Snapshot launch (single initial public commit).
-- Curated history launch (selected clean commits only).
-2. Keep source repo as canonical provenance source.
-3. Do not force-rewrite canonical private history.
+- Full sanitized history launch (preferred when the cleaned history is ready).
+- Curated milestone history launch (only if a narrower public surface is intentionally desired).
+2. Keep the archival source repository read-only after cutover.
+3. Do not rewrite the publication repository history after external review begins.
 
 ## B. Create public repository shell
 
-1. Create empty public repo `<owner>/<public-repo>`.
+1. Create empty repository `<owner>/<public-repo>` and keep it private until final review is complete.
 2. Configure baseline files in first commit:
 - `README.md`
 - `LICENSE`
@@ -20,19 +20,18 @@ Use this checklist when creating the new public repository from private canonica
 - `SECURITY.md`
 - `CONTRIBUTING.md`
 - `CODE_OF_CONDUCT.md`
-3. Add statement:
-- `Public history starts here; earlier development was private.`
+3. Confirm repository settings, labels, and branch defaults match the intended publication baseline.
 
 ## C. Import code
 
-1. From canonical source repo:
+1. From the vetted source repository:
 - checkout release-ready commit/tag
-- copy source tree (exclude `.git`)
-2. Remove/replace source-repository-only references:
+- mirror the sanitized history or import the release-ready tree (exclude `.git` when doing a snapshot import)
+2. Remove/replace repository-internal references:
 - owner/repo literals
-- private clone URLs
-- private run links in docs
-3. Commit as initial public import.
+- environment-specific absolute paths
+- internal run links in docs
+3. Validate remote configuration before the first shared push.
 
 ## D. Governance and CI hardening
 
@@ -58,7 +57,7 @@ PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner>
 
 1. No Cyrillic in tracked files.
 2. No absolute local paths in tracked files.
-3. No hardcoded source slug in tracked files.
+3. No hardcoded repository-internal slug in tracked files.
 4. No tracked generated artifacts.
-5. Public branch protection drift check passes.
-6. Public README/docs have no source-repository-only instructions.
+5. Publication branch protection drift check passes.
+6. README/docs have no repository-internal instructions.

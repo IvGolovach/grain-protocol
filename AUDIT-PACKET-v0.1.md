@@ -170,7 +170,7 @@ None for v0.1, except external cryptographic breaks (future major bump class).
 
 ## 11) Provenance migration and release discipline
 
-- Bundle-to-git reconstruction is disclosed in `MIGRATION.md` and ADR `adr/conformance/0002-bundle-provenance-migration.md`.
+- Repository provenance expectations are documented in `MIGRATION.md` and ADR `adr/conformance/0002-bundle-provenance-migration.md`.
 - Tag namespaces are intentionally split:
   - protocol line: `protocol-*`
   - repository milestones: `repo-*`

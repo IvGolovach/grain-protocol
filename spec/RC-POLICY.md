@@ -1,15 +1,15 @@
-# RC Policy (Private, Audit-Grade)
+# RC Policy (Audit-Grade)
 
 Protocol line: `v0.1.x` (`schema_major = 1`)
 
-This policy defines release-candidate discipline for private certification cycles.
+This policy defines release-candidate discipline for certification cycles.
 
 ## 1) Tag namespaces (MUST)
 
 - Protocol semantic tags: `protocol-*`
 - Repo milestone tags: `repo-*`
-- Protocol RC tags: `protocol-rc-v0.1.1-rcN`
-- Repo RC tags: `repo-rc-v0.3.1-rcN` (or current repo version)
+- Protocol RC tags: `protocol-rc-vX.Y.Z-rcN`
+- Repo RC tags: `repo-rc-vX.Y.Z-rcN`
 
 All RC tags MUST be annotated and signed.
 
@@ -73,4 +73,3 @@ Sign-off records live under `spec/rc/SIGNOFFS/`.
 
 RC status means readiness under current evidence, not public general availability.
 GA/public claims require separate decision and scope.
-

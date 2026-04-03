@@ -45,6 +45,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_forbidden_tracked.py
 
+    - name: Check repository history hygiene
+      shell: bash
+      run: python3 tools/ci/check_history_hygiene.py
+
     - name: Check CRLF in tracked text files
       shell: bash
       run: python3 tools/ci/check_crlf_tracked.py

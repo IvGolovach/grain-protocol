@@ -80,7 +80,7 @@ Update:
 - `docs/human/github-hardening.md`
 - `docs/human/release-process.md`
 - `docs/human/portability-pack.md`
-- `MIGRATION.md` if provenance or reconstruction language changed
+- `MIGRATION.md` if the repository provenance note changed
 - `docs/llm/CHANGE_POLICY.md`
 
 ## Merge check

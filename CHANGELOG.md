@@ -151,11 +151,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 - No protocol/conformance semantic changes.
 
 ## [0.3.0] - 2026-02-21
-- Repository provenance migration and GitHub hardening (TOR-GH-P01):
+- Repository provenance baseline and GitHub hardening (TOR-GH-P01):
   - commit-bound evidence artifacts in CI (`evidence-<sha>.zip`)
   - release tag evidence workflow (`.github/workflows/release-evidence.yml`)
   - branch-protection helper and governance hardening files
-  - migration disclosure (`MIGRATION.md`, ADR-0002)
+  - repository provenance note (`MIGRATION.md`, ADR-0002)
   - `.gitattributes` and `.nvmrc` pinning for cross-platform determinism
 - Rust reference Core included (TOR-02):
   - `core/rust/grain-core`

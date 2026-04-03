@@ -1,6 +1,6 @@
 # GitHub Hardening Runbook
 
-This runbook defines the minimum governance baseline after bundle-to-git migration.
+This runbook defines the minimum governance baseline for the canonical repository.
 
 ## 1) Required checks on `main`
 
@@ -78,6 +78,7 @@ All release tags must be signed.
 - CI enforces:
   - `tools/ci/check_gitattributes_policy.py`
   - `tools/ci/check_forbidden_tracked.py`
+  - `tools/ci/check_history_hygiene.py`
   - `tools/ci/check_crlf_tracked.py`
   - `tools/ci/check_codeowners_coverage.py`
 

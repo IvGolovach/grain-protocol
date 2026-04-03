@@ -49,7 +49,7 @@ Dependabot safe-lane updates must auto-resolve stale/review/merge friction while
     - `repo`
     - `workflow`
 
-Provisioning path (source repo):
+Provisioning path:
 - GitHub repository -> `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`.
 - Secret name MUST be exactly `DEPENDABOT_AUTOMERGE_TOKEN`.
 - Safety design:

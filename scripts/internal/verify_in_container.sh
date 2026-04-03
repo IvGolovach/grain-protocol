@@ -18,6 +18,7 @@ python3 tools/check_llm_docs.py
 python3 tools/check_spec_drift.py
 python3 tools/ci/check_gitattributes_policy.py
 python3 tools/ci/check_forbidden_tracked.py
+python3 tools/ci/check_history_hygiene.py
 python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py

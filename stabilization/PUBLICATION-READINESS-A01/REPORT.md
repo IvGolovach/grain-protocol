@@ -1,20 +1,20 @@
 # PUBLICATION-READINESS-A01 Report
 
 Date: 2026-02-26  
-Repository: `<private-canonical-repo>` (canonical source repository)  
-Audit commit anchor: `5281e81fc44f4e0c63bf1c04d74d813bc96635fe`
+Repository: publication candidate repository  
+Audit anchor: repository-local publication readiness scan
 
 ## Objective
 
-Run a full migration-readiness audit for publishing via a new public repository
-without leaking local/source-repository-only details and without changing frozen-core semantics.
+Run a full readiness audit for controlled publication through a clean repository surface
+without leaking local or internal-only details and without changing frozen-core semantics.
 
 ## Audit Coverage
 
 1. Local repository content and tracked files.
 2. Full git history objects (`git rev-list --objects --all` + blob scan).
 3. Commit/ref naming hygiene.
-4. GitHub metadata and governance:
+4. Repository metadata and governance:
    - branch protection
    - PR/issue/release state
    - labels
@@ -29,7 +29,7 @@ without leaking local/source-repository-only details and without changing frozen
 - `git ls-files -z | xargs -0 rg -n ...` for:
   - Cyrillic
   - absolute local paths
-  - source repo slug hard-coding
+  - repository slug hard-coding
   - secret-like patterns
 - `gh repo view ...`
 - `gh api repos/<owner>/<repo>/branches/main/protection`
@@ -49,8 +49,8 @@ without leaking local/source-repository-only details and without changing frozen
   - `docs/llm/DOMAIN_ADAPTERS.md`
   - `docs/llm/PORTING.md`
 
-2. Private slug hard-coding in docs/checklists/scripts.
-- Removed hardcoded `<owner>/<repo>` and SSH clone literals from:
+2. Repository-local slug hard-coding in docs/checklists/scripts.
+- Removed hardcoded `<owner>/<repo>` and clone literals from:
   - `docs/human/repro-checklist.md`
   - `stabilization/RC-STAB-A01/REPRO_CHECKLIST.md`
 - Replaced script defaults with environment/remote detection fallback:
@@ -59,8 +59,8 @@ without leaking local/source-repository-only details and without changing frozen
 - Updated test fixture slug:
   - `tools/stabilization/test_run_rc_stab.py`
 
-3. Public-facing wording cleanup.
-- Neutralized source-repository-only heading references in:
+3. Publication-facing wording cleanup.
+- Neutralized repository-internal references in:
   - `README.md`
   - `docs/human/github-hardening.md`
   - `docs/human/release-process.md`
@@ -77,24 +77,26 @@ without leaking local/source-repository-only details and without changing frozen
 - Action at cutover: apply
   - `PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner/repo>`
 
-2. Public history strategy decision (`P0`).
-- If you publish this same repository, all existing PR/release metadata stays visible.
-- Recommended path for clean launch: new publication (snapshot or curated history).
+2. Publication repository object must stay clean (`P0`).
+- Old PR/release metadata must not be carried into the publication repository object.
+- Recommended path for clean launch: a new publication repository populated from the sanitized history.
 
 3. Release metadata portability (`P1`).
-- Existing release notes reference source repository URLs and private PR numbers.
-- For new public repo, re-cut releases and evidence artifacts in the new namespace.
+- Existing release notes may reference repository-local URLs and PR numbers.
+- Re-cut releases and evidence artifacts in the publication namespace.
+
+4. Final pre-public verification (`P1`).
+- Keep the publication repository private until a final end-to-end review confirms history, tags, docs, and CI guardrails are clean.
 
 ## Current State Summary
 
-- Local `main` == `origin/main` at `5281e81...`
-- Open PRs: none
-- Open issues: 1 (`#23`, nightly stabilization failure notice)
+- Sanitized publication candidate repository prepared for internal review.
+- Open PRs/issues/releases from prior internal repositories are intentionally excluded from the publication repository object.
 - Required checks active: `python-tooling`, `rust-core`, `ts-c01`, `ts-full`, `evidence-bundle`
-- Recent `main` CI runs: successful
+- Final visibility remains private pending manual review.
 
 ## No-Change Guarantees
 
 - No frozen-core protocol semantics were changed.
 - No conformance vectors/expected outputs were altered.
-- Changes are migration hygiene only (docs/tooling defaults/governance wording).
+- Changes are publication-readiness hygiene only (docs/tooling defaults/governance wording).

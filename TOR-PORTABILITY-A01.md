@@ -199,7 +199,7 @@ Mitigation: deterministic gate subset + nightly deep fuzz with seed capture.
 ## 8) Audit visibility
 
 Auditor should be able to:
-1. clone source repo at commit/tag,
+1. clone the repository at commit/tag,
 2. run `./scripts/verify`,
 3. inspect evidence hashes and portability manifests,
 4. confirm runner contract stability and portability gates.

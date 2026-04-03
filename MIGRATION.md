@@ -1,17 +1,17 @@
-# Provenance Migration (Bundle -> Git)
+# Repository Provenance Note
 
-This repository history was reconstructed from a local filesystem bundle.
+This file summarizes how release provenance is established for this repository.
 
 Important:
-- Commit chronology in this repository is **logical reconstruction**, not original execution-time chronology.
-- Protocol semantics are unchanged; frozen-core rules remain defined by `spec/NES-v0.1.md` and `spec/FREEZE-v0.1.md`.
-- Provenance after migration is commit-based and CI-anchored.
+- Commit SHAs, signed tags, and CI evidence artifacts are authoritative for repository releases.
+- Protocol semantics remain defined by `spec/NES-v0.1.md` and `spec/FREEZE-v0.1.md`.
+- Publication preparation normalized repository history and documentation to remove internal-only material without changing executable behavior.
 
-Reconstruction stages:
-1. C0: protocol freeze + spec + conformance baseline import
-2. C1: TOR-01 Wave A court hardening material
-3. C2: TOR-02 Rust reference core
-4. C3: TOR-03 TS C01 smoke runner
-5. C4: GitHub hardening + provenance CI pipeline
+Provenance milestones:
+1. Baseline protocol freeze, specifications, and conformance import
+2. Wave A hardening material
+3. Rust reference core
+4. TypeScript C01 smoke runner
+5. GitHub hardening and CI evidence pipeline
 
-This file exists to prevent timeline ambiguity in external audits.
+This file exists so external audits can interpret repository history and release evidence consistently.

@@ -2,7 +2,7 @@
 
 Grain SDK — Universal, Professional, Zero-Ambiguity Surface
 
-Status: implemented in progress-gated form (private RC discipline compatible)
+Status: implemented in progress-gated form (RC discipline compatible)
 
 ## Scope
 

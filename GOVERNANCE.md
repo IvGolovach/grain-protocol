@@ -41,9 +41,9 @@ Roles can be defined/updated via PR to this file.
 - Releases must pass CI gates, including conformance suite checks.
 - Provenance is commit-based and CI-anchored. Evidence artifacts are produced from commit SHA.
 
-### Branch protection (source repo baseline)
+### Branch protection baseline
 
-The live private-repo baseline MUST match the `autonomous` profile in:
+The live repository baseline MUST match the `autonomous` profile in:
 - `docs/human/github-hardening.md`
 - `tools/github/apply_branch_protection.sh`
 - `tools/ci/check_branch_protection_drift.py`

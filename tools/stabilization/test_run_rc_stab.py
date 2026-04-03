@@ -106,7 +106,11 @@ class StabilizationRunnerTests(unittest.TestCase):
             return subprocess.CompletedProcess(cmd, 0, "", "")
 
         with (
-            mock.patch.object(run_rc_stab, "git_commit_rev_parse", return_value="bb8e812a"),
+            mock.patch.object(
+                run_rc_stab,
+                "git_commit_rev_parse",
+                return_value="3232e43b54c57205ebda242be16b964a85c125f8",
+            ),
             mock.patch.object(run_rc_stab, "run", side_effect=fake_run),
             mock.patch.object(
                 run_rc_stab,
@@ -117,8 +121,8 @@ class StabilizationRunnerTests(unittest.TestCase):
             report = run_rc_stab.run_repro_check("deep", out_dir, baseline_tag, baseline_sha)
 
         self.assertTrue(report["pass"])
-        self.assertEqual(report["baseline_commit"], "bb8e812a")
-        self.assertEqual(captured_commit_sha, ["bb8e812a"])
+        self.assertEqual(report["baseline_commit"], "3232e43b54c57205ebda242be16b964a85c125f8")
+        self.assertEqual(captured_commit_sha, ["3232e43b54c57205ebda242be16b964a85c125f8"])
 
         shutil.rmtree(out_dir, ignore_errors=True)
 

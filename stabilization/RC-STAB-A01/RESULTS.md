@@ -6,8 +6,8 @@ This file is the tracked decision log for the RC stabilization window.
 - Protocol anchor: `protocol-v0.1.1`
 - RC anchor: `repo-rc-v0.4.0-rc1`
 - Baseline evidence hash: `35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd`
-- Baseline release-evidence run: `22376265921` (success)
-- Baseline interop-certify run: `22376265920` (success)
+- Baseline release evidence source: published release artifacts for `repo-rc-v0.4.0-rc1`
+- Baseline interop evidence source: published interop artifacts for `repo-rc-v0.4.0-rc1`
 
 ## Latest stabilization execution
 Update this section from CI artifact `stabilization-evidence.json` after each deep run.
