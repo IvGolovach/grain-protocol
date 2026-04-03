@@ -90,7 +90,7 @@ runs:
       run: python3 tools/ci/check_sdk_no_network.py
 
     - name: Check branch protection drift (main)
-      if: inputs.run_branch_protection_drift == 'true'
+      if: inputs.run_branch_protection_drift == 'true' && inputs.gh_token != ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
