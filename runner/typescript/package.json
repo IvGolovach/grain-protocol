@@ -24,7 +24,7 @@
     "test:integer-precision": "npm run build --silent && node dist/scripts/test-integer-precision.js"
   },
   "devDependencies": {
-    "@types/node": "^22.15.30",
+    "@types/node": "^25.5.2",
     "typescript": "^5.9.2"
   }
 }
