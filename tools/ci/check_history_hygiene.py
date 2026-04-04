@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
+PROJECT_PRIVATE_SLUG = "grain" + "-protocol-" + "private"
 
 
 def literal(*parts: str, flags: int = 0) -> re.Pattern[str]:
@@ -27,10 +28,9 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(
             "|".join(
                 (
-                    re.escape("IvGolovach/" + "grain-protocol-" + "private"),
-                    re.escape("grain-protocol-" + "private"),
-                    re.escape("git@github.com:IvGolovach/" + "grain-protocol-" + "private"),
-                    re.escape("https://github.com/IvGolovach/" + "grain-protocol-" + "private"),
+                    rf"\b(?:[A-Za-z0-9_.-]+/)?{re.escape(PROJECT_PRIVATE_SLUG)}\b",
+                    rf"\bgit@github\.com:[A-Za-z0-9_.-]+/{re.escape(PROJECT_PRIVATE_SLUG)}\b",
+                    rf"\bhttps://github\.com/[A-Za-z0-9_.-]+/{re.escape(PROJECT_PRIVATE_SLUG)}\b",
                 )
             ),
             re.IGNORECASE,
@@ -78,6 +78,10 @@ COMMIT_MESSAGE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "predecessor-discussion",
         re.compile(r"\bprivate[- ]predecessor\b", re.IGNORECASE),
+    ),
+    (
+        "tmp-path-discussion",
+        re.compile(r"(?<![A-Za-z0-9_])/(?:private/)?tmp/[^\s\"']+"),
     ),
 )
 

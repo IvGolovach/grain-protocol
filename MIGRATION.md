@@ -1,11 +1,11 @@
-# Repository Provenance Note
+# Repository Provenance
 
 This file summarizes how release provenance is established for this repository.
 
 Important:
 - Commit SHAs, signed tags, and CI evidence artifacts are authoritative for repository releases.
 - Protocol semantics remain defined by `spec/NES-v0.1.md` and `spec/FREEZE-v0.1.md`.
-- Publication preparation normalized repository history and documentation to remove internal-only material without changing executable behavior.
+- Repository maintenance may update docs, tooling, and release process details without changing executable behavior.
 
 Provenance milestones:
 1. Baseline protocol freeze, specifications, and conformance import
