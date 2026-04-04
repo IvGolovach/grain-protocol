@@ -20,7 +20,7 @@ def literal(*parts: str, flags: int = 0) -> re.Pattern[str]:
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "personal-email",
-        literal("funtland@", "icloud.com", flags=re.IGNORECASE),
+        re.compile(r"\b[\w.+-]+@" + re.escape("icloud.com") + r"\b", re.IGNORECASE),
     ),
     (
         "private-slug",
@@ -29,8 +29,11 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
                 (
                     re.escape("IvGolovach/" + "grain-protocol-" + "private"),
                     re.escape("grain-protocol-" + "private"),
+                    re.escape("git@github.com:IvGolovach/" + "grain-protocol-" + "private"),
+                    re.escape("https://github.com/IvGolovach/" + "grain-protocol-" + "private"),
                 )
-            )
+            ),
+            re.IGNORECASE,
         ),
     ),
     (
@@ -64,7 +67,18 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
             re.IGNORECASE,
         ),
     ),
-    ("migration-marker", literal("PUBLIC-", "MIGRATION-", "A01")),
+)
+
+COMMIT_MESSAGE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("cyrillic-discussion", re.compile(r"\bcyrillic\b", re.IGNORECASE)),
+    (
+        "private-repository-discussion",
+        re.compile(r"\bprivate(?:\s+repository|\s+repo)\b", re.IGNORECASE),
+    ),
+    (
+        "predecessor-discussion",
+        re.compile(r"\bprivate[- ]predecessor\b", re.IGNORECASE),
+    ),
 )
 
 TEXT_EXT_ALLOWLIST = {
@@ -91,6 +105,15 @@ MAX_FINDINGS = 50
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--root", default=".")
+    parser.add_argument(
+        "--staged",
+        action="store_true",
+        help="Scan only staged paths and staged file contents from the git index.",
+    )
+    parser.add_argument(
+        "--commit-msg-file",
+        help="Scan a proposed commit message file instead of the full repository history.",
+    )
     return parser.parse_args()
 
 
@@ -146,6 +169,13 @@ def record_findings(text: str, scope: str, findings: list[str]) -> None:
             findings.append(f"{scope}: matched {label}")
 
 
+def record_commit_message_findings(text: str, scope: str, findings: list[str]) -> None:
+    record_findings(text, scope, findings)
+    for label, pattern in COMMIT_MESSAGE_PATTERNS:
+        if pattern.search(text):
+            findings.append(f"{scope}: matched {label}")
+
+
 def tracked_files(root: Path) -> list[Path]:
     out = git(root, "ls-files", "-z")
     return [root / rel for rel in out.split("\x00") if rel]
@@ -161,6 +191,24 @@ def scan_tracked_files(root: Path, findings: list[str]) -> None:
         if is_binary(path, data):
             continue
         record_findings(data.decode("utf-8", errors="ignore"), f"file:{rel}", findings)
+        if len(findings) >= MAX_FINDINGS:
+            return
+
+
+def staged_paths(root: Path) -> list[str]:
+    out = git(root, "diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR")
+    return [path for path in out.split("\x00") if path]
+
+
+def scan_staged_files(root: Path, findings: list[str]) -> None:
+    for rel in staged_paths(root):
+        record_findings(rel, f"staged-path:{rel}", findings)
+        if len(findings) >= MAX_FINDINGS:
+            return
+        data = git_bytes(root, "show", f":{rel}")
+        if is_binary(Path(rel), data):
+            continue
+        record_findings(data.decode("utf-8", errors="ignore"), f"staged-file:{rel}", findings)
         if len(findings) >= MAX_FINDINGS:
             return
 
@@ -266,10 +314,40 @@ def scan_tags(root: Path, findings: list[str]) -> None:
             return
 
 
+def print_findings(prefix: str, findings: list[str]) -> int:
+    if findings:
+        print(prefix, file=sys.stderr)
+        for finding in findings[:MAX_FINDINGS]:
+            print(f"- {finding}", file=sys.stderr)
+        if len(findings) > MAX_FINDINGS:
+            print(f"- ... and {len(findings) - MAX_FINDINGS} more", file=sys.stderr)
+        return 1
+    return 0
+
+
 def main() -> int:
     args = parse_args()
     root = Path(args.root).resolve()
     findings: list[str] = []
+
+    if args.staged:
+        scan_staged_files(root, findings)
+        if print_findings("Staged publication hygiene check failed:", findings):
+            return 1
+        print("Staged publication hygiene check: OK")
+        return 0
+
+    if args.commit_msg_file:
+        message = Path(args.commit_msg_file).read_text(encoding="utf-8", errors="ignore")
+        record_commit_message_findings(
+            message,
+            f"commit-msg:{Path(args.commit_msg_file).name}",
+            findings,
+        )
+        if print_findings("Commit message publication hygiene check failed:", findings):
+            return 1
+        print("Commit message publication hygiene check: OK")
+        return 0
 
     scan_tracked_files(root, findings)
     if len(findings) < MAX_FINDINGS:
@@ -279,12 +357,7 @@ def main() -> int:
     if len(findings) < MAX_FINDINGS:
         scan_tags(root, findings)
 
-    if findings:
-        print("Repository history hygiene check failed:", file=sys.stderr)
-        for finding in findings[:MAX_FINDINGS]:
-            print(f"- {finding}", file=sys.stderr)
-        if len(findings) > MAX_FINDINGS:
-            print(f"- ... and {len(findings) - MAX_FINDINGS} more", file=sys.stderr)
+    if print_findings("Repository history hygiene check failed:", findings):
         return 1
 
     print("Repository history hygiene check: OK")

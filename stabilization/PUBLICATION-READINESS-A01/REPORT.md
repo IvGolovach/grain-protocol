@@ -1,19 +1,19 @@
 # PUBLICATION-READINESS-A01 Report
 
-Date: 2026-02-26  
-Repository: publication candidate repository  
-Audit anchor: repository-local publication readiness scan
+Date: 2026-04-04
+Repository: `IvGolovach/grain-protocol`
+Audit anchor: final publication-readiness review
 
 ## Objective
 
-Run a full readiness audit for controlled publication through a clean repository surface
-without leaking local or internal-only details and without changing frozen-core semantics.
+Run a final readiness audit for the repository object intended for publication
+without changing frozen-core semantics or leaving publication-hygiene regressions.
 
 ## Audit Coverage
 
-1. Local repository content and tracked files.
-2. Full git history objects (`git rev-list --objects --all` + blob scan).
-3. Commit/ref naming hygiene.
+1. Tracked files and live-surface docs.
+2. Full git history objects and tag annotations.
+3. Commit/ref/message hygiene.
 4. Repository metadata and governance:
    - branch protection
    - PR/issue/release state
@@ -25,12 +25,11 @@ without leaking local or internal-only details and without changing frozen-core 
 - `git status --short --branch`
 - `git rev-parse HEAD && git rev-parse origin/main`
 - `git rev-list --count --all`
-- `git rev-list --objects --all` + blob scan for Cyrillic
+- `python3 tools/ci/check_history_hygiene.py`
 - `git ls-files -z | xargs -0 rg -n ...` for:
-  - Cyrillic
   - absolute local paths
-  - repository slug hard-coding
-  - secret-like patterns
+  - repository-internal identifiers
+  - placeholder publication commands
 - `gh repo view ...`
 - `gh api repos/<owner>/<repo>/branches/main/protection`
 - `gh pr list --state all ...`
@@ -40,58 +39,31 @@ without leaking local or internal-only details and without changing frozen-core 
 
 ## Findings
 
-### Resolved in this patch set
+### Current publication-hygiene state
 
-1. Absolute local path leakage in docs/contracts.
-- Replaced machine-local absolute paths with repo-relative paths in:
-  - `conformance/contract/runner_v1.md`
-  - `docs/human/porting-grain.md`
-  - `docs/llm/DOMAIN_ADAPTERS.md`
-  - `docs/llm/PORTING.md`
+1. Repository history, tracked files, and tag annotations pass publication-hygiene scanning.
+- `python3 tools/ci/check_history_hygiene.py` reports `OK`.
+- No personal email, machine-local paths, workstation fingerprints, or predecessor-repository slugs were detected at the audit anchor.
 
-2. Repository-local slug hard-coding in docs/checklists/scripts.
-- Removed hardcoded `<owner>/<repo>` and clone literals from:
-  - `docs/human/repro-checklist.md`
-  - `stabilization/RC-STAB-A01/REPRO_CHECKLIST.md`
-- Replaced script defaults with environment/remote detection fallback:
-  - `tools/ci/build_git_provenance.py`
-  - `tools/stabilization/run_rc_stab.py`
-- Updated test fixture slug:
-  - `tools/stabilization/test_run_rc_stab.py`
+2. Live-surface docs and reporting endpoints use publication-safe wording.
+- Security reporting points to GitHub Security Advisories.
+- Clone and image-publish examples use the publication repository and explicit registry guidance.
+- Contributor docs now describe local hygiene hooks for future commits.
 
-3. Publication-facing wording cleanup.
-- Neutralized repository-internal references in:
-  - `README.md`
-  - `docs/human/github-hardening.md`
-  - `docs/human/release-process.md`
+3. Local guardrails exist in both CI and clone-local workflows.
+- `tools/ci/check_history_hygiene.py` is enforced in repository verification.
+- `.githooks/pre-commit` scans staged content.
+- `.githooks/commit-msg` scans proposed commit messages.
+- `scripts/setup_local_hygiene.sh` installs the repo-managed hooks per clone.
 
-### Open migration blockers/risk items
+### Remaining release gate
 
-1. Branch protection profile mismatch for public launch (`P0`).
-- Current live protection on `main`:
-  - required approvals: `0`
-  - code owner reviews: `false`
-- Public-reviewed target should be:
-  - required approvals: `1`
-  - code owner reviews: `true`
-- Action at cutover: apply
-  - `PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner/repo>`
-
-2. Publication repository object must stay clean (`P0`).
-- Old PR/release metadata must not be carried into the publication repository object.
-- Recommended path for clean launch: a new publication repository populated from the sanitized history.
-
-3. Release metadata portability (`P1`).
-- Existing release notes may reference repository-local URLs and PR numbers.
-- Re-cut releases and evidence artifacts in the publication namespace.
-
-4. Final pre-public verification (`P1`).
-- Keep the publication repository private until a final end-to-end review confirms history, tags, docs, and CI guardrails are clean.
+1. Manual visibility change after final human review (`P0`).
+- Keep the repository private until the final reviewer explicitly approves the visibility toggle.
 
 ## Current State Summary
 
-- Sanitized publication candidate repository prepared for internal review.
-- Open PRs/issues/releases from prior internal repositories are intentionally excluded from the publication repository object.
+- Publication candidate repository prepared for final review.
 - Required checks active: `python-tooling`, `rust-core`, `ts-c01`, `ts-full`, `evidence-bundle`
 - Final visibility remains private pending manual review.
 

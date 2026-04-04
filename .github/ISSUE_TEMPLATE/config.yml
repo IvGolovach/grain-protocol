@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Security report (private)
+  - name: Security report
     url: https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/creating-a-repository-security-advisory
-    about: Use private security advisories, then follow SECURITY.md disclosure rules.
+    about: Use GitHub Security Advisories, then follow SECURITY.md disclosure rules.

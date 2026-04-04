@@ -46,6 +46,10 @@ Use these shortcuts when you already know the job:
   - `docs/llm/FILE_MAP.md`
   - `docs/llm/CHANGE_POLICY.md`
   - `docs/llm/DOC_SYNC.md`
+- Contributor workflow or repo hygiene change:
+  - `CONTRIBUTING.md`
+  - `.github/pull_request_template.md`
+  - `tools/ci/check_history_hygiene.py`
 
 ## Working stance
 

@@ -49,6 +49,13 @@ See `docs/human/dependencies-policy.md`.
 If you are working in a sandbox where `.git` is readable but not writable, use
 `scripts/git-sandbox-safe ...` to run git via a writable mirror in `/tmp`.
 
+### Local hygiene hooks
+
+Run `scripts/setup_local_hygiene.sh` once per clone.
+It configures local git hooks that block commits when staged files or commit
+messages contain publication-hygiene leaks, and block pushes when the full
+repository hygiene checks fail.
+
 ## Style
 
 - Use plain language.

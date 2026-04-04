@@ -2,8 +2,8 @@
 
 Cross-Platform Reproducibility & Portability Pack
 
-Code: `TOR-PORTABILITY-A01`  
-Status: Proposed (Private, RC-compatible)  
+Code: `TOR-PORTABILITY-A01`
+Status: Active, RC-compatible
 Class: Tooling / Packaging / Portability / Evidence (no frozen-core semantic changes)
 
 ## 0) Problem
