@@ -12,5 +12,6 @@ Hi. This is a short map of what must never be done if you want to preserve inter
 - PZ-CBORSEQ-0008: No partial-success outputs for malformed CBOR-seq framing. Vectors: NEG-LED-WA-0002, NEG-MAN-WA-0002
 - PZ-E2E-0009: No nonce/profile drift in deterministic E2E derivation. Vectors: NEG-E2E-010, NEG-E2E-WA-0004
 - PZ-CAPID-0010: No deterministic cap_id generation or non-CSPRNG fallback. Vectors: NEG-E2E-WA-0001, NEG-E2E-WA-0002
+- PZ-DOC-0011: No live-surface doc may present historical launch or migration-state wording as current operating policy. Keep cleanup-only language in archival notes only.
 
 If you are unsure, check vectors first and choose fail-closed behavior.

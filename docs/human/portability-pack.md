@@ -47,12 +47,15 @@ Optional fuzz smoke:
 Build/publish script:
 
 ```bash
-./scripts/containers/build_golden_images.sh
+./scripts/containers/build_golden_images.sh ghcr.io/<owner>
 ```
 
 Expected image families:
 - `ghcr.io/<owner>/grain-runner:stable`
 - `ghcr.io/<owner>/grain-certify:stable`
+
+If `GITHUB_REPOSITORY_OWNER` or `GOLDEN_IMAGE_REGISTRY` is already set, the
+script can derive the registry without an explicit argument.
 
 ## WASM read/verify path
 

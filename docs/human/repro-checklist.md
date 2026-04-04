@@ -5,7 +5,7 @@ Use this checklist to verify reproducibility from a fresh clone.
 ## 1) Clean clone
 
 ```bash
-git clone --no-single-branch --tags git@github.com:<owner>/<repo>.git grain-clean
+git clone --no-single-branch --tags git@github.com:IvGolovach/grain-protocol.git grain-clean
 cd grain-clean
 git fetch --all --tags --prune
 ```

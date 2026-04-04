@@ -1,18 +1,17 @@
 # PUBLICATION-READINESS-A01 Cutover Checklist
 
-Use this checklist when preparing the publication repository from the vetted source history.
+Use this checklist when confirming that the publication repository is ready for
+the final visibility change.
 
 ## A. Decide publication model
 
-1. Choose one:
-- Full sanitized history launch (preferred when the cleaned history is ready).
-- Curated milestone history launch (only if a narrower public surface is intentionally desired).
+1. Confirm the local review clone and `origin/main` are byte-identical.
 2. Keep the archival source repository read-only after cutover.
 3. Do not rewrite the publication repository history after external review begins.
 
 ## B. Create public repository shell
 
-1. Create empty repository `<owner>/<public-repo>` and keep it private until final review is complete.
+1. Keep `IvGolovach/grain-protocol` private until final review is complete.
 2. Configure baseline files in first commit:
 - `README.md`
 - `LICENSE`
@@ -24,14 +23,15 @@ Use this checklist when preparing the publication repository from the vetted sou
 
 ## C. Import code
 
-1. From the vetted source repository:
-- checkout release-ready commit/tag
-- mirror the sanitized history or import the release-ready tree (exclude `.git` when doing a snapshot import)
-2. Remove/replace repository-internal references:
-- owner/repo literals
+1. In the local review clone:
+- checkout the release-ready commit/tag
+- confirm `git rev-parse HEAD == git rev-parse origin/main`
+- confirm `git rev-parse HEAD^{tree} == git rev-parse origin/main^{tree}`
+2. Remove/replace live-surface references that are not suitable for external readers:
 - environment-specific absolute paths
 - internal run links in docs
-3. Validate remote configuration before the first shared push.
+- stale placeholder clone/publish commands
+3. Validate remote configuration before the visibility change.
 
 ## D. Governance and CI hardening
 
@@ -55,9 +55,9 @@ PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner>
 
 ## F. Final go/no-go gates
 
-1. No Cyrillic in tracked files.
-2. No absolute local paths in tracked files.
-3. No hardcoded repository-internal slug in tracked files.
-4. No tracked generated artifacts.
+1. Publication-hygiene checks pass.
+2. No absolute local paths remain in tracked files.
+3. No repository-internal instructions remain in live docs.
+4. No tracked generated artifacts remain.
 5. Publication branch protection drift check passes.
-6. README/docs have no repository-internal instructions.
+6. Required CI and verification lanes are green.

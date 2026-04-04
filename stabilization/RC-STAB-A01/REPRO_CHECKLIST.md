@@ -4,7 +4,7 @@ Goal: prove RC stabilization outputs are reproducible from clean clone.
 
 ## 1) Clean clone and checkout RC tag
 ```bash
-git clone --no-single-branch --tags git@github.com:<owner>/<repo>.git grain-rc-repro
+git clone --no-single-branch --tags git@github.com:IvGolovach/grain-protocol.git grain-rc-repro
 cd grain-rc-repro
 git checkout repo-rc-v0.4.0-rc1
 ```
