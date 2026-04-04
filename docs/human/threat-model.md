@@ -1,6 +1,6 @@
 # Threat Model (short)
 
-Grain assumes adversarial environments.
+Grain assumes hostile inputs and hostile networks.
 
 ## Attackers we assume
 - malicious issuers producing misleading signed content
@@ -24,4 +24,3 @@ Grain assumes adversarial environments.
 - truthfulness of content (a signature can be a lie)
 - availability (DoS is mitigated with strict limits but not eliminated)
 - compromised root key (recovery requires new ledger genesis in v0.1)
-

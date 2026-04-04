@@ -15,7 +15,7 @@ This is the operational contract for vectors and diagnostics.
 These are normative rules. Do not reinterpret them.
 
 4. `conformance/vectors/**`
-This is the court. If implementation disagrees with vectors, implementation is almost always wrong.
+This is the final behavior check. If implementation disagrees with vectors, the implementation is almost always wrong.
 
 ## Critical Pitfalls (Do Not Skip)
 

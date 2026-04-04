@@ -38,7 +38,7 @@ Every SDK error exposes:
 - `SDK_ERR_UNAUTHORIZED_AK` (`LEDGER`)
   - append attempted with revoked/non-authorized key
 - `SDK_ERR_CSPRNG_UNAVAILABLE` (`CRYPTO`)
-  - cap_id generation failed, operation aborted fail-closed
+  - cap_id generation failed, so the operation stopped
 - `GRAIN_ERR_NONCANONICAL` (`CANONICAL`, layer=`core`)
   - strict validation rejected non-canonical bytes
 

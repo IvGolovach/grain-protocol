@@ -25,31 +25,14 @@ If you are new, start with one of these:
 
 ---
 
-## Project Zones
+## Project Areas
 
-- Onboarding
-  - `docs/human/start-here.md`
-  - `docs/human/quickstart.md`
-  - `docs/human/overview.md`
-- Build
-  - `docs/human/building-on-grain.md`
-  - `docs/human/sdk/start-here.md`
-  - `docs/human/sdk/minimal-app-example.md`
-  - `core/ts/grain-sdk/README.md`
-- Implement
-  - `docs/human/implementing-grain.md`
-  - `conformance/SPEC.md`
-  - `conformance/contract/runner_v1.md`
-- Operate
-  - `docs/human/portability-pack.md`
-  - `docs/human/repro-checklist.md`
-  - `docs/human/release-process.md`
-- Governance
-  - `docs/human/github-hardening.md`
-  - `docs/human/dependencies-policy.md`
-  - `docs/llm/CHANGE_POLICY.md`
-- Vision
-  - `docs/human/future-vision.md` (read this after the current-state docs above)
+- Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`
+- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/minimal-app-example.md`, `core/ts/grain-sdk/README.md`
+- Implement: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
+- Operate: `docs/human/portability-pack.md`, `docs/human/repro-checklist.md`, `docs/human/release-process.md`
+- Maintain: `GOVERNANCE.md`, `docs/human/repository-settings.md`, `docs/human/dependencies-policy.md`, `docs/llm/CHANGE_POLICY.md`
+- Vision: `docs/human/future-vision.md`
 
 ---
 
@@ -72,13 +55,13 @@ If you are new, start with one of these:
 
 ## Status Snapshot
 
-- Protocol v0.1 frozen core: encoding, CID, COSE, ledger, E2E, and manifest rules are locked inside major version 1.
-- Conformance suite: shipped in this repo and used as the release gate.
-- Rust Core: implemented in `core/rust` and passing the strict suite.
-- TypeScript full engine: implemented in `runner/typescript` and checked against the full suite plus drift checks.
-- SDK: implemented as a strict primitives layer in `core/ts/grain-sdk`.
-- Provenance: CI evidence is commit-bound on `main` and release tags.
-- Portability pack: available through `./scripts/certify`.
+- v0.1 core rules are stable inside protocol major version 1.
+- The conformance suite in this repo is the release gate.
+- Rust Core in `core/rust` passes the strict suite.
+- The full TypeScript engine in `runner/typescript` is checked against the same suite plus drift checks.
+- The SDK in `core/ts/grain-sdk` gives app builders a safer layer on top of the same protocol rules.
+- CI evidence is tied to commit SHA on `main` and on release tags.
+- Release-grade verification is available through `./scripts/certify`.
 
 ## Verification paths
 
@@ -94,7 +77,7 @@ Release-grade certification with deterministic evidence:
 ./scripts/certify
 ```
 
-Compatibility operator alias:
+Compatibility alias:
 
 ```bash
 ./scripts/ops/run_verification_pack_v1.sh
@@ -111,13 +94,19 @@ Optional fuzz smoke:
 
 Conformance statement:
 - Passing the full suite in Strict Conformance Mode is the conformance criterion for Grain v0.1.
-- A strong interoperability claim becomes valid after two independent full implementations pass the full suite.
+- A strong interoperability claim only makes sense after two independent full implementations pass the full suite.
 
 ---
 
-## Source Of Truth
+## If Docs Disagree
 
-If two layers disagree, trust them in this order:
+In practice, check these first:
+
+- `spec/NES-v0.1.md` for the protocol rules
+- `spec/schemas/grain-v0.1.cddl` for machine-readable structure
+- `conformance/vectors/` for the release gate and expected behavior
+
+If you need the full precedence order, use this:
 
 1. `spec/NES-v0.1.md` (normative MUST/SHOULD/MAY)
 2. `spec/schemas/grain-v0.1.cddl` (machine-readable schemas)
@@ -130,7 +119,7 @@ If two layers disagree, trust them in this order:
 
 ---
 
-## Deep References
+## Deeper References
 
 - `conformance/README.md`
 - `conformance/SPEC.md`
@@ -149,7 +138,7 @@ If two layers disagree, trust them in this order:
 - `docs/llm/CHANGE_POLICY.md`
 - `adr/0000-template.md`
 
-Any PR touching frozen core invariants requires an ADR and will be treated as breaking.
+If a PR changes core protocol rules, add an ADR. Those changes are usually breaking.
 
 ---
 

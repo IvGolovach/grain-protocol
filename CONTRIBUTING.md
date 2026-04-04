@@ -1,13 +1,13 @@
 # Contributing
 
-Grain is protocol-first, but we try to keep the process easy to follow.
-Contributions are welcome. Please keep changes small, explicit, and documented.
+Grain is protocol-first, but contributing should still feel straightforward.
+Small, focused PRs are the easiest to review and merge.
 
 ## Ground rules
 
-- Protocol v0.1 is frozen core. Do not submit breaking changes unless you are explicitly proposing a new protocol major version.
+- The v0.1 core protocol rules are stable. Do not submit breaking changes unless you are proposing a new protocol major version.
 - Every change must have a clear reason.
-- The conformance suite is a release gate. If conformance fails, the PR does not merge.
+- The conformance suite is the release gate. If conformance fails, the PR does not merge.
 - If behavior changes, the matching docs must change in the same PR.
 - If code and docs disagree, fix the mismatch before merge.
 
@@ -25,8 +25,7 @@ Contributions are welcome. Please keep changes small, explicit, and documented.
 Use the PR template. Please answer:
 - What changed?
 - Why?
-- Which invariants are touched?
-- Which conformance vectors are affected?
+- Which invariants or vectors are touched?
 - Is this breaking?
 - Which docs were updated?
 
@@ -37,13 +36,13 @@ If the change affects users, builders, or maintainers, update the matching human
 
 ### ADR requirement
 
-If the PR touches encoding, CID, COSE, ledger, E2E, manifest, limits, conformance, or schemas, an ADR is mandatory.
+If the PR changes encoding, CID, COSE, ledger, E2E, manifest, limits, conformance, or schemas, add an ADR.
 See `adr/0000-template.md`.
 
-### Dependabot strict lane
+### Maintainer-only automation note
 
-Workflow dependency PR automation requires repository secret `DEPENDABOT_AUTOMERGE_TOKEN`.
-Missing or insufficient token permissions are fail-closed by policy (`DEPS_ERR_TOKEN_MISSING`, `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`).
+Dependency automation uses repository secret `DEPENDABOT_AUTOMERGE_TOKEN`.
+If that token is missing or under-scoped, the automation stops and tells you why (`DEPS_ERR_TOKEN_MISSING`, `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`).
 See `docs/human/dependencies-policy.md`.
 
 If you are working in a sandbox where `.git` is readable but not writable, use
@@ -52,9 +51,7 @@ If you are working in a sandbox where `.git` is readable but not writable, use
 ### Local hygiene hooks
 
 Run `scripts/setup_local_hygiene.sh` once per clone.
-It configures local git hooks that block commits when staged files or commit
-messages contain publication-hygiene leaks, and block pushes when the full
-repository hygiene checks fail.
+It installs local git hooks that catch accidental leaks in staged files or commit messages before they land in history.
 
 ## Style
 

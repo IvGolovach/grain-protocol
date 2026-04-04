@@ -1,6 +1,6 @@
 # Portability Pack (TOR-PORTABILITY-A01)
 
-This document defines the cross-platform reproducibility baseline.
+This document defines the repeatable cross-platform verification baseline.
 
 ## Verification paths
 
@@ -24,7 +24,7 @@ Run from a clean clone:
 ./scripts/certify
 ```
 
-Compatibility alias for legacy/operator paths:
+Compatibility alias for older scripts or operator paths:
 
 ```bash
 ./scripts/ops/run_verification_pack_v1.sh

@@ -16,9 +16,7 @@ the final visibility change.
 - `README.md`
 - `LICENSE`
 - `NOTICE`
-- `SECURITY.md`
 - `CONTRIBUTING.md`
-- `CODE_OF_CONDUCT.md`
 3. Confirm repository settings, labels, and branch defaults match the intended publication baseline.
 
 ## C. Import code
@@ -33,17 +31,17 @@ the final visibility change.
 - stale placeholder clone/publish commands
 3. Validate remote configuration before the visibility change.
 
-## D. Governance and CI hardening
+## D. Governance and CI setup
 
-1. Apply public branch protection profile:
+1. Apply the intended public branch-protection profile:
 ```bash
 PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner>/<public-repo>
 ```
 2. Confirm:
 - required checks strict and present
 - linear history on
-- approvals = 1
-- codeowner reviews enabled
+- PRs required for `main`
+- approvals/review requirements match the launch model
 3. Set required secrets for workflows.
 
 ## E. Evidence and releases

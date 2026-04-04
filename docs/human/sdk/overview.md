@@ -2,7 +2,7 @@
 
 `TOR-SDK-A01` is an internal tracking label for this SDK work. You can ignore it unless you are reading ADRs or project plans.
 
-The SDK is a universal primitives surface for building systems on top of Grain without changing protocol semantics.
+The SDK gives you a safer way to build on top of Grain without changing protocol semantics.
 
 If you want one first success, start with `docs/human/sdk/start-here.md`.
 This page is the capability map after that first run.
@@ -11,8 +11,8 @@ This page is the capability map after that first run.
 
 - strict by default
 - no new protocol semantics
-- fail-closed behavior on risky boundaries
-- core diagnostics preserved (SDK does not translate away protocol error codes)
+- careful behavior on risky boundaries
+- core diagnostics preserved (the SDK does not hide protocol error codes)
 
 ## Practical defaults
 
@@ -28,7 +28,7 @@ This page is the capability map after that first run.
 - `manifest`: deterministic put/del/resolve wrappers
 - `transport`: GR1 encode/decode/verify wrappers
 - `codec`: strict validation + diagnostics explanation
-- `evidence`: deterministic proof bundle builder
+- `evidence`: deterministic evidence bundle builder
 - `ai`: deterministic ingestion firewall (`accept` -> `applyAccepted`)
   - structured_v1 uses explicit field profiles/maps (no implicit numeric guessing)
 

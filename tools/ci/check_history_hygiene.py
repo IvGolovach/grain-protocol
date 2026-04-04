@@ -187,6 +187,11 @@ def scan_tracked_files(root: Path, findings: list[str]) -> None:
         record_findings(rel, f"path:{rel}", findings)
         if len(findings) >= MAX_FINDINGS:
             return
+        if not path.exists():
+            # A local deletion should not crash hygiene checks. The file is still
+            # covered by history scanning, and once staged it is covered by the
+            # staged-path scan instead of the working tree.
+            continue
         data = path.read_bytes()
         if is_binary(path, data):
             continue

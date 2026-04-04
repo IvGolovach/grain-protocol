@@ -46,7 +46,7 @@ without changing frozen-core semantics or leaving publication-hygiene regression
 - No personal email, machine-local paths, workstation fingerprints, or predecessor-repository slugs were detected at the audit anchor.
 
 2. Live-surface docs and reporting endpoints use publication-safe wording.
-- Security reporting points to GitHub Security Advisories.
+- Community-facing docs now stay focused on onboarding, contribution flow, and verification.
 - Clone and image-publish examples use the publication repository and explicit registry guidance.
 - Contributor docs now describe local hygiene hooks for future commits.
 
@@ -64,7 +64,7 @@ without changing frozen-core semantics or leaving publication-hygiene regression
 ## Current State Summary
 
 - Publication candidate repository prepared for final review.
-- Required checks active: `python-tooling`, `rust-core`, `ts-c01`, `ts-full`, `evidence-bundle`
+- Required checks active: `python-tooling`, `rust-core`, `evidence-bundle`, `capid-csprng-audit`
 - Final visibility remains private pending manual review.
 
 ## No-Change Guarantees

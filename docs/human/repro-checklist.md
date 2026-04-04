@@ -10,7 +10,7 @@ cd grain-clean
 git fetch --all --tags --prune
 ```
 
-Prerequisite:
+Prerequisites:
 - Docker or Podman installed locally.
 - No host Rust/Node/Python toolchain is required for `./scripts/certify`.
 - `./scripts/verify` uses host Rust/Node/Python toolchains.
@@ -48,7 +48,7 @@ npm --prefix core/ts/grain-sdk run test:ai-boundary
 ```
 
 Expected:
-- all commands print `OK` and exit `0`.
+- every command prints `OK` and exits `0`.
 
 ## 4) Fast developer verification
 

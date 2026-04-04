@@ -27,7 +27,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 ## What the SDK is allowed to do
 
 - strict by default
-- fail-closed for unsafe paths
+- stop on unsafe paths instead of guessing
 - preserve core diagnostics (SDK-only codes stay in `SDK_ERR_*`)
 - surface conflict/quarantine/unauthorized status explicitly
 
@@ -46,7 +46,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 - `src/manifest.ts`: deterministic resolution bridge
 - `src/transport.ts`: GR1 helpers + deterministic bundle import/export
 - `src/codec.ts`: strict validation and diagnostics explanation
-- `src/evidence.ts`: deterministic SDK proof bundle
+- `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder
 - `src/ai/*`: model-agnostic candidate ingestion, deterministic accept/apply, opaque token registry
 

@@ -1,6 +1,6 @@
 # INVARIANTS (MUST rules index)
 
-Hi teammate LLM. This is your non-negotiable checklist.
+Hi teammate LLM. This is your must-keep checklist.
 Use it when you need to answer: "What MUST stay identical across independent implementations?"
 
 Each invariant block gives you:

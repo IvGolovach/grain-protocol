@@ -10,11 +10,9 @@ This page is for protocol implementers (new Core/SDK/runner).
 4. `spec/NES-v0.1.md` + `spec/profiles/*` (normative rules; `NES` = Normative Encoding & Semantics)
 5. `spec/FREEZE-CONFIRMATION-v0.1.md` + `spec/SCOPE-v0.1.md` + `spec/INTEROP-v0.1.md`
 
-Conformance is the executable court. Implementation must follow vectors, not vice versa.
+Treat the conformance vectors as the final behavior check. Implementations should match the vectors, not the other way around.
 
-## TS full engine constraints
-
-Internal project tracking label for this lane: `TOR-04`.
+## TypeScript full engine rules
 
 - Independence: no Rust FFI/WASM inside TS execution logic.
 - Strict mode only for conformance runs.

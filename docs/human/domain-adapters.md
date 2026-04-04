@@ -7,7 +7,7 @@ That means an adapter should be explicit about which job it is doing:
 - mapping outside data into today's reducer-visible `IntakeEvent` path
 - carrying an app-defined domain event that current v0.1 reducers will treat as opaque
 
-The adapter adds domain structure, but it must not rewrite protocol semantics.
+The adapter adds domain structure, but it should not rewrite protocol semantics.
 
 ## Two adapter patterns
 
@@ -28,7 +28,7 @@ See also:
 ## Adapter contract
 
 - Your adapter owns domain meaning, field mapping, and serialization choices for the source data.
-- Grain owns strict validation, signatures, ledger semantics, manifest rules, and transport rules.
+- Grain owns validation, signatures, ledger semantics, manifest rules, and transport rules.
 - No adapter may bypass strict validation.
 - No adapter may add hidden ordering, timezone, locale, or normalization semantics.
 - The adapter docs should say what identity model `payload_cid` uses.

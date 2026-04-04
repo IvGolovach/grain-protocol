@@ -1,13 +1,13 @@
 # Governance
 
-Grain is an open infrastructure project. The protocol is designed to outlive any single author or team.
+Grain is an open infrastructure project. The protocol is meant to outlive any single author or team.
 
 ## Project artifacts
 
-- **Protocol (spec/):** the constitution (normative MUST/SHOULD/MAY rules)
-- **Conformance suite (conformance/):** the court (executable truth; release gate)
-- **Core (core/):** reference implementation of the protocol
-- **SDK (sdk/):** adoption layer; must still pass conformance
+- **Protocol (`spec/`)**: the rules.
+- **Conformance suite (`conformance/`)**: the release gate.
+- **Core (`core/`)**: the reference implementation.
+- **SDK (`core/ts/grain-sdk/`)**: the app-facing layer built on the same protocol rules.
 
 ## Decision process
 
@@ -16,7 +16,7 @@ We use:
 - Pull Requests for concrete changes
 - ADRs (Architecture Decision Records) for any change that affects protocol invariants or conformance behavior
 
-### When ADR is required (MUST)
+### When an ADR is required
 
 Any PR that touches:
 - encoding / canonicalization rules
@@ -31,40 +31,39 @@ MUST include an ADR link.
 ## Roles
 
 - **Maintainers:** triage issues, review PRs, keep releases moving.
-- **Protocol Stewards (optional):** a small group with final say on protocol changes. In v0.1 frozen core, the default posture is “no breaking changes”.
+- **Protocol Stewards (optional):** a small group with final say on protocol changes. In v0.1, the default posture is still "no breaking changes."
 
 Roles can be defined/updated via PR to this file.
 
 ## Releases
 
-- Protocol v0.1 is **frozen core**. Changes that alter frozen invariants require a protocol major bump.
+- Protocol v0.1 keeps its core rules stable. Changes that alter those rules require a protocol major bump.
 - Releases must pass CI gates, including conformance suite checks.
-- Provenance is commit-based and CI-anchored. Evidence artifacts are produced from commit SHA.
+- Evidence is tied to commit SHA and produced in CI.
 
-### Branch protection baseline
+### Repository settings baseline
 
-The live repository baseline MUST match the `autonomous` profile in:
-- `docs/human/github-hardening.md`
+The live repository settings should match the current `main protection` ruleset and the related runbook/script:
+- `docs/human/repository-settings.md`
 - `tools/github/apply_branch_protection.sh`
 - `tools/ci/check_branch_protection_drift.py`
 
 Current baseline on `main`:
-- `main` is protected.
+- Changes to `main` go through PRs.
 - Direct pushes to `main` are disabled.
 - Required checks:
   - `python-tooling`
   - `rust-core`
-  - `ts-c01`
-  - `ts-full`
   - `evidence-bundle`
+  - `capid-csprng-audit`
 - Required approving reviews: `0`
 - Dismiss stale reviews: `true`
 - Code owner reviews: `false`
-- Enforce admins: `true`
-- Linear history: `true`
 - Force pushes: disabled
 - Deletions: disabled
 - Conversation resolution: required
+- Auto-merge: enabled
+- Delete branch on merge: enabled
 
 If the repository intentionally changes branch-protection mode, update the
 runbook, apply script, and drift checker in the same change as this file.
@@ -74,7 +73,3 @@ runbook, apply script, and drift checker in the same change as this file.
 - Protocol tags: `protocol-*`
 - Repository milestone tags: `repo-*`
 - Release tags must be signed.
-
-## Code of Conduct
-
-See `CODE_OF_CONDUCT.md`.

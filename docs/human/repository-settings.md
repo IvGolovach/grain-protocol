@@ -1,29 +1,30 @@
-# GitHub Hardening Runbook
+# GitHub Repo Settings
 
-This runbook defines the minimum governance baseline for the canonical repository.
+This runbook records the GitHub settings we expect for the canonical repository.
 
-## 1) Required checks on `main`
+You only need this file if you maintain the repo settings on GitHub.
+If you are here just to contribute code or docs, you can skip it.
 
-Branch protection must require:
+## 1) Current launch settings
+
+`main` should require:
 - `python-tooling`
 - `rust-core`
-- `ts-c01`
-- `ts-full`
 - `evidence-bundle`
+- `capid-csprng-audit`
 
-CI push-to-main drift assertion validates that branch protection required checks stay aligned with policy.
-`GOVERNANCE.md` must describe the same live baseline.
-
-Autonomous baseline profile:
+The active maintainer-friendly launch profile is:
 - pull requests required
 - required approving reviews: `0`
 - dismiss stale reviews: `true`
 - code owner review requirement: `false`
-- enforce admins: `true`
-- linear history: `true`
 - force pushes: disabled
 - deletions: disabled
 - conversation resolution: required
+- auto-merge: enabled
+- delete branch on merge: enabled
+
+`GOVERNANCE.md` should describe the same live baseline.
 
 ## 2) Apply branch protection
 
@@ -31,7 +32,7 @@ Autonomous baseline profile:
 PROTECTION_PROFILE=autonomous bash tools/github/apply_branch_protection.sh <owner/repo>
 ```
 
-When explicitly switching to public reviewed mode:
+If the maintainer team grows and you want a review-required mode later:
 
 ```bash
 PROTECTION_PROFILE=reviewed bash tools/github/apply_branch_protection.sh <owner/repo>
@@ -93,7 +94,7 @@ All release tags must be signed.
 - `core.filemode` policy on Linux CI runners is expected to be stable (`true`).
 - Repository must not rely on clean/smudge filters for correctness; policy is LF via `.gitattributes`, not custom filters.
 
-## 8) Dependabot automation lane
+## 8) Advanced automation details
 
 - Workflow: `/.github/workflows/dependabot-automerge.yml`
 - Policy: `docs/human/dependencies-policy.md`
@@ -105,7 +106,7 @@ All release tags must be signed.
   - auto-approve + auto-merge after required checks
   - branch update/rebase requested automatically when behind
   - semver-major workflow bumps allowed by default (toggle can force manual)
-- Strict failure mode:
+- Explicit failure mode:
   - missing secret -> `DEPS_ERR_TOKEN_MISSING`
   - insufficient permissions -> `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`
 - Manual lane:
@@ -118,7 +119,7 @@ All release tags must be signed.
   - GitHub Actions
   - Rust (`core/rust`)
   - TS runner (`runner/typescript`)
-- Zero-friction safe lane for Dependabot workflow PRs:
+- Low-friction safe lane for Dependabot workflow PRs:
   - `/.github/workflows/dependabot-automerge.yml`
   - policy: `/docs/human/dependencies-policy.md`
   - required token secret: `DEPENDABOT_AUTOMERGE_TOKEN` (repo + workflow scopes)

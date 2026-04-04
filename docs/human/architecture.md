@@ -1,11 +1,11 @@
 # Architecture
 
-Grain is a layered protocol plus an executable interop court.
+Grain is a layered protocol with an executable release gate.
 
 ```mermaid
 flowchart TB
     P["Protocol (NES + CDDL + profiles)\nFrozen core rules"]
-    C["Conformance Court\nVectors + SPEC + strict mode"]
+    C["Conformance checks\nVectors + SPEC + strict mode"]
     R["Rust Core\nReference strict interpreter"]
     T["TypeScript Full Engine\nIndependent strict interpreter"]
     A["Applications / SDK"]
@@ -28,7 +28,7 @@ Diagram source: `docs/human/diagrams/architecture.mmd`.
 ## How to read this diagram
 
 - Protocol: the rules themselves.
-- Conformance court: vectors plus strict runner contract. If prose and implementations disagree, this layer decides release eligibility.
+- Conformance checks: vectors plus the strict runner contract. If docs and implementations disagree, this layer decides release behavior.
 - Rust Core: the reference executor.
 - TypeScript full engine: an independent implementation used to catch drift.
 - Applications / SDK: safer builders and orchestration on top of the same protocol rules.
@@ -54,4 +54,4 @@ Diagram source: `docs/human/diagrams/architecture.mmd`.
 
 - Rust Core is the reference executor.
 - TS full engine passes full strict suite; C01 remains a focused byte-path smoke profile.
-- Conformance vectors remain the arbiter of behavior.
+- Conformance vectors remain the final release check for behavior.

@@ -11,7 +11,7 @@ This checklist documents what public SDK APIs reject by construction.
    - same `cap_id`, different ciphertext/chash
    - code: `SDK_ERR_CAP_OVERWRITE_OR_CORRUPTION`
 3. Missing CSPRNG for cap generation
-   - fail-closed
+   - operation stops instead of guessing
    - code: `SDK_ERR_CSPRNG_UNAVAILABLE`
 4. Non-canonical bytes
    - rejected by `codec.strictValidate()`

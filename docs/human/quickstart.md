@@ -86,7 +86,7 @@ Those are demo identifiers inside the sample ledger, not separately derived prot
 
 ## 3) What the terms mean
 
-- `strict: true`: the demo ran in fail-closed mode with no permissive fallback behavior.
+- `strict: true`: the demo did not use permissive fallback behavior.
 - `GR1:`: fixed QR transport prefix for Grain v0.1.
 - `COSE narrow profile`: the small fixed signature profile Grain uses for deterministic verification.
 - `C01`: a small TypeScript smoke profile for byte-path checks; it is not a second protocol mode.

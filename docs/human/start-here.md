@@ -19,7 +19,7 @@ What Grain does not give you:
 - A global registry.
 - A hosted product platform.
 
-If you want the longer product direction, read [Future Vision](./future-vision.md).
+If you want the longer product direction, read [Future Vision](./future-vision.md) after this page.
 
 ## Choose your path
 
@@ -33,20 +33,22 @@ If you only read one more page, read [Quickstart](./quickstart.md).
 - [Run release-grade portability verification](./portability-pack.md)
 - [Read the future vision](./future-vision.md)
 
-## Verification paths
+## Checks you can run
 
-- `./scripts/verify` is the fast local check on host toolchains.
-- `./scripts/certify` is the clean-tree, containerized evidence path.
-- `./scripts/ops/run_verification_pack_v1.sh` is the operator alias for certification.
+- `./scripts/verify` is the fast local check on your host toolchains.
+- `./scripts/certify` is the clean-tree, containerized evidence run.
+- `./scripts/ops/run_verification_pack_v1.sh` is a compatibility alias for certification.
 
 ## Current status snapshot
 
-- Protocol: frozen v0.1 core (`schema_major=1`).
+- Protocol: stable v0.1 core (`schema_major=1`).
 - Conformance: vectors are the execution gate.
-- Reference implementation: Rust Core passes strict suite.
-- TypeScript: full strict engine is available; `C01` is the small smoke profile kept for byte-path regressions.
-- SDK: TypeScript universal primitives layer is available at `core/ts/grain-sdk`.
+- Reference implementation: Rust Core passes the strict suite.
+- TypeScript: the full strict engine is available; `C01` is the smaller smoke profile for byte-path regressions.
+- SDK: the TypeScript primitives layer lives in `core/ts/grain-sdk`.
 
 Repo shorthand you may see later:
 - `NES` = the normative spec file `spec/NES-v0.1.md`
 - `C01` = the small TypeScript smoke profile, not the main conformance criterion
+
+You can ignore both on your first pass unless you are working on the protocol itself.

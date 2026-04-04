@@ -25,7 +25,7 @@ If you later store the payload as its own canonical Grain object, then using tha
 
 - Grain does not tell you whether the content is true.
 - Private data is not visible to the server in plaintext.
-- Grain does not guess outside strict conformance rules.
+- Grain does not guess outside the protocol rules.
 
 ## A simple app path
 

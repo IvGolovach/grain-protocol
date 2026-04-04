@@ -1,6 +1,6 @@
 # Future Vision
 
-This document is aspirational and non-normative.
+This document is about future direction, not current rules.
 
 Do not start here if you are new to the repo.
 Read `docs/human/start-here.md` or `docs/human/quickstart.md` first.
@@ -13,7 +13,7 @@ The protocol source of truth remains:
 
 This document answers a different question:
 
-What kind of future becomes possible if the Grain substrate stays stable and more product layers are built on top of it?
+What becomes possible if Grain's core stays stable and more product layers are built on top of it?
 
 It is about direction, not about today's guarantees.
 
@@ -32,21 +32,21 @@ But the shape of the system is bigger than one food app.
 
 ## What Already Exists In This Repository
 
-This future is not built on hand-waving. The repo already contains the hard substrate:
+This is not just an idea. The repo already contains the technical foundation:
 
-- a frozen core protocol for canonical bytes, CID derivation, COSE signatures, append-only ledger semantics, E2E private sync, and deterministic manifest resolution;
-- a shipped conformance suite that acts as executable truth, not just prose;
+- a stable core protocol for canonical bytes, CID derivation, COSE signatures, append-only ledger semantics, E2E private sync, and deterministic manifest resolution;
+- a shipped conformance suite that works as the release gate, not just prose;
 - two independent strict implementations, in Rust and TypeScript, with divergence checks;
 - offline transport through `GR1:` QR payloads;
 - commit-bound evidence and portability verification flows;
-- an SDK with identity, events, manifest, E2E transport, proof bundles, and a fail-closed AI boundary.
+- an SDK with identity, events, manifest, E2E transport, evidence bundles, and an AI layer that only writes through an explicit accept step.
 
 That means the repo already proves something unusual:
 
 ```mermaid
 flowchart LR
     P["Protocol core\ncanonical bytes, CID, signatures, ledger, E2E"]
-    C["Conformance court\nvectors, strict mode, frozen runner contract"]
+    C["Conformance checks\nvectors, strict mode, frozen runner contract"]
     V["Verification and evidence\ncommit-bound artifacts, portability pack"]
     S["SDK boundary\nidentity, events, transport, AI firewall"]
     A["Applications and products\nwallets, kitchens, clinics, copilots"]
@@ -56,7 +56,7 @@ flowchart LR
     P --> S
 ```
 
-The trust substrate exists now.
+The technical foundation already exists.
 Most of the missing pieces are domain layers, execution adapters, and product surfaces.
 
 ## What Makes Grain Different
@@ -76,7 +76,7 @@ That is only possible if the system has all of the following at once:
 - deterministic semantics;
 - portable signatures;
 - private sync;
-- an executable interop court;
+- a shared conformance suite;
 - a way to keep AI from writing garbage directly into the record layer.
 
 Most systems have one or two of these. Grain is unusual because it is trying to hold all of them together.
@@ -113,7 +113,7 @@ What this could look like:
 - only accepted objects enter the durable record layer;
 - later, the same record can be used by another app, another device, or another country.
 
-That is a strong fit for the current SDK direction because the AI boundary is already designed to be fail-closed.
+That fits the current SDK direction because the AI boundary already requires an explicit accept step before data becomes durable.
 
 ### 3. Kitchens That Remember Intent, Not Just Recipes
 
@@ -224,7 +224,7 @@ The shipped schema and reducer semantics are still food-first today.
 That should be stated plainly.
 
 But the core architecture is broader than food, and the repo already says so.
-If the substrate remains stable, the same pattern can later support:
+If the core stays stable, the same pattern can later support:
 - sensor-linked personal records;
 - robotics operation events;
 - supply-chain traceability;
@@ -248,14 +248,14 @@ This future still requires major work above the protocol:
 The repo should not pretend these things already exist.
 
 The honest claim is stronger than that:
-the difficult substrate work is underway now, so those systems can later be built on something durable.
+the difficult foundation work is underway now, so those systems can later be built on something durable.
 
 ## Why This Matters
 
 The deepest problem is not "how do we make a good app for food."
 
 The deeper problem is:
-how do we make records from the physical world survive change without losing meaning, provenance, or user ownership?
+how do we make records from the physical world survive change without losing meaning, history, or user ownership?
 
 If Grain succeeds, the future is not one company controlling the graph.
 

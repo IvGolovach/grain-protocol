@@ -2,6 +2,11 @@
 
 This process applies to repository milestones and protocol tags.
 
+Normal flow:
+- make sure `main` is green
+- run the local verification steps
+- cut a signed tag and confirm the release artifacts
+
 RC policy reference:
 - `spec/RC-POLICY.md`
 - `spec/INTEROP-CLAIM.md`
@@ -11,9 +16,7 @@ RC policy reference:
 
 1. Local tree is clean.
 2. CI on `main` is green.
-3. Branch protection is enabled with the intended profile:
-   - autonomous maintenance baseline: `PROTECTION_PROFILE=autonomous`
-   - reviewed publication baseline: `PROTECTION_PROFILE=reviewed`
+3. The `main protection` ruleset is enabled with the intended launch settings.
 4. Tag signing key is configured.
 
 ## Release steps
@@ -74,6 +77,6 @@ Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
 ## Notes
 
 - Protocol and repo tags are intentionally independent.
-- Repository provenance note (`MIGRATION.md`) must stay accurate when release governance changes.
-- RC tags are readiness checkpoints, not GA/public release declarations.
+- Repository provenance note (`MIGRATION.md`) must stay accurate when release workflow changes.
+- RC tags are readiness checkpoints, not public launch declarations.
 - RC rollback uses signed revocation records; history and tags are not rewritten.

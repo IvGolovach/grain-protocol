@@ -1,5 +1,5 @@
 name: Conformance Vector Request
-description: Propose a new vector or vector correction for court coverage.
+description: Propose a new vector or fix an existing one.
 title: "[conformance] "
 labels:
   - conformance
@@ -9,7 +9,7 @@ body:
     id: gap
     attributes:
       label: Coverage Gap
-      description: Which behavior is currently unproven by vectors?
+      description: Which behavior is not covered well enough today?
     validations:
       required: true
 
@@ -26,7 +26,7 @@ body:
     id: expected
     attributes:
       label: Expected Deterministic Outcome
-      description: PASS/REJECT and exact error code / output fields.
+      description: PASS/REJECT and the exact error code or output fields you expect.
     validations:
       required: true
 
@@ -44,7 +44,7 @@ body:
     attributes:
       label: Checks
       options:
-        - label: I confirmed this does not change frozen-core semantics.
+        - label: I confirmed this does not change the stable v0.1 core behavior.
           required: true
-        - label: I provided deterministic expected outputs/diagnostics.
+        - label: I provided deterministic expected outputs or diagnostics.
           required: true

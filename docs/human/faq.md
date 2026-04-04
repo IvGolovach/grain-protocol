@@ -17,7 +17,7 @@ No. Root rotation is intentionally not supported in v0.1. Recovery is new ledger
 Minimal interop matrix. Additional algorithms can be added additively later.
 
 **Q: Why does conformance include `e2e_derive_v1` and raw CBOR-seq parse ops?**  
-Because interop failures often happen on byte paths before business semantics (KDF labels/separators, stream framing, parser edge cases). The byte-path hardening wave ("Wave A") makes these failures explicit and deterministic.
+Because many compatibility bugs happen in byte handling before business logic ever runs: KDF labels, stream framing, and parser edge cases are common examples. Grain tests those paths directly so the failures are explicit and repeatable.
 
 **Q: Is Grain only for food forever?**  
 No. v0.1 ships a food-first schema profile, but core invariants are domain-neutral. See `spec/SCOPE-v0.1.md`.

@@ -1,6 +1,6 @@
 # Dependencies Policy (TOR-DEPS-STRICT-FINAL)
 
-This document defines zero-friction automation boundaries for Dependabot PRs.
+This document defines the safe automation boundaries for Dependabot PRs.
 
 ADR references:
 - `adr/conformance/0003-dependabot-autonomous-safe-lane.md`
@@ -24,7 +24,7 @@ Dependabot safe-lane updates must auto-resolve stale/review/merge friction while
   - `.github/dependabot.yml`
   - `.github/ISSUE_TEMPLATE/**`
   - `.github/actions/**`
-- required checks remain enforced by branch protection.
+- required checks still run before merge.
 - branch update is requested automatically when behind.
 
 2. Manual review lane:
@@ -38,7 +38,7 @@ Dependabot safe-lane updates must auto-resolve stale/review/merge friction while
 - Trigger: trusted `workflow_run` for successful `ci` pull_request runs.
 - Token strategy:
   - canonical and required: repository secret `DEPENDABOT_AUTOMERGE_TOKEN`.
-  - no fallback: the lane fails closed when this secret is absent or insufficient.
+  - no fallback: the lane stops when this secret is absent or insufficient.
 - Recommended token permissions:
   - Fine-grained PAT (repo-scoped):
     - `Contents: Read & Write`
@@ -61,13 +61,13 @@ Provisioning path:
   - enables auto-merge (`--auto --rebase`),
   - posts deterministic audit-trail comments.
 
-## Strict fail-closed diagnostics
+## Explicit diagnostics
 
 The workflow emits deterministic hard-fail diagnostics:
 - `DEPS_ERR_TOKEN_MISSING` when `DEPENDABOT_AUTOMERGE_TOKEN` is absent.
 - `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS` when token permission probe fails.
 
-No warning-only path and no fallback are allowed.
+There is no warning-only path and no fallback token.
 
 Default major-bump behavior:
 - semver-major workflow bumps are allowed by default if checks pass.
@@ -75,6 +75,6 @@ Default major-bump behavior:
 
 ## Governance notes
 
-- CODEOWNERS remains enforced for critical paths.
+- CODEOWNERS documents ownership for core paths even though code owner review is not currently required on `main`.
 - Safe `.github` dependency path is policy-guarded by allowlist and required checks.
 - No changes to protocol semantics are allowed through dependency automation.

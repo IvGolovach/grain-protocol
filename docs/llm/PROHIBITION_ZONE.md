@@ -14,4 +14,4 @@ Hi. This is a short map of what must never be done if you want to preserve inter
 - PZ-CAPID-0010: No deterministic cap_id generation or non-CSPRNG fallback. Vectors: NEG-E2E-WA-0001, NEG-E2E-WA-0002
 - PZ-DOC-0011: No live-surface doc may present historical launch or migration-state wording as current operating policy. Keep cleanup-only language in archival notes only.
 
-If you are unsure, check vectors first and choose fail-closed behavior.
+If you are unsure, check vectors first and choose the stricter behavior.

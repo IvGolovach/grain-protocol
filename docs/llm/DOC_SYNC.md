@@ -71,13 +71,13 @@ Update:
 - `docs/llm/CHANGE_POLICY.md`
 - `CONTRIBUTING.md`
 - `.github/pull_request_template.md`
-- `docs/human/github-hardening.md` if release or governance rules changed
+- `docs/human/repository-settings.md` if release or governance rules changed
 
 ### CI, release, and provenance changes
 
 Update:
 - `.github/workflows/*` that changed
-- `docs/human/github-hardening.md`
+- `docs/human/repository-settings.md`
 - `docs/human/release-process.md`
 - `docs/human/portability-pack.md`
 - `MIGRATION.md` if the repository provenance note changed

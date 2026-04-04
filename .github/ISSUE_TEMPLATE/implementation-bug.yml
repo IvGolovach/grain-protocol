@@ -1,5 +1,5 @@
 name: Implementation Bug
-description: Report divergence between expected conformance result and implementation behavior.
+description: Report a mismatch between expected conformance result and implementation behavior.
 title: "[impl] "
 labels:
   - implementation
@@ -18,7 +18,7 @@ body:
     id: observed
     attributes:
       label: Observed Behavior
-      description: Include actual runner JSON output.
+      description: Include the actual runner JSON output.
     validations:
       required: true
 
@@ -26,7 +26,7 @@ body:
     id: expected
     attributes:
       label: Expected Behavior
-      description: Quote `expect` from vector and required diag/out fields.
+      description: Quote `expect` from the vector and the required `diag` or `out` fields.
     validations:
       required: true
 
@@ -44,5 +44,5 @@ body:
     attributes:
       label: Checks
       options:
-        - label: I reproduced in Strict Conformance Mode.
+        - label: I reproduced this in Strict Conformance Mode.
           required: true

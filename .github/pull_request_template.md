@@ -2,7 +2,7 @@
 Describe the change in one short paragraph.
 
 ## Why
-Technical rationale. Link ADR(s) if required.
+Explain the reason in plain language. Link ADR(s) if required.
 
 ## Docs sync (required)
 - [ ] I read `docs/llm/DOC_SYNC.md`
@@ -20,13 +20,14 @@ Technical rationale. Link ADR(s) if required.
 - [ ] CI / tooling
 
 ## Invariants touched (required)
-List invariant IDs from `docs/llm/INVARIANTS.md`:
-- INV-...
+List invariant IDs from `docs/llm/INVARIANTS.md` if this PR changes protocol behavior.
+Write `none` for docs-only or process-only PRs.
+- INV-... or `none`
 
 ## Conformance vectors affected (required)
-- Added: POS-/NEG-...
-- Modified: POS-/NEG-...
-- Removed: POS-/NEG-...
+- Added: POS-/NEG-... or `none`
+- Modified: POS-/NEG-... or `none`
+- Removed: POS-/NEG-... or `none`
 
 ## Is this breaking?
 - [ ] No

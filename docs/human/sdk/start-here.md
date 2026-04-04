@@ -1,6 +1,6 @@
 # SDK Start Here
 
-If you are building an app on Grain, start here. Keep the first version small and let the SDK do the strict work for you.
+If you are building an app on Grain, start here. Keep the first version small and let the SDK handle the strict protocol work for you.
 
 ## Your first pass
 
@@ -41,7 +41,7 @@ If you are adapting another domain into Grain, read `docs/human/domain-adapters.
 
 - strict-by-default execution
 - rejected unauthorized appends
-- CSPRNG-only `cap_id` generation
+- safe `cap_id` generation
 - rejected `cap_id` overwrite or corruption
 - private payload helpers
 - manifest helpers for private graph lookups

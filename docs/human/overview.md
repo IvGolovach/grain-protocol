@@ -16,7 +16,7 @@ The core rules are general-purpose. The shipped schema profile is food-first.
 ## What lives where
 
 - `spec/*`: normative rules and machine-readable schemas.
-- `conformance/*`: executable release gate; vectors are the interoperability court.
+- `conformance/*`: executable release gate; vectors decide whether behavior is acceptable for release.
 - `core/rust/*`: reference executor.
 - `runner/typescript/*`: independent strict implementation used for drift detection.
 - `core/ts/grain-sdk/*`: safer app-facing orchestration layer.
@@ -32,7 +32,7 @@ The core rules are general-purpose. The shipped schema profile is food-first.
 
 ## Important terms
 
-- `strict mode`: fail-closed execution path used for conformance and release verification.
+- `strict mode`: the path used for conformance and release checks. It rejects anything outside the allowed rules.
 - `CID`: content ID derived from canonical bytes.
 - `ledger`: signed append-only event set reduced deterministically.
 - `manifest`: private lookup structure for capability-addressed ciphertext.

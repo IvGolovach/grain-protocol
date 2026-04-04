@@ -12,7 +12,7 @@ You only need:
 - `conformance/vectors/**`
 - `docs/llm/PORTING.md`
 
-## Non-negotiable implementation rules
+## Rules you need to keep
 
 1. Compare strings by raw UTF-8 bytes where protocol requires ordering; never use locale APIs.
 2. Reject duplicate map keys at any CBOR nesting depth.
@@ -37,7 +37,7 @@ Then run full vectors in strict mode and compare divergence against reference en
 
 ## Fast failure checklist
 
-- If one vector differs, treat it as a contract bug until proven otherwise.
+- If one vector differs, treat it as a real contract mismatch first.
 - If diagnostics differ, compare codes only.
 - If results differ across OS/runtime, pin toolchain and compare inside container.
 - If your parser library normalizes maps/strings, replace it or add a strict scanner before decode.

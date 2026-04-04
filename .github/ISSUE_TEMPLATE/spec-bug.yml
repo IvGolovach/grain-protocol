@@ -1,5 +1,5 @@
 name: Spec Bug
-description: Report a normative ambiguity, contradiction, or missing MUST/SHOULD rule.
+description: Report a missing, unclear, or contradictory spec rule.
 title: "[spec] "
 labels:
   - spec
@@ -26,7 +26,7 @@ body:
     id: divergence
     attributes:
       label: Divergence Scenario
-      description: Explain how two independent implementations could diverge.
+      description: Explain how two independent implementations could disagree.
     validations:
       required: true
 

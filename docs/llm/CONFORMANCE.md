@@ -11,7 +11,7 @@ Grain v0.1 compatibility is defined by passing the conformance suite in **Strict
 
 ## Wave A (byte-level closure)
 
-Wave A is the byte-path hardening pack:
+Wave A is the byte-path closure pack:
 - `parse_cborseq_stream_v1` for raw ledger/manifest CBOR-seq framing
 - `e2e_derive_v1` for exact HKDF key/nonce expected bytes
 - `utf8` vector pack for raw UTF-8 sorting/dedup traps
@@ -124,7 +124,7 @@ Evidence policy:
 - CI emits commit-bound bundle `evidence-<commit_sha>.zip`
 - bundle includes suite summaries, vector manifests/hashes, toolchain/lock hashes, Rust↔TS divergence summaries
 - local `.local-architect-reports/**` are non-normative and MUST NOT be committed
-- containerized portability certify path: `scripts/certify` (strict, fail-closed, clean-tree required)
+- containerized portability certify path: `scripts/certify` (strict, clean-tree required, no permissive fallback)
 
 Interop certification workflow:
 - `/.github/workflows/interop-certify.yml` runs TOR-CERT-D01 packaging

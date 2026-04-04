@@ -61,7 +61,7 @@ If `conformance/SPEC.md` changes, or if the input/output or diagnostics contract
 ## If provenance or CI policy changes
 
 If a PR changes CI gates, evidence artifacts, branch protection policy, tag namespace policy, or provenance docs:
-- update `docs/human/github-hardening.md`
+- update `docs/human/repository-settings.md`
 - update `MIGRATION.md` when provenance statements change
 - keep required CI context names stable unless governance update is explicit
 - update `docs/llm/DOC_SYNC.md`
