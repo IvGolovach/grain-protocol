@@ -12,12 +12,15 @@
   },
   "scripts": {
     "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
-    "build": "npm --prefix ../../../runner/typescript run build --silent && npm run clean --silent && tsc -p tsconfig.build.json",
+    "build": "npm --prefix ../grain-ts-core run build --silent && npm run clean --silent && tsc -p tsconfig.build.json",
     "run:vector": "npm run build --silent && node dist/src/cli.js run --strict --vector",
     "run:protocol-suite": "npm run build --silent && node dist/scripts/run-protocol-suite.js",
     "test:invariants": "npm run build --silent && node dist/scripts/test-sdk-invariants.js",
     "test:ai-boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-boundary.js",
     "demo:e2e": "npm run build --silent && node dist/scripts/demo-end-to-end.js"
+  },
+  "dependencies": {
+    "grain-ts-core": "file:../grain-ts-core"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

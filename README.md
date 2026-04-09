@@ -59,6 +59,7 @@ If you are new, start with one of these:
 - The conformance suite in this repo is the release gate.
 - Rust Core in `core/rust` passes the strict suite.
 - The full TypeScript engine in `runner/typescript` is checked against the same suite plus drift checks.
+- The shared TypeScript protocol core in `core/ts/grain-ts-core` keeps the runner and SDK on the same execution logic.
 - The SDK in `core/ts/grain-sdk` gives app builders a safer layer on top of the same protocol rules.
 - CI evidence is tied to commit SHA on `main` and on release tags.
 - Release-grade verification is available through `./scripts/certify`.
@@ -115,7 +116,7 @@ If you need the full precedence order, use this:
 5. `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
 6. `docs/llm/` (LLM-first indexes and cross-file maps)
 7. `adr/` (decision history)
-8. `core/rust/`, `runner/typescript/`, `core/` and `sdk/` (implementations)
+8. `core/rust/`, `core/ts/grain-ts-core/`, `runner/typescript/`, `core/` and `sdk/` (implementations)
 
 ---
 

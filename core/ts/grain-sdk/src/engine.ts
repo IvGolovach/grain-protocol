@@ -1,6 +1,6 @@
-import type { Json, OperationActual, RunnerOutput, VectorFile } from "../../../../runner/typescript/dist/src/types.js";
+import type { Json, OperationActual, RunnerOutput, VectorFile } from "grain-ts-core/types";
 import { SdkError, toSdkError } from "./errors.js";
-import { evaluateVector, executeOperation } from "./runner-bridge.js";
+import { evaluateVector, executeOperation } from "./ts-core-bridge.js";
 
 export class TsCoreEngine {
   execute(op: string, input: Record<string, Json>, strict = true): OperationActual {

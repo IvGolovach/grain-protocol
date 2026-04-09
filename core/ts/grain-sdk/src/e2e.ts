@@ -1,9 +1,9 @@
 import { createCipheriv } from "node:crypto";
 
-import type { CborNode, Json } from "../../../../runner/typescript/dist/src/types.js";
+import type { CborNode, Json } from "grain-ts-core/types";
 
 import { SdkError, toSdkError } from "./errors.js";
-import { compareCanonicalMapKey, encodeCanonical } from "./runner-bridge.js";
+import { compareCanonicalMapKey, encodeCanonical } from "./ts-core-bridge.js";
 import { randomBytes32, decodeB64, encodeB64, sha256, bytesEq } from "./utils.js";
 import type { GrainSdkStore } from "./store.js";
 import type { IdentityManager } from "./identity.js";

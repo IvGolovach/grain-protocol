@@ -35,6 +35,7 @@ runs:
 
         sha256sum core/rust/Cargo.lock | awk '{print $1}' > artifacts/evidence/cargo.lock.sha256
         sha256sum core/rust/rust-toolchain.toml | awk '{print $1}' > artifacts/evidence/rust-toolchain.sha256
+        sha256sum core/ts/grain-ts-core/package-lock.json | awk '{print $1}' > artifacts/evidence/ts-core-package-lock.json.sha256
         sha256sum runner/typescript/package-lock.json | awk '{print $1}' > artifacts/evidence/package-lock.json.sha256
         sha256sum core/ts/grain-sdk/package-lock.json | awk '{print $1}' > artifacts/evidence/sdk-package-lock.json.sha256
         sha256sum artifacts/evidence/vector-manifest.json | awk '{print $1}' > artifacts/evidence/vector-manifest.sha256

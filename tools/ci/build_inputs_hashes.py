@@ -33,6 +33,7 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     rust_toolchain = root / "core/rust/rust-toolchain.toml"
     cargo_lock = root / "core/rust/Cargo.lock"
+    ts_core_lock = root / "core/ts/grain-ts-core/package-lock.json"
     node_lock = root / "runner/typescript/package-lock.json"
     sdk_node_lock = root / "core/ts/grain-sdk/package-lock.json"
 
@@ -41,6 +42,7 @@ def main() -> int:
     data = {
         "rust_toolchain_toml_sha256": sha256_file(rust_toolchain),
         "cargo_lock_sha256": sha256_file(cargo_lock),
+        "ts_core_node_package_lock_sha256": sha256_file(ts_core_lock),
         "node_package_lock_sha256": sha256_file(node_lock),
         "sdk_node_package_lock_sha256": sha256_file(sdk_node_lock),
         "node_version": node_version,

@@ -12,7 +12,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
-    "build": "npm run clean --silent && tsc -p tsconfig.build.json",
+    "build": "npm --prefix ../../core/ts/grain-ts-core run build --silent && npm run clean --silent && tsc -p tsconfig.build.json",
     "run:vector": "npm run build --silent && node dist/src/cli.js run --strict --vector",
     "run:c01": "npm run build --silent && node dist/scripts/run-c01.js",
     "divergence:c01": "npm run build --silent && node dist/scripts/divergence-c01.js",
@@ -22,6 +22,9 @@
     "test:cborseq-contract": "npm run build --silent && node dist/scripts/test-cborseq-contract.js",
     "test:properties": "npm run build --silent && node dist/scripts/properties-full.js",
     "test:integer-precision": "npm run build --silent && node dist/scripts/test-integer-precision.js"
+  },
+  "dependencies": {
+    "grain-ts-core": "file:../../core/ts/grain-ts-core"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",

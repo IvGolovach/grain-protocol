@@ -6,13 +6,13 @@ If you are building an app on Grain, start here. Keep the first version small an
 
 1. Read [Minimal app example](./minimal-app-example.md).
 2. Run the ready-made demo if you want a quick confidence check.
-3. On a fresh checkout, install both `runner/typescript` and
-   `core/ts/grain-sdk` dependencies before the first SDK build.
-4. If you build manually, use the SDK build; it will build the shared runner
-   output first.
+3. On a fresh checkout, install `core/ts/grain-ts-core`
+   and `core/ts/grain-sdk` before the first SDK build.
+4. If you build manually, use the SDK build. It will build the shared
+   TypeScript core first.
 
 ```bash
-npm ci --prefix runner/typescript
+npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix core/ts/grain-sdk
 npm --prefix core/ts/grain-sdk run demo:e2e
 ```
@@ -36,6 +36,7 @@ If you later persist the payload as its own canonical Grain object, switch to us
 
 If you need device lifecycle changes, use `identity.addDeviceKey()` and `identity.revokeDeviceKey()`. These APIs keep the SDK's local authorization view and the ledger in sync.
 If you are adapting another domain into Grain, read `docs/human/domain-adapters.md` after the first success.
+If you are also changing the strict TS runner itself, then install `runner/typescript` too.
 
 ## What the SDK handles for you
 

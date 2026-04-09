@@ -1,0 +1,52 @@
+{
+  "name": "grain-ts-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared TypeScript protocol core used by the Grain runner and SDK",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    "./types": {
+      "types": "./dist/src/types.d.ts",
+      "default": "./dist/src/types.js"
+    },
+    "./utils": {
+      "types": "./dist/src/utils.d.ts",
+      "default": "./dist/src/utils.js"
+    },
+    "./base45": {
+      "types": "./dist/src/base45.d.ts",
+      "default": "./dist/src/base45.js"
+    },
+    "./cbor": {
+      "types": "./dist/src/cbor.d.ts",
+      "default": "./dist/src/cbor.js"
+    },
+    "./vector-json": {
+      "types": "./dist/src/vector-json.d.ts",
+      "default": "./dist/src/vector-json.js"
+    },
+    "./expect": {
+      "types": "./dist/src/expect.d.ts",
+      "default": "./dist/src/expect.js"
+    },
+    "./ops": {
+      "types": "./dist/src/ops.d.ts",
+      "default": "./dist/src/ops.js"
+    },
+    "./ops/*": {
+      "types": "./dist/src/ops/*.d.ts",
+      "default": "./dist/src/ops/*.js"
+    }
+  },
+  "scripts": {
+    "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
+    "build": "npm run clean --silent && tsc -p tsconfig.build.json"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "typescript": "^5.9.2"
+  }
+}

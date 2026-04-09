@@ -77,6 +77,7 @@ cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
 python3 tools/ci/check_quickstart_smoke.py \
   --runner-cmd core/rust/target/debug/grain-runner demo --strict
 
+npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix runner/typescript
 if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
   npm ci --prefix core/ts/grain-sdk
