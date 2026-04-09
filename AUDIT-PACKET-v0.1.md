@@ -177,6 +177,5 @@ None for v0.1, except external cryptographic breaks (future major bump class).
 - Required CI checks on `main`:
   - `python-tooling`
   - `rust-core`
-  - `ts-c01`
-  - `ts-full`
   - `evidence-bundle`
+  - `capid-csprng-audit`

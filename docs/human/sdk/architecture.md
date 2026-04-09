@@ -1,7 +1,5 @@
 # SDK Architecture
 
-`TOR-SDK-A01` and `TOR-SDK-A03` are internal tracking IDs for this work. You can ignore them unless you are reading ADRs or project plans.
-
 This page defines boundaries. The SDK is a strict orchestration layer, not a new protocol semantics layer.
 
 ## Practical reading

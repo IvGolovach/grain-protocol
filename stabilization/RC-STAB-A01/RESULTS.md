@@ -1,31 +1,36 @@
-# TOR-RC-STAB-A01 Results
+# TOR-RC-STAB-A01 Historical Results
 
-This file is the tracked decision log for the RC stabilization window.
+This file is the historical decision log for the imported
+`repo-rc-v0.4.0-rc1` stabilization window.
 
 ## Baseline snapshot
 - Protocol anchor: `protocol-v0.1.1`
 - RC anchor: `repo-rc-v0.4.0-rc1`
 - Baseline evidence hash: `35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd`
-- Baseline release evidence source: published release artifacts for `repo-rc-v0.4.0-rc1`
-- Baseline interop evidence source: published interop artifacts for `repo-rc-v0.4.0-rc1`
+- Baseline release evidence source: historical artifact references for `repo-rc-v0.4.0-rc1` (not backfilled as GitHub Releases in this repo)
+- Baseline interop evidence source: historical artifact references for `repo-rc-v0.4.0-rc1` (not backfilled as GitHub Releases in this repo)
 
 ## Latest stabilization execution
-Update this section from CI artifact `stabilization-evidence.json` after each deep run.
+Latest imported deep run on the public-candidate mainline:
 
-- Run mode: `smoke` / `deep`
-- Commit: `<fill-from-artifact>`
-- Verdict: `<PASS|FAIL>`
+- Run mode: `deep`
+- Commit: `1707b071b309e4693ad59fc8d4e26513ec9139a7`
+- Verdict: `FAIL`
 - Gates:
-  - `attack_matrix_pass=<bool>`
-  - `fuzz_no_crash_or_divergence=<bool>`
-  - `properties_pass=<bool>`
-  - `repro_pass=<bool|n/a(smoke)>`
-  - `rollback_rehearsal_pass=<bool|n/a(smoke)>`
+  - `attack_matrix_pass=true`
+  - `fuzz_no_crash_or_divergence=true`
+  - `properties_pass=true`
+  - `repro_pass=false`
+  - `rollback_rehearsal_pass=false`
 - Artifact hash anchors:
-  - `minimized-repros.sha256=<value>`
-  - `content_digest_sha256=<value>`
+  - `minimized-repros.sha256`: recorded in the imported deep-run artifact bundle
+  - `content_digest_sha256=ef21bb875cfa2d063e692f2054499a361052e7b5859e7023341d8cf1377da3ee`
 
-## Decision branch
+Notes:
+- reproducibility failed because the observed evidence hash did not match the imported RC baseline hash
+- rollback rehearsal failed because release metadata for `repo-rc-v0.4.0-rc1` was not backfilled in this repository
+
+## Historical decision rule
 - If all gates pass in deep mode:
   - candidate is ready for `repo-v0.4.0` cut.
 - If any blocker fails:

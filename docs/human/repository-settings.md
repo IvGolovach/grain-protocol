@@ -1,11 +1,11 @@
-# GitHub Repo Settings
+# GitHub Repository Settings
 
 This runbook records the GitHub settings we expect for the canonical repository.
 
 You only need this file if you maintain the repo settings on GitHub.
 If you are here just to contribute code or docs, you can skip it.
 
-## 1) Current launch settings
+## 1) Current main ruleset and repo settings
 
 `main` should require:
 - `python-tooling`
@@ -13,7 +13,7 @@ If you are here just to contribute code or docs, you can skip it.
 - `evidence-bundle`
 - `capid-csprng-audit`
 
-The active maintainer-friendly launch profile is:
+The active `main protection` ruleset is:
 - pull requests required
 - required approving reviews: `0`
 - dismiss stale reviews: `true`
@@ -21,16 +21,21 @@ The active maintainer-friendly launch profile is:
 - force pushes: disabled
 - deletions: disabled
 - conversation resolution: required
-- auto-merge: enabled
+- allowed merge methods: `merge`, `squash`, `rebase`
+
+Related repo-level settings:
 - delete branch on merge: enabled
 
 `GOVERNANCE.md` should describe the same live baseline.
 
-## 2) Apply branch protection
+## 2) Apply or update the main ruleset
 
 ```bash
 PROTECTION_PROFILE=autonomous bash tools/github/apply_branch_protection.sh <owner/repo>
 ```
+
+The script updates the repository ruleset `main protection` through the GitHub
+rulesets API. It does not use the legacy branch-protection endpoint.
 
 If the maintainer team grows and you want a review-required mode later:
 
@@ -46,12 +51,15 @@ Namespaces:
 - protocol RC tags: `protocol-rc-*`
 - repo RC tags: `repo-rc-*`
 
-Migration milestone tags:
+Historical milestone tags currently present:
 - `protocol-v0.1.1`
 - `repo-v0.2.0`
 - `repo-v0.3.0`
+- `repo-v0.3.1`
+- `repo-rc-v0.4.0-rc1`
 
-All release tags must be signed.
+Future public release tags should be signed.
+Historical imported milestone tags in this repository are annotated, but not all of them were backfilled as signed public release tags.
 
 ## 4) CI evidence policy
 
@@ -123,7 +131,5 @@ All release tags must be signed.
   - `/.github/workflows/dependabot-automerge.yml`
   - policy: `/docs/human/dependencies-policy.md`
   - required token secret: `DEPENDABOT_AUTOMERGE_TOKEN` (repo + workflow scopes)
-- Issue templates are required:
-  - spec bug
-  - conformance vector request
-  - implementation bug
+- Issue forms live in `/.github/ISSUE_TEMPLATE/`.
+- Blank issues are acceptable if GitHub falls back instead of rendering forms.

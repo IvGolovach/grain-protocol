@@ -1,22 +1,22 @@
 name: Python policy checks
 description: Run the shared Python policy and repository hygiene checks.
 inputs:
-  run_branch_protection_drift:
-    description: Run the branch protection drift check for main.
+  run_main_ruleset_drift:
+    description: Run the main ruleset drift check for main.
     required: false
     default: "false"
   gh_token:
-    description: Token used by the branch protection drift check.
+    description: Token used by the main ruleset drift check.
     required: false
     default: ""
-  branch_protection_branch:
+  main_ruleset_branch:
     description: Branch name to validate when drift checks are enabled.
     required: false
     default: main
-  branch_protection_contexts:
+  main_ruleset_contexts:
     description: Comma-separated required status contexts.
     required: false
-    default: python-tooling,rust-core,ts-c01,ts-full,evidence-bundle
+    default: python-tooling,rust-core,evidence-bundle,capid-csprng-audit
 runs:
   using: composite
   steps:
@@ -89,8 +89,8 @@ runs:
       shell: bash
       run: python3 tools/ci/check_sdk_no_network.py
 
-    - name: Check branch protection drift (main)
-      if: inputs.run_branch_protection_drift == 'true' && inputs.gh_token != ''
+    - name: Check main ruleset drift (main)
+      if: inputs.run_main_ruleset_drift == 'true' && inputs.gh_token != ''
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
@@ -98,15 +98,16 @@ runs:
         set -euo pipefail
         python3 tools/ci/check_branch_protection_drift.py \
           --repo "${GITHUB_REPOSITORY}" \
-          --branch "${{ inputs.branch_protection_branch }}" \
-          --expected-contexts "${{ inputs.branch_protection_contexts }}" \
+          --branch "${{ inputs.main_ruleset_branch }}" \
+          --expected-contexts "${{ inputs.main_ruleset_contexts }}" \
           --expected-approvals 0 \
           --expected-codeowner-reviews false \
-          --expected-enforce-admins true \
-          --expected-linear-history true \
-          --expected-allow-force-pushes false \
-          --expected-allow-deletions false \
-          --expected-conversation-resolution true
+          --expected-dismiss-stale-reviews true \
+          --expected-last-push-approval false \
+          --expected-conversation-resolution true \
+          --expected-do-not-enforce-on-create false \
+          --expected-ruleset-name "main protection" \
+          --expected-merge-methods "merge,squash,rebase"
 
     - name: Ensure no macOS metadata files
       shell: bash

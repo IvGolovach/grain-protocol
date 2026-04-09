@@ -1,13 +1,10 @@
-name: rc-stabilization-nightly
+name: rc-stabilization-deep-check
 
 on:
-  schedule:
-    - cron: "15 2 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   deep-stabilization:
@@ -58,45 +55,3 @@ jobs:
         with:
           name: rc-stab-deep-${{ github.sha }}
           path: artifacts/rc-stab-deep
-
-      - name: Open or update blocker issue on failure
-        if: failure()
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const title = 'RC stabilization nightly failure';
-            const runUrl = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
-            const body = [
-              'Nightly deep stabilization failed.',
-              '',
-              `- workflow run: ${runUrl}`,
-              `- commit: ${context.sha}`,
-              '',
-              `Inspect artifact \`rc-stab-deep-${context.sha}\` and remediate before RC promotion.`
-            ].join('\n');
-
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner,
-              repo,
-              state: 'open',
-              per_page: 100,
-            });
-
-            const existing = issues.find((i) => i.title === title);
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: existing.number,
-                body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner,
-                repo,
-                title,
-                body,
-              });
-            }

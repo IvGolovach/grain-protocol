@@ -26,8 +26,8 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
    - Implementations. They must conform to the contract above.
 10. `.github/workflows/`, `.githooks/*`, `scripts/setup_local_hygiene.sh`, `tools/ci/check_history_hygiene.py`, `MIGRATION.md`, `TOR-PORTABILITY-A01.md`, `docs/human/repository-settings.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`
    - Provenance, local hygiene enforcement, and policy enforcement (CI gates, evidence artifacts, branch protection).
-11. `stabilization/RC-STAB-A01/*`, `tools/stabilization/run_rc_stab.py`, `.github/workflows/rc-stabilization-nightly.yml`
-   - RC pressure-test contract and execution tooling. Use this when deciding whether RC can be promoted or must be revoked or cut as RC2.
+11. `stabilization/RC-STAB-A01/*`, `tools/stabilization/run_rc_stab.py`, `.github/workflows/rc-stabilization-deep-check.yml`
+   - RC pressure-test tooling plus a historical RC stabilization record. Use this as reference material when a new RC window is opened.
 
 ## If two layers disagree
 

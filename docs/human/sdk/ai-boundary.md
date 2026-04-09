@@ -23,7 +23,7 @@ No direct append path exists for raw AI candidates.
 
 ## Side-effect in v1
 
-In TOR-SDK-A03 v1, `applyAccepted()` writes accepted canonical bytes to SDK object store under derived CID.
+In the current SDK, `applyAccepted()` writes accepted canonical bytes to SDK object store under derived CID.
 Ledger append remains an explicit application decision after acceptance.
 
 ## Security posture

@@ -1,4 +1,4 @@
-# Dependencies Policy (TOR-DEPS-STRICT-FINAL)
+# Dependencies Policy
 
 This document defines the safe automation boundaries for Dependabot PRs.
 
@@ -9,7 +9,7 @@ ADR references:
 ## Goal
 
 Dependabot safe-lane updates must auto-resolve stale/review/merge friction while preserving:
-- branch protection,
+- the `main protection` ruleset,
 - required checks,
 - linear history,
 - evidence workflows,

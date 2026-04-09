@@ -19,7 +19,7 @@ jobs:
 
       - uses: ./.github/actions/python-policy-checks
         with:
-          run_branch_protection_drift: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          run_main_ruleset_drift: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           gh_token: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
 
   capid-csprng-audit:

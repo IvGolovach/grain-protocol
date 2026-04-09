@@ -1,6 +1,6 @@
-# RC Stabilization Repro Checklist
+# Historical RC Stabilization Repro Checklist
 
-Goal: prove RC stabilization outputs are reproducible from clean clone.
+Goal: reproduce the imported `repo-rc-v0.4.0-rc1` stabilization outputs from a clean clone.
 
 ## 1) Clean clone and checkout RC tag
 ```bash
@@ -51,7 +51,7 @@ Expected:
 - no crash findings
 - deterministic attack-matrix pass
 
-## 6) Deep mode (nightly/manual)
+## 6) Deep mode (manual; scheduled nightly currently disabled)
 ```bash
 python3 tools/stabilization/run_rc_stab.py \
   --mode deep \
