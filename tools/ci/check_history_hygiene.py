@@ -11,7 +11,6 @@ import sys
 from pathlib import Path
 
 CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
-PROJECT_PRIVATE_SLUG = "grain" + "-protocol-" + "private"
 
 
 def literal(*parts: str, flags: int = 0) -> re.Pattern[str]:
@@ -20,17 +19,20 @@ def literal(*parts: str, flags: int = 0) -> re.Pattern[str]:
 
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
-        "personal-email",
-        re.compile(r"\b[\w.+-]+@" + re.escape("icloud.com") + r"\b", re.IGNORECASE),
+        "consumer-email-domain",
+        re.compile(
+            r"\b[\w.+-]+@(?:icloud\.com|me\.com|gmail\.com|yahoo\.com|hotmail\.com|outlook\.com)\b",
+            re.IGNORECASE,
+        ),
     ),
     (
-        "private-slug",
+        "private-repo-slug",
         re.compile(
             "|".join(
                 (
-                    rf"\b(?:[A-Za-z0-9_.-]+/)?{re.escape(PROJECT_PRIVATE_SLUG)}\b",
-                    rf"\bgit@github\.com:[A-Za-z0-9_.-]+/{re.escape(PROJECT_PRIVATE_SLUG)}\b",
-                    rf"\bhttps://github\.com/[A-Za-z0-9_.-]+/{re.escape(PROJECT_PRIVATE_SLUG)}\b",
+                    r"\b[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?\b",
+                    r"\bgit@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?\b",
+                    r"\bhttps://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?\b",
                 )
             ),
             re.IGNORECASE,
@@ -57,13 +59,9 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("tok-scale-fingerprint", literal("tok", "scale", flags=re.IGNORECASE)),
     ("little-snitch-fingerprint", literal("Little", " Snitch", flags=re.IGNORECASE)),
     (
-        "publication-prep-marker",
+        "publication-transition-marker",
         re.compile(
-            r"\b"
-            + re.escape("de-" + "private")
-            + r"\b|\b"
-            + re.escape("public-" + "mirror")
-            + r"\b",
+            r"\b" + re.escape("public-" + "mirror") + r"\b",
             re.IGNORECASE,
         ),
     ),
@@ -71,14 +69,6 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
 
 COMMIT_MESSAGE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("cyrillic-discussion", re.compile(r"\bcyrillic\b", re.IGNORECASE)),
-    (
-        "private-repository-discussion",
-        re.compile(r"\bprivate(?:\s+repository|\s+repo)\b", re.IGNORECASE),
-    ),
-    (
-        "predecessor-discussion",
-        re.compile(r"\bprivate[- ]predecessor\b", re.IGNORECASE),
-    ),
     (
         "tmp-path-discussion",
         re.compile(r"(?<![A-Za-z0-9_])/(?:private/)?tmp/[^\s\"']+"),

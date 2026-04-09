@@ -1,7 +1,5 @@
 # Grain SDK Overview
 
-`TOR-SDK-A01` is an internal tracking label for this SDK work. You can ignore it unless you are reading ADRs or project plans.
-
 The SDK gives you a safer way to build on top of Grain without changing protocol semantics.
 
 If you want one first success, start with `docs/human/sdk/start-here.md`.

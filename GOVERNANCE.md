@@ -62,14 +62,18 @@ Current baseline on `main`:
 - Force pushes: disabled
 - Deletions: disabled
 - Conversation resolution: required
+- Allowed merge methods: `merge`, `squash`, `rebase`
+
+Related repo-level setting:
 - Auto-merge: enabled
 - Delete branch on merge: enabled
 
-If the repository intentionally changes branch-protection mode, update the
-runbook, apply script, and drift checker in the same change as this file.
+If the repository intentionally changes its `main protection` ruleset baseline,
+update the runbook, apply script, and drift checker in the same change as this file.
 
 ### Tag policy
 
 - Protocol tags: `protocol-*`
 - Repository milestone tags: `repo-*`
-- Release tags must be signed.
+- Future public release tags must be signed.
+- Historical imported milestone tags may remain annotated-only.

@@ -44,13 +44,13 @@ RC policy reference:
 6. Push tag:
    - `git push origin <tag-name>`
 7. Verify tag workflows:
-   - `release-evidence` attached `evidence-<sha>.zip`.
-   - `interop-certify` attached `interop-evidence-<sha>.zip`.
+   - `release-evidence` completed and produced `evidence-<sha>.zip`.
+   - `interop-certify` completed and produced `interop-evidence-<sha>.zip`.
    - `golden-images` published digests for `grain-runner` and `grain-certify`.
    - for `repo-*` tags, image alias `stable` is updated.
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only (must not overwrite `stable`).
-8. For release tags (`protocol-*`, `repo-*`), verify GitHub release entry and attached assets.
-9. For RC tags (`protocol-rc-*`, `repo-rc-*`), verify GitHub release entry is marked `prerelease=true`.
+8. For new tags cut from this repository, verify the matching GitHub release entry exists and attached assets are present.
+9. Historical imported milestone tags in this repository may remain tag-only and may not have backfilled GitHub release pages.
 
 ## RC stabilization window gate (TOR-RC-STAB-A01)
 
@@ -58,9 +58,10 @@ Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
 
 1. PR smoke gate (already in CI `ts-full` context):
    - `python3 tools/stabilization/run_rc_stab.py --mode smoke ...`
-2. Deep stabilization (nightly or manual):
-   - workflow: `.github/workflows/rc-stabilization-nightly.yml`
+2. Deep stabilization (manual during an active RC window):
+   - workflow: `.github/workflows/rc-stabilization-deep-check.yml`
    - includes deep fuzz, reproducibility check, rollback rehearsal.
+   - scheduled nightly is currently disabled on GitHub and is not part of the live release gate.
 3. Review artifacts:
    - `fuzz-report.md`
    - `attack-matrix-results.md`
@@ -79,4 +80,5 @@ Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
 - Protocol and repo tags are intentionally independent.
 - Repository provenance note (`MIGRATION.md`) must stay accurate when release workflow changes.
 - RC tags are readiness checkpoints, not public launch declarations.
+- Historical imported milestone tags in this repository predate public release backfill and may not have GitHub Releases attached.
 - RC rollback uses signed revocation records; history and tags are not rewritten.

@@ -8,6 +8,7 @@ fi
 
 REPO="$1"
 PROTECTION_PROFILE="${PROTECTION_PROFILE:-autonomous}"
+RULESET_NAME="${RULESET_NAME:-main protection}"
 
 case "$PROTECTION_PROFILE" in
   autonomous)
@@ -24,33 +25,81 @@ case "$PROTECTION_PROFILE" in
     ;;
 esac
 
-gh api \
-  -X PUT \
-  -H "Accept: application/vnd.github+json" \
-  "repos/${REPO}/branches/main/protection" \
-  --input <(
-    cat <<JSON
+mapfile -t existing_ruleset_ids < <(
+  GH_PAGER=cat gh api \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2026-03-10" \
+    "repos/${REPO}/rulesets" \
+    --jq ".[] | select(.name == \"${RULESET_NAME}\" and .target == \"branch\") | .id"
+)
+
+if [[ "${#existing_ruleset_ids[@]}" -gt 1 ]]; then
+  echo "multiple branch rulesets named '${RULESET_NAME}' found for ${REPO}" >&2
+  exit 3
+fi
+
+existing_ruleset_id="${existing_ruleset_ids[0]:-}"
+
+payload_file="$(mktemp)"
+cat >"${payload_file}" <<JSON
 {
-  "required_status_checks": {
-    "strict": true,
-    "contexts": ["python-tooling", "rust-core", "ts-c01", "ts-full", "evidence-bundle"]
+  "name": "${RULESET_NAME}",
+  "target": "branch",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": {
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    }
   },
-  "enforce_admins": true,
-  "required_pull_request_reviews": {
-    "dismiss_stale_reviews": true,
-    "require_code_owner_reviews": ${REQUIRE_CODE_OWNER_REVIEWS},
-    "required_approving_review_count": ${REQUIRED_APPROVING_REVIEW_COUNT}
-  },
-  "restrictions": null,
-  "required_linear_history": true,
-  "allow_force_pushes": false,
-  "allow_deletions": false,
-  "block_creations": false,
-  "required_conversation_resolution": true,
-  "lock_branch": false,
-  "allow_fork_syncing": false
+  "rules": [
+    {"type": "deletion"},
+    {"type": "non_fast_forward"},
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": ${REQUIRED_APPROVING_REVIEW_COUNT},
+        "dismiss_stale_reviews_on_push": true,
+        "required_reviewers": [],
+        "require_code_owner_review": ${REQUIRE_CODE_OWNER_REVIEWS},
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": true,
+        "allowed_merge_methods": ["merge", "squash", "rebase"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {"context": "python-tooling"},
+          {"context": "rust-core"},
+          {"context": "evidence-bundle"},
+          {"context": "capid-csprng-audit"}
+        ]
+      }
+    }
+  ]
 }
 JSON
-  )
 
-echo "Branch protection applied for ${REPO}:main (${PROTECTION_PROFILE})"
+if [[ -n "${existing_ruleset_id}" ]]; then
+  gh api \
+    -X PUT \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2026-03-10" \
+    "repos/${REPO}/rulesets/${existing_ruleset_id}" \
+    --input "${payload_file}" >/dev/null
+else
+  gh api \
+    -X POST \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2026-03-10" \
+    "repos/${REPO}/rulesets" \
+    --input "${payload_file}" >/dev/null
+fi
+
+rm -f "${payload_file}"
+echo "Ruleset applied for ${REPO}: ${RULESET_NAME} (${PROTECTION_PROFILE})"

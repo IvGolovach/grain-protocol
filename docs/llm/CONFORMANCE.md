@@ -116,9 +116,11 @@ Contract:
 Required CI contexts on `main`:
 - `python-tooling`
 - `rust-core`
-- `ts-c01`
-- `ts-full`
 - `evidence-bundle`
+- `capid-csprng-audit`
+
+Additional CI jobs such as `ts-c01` and `ts-full` still run in CI, but they are
+not separate branch-protection contexts on `main` today.
 
 Evidence policy:
 - CI emits commit-bound bundle `evidence-<commit_sha>.zip`
@@ -136,17 +138,18 @@ Interop certification workflow:
 Paths:
 - `tools/stabilization/run_rc_stab.py`
 - `stabilization/RC-STAB-A01/*`
-- `/.github/workflows/rc-stabilization-nightly.yml`
+- `/.github/workflows/rc-stabilization-deep-check.yml`
 
 Modes:
 - `smoke` (PR-safe pressure test, now executed inside `ts-full` context)
-- `deep` (nightly/manual pressure test with clean-clone repro + rollback rehearsal)
+- `deep` (manual pressure test with clean-clone repro + rollback rehearsal)
 
 Key rule:
 - Stabilization never changes frozen-core semantics.
 - Any failure yields blocker handling (`rc1` revoke + `rc2` cut), not silent weakening.
 - Addendum A02: deep reproducibility includes SDK strict suite parity when SDK lane is required.
 - Addendum A02 / `INV-STAB-001`: cleanup failures are warning-only (`STAB_CLEANUP_WARN`) and MUST NOT flip protocol verdict.
+- The scheduled nightly variant is currently disabled on GitHub; deep runs are manual until an active RC window needs them again.
 
 ## Portability pack contract (TOR-PORTABILITY-A01)
 

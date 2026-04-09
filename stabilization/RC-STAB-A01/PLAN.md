@@ -1,4 +1,8 @@
-# TOR-RC-STAB-A01 Plan
+# TOR-RC-STAB-A01 Historical Plan
+
+This file records the historical stabilization plan for the imported
+`repo-rc-v0.4.0-rc1` window. It is reference material, not the current live
+release gate for `main`.
 
 ## 1) Baseline anchors
 - Protocol tag: `protocol-v0.1.1` (frozen core, unchanged).
@@ -14,7 +18,7 @@
 ## 3) In scope
 - Byte-level and property-based stabilization checks via `tools/stabilization/run_rc_stab.py`.
 - Attack matrix execution with deterministic expected outcomes.
-- PR smoke stabilization gate and nightly deep stabilization workflow.
+- PR smoke stabilization gate and manual deep stabilization runs for that RC window.
 - Reproducibility drill from clean clone on RC tag.
 - Rollback rehearsal (non-destructive, revocation-first model).
 
@@ -28,10 +32,11 @@
    - Attack matrix
    - Mutational byte-level fuzz smoke budget
    - Rust+TS property checks
-2. Deep (nightly/manual):
+2. Deep (manual during an active RC window):
    - Expanded mutational campaigns
    - Reproducibility check against RC baseline hash
    - Rollback rehearsal checks against release metadata
+   - scheduled nightly is currently disabled on GitHub
 3. Regression capture:
    - Every crash/divergence must have minimized repro and deterministic guard.
 

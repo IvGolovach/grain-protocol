@@ -1,6 +1,7 @@
 # Grain SDK
 
-Status: TS primitives SDK baseline implemented (TOR-SDK-A01 initial wave).
+The production SDK code lives in `core/ts/grain-sdk`.
+This top-level `sdk/` path is only a signpost for readers browsing the repo root.
 
 SDK is an adoption layer:
 - developer-friendly API

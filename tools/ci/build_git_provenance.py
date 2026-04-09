@@ -71,7 +71,7 @@ def main() -> int:
     ahead_behind = run(["git", "rev-list", "--left-right", "--count", "origin/main...HEAD"])
     status_porcelain = run(["git", "status", "--porcelain=v1"]) if True else ""
 
-    protection = maybe_json(["gh", "api", f"repos/{args.repo}/branches/main/protection"])
+    protection = maybe_json(["gh", "api", f"repos/{args.repo}/rules/branches/main"])
     ci_runs = maybe_json(
         [
             "gh",

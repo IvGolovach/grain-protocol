@@ -1,4 +1,4 @@
-# Portability Pack (TOR-PORTABILITY-A01)
+# Portability Pack
 
 This document defines the repeatable cross-platform verification baseline.
 
@@ -47,12 +47,13 @@ Optional fuzz smoke:
 Build/publish script:
 
 ```bash
-./scripts/containers/build_golden_images.sh ghcr.io/<owner>
+OWNER="${GITHUB_REPOSITORY_OWNER:-your-ghcr-namespace}"
+./scripts/containers/build_golden_images.sh "ghcr.io/${OWNER}"
 ```
 
 Expected image families:
-- `ghcr.io/<owner>/grain-runner:stable`
-- `ghcr.io/<owner>/grain-certify:stable`
+- `ghcr.io/${OWNER}/grain-runner:stable`
+- `ghcr.io/${OWNER}/grain-certify:stable`
 
 If `GITHUB_REPOSITORY_OWNER` or `GOLDEN_IMAGE_REGISTRY` is already set, the
 script can derive the registry without an explicit argument.
