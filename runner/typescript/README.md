@@ -24,6 +24,7 @@ Implemented full conformance op set:
 
 - Node `22.22.0` for evidence-generating and stabilization paths (`.nvmrc` is the source of truth)
 - Docker available for divergence scripts
+- `npm ci --prefix core/ts/grain-ts-core`
 - `npm ci --prefix runner/typescript`
 
 ## Commands

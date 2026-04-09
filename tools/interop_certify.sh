@@ -49,6 +49,7 @@ if ! command -v docker >/dev/null 2>&1; then
   exit 2
 fi
 
+npm ci --prefix core/ts/grain-ts-core >/dev/null
 npm ci --prefix runner/typescript >/dev/null
 if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
   npm ci --prefix core/ts/grain-sdk >/dev/null

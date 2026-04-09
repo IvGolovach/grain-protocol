@@ -28,7 +28,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: runner/typescript/package-lock.json
+          cache-dependency-path: |
+            core/ts/grain-ts-core/package-lock.json
+            runner/typescript/package-lock.json
+            core/ts/grain-sdk/package-lock.json
 
       - name: Run TOR-CERT-D01 interop certification
         run: |

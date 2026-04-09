@@ -11,14 +11,14 @@ It does four things:
 ## 1) Install build dependencies
 
 ```bash
-npm ci --prefix runner/typescript
+npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix core/ts/grain-sdk
 ```
 
 ## 2) Build the SDK once
 
-The SDK build is not self-contained: it uses the shared TypeScript runner
-output first, then emits the SDK files.
+The SDK build is self-contained at the package boundary: it builds the shared
+TypeScript core first, then emits the SDK files.
 
 ```bash
 npm --prefix core/ts/grain-sdk run build

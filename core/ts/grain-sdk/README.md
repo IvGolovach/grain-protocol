@@ -29,15 +29,16 @@ If you later store that payload as its own canonical Grain object, then using th
 
 ## Copy these commands
 
-Install the shared runner and SDK build-time dependencies:
+Install the shared TypeScript core and SDK dependencies:
 
 ```bash
-npm ci --prefix runner/typescript
+npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix core/ts/grain-sdk
 ```
 
-Build output is not fully self-contained: the SDK build first builds the shared
-TypeScript runner in `runner/typescript`, then emits SDK files.
+The SDK does not reach into `runner/typescript/dist` anymore.
+Both the runner and the SDK build on top of the shared TypeScript core in
+`core/ts/grain-ts-core`, then emit their own package output.
 
 Try the smallest end-to-end demo:
 
@@ -69,3 +70,9 @@ If you want to go deeper after the first app, read:
 - `docs/human/sdk/architecture.md`
 - `docs/human/sdk/errors.md`
 - `docs/human/sdk/impossible-misuse.md`
+
+If you are also working on runner conformance flows, install that package too:
+
+```bash
+npm ci --prefix runner/typescript
+```

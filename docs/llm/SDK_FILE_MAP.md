@@ -30,9 +30,10 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 1. `spec/NES-v0.1.md`
 2. `spec/profiles/*`
 3. `conformance/vectors/*`
-4. `runner/typescript/src/*` (TS full engine behavior)
-5. `core/ts/grain-sdk/src/*` (orchestration only)
-6. `docs/llm/*` (maintainer maps, sync rules, and indexes)
-7. `docs/human/sdk/*` (explanatory, not normative)
+4. `core/ts/grain-ts-core/src/*` (shared TS protocol engine behavior)
+5. `runner/typescript/src/*` (runner harness and compatibility surface)
+6. `core/ts/grain-sdk/src/*` (orchestration only)
+7. `docs/llm/*` (maintainer maps, sync rules, and indexes)
+8. `docs/human/sdk/*` (explanatory, not normative)
 
 If SDK behavior diverges from protocol vectors, treat it as a bug in SDK and update the matching docs and tests in the same change.

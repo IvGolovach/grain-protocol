@@ -1,7 +1,7 @@
-import type { CborNode, Json } from "../../../../../runner/typescript/dist/src/types.js";
+import type { CborNode, Json } from "grain-ts-core/types";
 import type { TsCoreEngine } from "../engine.js";
 import { SdkError, toSdkError } from "../errors.js";
-import { compareCanonicalMapKey, encodeCanonical } from "../runner-bridge.js";
+import { compareCanonicalMapKey, encodeCanonical } from "../ts-core-bridge.js";
 import type { GrainSdkStore } from "../store.js";
 import { compareBytesLex, decodeB64, encodeB64, sha256Hex, toUtf8 } from "../utils.js";
 import type { AICandidateEnvelopeV1 } from "./adapter.js";

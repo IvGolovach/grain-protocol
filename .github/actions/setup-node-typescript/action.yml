@@ -1,5 +1,5 @@
 name: Set up Node TypeScript dependencies
-description: Install the pinned Node runtime plus runner and SDK TypeScript dependencies.
+description: Install the pinned Node runtime plus shared core, runner, and SDK TypeScript dependencies.
 inputs:
   node-version-file:
     description: Node version file to use for setup-node.
@@ -9,14 +9,19 @@ inputs:
     description: Package lockfile path(s) used for npm cache keying.
     required: false
     default: |
+      core/ts/grain-ts-core/package-lock.json
       runner/typescript/package-lock.json
       core/ts/grain-sdk/package-lock.json
   prefix:
     description: Prefix passed to npm ci.
     required: false
-    default: runner/typescript
+    default: core/ts/grain-ts-core
   extra-prefix:
     description: Optional second prefix passed to npm ci.
+    required: false
+    default: runner/typescript
+  tertiary-prefix:
+    description: Optional third prefix passed to npm ci.
     required: false
     default: core/ts/grain-sdk
 runs:
@@ -37,3 +42,8 @@ runs:
       if: inputs.extra-prefix != ''
       shell: bash
       run: npm ci --prefix "${{ inputs.extra-prefix }}"
+
+    - name: Install tertiary TypeScript deps
+      if: inputs.tertiary-prefix != ''
+      shell: bash
+      run: npm ci --prefix "${{ inputs.tertiary-prefix }}"

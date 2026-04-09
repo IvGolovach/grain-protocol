@@ -55,11 +55,12 @@ This page is the capability map after that first run.
 
 ## Quick commands
 
-On a fresh checkout, the SDK build will compile the shared runner output first,
-because `core/ts/grain-sdk` consumes it during build.
+On a fresh checkout, install the shared TypeScript core first.
+The SDK and the runner both build on top of that shared package, but the first
+app flow only needs the SDK package.
 
 ```bash
-npm ci --prefix runner/typescript
+npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix core/ts/grain-sdk
 npm --prefix core/ts/grain-sdk run demo:e2e
 npm --prefix core/ts/grain-sdk run test:invariants

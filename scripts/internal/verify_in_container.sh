@@ -39,6 +39,7 @@ python3 tools/ci/run_runner_suite.py \
   --out "$OUT_DIR/evidence/suite-run-rust.json" \
   --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
 
+npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix runner/typescript
 if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
   npm ci --prefix core/ts/grain-sdk

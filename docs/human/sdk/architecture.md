@@ -13,10 +13,12 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 1. Protocol (`spec/*`, `conformance/*`)
    - normative rules
    - frozen-core behavior
-2. Core engines (`core/rust/grain-core`, `runner/typescript/src`)
+2. Core engines (`core/rust/grain-core`, `core/ts/grain-ts-core/src`)
    - deterministic rule execution
    - canonical diagnostics
-3. SDK (`core/ts/grain-sdk`)
+3. Runner surface (`runner/typescript/src`)
+   - CLI and conformance harness over the shared TS core
+4. SDK (`core/ts/grain-sdk`)
    - typed primitives + safe builders
    - orchestration for identity/events/e2e/manifest/transport/evidence
    - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
