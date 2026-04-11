@@ -47,7 +47,7 @@ jobs:
       - uses: ./.github/actions/rust-core-verification
 
       - name: Upload rust suite summary
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: rust-suite-summary
           path: artifacts/rust-suite-summary.json
@@ -77,7 +77,7 @@ jobs:
           cp runner/typescript/.divergence-c01.md artifacts/divergence-c01.md
 
       - name: Upload TS C01 artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ts-c01-results
           path: artifacts/*
@@ -167,7 +167,7 @@ jobs:
           cp runner/typescript/.properties-full.json artifacts/properties-full.json
 
       - name: Upload TS full artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ts-full-results
           path: artifacts/*
@@ -201,7 +201,7 @@ jobs:
           sha256sum core/rust/target/wasm32-wasip1/release/grain_core_wasm.wasm | awk '{print $1}' > artifacts/wasm.sha256
 
       - name: Upload WASM artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: wasm-smoke-results
           path: artifacts/wasm*
@@ -230,7 +230,7 @@ jobs:
         run: ./scripts/fuzz-smoke --out-dir artifacts/fuzz-smoke
 
       - name: Upload fuzz smoke artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: fuzz-smoke-results
           path: artifacts/fuzz-smoke
@@ -278,7 +278,7 @@ jobs:
           hash_order: full-first
 
       - name: Upload evidence bundle
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: evidence-${{ github.sha }}
           path: artifacts/evidence-${{ github.sha }}.zip
