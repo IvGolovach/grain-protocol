@@ -154,7 +154,7 @@ Key rule:
 ## Portability pack contract (TOR-PORTABILITY-A01)
 
 Primary anchors:
-- `TOR-PORTABILITY-A01.md`
+- `docs/human/rationale/TOR-PORTABILITY-A01.md`
 - `scripts/verify`
 - `scripts/certify`
 - `docker/grain-runner.Dockerfile`

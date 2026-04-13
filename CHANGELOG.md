@@ -34,7 +34,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 - TOR-RC-STAB-A01 addendum + TOR-PORTABILITY-A01 refresh:
   - RC stabilization docs now explicitly require SDK strict-suite parity in deep reproducibility lane when SDK gate is active.
   - RC stabilization docs now explicitly bind `INV-STAB-001` (cleanup warning-only, protocol verdict authoritative).
-  - `TOR-PORTABILITY-A01.md` upgraded to production-grade scope/gates/artifact matrix/risk register format.
+  - `docs/human/rationale/TOR-PORTABILITY-A01.md` upgraded to production-grade scope/gates/artifact matrix/risk register format.
   - LLM conformance/file-map indexes updated for portability and stabilization addendum anchors.
 - TOR-RC-STAB-PATCH-A02 (deterministic cleanup / non-blocking stabilization):
   - hardened `tools/stabilization/run_rc_stab.py` with best-effort `safe_rmtree` cleanup.
