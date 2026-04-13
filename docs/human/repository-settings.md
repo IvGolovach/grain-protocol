@@ -59,7 +59,7 @@ Historical milestone tags currently present:
 - `repo-rc-v0.4.0-rc1`
 
 Future public release tags should be signed.
-Historical imported milestone tags in this repository are annotated, but not all of them were backfilled as signed public release tags.
+Historical imported milestone tags in this repository now have GitHub release pages, but they remain historical imports and may not have fully reconstructed release assets or signed tags.
 
 ## 4) CI evidence policy
 
