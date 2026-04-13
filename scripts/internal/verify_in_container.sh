@@ -26,7 +26,9 @@ python3 tools/ci/check_node_runtime_pin.py
 python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
+python3 tools/ci/check_maintainer_docs.py
 python3 tools/ci/check_runner_contract_compat.py
+python3 tools/ci/check_runner_shim_boundary.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
 python3 tools/ci/check_sdk_no_network.py

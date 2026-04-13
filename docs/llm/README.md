@@ -48,6 +48,8 @@ Use these shortcuts when you already know the job:
   - `docs/llm/DOC_SYNC.md`
 - Contributor workflow or repo hygiene change:
   - `CONTRIBUTING.md`
+  - `docs/human/maintainer-start-here.md`
+  - `docs/human/maintainer-writing.md`
   - `.github/pull_request_template.md`
   - `tools/ci/check_history_hygiene.py`
 

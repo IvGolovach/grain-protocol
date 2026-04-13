@@ -77,9 +77,17 @@ runs:
       shell: bash
       run: python3 tools/ci/check_docs_flow.py
 
+    - name: Maintainer docs front-door check
+      shell: bash
+      run: python3 tools/ci/check_maintainer_docs.py
+
     - name: Check runner_v1 contract compatibility
       shell: bash
       run: python3 tools/ci/check_runner_contract_compat.py
+
+    - name: Check runner shim boundary
+      shell: bash
+      run: python3 tools/ci/check_runner_shim_boundary.py
 
     - name: Check prohibition-zone coverage
       shell: bash

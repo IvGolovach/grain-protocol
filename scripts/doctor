@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/doctor
+
+Quick maintainer status view for this repository.
+It does not change anything. It only reports what looks healthy and what needs a look.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -gt 0 ]]; then
+  echo "Unknown argument: $1" >&2
+  usage >&2
+  exit 2
+fi
+
+have_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+tool_state() {
+  local tool="$1"
+  if have_cmd "$tool"; then
+    printf "yes"
+  else
+    printf "no"
+  fi
+}
+
+branch="$(git branch --show-current 2>/dev/null || true)"
+if [[ -z "$branch" ]]; then
+  branch="DETACHED"
+fi
+
+base_ref="origin/main"
+if ! git rev-parse --verify "$base_ref" >/dev/null 2>&1; then
+  base_ref=""
+fi
+
+ahead_behind="n/a"
+if [[ -n "$base_ref" ]]; then
+  ahead_behind="$(git rev-list --left-right --count "${base_ref}...HEAD" | awk '{print "behind=" $1 ", ahead=" $2}')"
+fi
+
+dirty_items="$(git status --short | wc -l | tr -d ' ')"
+if [[ "$dirty_items" == "0" ]]; then
+  worktree="clean"
+else
+  worktree="dirty (${dirty_items} paths)"
+fi
+
+pinned_node="$(tr -d '\n' < .nvmrc 2>/dev/null || printf 'missing')"
+node_state="missing"
+if have_cmd node; then
+  node_version="$(node -v)"
+  if [[ "$node_version" == "v${pinned_node}" ]]; then
+    node_state="${node_version} (matches .nvmrc)"
+  else
+    node_state="${node_version} (expected v${pinned_node})"
+  fi
+fi
+
+dev_verify_path="artifacts/dev-verify"
+if [[ ! -d "$dev_verify_path" ]]; then
+  dev_verify_path="missing"
+fi
+
+certify_path="artifacts/verify"
+if [[ ! -d "$certify_path" ]]; then
+  certify_path="missing"
+fi
+
+printf "repo: %s\n" "$ROOT"
+printf "branch: %s\n" "$branch"
+printf "base: %s\n" "${base_ref:-missing}"
+printf "ahead/behind: %s\n" "$ahead_behind"
+printf "worktree: %s\n" "$worktree"
+printf "node: %s\n" "$node_state"
+printf "python3: %s\n" "$(tool_state python3)"
+printf "cargo: %s\n" "$(tool_state cargo)"
+printf "npm: %s\n" "$(tool_state npm)"
+printf "docker: %s\n" "$(tool_state docker)"
+printf "podman: %s\n" "$(tool_state podman)"
+printf "gh: %s\n" "$(tool_state gh)"
+printf "last dev verify artifacts: %s\n" "$dev_verify_path"
+printf "last certify artifacts: %s\n" "$certify_path"
+printf "\n"
+printf "next good commands:\n"
+printf "  ./scripts/verify\n"
+printf "  ./scripts/certify\n"
+printf "  ./scripts/doctor\n"
+printf "  docs/human/maintainer-start-here.md\n"

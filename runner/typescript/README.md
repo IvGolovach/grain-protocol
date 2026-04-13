@@ -5,6 +5,7 @@ TypeScript independent implementation for Grain conformance.
 ## Scope
 
 Implemented full conformance op set:
+
 - `dagcbor_validate`
 - `cid_derive`
 - `cose_verify`
@@ -17,8 +18,12 @@ Implemented full conformance op set:
 
 ## Independence boundary
 
-- No Rust FFI/WASM in engine execution.
-- Rust is used only by divergence tooling as external oracle process comparison.
+- No Rust FFI or WASM in engine execution
+- Rust is used only by divergence tooling as an external oracle process comparison
+- `runner/typescript/src` is intentionally a thin compatibility shell
+- shared protocol logic belongs in `core/ts/grain-ts-core`
+
+If you catch yourself adding protocol logic directly to `runner/typescript/src`, pause and check whether it belongs in `grain-ts-core` instead.
 
 ## Requirements
 
@@ -35,14 +40,14 @@ Run one vector:
 npm --prefix runner/typescript run run:vector -- conformance/vectors/cid/POS-CID-001.json
 ```
 
-Run C01 (Wave A smoke):
+Run `C01` (Wave A smoke):
 
 ```bash
 npm --prefix runner/typescript run run:c01
 npm --prefix runner/typescript run divergence:c01
 ```
 
-Run full suite + divergence:
+Run full suite plus divergence:
 
 ```bash
 npm --prefix runner/typescript run run:full
@@ -79,7 +84,7 @@ npm --prefix runner/typescript run build
 
 ## Determinism notes
 
-- UTF-8 comparisons are raw-byte lexicographic only.
-- HKDF labels are ASCII with explicit `0x00` separators.
-- DAG-CBOR decoding is strict and rejects duplicate map keys/non-canonical forms.
-- Ledger and manifest outputs are order-independent for identical input sets.
+- UTF-8 comparisons are raw-byte lexicographic only
+- HKDF labels are ASCII with explicit `0x00` separators
+- DAG-CBOR decoding is strict and rejects duplicate map keys and non-canonical forms
+- Ledger and manifest outputs are order-independent for identical input sets

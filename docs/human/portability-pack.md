@@ -1,8 +1,15 @@
 # Portability Pack
 
-This document defines the repeatable cross-platform verification baseline.
+This page is the short map for repeatable verification across machines.
+If you want one command and a clear answer, start here.
 
 ## Verification paths
+
+Quick health view:
+
+```bash
+./scripts/doctor
+```
 
 Fast developer verification:
 
@@ -10,8 +17,9 @@ Fast developer verification:
 ./scripts/verify
 ```
 
-Properties:
-- host toolchains required (Rust, Node, Python)
+What you get:
+
+- host toolchains required (`Rust`, `Node`, `Python`)
 - no clean-tree requirement
 - no container image build
 - no evidence bundle generation
@@ -30,7 +38,8 @@ Compatibility alias for older scripts or operator paths:
 ./scripts/ops/run_verification_pack_v1.sh
 ```
 
-Properties:
+What you get:
+
 - strict mode only
 - container-only execution (`docker` or `podman`)
 - deterministic PASS/FAIL verdict
@@ -44,7 +53,7 @@ Optional fuzz smoke:
 
 ## Golden images
 
-Build/publish script:
+Build or publish script:
 
 ```bash
 OWNER="${GITHUB_REPOSITORY_OWNER:-your-ghcr-namespace}"
@@ -52,11 +61,11 @@ OWNER="${GITHUB_REPOSITORY_OWNER:-your-ghcr-namespace}"
 ```
 
 Expected image families:
+
 - `ghcr.io/${OWNER}/grain-runner:stable`
 - `ghcr.io/${OWNER}/grain-certify:stable`
 
-If `GITHUB_REPOSITORY_OWNER` or `GOLDEN_IMAGE_REGISTRY` is already set, the
-script can derive the registry without an explicit argument.
+If `GITHUB_REPOSITORY_OWNER` or `GOLDEN_IMAGE_REGISTRY` is already set, the script can derive the registry without an explicit argument.
 
 ## WASM read/verify path
 
@@ -74,7 +83,16 @@ npm --prefix runner/typescript run run:wasm-subset
 
 ## Evidence model
 
-`evidence_content.sha256` is computed from deterministic artifacts only (vector manifests, suite outputs, divergence outputs, invariant audit).  
-`metadata.json` may contain timestamps/host details and is intentionally excluded from `evidence_content.sha256`.
+`evidence_content.sha256` is computed from deterministic artifacts only:
 
-`inputs-hashes.json` records `node -v`, so evidence-generating paths must use the exact Node patch version pinned in `.nvmrc`. The same exact version must also be pinned in `docker/grain-certify.Dockerfile`; `python3 tools/ci/check_node_runtime_pin.py` enforces that parity.
+- vector manifests
+- suite outputs
+- divergence outputs
+- invariant audit
+
+`metadata.json` may contain timestamps and host details.
+It is intentionally excluded from `evidence_content.sha256`.
+
+`inputs-hashes.json` records `node -v`, so evidence-generating paths must use the exact Node patch version pinned in `.nvmrc`.
+The same version must also be pinned in `docker/grain-certify.Dockerfile`.
+`python3 tools/ci/check_node_runtime_pin.py` enforces that parity.

@@ -1,6 +1,6 @@
 # Repro Checklist (Clean Clone)
 
-Use this checklist to verify reproducibility from a fresh clone.
+Use this page when you want the clean-clone answer, not the "it works on my laptop" answer.
 
 ## 1) Clean clone
 
@@ -11,10 +11,11 @@ git fetch --all --tags --prune
 ```
 
 Prerequisites:
-- Docker or Podman installed locally.
-- No host Rust/Node/Python toolchain is required for `./scripts/certify`.
-- `./scripts/verify` uses host Rust/Node/Python toolchains.
-- If you run host-side TS commands, developer verification, or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`.
+
+- Docker or Podman installed locally
+- no host Rust, Node, or Python toolchain is required for `./scripts/certify`
+- `./scripts/verify` uses host Rust, Node, and Python toolchains
+- if you run host-side TS commands, developer verification, or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`
 
 ## 2) Git parity checks
 
@@ -28,6 +29,7 @@ git status --porcelain=v1
 ```
 
 Expected:
+
 - `HEAD == origin/main`
 - `HEAD^{tree} == origin/main^{tree}`
 - `ahead/behind = 0 0`
@@ -48,7 +50,8 @@ npm --prefix core/ts/grain-sdk run test:ai-boundary
 ```
 
 Expected:
-- every command prints `OK` and exits `0`.
+
+- every command prints `OK` and exits `0`
 
 ## 4) Fast developer verification
 
@@ -57,11 +60,12 @@ Expected:
 ```
 
 Expected:
+
 - Rust strict suite PASS
 - TS strict suite PASS
 - SDK strict suite PASS
-- divergence C01/full = 0
-- property tests failed = 0
+- divergence `C01/full = 0`
+- property tests failed = `0`
 - AI boundary checks PASS
 - summary artifacts produced under `artifacts/dev-verify-local`
 
@@ -72,23 +76,24 @@ Expected:
 ```
 
 Expected:
+
 - containerized strict verification PASS
 - `evidence_content.sha256` produced
 
 ## 6) Compare with CI artifact
 
-Download evidence artifact from latest successful CI/release run and compare:
+Download the evidence artifact from the latest successful CI or release run and compare:
 
 ```bash
 cat artifacts/verify-local/evidence/evidence_content.sha256
 ```
 
-Confirm the first line hash (`evidence_sha256 ...`) matches the reference run for the same commit.
+Confirm the first-line hash (`evidence_sha256 ...`) matches the reference run for the same commit.
 
 ## 7) RC stabilization smoke (only during an active RC window)
 
-Use the current RC tag and baseline evidence hash from the matching
-stabilization record. Do not reuse an old RC baseline for a new release window.
+Use the current RC tag and baseline evidence hash from the matching stabilization record.
+Do not reuse an old RC baseline for a new release window.
 
 ```bash
 RC_TAG="repo-rc-vX.Y.Z-rcN"
@@ -102,7 +107,8 @@ python3 tools/stabilization/run_rc_stab.py \
 ```
 
 Expected:
-- `stabilization-evidence.json` verdict is `PASS`.
-- no fuzz crash/divergence findings.
-- attack matrix has no `FOUND_BUG`.
-- `reproducibility-report.md` shows `Observed node version` equal to the exact patch pinned in `.nvmrc`.
+
+- `stabilization-evidence.json` verdict is `PASS`
+- no fuzz crash or divergence findings
+- attack matrix has no `FOUND_BUG`
+- `reproducibility-report.md` shows `Observed node version` equal to the exact patch pinned in `.nvmrc`

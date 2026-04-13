@@ -21,7 +21,7 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 7. `adr/` (including `adr/sdk/`)
    - Why decisions were made; use for rationale, not as a normative override.
 8. `README.md`, `docs/human/*`, `core/ts/grain-sdk/README.md`, `CONTRIBUTING.md`, `.github/pull_request_template.md`
-   - Human onboarding and contributor process docs. Helpful, but they do not override spec or vectors.
+   - Human onboarding and contributor process docs. Helpful, but they do not override spec or vectors. If you need the maintainer front door, start with `docs/human/maintainer-start-here.md`.
 9. `core/rust/`, `core/ts/grain-ts-core/`, `runner/typescript/`, `core/`, `sdk/`
    - Implementations. They must conform to the contract above.
 10. `.github/workflows/`, `.githooks/*`, `scripts/setup_local_hygiene.sh`, `tools/ci/check_history_hygiene.py`, `MIGRATION.md`, `docs/human/rationale/TOR-PORTABILITY-A01.md`, `docs/human/repository-settings.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`

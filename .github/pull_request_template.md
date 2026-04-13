@@ -8,6 +8,7 @@ Explain the reason in plain language. Link ADR(s) if required.
 - [ ] I read `docs/llm/DOC_SYNC.md`
 - [ ] I updated the matching `docs/llm/*` docs for any contract or behavior change
 - [ ] I updated human docs if this affects onboarding, user flow, or maintainer workflow
+- [ ] I kept `docs/human/maintainer-start-here.md` and related runbooks accurate if maintainer workflow changed
 - [ ] I updated the relevant process docs or this template if the process changed
 - [ ] I did not leave code, tests, and docs describing different behavior
 
