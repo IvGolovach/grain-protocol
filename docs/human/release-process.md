@@ -50,7 +50,7 @@ RC policy reference:
    - for `repo-*` tags, image alias `stable` is updated.
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only (must not overwrite `stable`).
 8. For new tags cut from this repository, verify the matching GitHub release entry exists and attached assets are present.
-9. Historical imported milestone tags in this repository may remain tag-only and may not have backfilled GitHub release pages.
+9. Historical imported milestone tags in this repository now have backfilled GitHub release pages, but older milestones may still point to reconstructed notes instead of fully reconstructed release assets.
 
 ## RC stabilization window gate (TOR-RC-STAB-A01)
 
@@ -80,5 +80,5 @@ Before promoting `repo-rc-*` to `repo-v*`, run stabilization checks:
 - Protocol and repo tags are intentionally independent.
 - Repository provenance note (`MIGRATION.md`) must stay accurate when release workflow changes.
 - RC tags are readiness checkpoints, not public launch declarations.
-- Historical imported milestone tags in this repository predate public release backfill and may not have GitHub Releases attached.
+- Historical imported milestone tags in this repository now have backfilled GitHub release pages, but some older milestones still rely on historical evidence references instead of reconstructed GitHub release assets.
 - RC rollback uses signed revocation records; history and tags are not rewritten.
