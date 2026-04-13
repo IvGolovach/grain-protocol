@@ -13,10 +13,6 @@ from pathlib import Path
 CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
 
 
-def literal(*parts: str, flags: int = 0) -> re.Pattern[str]:
-    return re.compile(re.escape("".join(parts)), flags)
-
-
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "consumer-email-domain",
@@ -50,14 +46,6 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         "private-tmp-path",
         re.compile(re.escape("/" + "private" + "/tmp") + r"(?:/[^\s\"']+)?"),
     ),
-    (
-        "codex-fingerprint",
-        re.compile(
-            r"(?<![A-Za-z0-9_])" + re.escape("." + "codex") + r"(?![A-Za-z0-9_])"
-        ),
-    ),
-    ("tok-scale-fingerprint", literal("tok", "scale", flags=re.IGNORECASE)),
-    ("little-snitch-fingerprint", literal("Little", " Snitch", flags=re.IGNORECASE)),
     (
         "publication-transition-marker",
         re.compile(
