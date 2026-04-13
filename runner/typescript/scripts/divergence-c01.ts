@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 
 import { runnerPath } from "./runtime.js";
-import { loadC01Vectors, runRustVectors, runTsVector, stable, type RunnerJson } from "./shared.js";
+import { loadC01Vectors, parseRunnerOutput, runRustVectors, runTsVector, stable, type RunnerJson } from "./shared.js";
 
 const vectors = loadC01Vectors();
 const rustMap = runRustVectors(vectors, runnerPath(".c01-vectors.txt"));
@@ -23,7 +23,7 @@ for (const vector of vectors) {
 
   let ts: RunnerJson;
   try {
-    ts = JSON.parse(runTsVector(vector)) as RunnerJson;
+    ts = parseRunnerOutput(runTsVector(vector));
   } catch (err) {
     mismatches.push({ vector, kind: "parse", rust, details: err instanceof Error ? err.message : String(err) });
     continue;

@@ -129,6 +129,12 @@ Implementations MAY provide additional ops, but conformance only depends on the 
 
 ## 5. Diagnostics (recommended)
 
+## Runner JSON boundary
+
+- For `runner_v1` JSON output, integers with absolute value greater than `9007199254740991` MUST be encoded as decimal strings.
+- Safe integers MAY stay as JSON numbers.
+- This rule is about the portability-facing JSON boundary only; internal implementations may use native 64-bit integer types.
+
 Suggested deterministic diag codes (non-exhaustive):
 - `GRAIN_ERR_NONCANONICAL`
 - `GRAIN_ERR_DUP_MAP_KEY`

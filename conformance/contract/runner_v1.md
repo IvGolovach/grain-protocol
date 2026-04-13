@@ -25,6 +25,11 @@ Compatibility rules:
 - `diag` (array of deterministic codes)
 - `out` (object)
 
+JSON integer interoperability rule:
+- values inside `out` whose absolute value is greater than `9007199254740991` MUST be emitted as base-10 decimal strings
+- safe integers MAY be emitted as JSON numbers
+- this keeps `runner_v1` interoperable across IEEE-754 / JavaScript runtimes without losing exactness
+
 Normative schema file:
 - `conformance/contract/runner_v1.output.schema.json`
 

@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { stringifyExactJson } from "grain-ts-core/exact-json";
 import type { RunnerOutput, VectorFile } from "grain-ts-core/types";
 import { repoRoot } from "../scripts/runtime.js";
 import { GrainSdk } from "./sdk.js";
@@ -53,7 +54,7 @@ function main(argv: string[]): number {
 }
 
 function printAndExit(output: RunnerOutput, code: number): never {
-  process.stdout.write(`${JSON.stringify(output)}\n`);
+  process.stdout.write(`${stringifyExactJson(output)}\n`);
   process.exit(code);
 }
 

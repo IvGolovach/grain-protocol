@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 
 import { runnerPath } from "./runtime.js";
-import { loadFullVectors, runTsVector } from "./shared.js";
+import { loadFullVectors, parseRunnerOutput, runTsVector } from "./shared.js";
 
 const vectors = loadFullVectors();
 
@@ -12,7 +12,7 @@ const failures: { vector: string; output: string }[] = [];
 for (const vector of vectors) {
   try {
     const out = runTsVector(vector);
-    const parsed = JSON.parse(out) as { pass: boolean };
+    const parsed = parseRunnerOutput(out);
     if (parsed.pass) {
       passed += 1;
     } else {
