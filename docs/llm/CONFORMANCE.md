@@ -104,11 +104,13 @@ Primary commands:
 ```bash
 npm --prefix core/ts/grain-sdk run run:protocol-suite
 npm --prefix core/ts/grain-sdk run test:invariants
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 ```
 
 Contract:
 - protocol vectors are executed through SDK boundary (no bypass path)
 - SDK invariants are additional and MUST NOT weaken protocol vectors
+- AI boundary checks are separate from core SDK checks and live in the optional sidecar package
 - CI includes SDK checks inside required context `ts-full`
 
 ## CI and provenance contract

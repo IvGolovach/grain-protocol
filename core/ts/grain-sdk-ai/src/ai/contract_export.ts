@@ -37,7 +37,7 @@ export function exportAiContract(): ContractExportV1 {
       set_array_policy: "AI ingestion may normalize unsorted set-arrays; duplicates are always rejected."
     },
     prohibitions: [
-      "No network calls from SDK AI boundary.",
+      "No network calls from AI sidecar or SDK core.",
       "No append bypass around accept() -> applyAccepted().",
       "No unknown critical extension auto-apply."
     ],

@@ -4,30 +4,36 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 
 ## [Unreleased]
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
-  - added `sdk.ai` boundary with two-step contract:
+  - moved AI into optional sidecar package `core/ts/grain-sdk-ai`
+  - `GrainSdk` no longer exposes `sdk.ai`; callers opt in with `createGrainSdkAi(sdk)`
+  - sidecar contract stays two-step:
     - `accept(candidate)` (pure deterministic validation/canonicalization)
     - `applyAccepted(token)` (explicit side effect using opaque token)
   - removed public `sdk.store` exposure from SDK API (`GrainSdk` now uses runtime-private `#store`)
-  - added AI modules:
-    - `core/ts/grain-sdk/src/ai/adapter.ts`
-    - `core/ts/grain-sdk/src/ai/candidate_v1.ts`
-    - `core/ts/grain-sdk/src/ai/accept.ts`
-    - `core/ts/grain-sdk/src/ai/token_registry.ts`
-    - `core/ts/grain-sdk/src/ai/contract_export.ts`
-    - `core/ts/grain-sdk/src/ai/diagnostics.ts`
+  - core SDK now exposes narrow AI host bridge:
+    - `core/ts/grain-sdk/src/ai-host.ts`
+  - AI sidecar modules now live in:
+    - `core/ts/grain-sdk-ai/src/ai/adapter.ts`
+    - `core/ts/grain-sdk-ai/src/ai/candidate_v1.ts`
+    - `core/ts/grain-sdk-ai/src/ai/accept.ts`
+    - `core/ts/grain-sdk-ai/src/ai/token_registry.ts`
+    - `core/ts/grain-sdk-ai/src/ai/contract_export.ts`
+    - `core/ts/grain-sdk-ai/src/ai/diagnostics.ts`
   - added deterministic AI boundary tests:
-    - `core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts`
+    - `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`
   - token registry hardening:
-    - deterministic token expiry/cap behavior with injectable clock in `GrainSdkOptions.ai.now_ms`
+    - deterministic token expiry/cap behavior with injectable clock in `createGrainSdkAi(sdk, { now_ms })`
     - explicit cap reached reject `SDK_ERR_ACCEPT_TOKEN_CAP_REACHED`
   - structured_v1 hardening:
     - explicit field profile requirement (`profile_id` or explicit field maps), no implicit numeric guessing
-    - added profile table in `core/ts/grain-sdk/src/ai/profiles.ts`
+    - added profile table in `core/ts/grain-sdk-ai/src/ai/profiles.ts`
   - explain hardening:
     - default redaction forbids raw candidate/private bytes
     - sensitive mode limited to bounded metadata (hash/length/prefix), never raw payloads
-  - hardened CI with SDK no-network static guard:
+  - hardened CI with SDK no-network static guard and AI boundary import guard:
     - `tools/ci/check_sdk_no_network.py`
+    - `tools/ci/check_sdk_ai_boundary.py`
+  - added blessed local bootstrap path with `mise.toml` + `./scripts/bootstrap`
   - updated SDK docs (human + LLM) with AI boundary/invariants mapping.
   - added ADR: `adr/sdk/0003-ai-boundary-deterministic-ingestion.md`.
   - SDK semver bumped to `0.2.0` (independent from protocol major).

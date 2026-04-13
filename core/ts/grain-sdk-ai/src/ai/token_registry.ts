@@ -1,5 +1,5 @@
-import { SdkError } from "../errors.js";
-import { bytesEq, sha256Hex } from "../utils.js";
+import { SdkError } from "grain-sdk-ts/errors";
+import { bytesEq, sha256Hex } from "../sdk-utils.js";
 
 const TOKEN_SECRET = Symbol("sdk-ai-accepted-token-secret");
 

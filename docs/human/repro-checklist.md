@@ -15,6 +15,7 @@ Prerequisites:
 - Docker or Podman installed locally
 - no host Rust, Node, or Python toolchain is required for `./scripts/certify`
 - `./scripts/verify` uses host Rust, Node, and Python toolchains
+- `./scripts/bootstrap` is the blessed way to install those host toolchains and package dependencies
 - if you run host-side TS commands, developer verification, or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`
 
 ## 2) Git parity checks
@@ -45,8 +46,10 @@ python3 tools/check_spec_drift.py
 python3 tools/check_llm_docs.py
 python3 tools/validate_vectors.py
 python3 tools/ci/check_node_runtime_pin.py
+python3 tools/ci/check_toolchain_bootstrap.py
 python3 tools/ci/check_sdk_no_network.py
-npm --prefix core/ts/grain-sdk run test:ai-boundary
+python3 tools/ci/check_sdk_ai_boundary.py
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 ```
 
 Expected:
@@ -63,10 +66,10 @@ Expected:
 
 - Rust strict suite PASS
 - TS strict suite PASS
-- SDK strict suite PASS
+- SDK core suite PASS
 - divergence `C01/full = 0`
 - property tests failed = `0`
-- AI boundary checks PASS
+- AI sidecar boundary checks PASS
 - summary artifacts produced under `artifacts/dev-verify-local`
 
 ## 5) Release-grade certification

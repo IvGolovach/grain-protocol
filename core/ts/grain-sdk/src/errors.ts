@@ -204,7 +204,7 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
   SDK_ERR_AI_PROFILE_UNKNOWN: {
     category: "CONTRACT",
     summary: "structured_v1 profile_id is unknown.",
-    human_hint: "Use an exported profile_id from sdk.ai.exportContract() or explicit field maps.",
+    human_hint: "Use an exported profile_id from ai.exportContract() or explicit field maps.",
     nes_ref: "docs/human/sdk/ai-ingestion.md",
     vector_refs: ["SDK-NEG-AI-0012"]
   },
@@ -232,7 +232,7 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
   SDK_ERR_ACCEPT_TOKEN_FORGED: {
     category: "CONTRACT",
     summary: "Accepted token is forged or external to SDK registry.",
-    human_hint: "Only pass opaque token returned by sdk.ai.accept().",
+    human_hint: "Only pass opaque token returned by ai.accept().",
     nes_ref: "docs/human/sdk/ai-boundary.md",
     vector_refs: ["SDK-NEG-AI-0009"]
   },

@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 NVMRC = ROOT / ".nvmrc"
 DOCKERFILE = ROOT / "docker" / "grain-certify.Dockerfile"
+MISE_TOML = ROOT / "mise.toml"
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
 DOCKER_ARG_RE = re.compile(r"^ARG NODE_VERSION=(\S+)$", re.MULTILINE)
 
@@ -39,6 +41,16 @@ def main() -> int:
             "Node runtime pin drift: "
             f".nvmrc={nvmrc_value!r} docker/grain-certify.Dockerfile={docker_value!r}"
         )
+
+    if not MISE_TOML.exists():
+        errors.append("mise.toml is missing")
+    else:
+        mise_data = tomllib.loads(MISE_TOML.read_text(encoding="utf-8"))
+        mise_node = str(mise_data.get("tools", {}).get("node", "")).strip()
+        if not SEMVER_RE.fullmatch(mise_node):
+            errors.append(f"mise.toml [tools].node must pin an exact Node patch version, got: {mise_node!r}")
+        elif mise_node != nvmrc_value:
+            errors.append(f"Node runtime pin drift: .nvmrc={nvmrc_value!r} mise.toml={mise_node!r}")
 
     if errors:
         print("node runtime pin check failed:", file=sys.stderr)

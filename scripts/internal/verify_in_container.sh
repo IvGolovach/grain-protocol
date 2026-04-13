@@ -23,6 +23,7 @@ python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
 python3 tools/ci/check_node_runtime_pin.py
+python3 tools/ci/check_toolchain_bootstrap.py
 python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
@@ -32,6 +33,7 @@ python3 tools/ci/check_runner_shim_boundary.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
 python3 tools/ci/check_sdk_no_network.py
+python3 tools/ci/check_sdk_ai_boundary.py
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
 
@@ -46,6 +48,9 @@ npm ci --prefix runner/typescript
 if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
   npm ci --prefix core/ts/grain-sdk
 fi
+if [[ -f core/ts/grain-sdk-ai/package-lock.json ]]; then
+  npm ci --prefix core/ts/grain-sdk-ai
+fi
 
 npm --prefix runner/typescript run run:c01
 npm --prefix runner/typescript run run:full
@@ -56,7 +61,7 @@ npm --prefix runner/typescript run test:properties
 npm --prefix runner/typescript run test:integer-precision
 npm --prefix core/ts/grain-sdk run run:protocol-suite
 npm --prefix core/ts/grain-sdk run test:invariants
-npm --prefix core/ts/grain-sdk run test:ai-boundary
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 
 python3 tools/ci/run_runner_suite.py \
   --vectors-root conformance/vectors \
@@ -149,7 +154,8 @@ summary = "\n".join(
         "- Python policy checks: PASS",
         "- Rust strict suite: PASS",
         "- TypeScript strict suite: PASS",
-        "- SDK suite + invariants + AI boundary: PASS",
+        "- SDK core suite + invariants: PASS",
+        "- SDK AI sidecar boundary: PASS",
         "- Interop summary: PASS",
         "",
     ]

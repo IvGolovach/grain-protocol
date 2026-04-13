@@ -21,13 +21,13 @@ npm --prefix core/ts/grain-sdk run run:protocol-suite
 
 ```bash
 npm --prefix core/ts/grain-sdk run test:invariants
-npm --prefix core/ts/grain-sdk run test:ai-boundary
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 ```
 
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0012` and `SDK-AI-001` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0012` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Diagnostics contract
 
@@ -42,6 +42,6 @@ Expected contract:
 python3 tools/ci/check_sdk_no_network.py
 ```
 
-This is a hard gate. SDK core must stay vendor/network agnostic.
+This is a hard gate. SDK core and the AI sidecar must stay vendor/network agnostic.
 
 If this mapping drifts, report a blocking issue before proposing any semantic change.
