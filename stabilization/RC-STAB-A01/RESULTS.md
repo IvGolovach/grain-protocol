@@ -7,8 +7,8 @@ This file is the historical decision log for the imported
 - Protocol anchor: `protocol-v0.1.1`
 - RC anchor: `repo-rc-v0.4.0-rc1`
 - Baseline evidence hash: `35475fd1767ec873a4bfa46c51ffffd23843831e21df5c17db0e5d2162b3a1bd`
-- Baseline release evidence source: historical artifact references for `repo-rc-v0.4.0-rc1` (not backfilled as GitHub Releases in this repo)
-- Baseline interop evidence source: historical artifact references for `repo-rc-v0.4.0-rc1` (not backfilled as GitHub Releases in this repo)
+- Baseline release evidence source: historical artifact references for `repo-rc-v0.4.0-rc1` (release page backfilled later; original release assets were not reconstructed)
+- Baseline interop evidence source: historical artifact references for `repo-rc-v0.4.0-rc1` (release page backfilled later; original release assets were not reconstructed)
 
 ## Latest stabilization execution
 Latest imported deep run on the public-candidate mainline:
@@ -28,7 +28,7 @@ Latest imported deep run on the public-candidate mainline:
 
 Notes:
 - reproducibility failed because the observed evidence hash did not match the imported RC baseline hash
-- rollback rehearsal failed because release metadata for `repo-rc-v0.4.0-rc1` was not backfilled in this repository
+- rollback rehearsal failed because release metadata for `repo-rc-v0.4.0-rc1` was not backfilled in this repository at the time of the historical run
 
 ## Historical decision rule
 - If all gates pass in deep mode:
