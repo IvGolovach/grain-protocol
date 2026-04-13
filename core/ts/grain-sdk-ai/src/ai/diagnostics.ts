@@ -1,4 +1,4 @@
-import { describeError, type ErrorCategory } from "../errors.js";
+import { describeError, type ErrorCategory } from "grain-sdk-ts/errors";
 
 export type AIExplainPayload = {
   code: string;

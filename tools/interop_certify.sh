@@ -35,6 +35,7 @@ python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
 python3 tools/ci/check_node_runtime_pin.py
+python3 tools/ci/check_toolchain_bootstrap.py
 python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
@@ -42,6 +43,7 @@ python3 tools/ci/check_runner_contract_compat.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
 python3 tools/ci/check_sdk_no_network.py
+python3 tools/ci/check_sdk_ai_boundary.py
 python3 -m py_compile tools/*.py tools/ci/*.py
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -53,6 +55,9 @@ npm ci --prefix core/ts/grain-ts-core >/dev/null
 npm ci --prefix runner/typescript >/dev/null
 if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
   npm ci --prefix core/ts/grain-sdk >/dev/null
+fi
+if [[ -f core/ts/grain-sdk-ai/package-lock.json ]]; then
+  npm ci --prefix core/ts/grain-sdk-ai >/dev/null
 fi
 npm --prefix runner/typescript run build --silent >/dev/null
 
@@ -99,7 +104,7 @@ npm --prefix runner/typescript run run:full >/dev/null
 npm --prefix runner/typescript run divergence:c01 >/dev/null
 npm --prefix runner/typescript run divergence:full >/dev/null
 npm --prefix runner/typescript run test:properties >/dev/null
-npm --prefix core/ts/grain-sdk run test:ai-boundary >/dev/null
+npm --prefix core/ts/grain-sdk-ai run test:boundary >/dev/null
 
 cp runner/typescript/.divergence-c01.json "$OUT_DIR/divergence-c01.json"
 cp runner/typescript/.divergence-full.json "$OUT_DIR/divergence-full.json"

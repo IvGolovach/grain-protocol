@@ -1,28 +1,31 @@
 # SDK_AI_BOUNDARY
 
-Hi teammate LLM. This page is the deterministic AI ingestion handoff for SDK.
+Hi teammate LLM. This page is the deterministic AI ingestion handoff for the optional SDK AI sidecar.
 
 ## Read this first
 
 1. AI output is suggestion-only.
-2. It must pass `accept()`.
-3. Only opaque accepted tokens can be applied with `applyAccepted()`.
+2. The sidecar is explicit: create it from `GrainSdk`, do not assume `sdk.ai`.
+3. It must pass `accept()`.
+4. Only opaque accepted tokens can be applied with `applyAccepted()`.
 
 If any step is bypassed, treat it as a bug.
 
 ## File map
 
-- `core/ts/grain-sdk/src/ai/candidate_v1.ts`
-- `core/ts/grain-sdk/src/ai/accept.ts`
-- `core/ts/grain-sdk/src/ai/token_registry.ts`
-- `core/ts/grain-sdk/src/ai/diagnostics.ts`
-- `core/ts/grain-sdk/src/ai/contract_export.ts`
+- `core/ts/grain-sdk/src/ai-host.ts`
+- `core/ts/grain-sdk-ai/src/ai/candidate_v1.ts`
+- `core/ts/grain-sdk-ai/src/ai/accept.ts`
+- `core/ts/grain-sdk-ai/src/ai/token_registry.ts`
+- `core/ts/grain-sdk-ai/src/ai/diagnostics.ts`
+- `core/ts/grain-sdk-ai/src/ai/contract_export.ts`
 
 ## Invariants to enforce
 
+- `SDK-AI-000`: AI stays opt-in; `GrainSdk` must not grow a default `sdk.ai`
 - `SDK-AI-001`: no append/apply bypass without accept token
 - `SDK-AI-002`: deterministic accept/apply outcomes
-- `SDK-AI-003`: no network in SDK core
+- `SDK-AI-003`: no network in SDK core or AI sidecar
 - `SDK-AI-004`: explain redaction by default
 - `SDK-AI-005`: numeric ingestion uses decimal strings only
 - `SDK-AI-006`: set-array sort normalize allowed, duplicates reject

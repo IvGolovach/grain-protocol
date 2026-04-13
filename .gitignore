@@ -29,3 +29,7 @@ Thumbs.db
 
 # local audit workspace (never commit)
 .local-architect-reports/
+
+# local mise overrides
+mise.local.toml
+.mise.local.toml

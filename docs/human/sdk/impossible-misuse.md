@@ -26,7 +26,7 @@ This checklist documents what public SDK APIs reject by construction.
    - rejected by `ai.applyAccepted(...)`
    - code: `SDK_ERR_ACCEPT_TOKEN_FORGED` / `SDK_ERR_ACCEPT_TOKEN_UNKNOWN` / `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
 8. AI candidate bypass around deterministic firewall
-   - no public `sdk.store` access; side effects require `accept()` then opaque token apply
+   - no public `sdk.store` access; side effects require sidecar `accept()` then opaque token apply
    - code path: `SDK-AI-001` gate suite
 9. Unknown critical AI candidate extensions
    - quarantined deterministically
@@ -41,7 +41,7 @@ This checklist documents what public SDK APIs reject by construction.
 
 ```bash
 npm --prefix core/ts/grain-sdk run test:invariants
-npm --prefix core/ts/grain-sdk run test:ai-boundary
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 ```
 
 This command is the executable proof for `SDK-INV-*` mappings in `docs/llm/SDK_INVARIANTS.md`.

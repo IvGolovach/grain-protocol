@@ -1,6 +1,7 @@
 # Grain SDK
 
 The production SDK code lives in `core/ts/grain-sdk`.
+The optional AI sidecar lives in `core/ts/grain-sdk-ai`.
 This top-level `sdk/` path is only a signpost for readers browsing the repo root.
 
 SDK is an adoption layer:
@@ -10,3 +11,4 @@ SDK is an adoption layer:
 
 Primary implementation:
 - `core/ts/grain-sdk`
+- `core/ts/grain-sdk-ai`
