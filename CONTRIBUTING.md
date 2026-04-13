@@ -60,7 +60,3 @@ It installs local git hooks that catch accidental leaks in staged files or commi
 - Avoid hidden behavior.
 - Add negative vectors for any new edge case.
 - For any MUST rule, link to the exact NES paragraph.
-
-## Developer Certificate of Origin
-
-If you want a DCO policy, add signoff requirements here.
