@@ -1,19 +1,21 @@
 # Building On Grain
 
-This page is for app builders. It shows the shortest path from "I want to use Grain" to "I have a small working app".
+This page is for app builders.
+It is the shortest path from "I want to use Grain" to "I have a small working app."
 
 ## Start with the smallest win
 
 If you want the easiest first step, read [Minimal app example](./sdk/minimal-app-example.md).
 
 That example does four things:
+
 - creates an in-memory SDK
 - creates a root identity
 - appends one event
 - reduces the event list into a deterministic result
 
 For that first app, `payload_cid` can simply be a stable identifier for the source payload.
-If you later store the payload as its own canonical Grain object, then using that real CID is the stronger pattern.
+If you later store the payload as its own canonical Grain object, using the real CID is the stronger pattern.
 
 ## What you can count on
 
@@ -37,16 +39,9 @@ If you later store the payload as its own canonical Grain object, then using tha
 If you want shipped v0.1 reducer behavior today, stay on the existing `IntakeEvent` path.
 If you want to preserve an app-defined event type, treat that as a store/forward lane unless you have added explicit semantics on top.
 
-If you are building with the SDK, go to [SDK Start Here](./sdk/start-here.md).
-If you are mapping a domain object into Grain, use [Domain Adapters](./domain-adapters.md).
-If you want the deeper protocol rules, read the conformance spec after your first run.
+## Where to go next
 
-## Read later
-
-Most app builders do not need the full `NES` (`Normative Encoding & Semantics`) document on day one.
-Start with:
-- `conformance/SPEC.md`
-
-Then go deeper if you need protocol detail:
-- `spec/NES-v0.1.md`
-- `spec/profiles/*`
+- Building with the SDK: [SDK Start Here](./sdk/start-here.md)
+- Mapping a domain object into Grain: [Domain Adapters](./domain-adapters.md)
+- Working on the repo itself: [Maintainer Start Here](./maintainer-start-here.md)
+- Going deeper on protocol detail: `conformance/SPEC.md`, then `spec/NES-v0.1.md`

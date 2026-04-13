@@ -1,6 +1,7 @@
 # Quickstart (5 minutes)
 
-Run one working flow first. Read internals second.
+Run one working flow first.
+Read internals second.
 
 This path uses Docker so you can get a first success without setting up a local Rust toolchain.
 
@@ -77,19 +78,19 @@ Expected deterministic output:
 The demo uses stable placeholder labels such as `cid-intake-demo-3` for `payload_cid`.
 Those are demo identifiers inside the sample ledger, not separately derived protocol-object CIDs.
 
-## 2) What the demo actually did
+## 2) What the demo just did
 
-1. Decoded `GR1:` transport payload.
-2. Verified COSE signature under narrow profile.
+1. Decoded a `GR1:` transport payload.
+2. Verified a COSE signature under the narrow profile.
 3. Appended one deterministic `IntakeEvent` to a local demo ledger.
 4. Reduced ledger state to deterministic totals (`sum_mean`, `sum_var`).
 
 ## 3) What the terms mean
 
-- `strict: true`: the demo did not use permissive fallback behavior.
-- `GR1:`: fixed QR transport prefix for Grain v0.1.
+- `strict: true`: no permissive fallback behavior was used.
+- `GR1:`: the fixed QR transport prefix for Grain v0.1.
 - `COSE narrow profile`: the small fixed signature profile Grain uses for deterministic verification.
-- `C01`: a small TypeScript smoke profile for byte-path checks; it is not a second protocol mode.
+- `C01`: a small TypeScript smoke profile for byte-path checks. It is not a second protocol mode.
 
 ## 4) Choose your next path
 
@@ -97,19 +98,23 @@ Those are demo identifiers inside the sample ledger, not separately derived prot
 - [Build an app on Grain](./building-on-grain.md)
 - [Use the SDK path](./sdk/start-here.md)
 - [Implement Grain](./implementing-grain.md)
+- [Maintain the repo](./maintainer-start-here.md)
 - [Run fast developer verification](./start-here.md#verification-paths)
 - [Start-here overview](./start-here.md)
 
-## 5) Deep protocol references (after first run)
+## 5) Deep protocol references
+
+Read these after your first run, not before:
 
 - `conformance/SPEC.md`
-- `spec/NES-v0.1.md` (the normative rules document)
+- `spec/NES-v0.1.md`
 - `docs/llm/INVARIANTS.md`
 - `docs/llm/EDGE_CASES.md`
 
 ## 6) Going deeper
 
 If you are just evaluating Grain, you can stop here.
+
 If you are implementing or testing Grain itself, these TypeScript engine commands are useful:
 
 ```bash
@@ -119,5 +124,7 @@ npm --prefix runner/typescript run run:full
 npm --prefix runner/typescript run divergence:full
 ```
 
-TS now has a full strict engine. `C01` stays as the smaller smoke profile for byte-path regressions.
+TS now has a full strict engine.
+`C01` stays as the smaller smoke profile for byte-path regressions.
+
 If you want the broader local verification pass after this demo, run `./scripts/verify`.
