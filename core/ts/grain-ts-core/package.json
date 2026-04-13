@@ -28,6 +28,10 @@
       "types": "./dist/src/vector-json.d.ts",
       "default": "./dist/src/vector-json.js"
     },
+    "./exact-json": {
+      "types": "./dist/src/exact-json.d.ts",
+      "default": "./dist/src/exact-json.js"
+    },
     "./expect": {
       "types": "./dist/src/expect.d.ts",
       "default": "./dist/src/expect.js"

@@ -23,6 +23,7 @@ REQUIRED_INPUT_BY_OP = {
 }
 
 PLACEHOLDER_TOKENS = ("placeholder", "illustrative", "next phase")
+MAX_SAFE_INTEGER = 9007199254740991
 
 
 def _is_b64_field(name: str) -> bool:
@@ -46,6 +47,25 @@ def _walk_strings(node):
     elif isinstance(node, list):
         for item in node:
             yield from _walk_strings(item)
+
+
+def _collect_unsafe_expect_integers(node, path=""):
+    out = []
+    if isinstance(node, bool):
+        return out
+    if isinstance(node, int):
+        if abs(node) > MAX_SAFE_INTEGER:
+            out.append((path or "<root>", node))
+        return out
+    if isinstance(node, dict):
+        for key, value in node.items():
+            child_path = f"{path}.{key}" if path else key
+            out.extend(_collect_unsafe_expect_integers(value, child_path))
+        return out
+    if isinstance(node, list):
+        for idx, item in enumerate(node):
+            out.extend(_collect_unsafe_expect_integers(item, f"{path}[{idx}]"))
+    return out
 
 
 def _collect_b64_fields(node, path=""):
@@ -162,6 +182,18 @@ def main() -> int:
         for field_path, value in _collect_b64_fields(obj):
             if not _validate_b64(value):
                 bad.append((rel, f"invalid base64 in field {field_path}"))
+
+        for expect_key in ("out", "out_equals"):
+            expect_value = obj.get("expect", {}).get(expect_key)
+            if expect_value is None:
+                continue
+            for field_path, value in _collect_unsafe_expect_integers(expect_value, f"expect.{expect_key}"):
+                bad.append(
+                    (
+                        rel,
+                        f"{field_path} uses integer {value} outside the JSON safe range; encode unsafe output integers as decimal strings",
+                    )
+                )
 
         # Op-specific shape rules.
         if op == "manifest_resolve":

@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { parseExactJson } from "../src/exact-json.js";
 import { parseVectorFile } from "../src/vector-json.js";
 import { runTsVector } from "./shared.js";
 
@@ -41,7 +42,7 @@ function run(): void {
     });
 
     runCase(tempDir, "body-precision", BODY_PRECISION_VECTOR, {
-      sum_mean: { kcal: 9007199254740992 },
+      sum_mean: { kcal: "9007199254740993" },
       sum_var: { kcal: 0 }
     }, (parsed) => {
       const events = parsed.input.events as Array<Record<string, unknown>>;
@@ -52,7 +53,17 @@ function run(): void {
       if (mean?.kcal !== "9007199254740993") {
         throw new Error("vector parser did not preserve exact body integer value");
       }
+    }, (rawOutput) => {
+      if (!rawOutput.includes("\"kcal\":\"9007199254740993\"")) {
+        throw new Error(`runner output did not preserve unsafe integer as decimal string: ${rawOutput}`);
+      }
     });
+
+    runParsedRawDivergenceCase(
+      "raw-output-divergence",
+      "{\"vector_id\":\"X\",\"pass\":true,\"diag\":[],\"out\":{\"sum_mean\":{\"kcal\":9007199254740992}}}",
+      "{\"vector_id\":\"X\",\"pass\":true,\"diag\":[],\"out\":{\"sum_mean\":{\"kcal\":9007199254740993}}}"
+    );
 
     const failed = checks.filter((c) => !c.pass);
     process.stdout.write(`${JSON.stringify({ total: checks.length, failed: failed.length, checks }, null, 2)}\n`);
@@ -67,7 +78,8 @@ function runCase(
   name: string,
   vectorText: string,
   expectedOut: Record<string, unknown>,
-  assertParsedInput: (parsed: ReturnType<typeof parseVectorFile>) => void
+  assertParsedInput: (parsed: ReturnType<typeof parseVectorFile>) => void,
+  assertRawOutput?: (rawOutput: string) => void
 ): void {
   const vectorPath = join(tempDir, `${name}.json`);
   writeFileSync(vectorPath, vectorText, "utf8");
@@ -76,11 +88,14 @@ function runCase(
     const parsed = parseVectorFile(vectorText);
     assertParsedInput(parsed);
 
-    const output = JSON.parse(runTsVector(vectorPath)) as {
+    const rawOutput = runTsVector(vectorPath);
+    assertRawOutput?.(rawOutput);
+
+    const output = parseExactJson<{
       pass: boolean;
       diag: string[];
       out: Record<string, unknown>;
-    };
+    }>(rawOutput);
 
     if (!output.pass) {
       fail(name, `runner reported failure: ${JSON.stringify(output)}`);
@@ -95,6 +110,21 @@ function runCase(
     if (!equalJsonLike(output.out, expectedOut)) {
       fail(name, `unexpected output: ${JSON.stringify(output.out)}`);
       return;
+    }
+
+    ok(name);
+  } catch (err) {
+    fail(name, err instanceof Error ? err.message : String(err));
+  }
+}
+
+function runParsedRawDivergenceCase(name: string, leftRaw: string, rightRaw: string): void {
+  try {
+    const left = parseExactJson<{ out: unknown }>(leftRaw);
+    const right = parseExactJson<{ out: unknown }>(rightRaw);
+
+    if (equalJsonLike(left.out, right.out)) {
+      throw new Error("exact JSON parsing still collapses distinct integer outputs");
     }
 
     ok(name);
@@ -168,7 +198,7 @@ const BODY_PRECISION_VECTOR = `{
         "ak": "dev1",
         "seq": 2,
         "payload_cid": "cid-b",
-        "body": { "mean": { "kcal": -1 }, "var": { "kcal": 0 } }
+        "body": { "mean": { "kcal": 0 }, "var": { "kcal": 0 } }
       }
     ]
   },

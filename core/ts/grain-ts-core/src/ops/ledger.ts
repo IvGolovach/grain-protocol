@@ -1,5 +1,6 @@
 import { GrainDiagError } from "../types.js";
 import type { Json, OperationActual } from "../types.js";
+import { jsonIntegerFromBigInt } from "../exact-json.js";
 import { normalizeDiag } from "../utils.js";
 import { parseInteger, textFromObjectField, toObject, toText } from "./helpers.js";
 
@@ -107,8 +108,8 @@ export function opLedgerReduce(input: Record<string, Json>): OperationActual {
   }
 
   const out: Record<string, Json> = {
-    sum_mean: { kcal: Number(sumMean) },
-    sum_var: { kcal: Number(sumVar) }
+    sum_mean: { kcal: jsonIntegerFromBigInt(sumMean) },
+    sum_var: { kcal: jsonIntegerFromBigInt(sumVar) }
   };
 
   const diagContains = normalizeDiag([...diagnostics]);

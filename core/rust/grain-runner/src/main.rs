@@ -8,6 +8,9 @@ use grain_core::{execute_operation, OperationResult};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+const JSON_SAFE_INTEGER_MAX_I64: i64 = 9_007_199_254_740_991;
+const JSON_SAFE_INTEGER_MAX_U64: u64 = 9_007_199_254_740_991;
+
 #[derive(Parser)]
 #[command(name = "grain-runner")]
 #[command(about = "Grain conformance runner")]
@@ -56,6 +59,7 @@ fn main() {
         Commands::Run { strict, vector } => run_vector(strict, vector),
         Commands::Demo { strict } => run_demo(strict),
     };
+    let output = normalize_runner_value(output);
 
     println!(
         "{}",
@@ -95,7 +99,7 @@ fn run_vector(strict_flag: bool, vector_path: PathBuf) -> (Value, i32) {
     };
 
     let strict = strict_flag && vector.strict;
-    let actual = execute_operation(&vector.op, &vector.input, strict);
+    let actual = normalize_operation_result(execute_operation(&vector.op, &vector.input, strict));
     let vector_pass = evaluate_expectation(&vector.expect, &actual);
 
     let out = json!({
@@ -136,7 +140,7 @@ fn run_demo(strict: bool) -> (Value, i32) {
         Err(_) => return demo_internal_error("DEMO_VECTOR_PARSE_LEDGER"),
     };
 
-    let qr_actual = execute_operation("qr_decode_gr1", &qr_vector.input, true);
+    let qr_actual = normalize_operation_result(execute_operation("qr_decode_gr1", &qr_vector.input, true));
     if !qr_actual.accepted {
         return demo_step_failed("qr_decode_gr1", &qr_actual);
     }
@@ -155,7 +159,7 @@ fn run_demo(strict: bool) -> (Value, i32) {
     };
     cose_obj.insert("cose_b64".to_string(), Value::String(cose_b64));
 
-    let cose_actual = execute_operation("cose_verify", &cose_input, true);
+    let cose_actual = normalize_operation_result(execute_operation("cose_verify", &cose_input, true));
     if !cose_actual.accepted {
         return demo_step_failed("cose_verify", &cose_actual);
     }
@@ -180,7 +184,7 @@ fn run_demo(strict: bool) -> (Value, i32) {
     };
     events.push(append_event.clone());
 
-    let ledger_actual = execute_operation("ledger_reduce", &ledger_input, true);
+    let ledger_actual = normalize_operation_result(execute_operation("ledger_reduce", &ledger_input, true));
     if !ledger_actual.accepted {
         return demo_step_failed("ledger_reduce", &ledger_actual);
     }
@@ -248,6 +252,46 @@ fn demo_internal_error(code: &str) -> (Value, i32) {
     (out, 1)
 }
 
+fn normalize_operation_result(actual: OperationResult) -> OperationResult {
+    OperationResult {
+        accepted: actual.accepted,
+        diag: actual.diag,
+        out: normalize_runner_value(actual.out),
+    }
+}
+
+fn normalize_runner_value(value: Value) -> Value {
+    match value {
+        Value::Array(items) => Value::Array(items.into_iter().map(normalize_runner_value).collect()),
+        Value::Object(entries) => Value::Object(
+            entries
+                .into_iter()
+                .map(|(key, item)| (key, normalize_runner_value(item)))
+                .collect(),
+        ),
+        Value::Number(number) => normalize_runner_number(number),
+        other => other,
+    }
+}
+
+fn normalize_runner_number(number: serde_json::Number) -> Value {
+    if let Some(value) = number.as_i64() {
+        if !(-JSON_SAFE_INTEGER_MAX_I64..=JSON_SAFE_INTEGER_MAX_I64).contains(&value) {
+            return Value::String(value.to_string());
+        }
+        return Value::Number(number);
+    }
+
+    if let Some(value) = number.as_u64() {
+        if value > JSON_SAFE_INTEGER_MAX_U64 {
+            return Value::String(value.to_string());
+        }
+        return Value::Number(number);
+    }
+
+    Value::Number(number)
+}
+
 fn evaluate_expectation(expect: &Expect, actual: &OperationResult) -> bool {
     if actual.accepted != expect.pass {
         return false;
@@ -305,5 +349,41 @@ fn value_subset_match_skip_diag(expected: &Value, actual: &Value) -> bool {
         }
         (Value::Array(e), Value::Array(a)) => e == a,
         _ => expected == actual,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_unsafe_json_integers_to_decimal_strings() {
+        let normalized = normalize_runner_value(json!({
+            "safe": 42,
+            "unsafe_pos": 9_007_199_254_740_993i64,
+            "unsafe_neg": -9_007_199_254_740_993i64,
+            "nested": {
+                "u64_like": 9_007_199_254_740_992u64
+            }
+        }));
+
+        assert_eq!(normalized["safe"], json!(42));
+        assert_eq!(normalized["unsafe_pos"], json!("9007199254740993"));
+        assert_eq!(normalized["unsafe_neg"], json!("-9007199254740993"));
+        assert_eq!(normalized["nested"]["u64_like"], json!("9007199254740992"));
+    }
+
+    #[test]
+    fn normalized_outputs_match_string_expectations() {
+        let expected = json!({
+            "sum_mean": { "kcal": "9007199254740993" },
+            "sum_var": { "kcal": 0 }
+        });
+        let actual = normalize_runner_value(json!({
+            "sum_mean": { "kcal": 9_007_199_254_740_993i64 },
+            "sum_var": { "kcal": 0 }
+        }));
+
+        assert!(value_subset_match_skip_diag(&expected, &actual));
     }
 }

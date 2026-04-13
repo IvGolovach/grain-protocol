@@ -1,3 +1,5 @@
+export type JsonInteger = number | string;
+
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 export type VectorFile = {

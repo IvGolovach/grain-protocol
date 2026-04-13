@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 
+import { parseExactJson, stableExactJson } from "../src/exact-json.js";
 import { repoPath, repoRoot, runnerDistPath } from "./runtime.js";
 
 type ProfileDef = {
@@ -45,8 +46,12 @@ export function runTsVector(vectorPath: string): string {
   ).trim();
 }
 
+export function parseRunnerOutput(text: string): RunnerJson {
+  return parseExactJson<RunnerJson>(text);
+}
+
 export function stable(value: unknown): string {
-  return JSON.stringify(sortValue(value));
+  return stableExactJson(value);
 }
 
 export function writeVectorList(path: string, vectors: string[]): void {
@@ -65,7 +70,7 @@ export function runRustVectors(vectors: string[], listPath: string): Map<string,
         ["run", "--strict", "--vector", vectorPath],
         { cwd: repoRoot, encoding: "utf-8", maxBuffer: 20 * 1024 * 1024 }
       ).trim();
-      rustMap.set(vectorPath, JSON.parse(payload) as RunnerJson);
+      rustMap.set(vectorPath, parseRunnerOutput(payload));
     }
     return rustMap;
   }
@@ -92,23 +97,10 @@ export function runRustVectors(vectors: string[], listPath: string): Map<string,
     if (tab <= 0) continue;
     const path = line.slice(0, tab);
     const payload = line.slice(tab + 1);
-    rustMap.set(path, JSON.parse(payload) as RunnerJson);
+    rustMap.set(path, parseRunnerOutput(payload));
   }
 
   return rustMap;
-}
-
-function sortValue(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(sortValue);
-  }
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([k, v]) => [k, sortValue(v)]);
-    return Object.fromEntries(entries);
-  }
-  return value;
 }
 
 export type RunnerJson = {

@@ -4,8 +4,10 @@ import { resolve } from "node:path";
 import { execSync } from "node:child_process";
 import { WASI } from "node:wasi";
 
+import { parseExactJson } from "../src/exact-json.js";
 import { evaluateVector } from "../src/expect.js";
 import type { Json, OperationActual, VectorFile } from "../src/types.js";
+import { parseVectorFile } from "../src/vector-json.js";
 import { repoPath, repoRoot, runnerPath } from "./runtime.js";
 
 type WasmExports = {
@@ -24,7 +26,7 @@ function listVectors(root: string): Map<string, string> {
     .filter(Boolean);
   for (const rel of lines) {
     const full = resolve(root, rel);
-    const vector = JSON.parse(readFileSync(full, "utf8")) as VectorFile;
+    const vector = parseVectorFile(readFileSync(full, "utf8")) as VectorFile;
     out.set(vector.vector_id, full);
   }
   return out;
@@ -63,7 +65,7 @@ function runVector(exportsObj: WasmExports, vectorBytes: Uint8Array): OperationA
   const { ptr, len } = decodePacked(packed);
   const outBytes = Buffer.from(new Uint8Array(exportsObj.memory.buffer, ptr, len));
   exportsObj.grain_dealloc(ptr, len);
-  return toActual(JSON.parse(outBytes.toString("utf8")));
+  return toActual(parseExactJson(outBytes.toString("utf8")));
 }
 
 async function main(): Promise<number> {
@@ -90,7 +92,7 @@ async function main(): Promise<number> {
       failures.push({ vector_id: id, diag: ["WASM_VECTOR_NOT_FOUND"], out: {} });
       continue;
     }
-    const vector = JSON.parse(readFileSync(path, "utf8")) as VectorFile;
+    const vector = parseVectorFile(readFileSync(path, "utf8")) as VectorFile;
     const vectorBytes = readFileSync(path);
     const actual = runVector(exportsObj, vectorBytes);
     const verdict = evaluateVector(vector, actual);

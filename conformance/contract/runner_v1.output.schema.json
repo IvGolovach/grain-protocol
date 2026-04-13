@@ -25,7 +25,8 @@
       }
     },
     "out": {
-      "type": "object"
+      "type": "object",
+      "description": "Unsafe integers (absolute value > 9007199254740991) MUST be encoded as base-10 decimal strings."
     }
   }
 }

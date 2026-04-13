@@ -88,3 +88,4 @@ npm --prefix runner/typescript run build
 - HKDF labels are ASCII with explicit `0x00` separators
 - DAG-CBOR decoding is strict and rejects duplicate map keys and non-canonical forms
 - Ledger and manifest outputs are order-independent for identical input sets
+- runner JSON output encodes unsafe integers as decimal strings once values move past the JavaScript safe-integer range

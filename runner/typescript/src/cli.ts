@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import { repoRoot } from "../scripts/runtime.js";
+import { stringifyExactJson } from "./exact-json.js";
 import { evaluateVector } from "./expect.js";
 import { executeOperation } from "./ops.js";
 import { parseVectorFile } from "./vector-json.js";
@@ -49,7 +50,7 @@ function main(): void {
 }
 
 function printAndExit(output: RunnerOutput, code: number): never {
-  process.stdout.write(`${JSON.stringify(output)}\n`);
+  process.stdout.write(`${stringifyExactJson(output)}\n`);
   process.exit(code);
 }
 
