@@ -21,8 +21,11 @@ What it does for you:
 - deterministic error messages with NES/vector references
 - deterministic transport bundle import/export (`grain-transport-bundle-v1`)
 - device lifecycle APIs that keep local authorization and ledger history in sync
-- deterministic AI ingestion (`accept` -> `applyAccepted`)
 - no outbound network behavior in the SDK core
+
+What it does not do:
+- it does not wire AI into `GrainSdk` automatically
+- it keeps AI in the optional sidecar package `core/ts/grain-sdk-ai`
 
 For first examples, `payload_cid` can be a stable application identifier for the payload.
 If you later store that payload as its own canonical Grain object, then using the real CID is the stronger pattern.
@@ -50,7 +53,13 @@ Run SDK invariant checks:
 
 ```bash
 npm --prefix core/ts/grain-sdk run test:invariants
-npm --prefix core/ts/grain-sdk run test:ai-boundary
+```
+
+If you need the optional AI sidecar, install and test it explicitly:
+
+```bash
+npm ci --prefix core/ts/grain-sdk-ai
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 ```
 
 Run the full protocol suite through the SDK runner:

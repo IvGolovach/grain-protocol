@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Fail if SDK core introduces outbound network usage."""
+"""Fail if SDK core or AI sidecar introduce outbound network usage."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SDK_SRC = ROOT / "core" / "ts" / "grain-sdk" / "src"
+SDK_ROOTS = [
+    ROOT / "core" / "ts" / "grain-sdk" / "src",
+    ROOT / "core" / "ts" / "grain-sdk-ai" / "src",
+]
 
 FORBIDDEN = [
     "fetch(",
@@ -29,21 +32,24 @@ def should_scan(path: Path) -> bool:
 
 def main() -> int:
     violations: list[str] = []
-    for path in sorted(SDK_SRC.rglob("*")):
-        if not should_scan(path):
+    for root in SDK_ROOTS:
+        if not root.exists():
             continue
-        rel = str(path.relative_to(ROOT))
-        if rel in ALLOWLIST_FILES:
-            continue
-        text = path.read_text(encoding="utf-8")
-        for pattern in FORBIDDEN:
-            if pattern in text:
-                violations.append(f"{rel}: {pattern}")
+        for path in sorted(root.rglob("*")):
+            if not should_scan(path):
+                continue
+            rel = str(path.relative_to(ROOT))
+            if rel in ALLOWLIST_FILES:
+                continue
+            text = path.read_text(encoding="utf-8")
+            for pattern in FORBIDDEN:
+                if pattern in text:
+                    violations.append(f"{rel}: {pattern}")
 
     if violations:
         raise SystemExit("SDK no-network guard violations:\n- " + "\n- ".join(violations))
 
-    print("SDK no-network guard: OK")
+    print("SDK no-network guard: OK (core + ai sidecar)")
     return 0
 
 

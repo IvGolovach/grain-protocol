@@ -8,7 +8,8 @@ If you are building an app on Grain, start here. Keep the first version small an
 2. Run the ready-made demo if you want a quick confidence check.
 3. On a fresh checkout, install `core/ts/grain-ts-core`
    and `core/ts/grain-sdk` before the first SDK build.
-4. If you build manually, use the SDK build. It will build the shared
+4. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
+5. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash
@@ -46,7 +47,7 @@ If you are also changing the strict TS runner itself, then install `runner/types
 - rejected `cap_id` overwrite or corruption
 - private payload helpers
 - manifest helpers for private graph lookups
-- AI candidates that stay suggestions until you accept them
+- a narrow host bridge if you later opt into the AI sidecar
 
 ## Want the full map?
 

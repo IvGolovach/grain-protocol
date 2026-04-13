@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { GrainSdk } from "../src/index.js";
-import { encodeB64 } from "../src/utils.js";
+import { GrainSdk } from "grain-sdk-ts";
+import { createGrainSdkAi } from "../src/index.js";
+import { encodeB64 } from "../src/sdk-utils.js";
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 
@@ -24,7 +25,14 @@ function summarize(): number {
 
 async function run(): Promise<number> {
   const sdk = new GrainSdk();
+  const ai = createGrainSdkAi(sdk);
   await sdk.identity.createRoot();
+
+  if ("ai" in (sdk as unknown as Record<string, unknown>)) {
+    fail("SDK-AI-000 sidecar stays optional", "public sdk.ai still exists");
+  } else {
+    ok("SDK-AI-000 sidecar stays optional");
+  }
 
   if ("store" in (sdk as unknown as Record<string, unknown>)) {
     fail("SDK-AI-001 no public sdk.store", "public sdk.store still exists");
@@ -51,8 +59,8 @@ async function run(): Promise<number> {
     }
   } as const;
 
-  const r1 = await sdk.ai.accept(candidate);
-  const r2 = await sdk.ai.accept(candidate);
+  const r1 = await ai.accept(candidate);
+  const r2 = await ai.accept(candidate);
   if (r1.status !== "accepted" || r2.status !== "accepted") {
     fail("SDK-AI-002 deterministic accept", "expected accepted status for deterministic case");
   } else if (
@@ -72,7 +80,7 @@ async function run(): Promise<number> {
     }
   }
 
-  const numberReject = await sdk.ai.accept({
+  const numberReject = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,
@@ -89,7 +97,7 @@ async function run(): Promise<number> {
     ok("SDK-AI-005 numeric fields reject JS number");
   }
 
-  const dupReject = await sdk.ai.accept({
+  const dupReject = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,
@@ -106,7 +114,7 @@ async function run(): Promise<number> {
     ok("SDK-AI-006 set-array duplicates reject");
   }
 
-  const profileMissing = await sdk.ai.accept({
+  const profileMissing = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,
@@ -122,7 +130,7 @@ async function run(): Promise<number> {
     ok("SDK-AI-005 explicit profile required");
   }
 
-  const quarantine = await sdk.ai.accept({
+  const quarantine = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,
@@ -135,7 +143,7 @@ async function run(): Promise<number> {
     fail("SDK-AI-007 unknown critical quarantine", "expected deterministic quarantine");
   } else {
     ok("SDK-AI-007 unknown critical quarantine");
-    const blocked = await sdk.ai.applyAccepted((quarantine as unknown as { token: unknown }).token);
+    const blocked = await ai.applyAccepted((quarantine as unknown as { token: unknown }).token);
     if (blocked.status !== "rejected" || blocked.error.code !== "SDK_ERR_ACCEPT_TOKEN_FORGED") {
       fail("SDK-AI-007 quarantined cannot apply", "quarantined path must not be applicable");
     } else {
@@ -144,14 +152,14 @@ async function run(): Promise<number> {
   }
 
   if (r1.status === "accepted") {
-    const applied = await sdk.ai.applyAccepted(r1.token);
+    const applied = await ai.applyAccepted(r1.token);
     if (applied.status !== "applied") {
       fail("SDK-AI-001 apply accepted token", "expected apply to succeed");
     } else {
       ok("SDK-AI-001 apply accepted token");
     }
 
-    const replay = await sdk.ai.applyAccepted(r1.token);
+    const replay = await ai.applyAccepted(r1.token);
     if (replay.status !== "rejected" || replay.error.code !== "SDK_ERR_ACCEPT_TOKEN_UNKNOWN") {
       fail("SDK-AI-002 replay reject", "expected consumed token to reject as unknown");
     } else {
@@ -159,7 +167,7 @@ async function run(): Promise<number> {
     }
   }
 
-  const forged = await sdk.ai.applyAccepted({ id: "fake-token", issued_at_ms: 0 });
+  const forged = await ai.applyAccepted({ id: "fake-token", issued_at_ms: 0 });
   if (forged.status !== "rejected" || forged.error.code !== "SDK_ERR_ACCEPT_TOKEN_FORGED") {
     fail("SDK-AI-001 forged token reject", "expected forged token reject");
   } else {
@@ -168,14 +176,13 @@ async function run(): Promise<number> {
 
   {
     let now = 1_000;
-    const expirySdk = new GrainSdk(undefined, {
-      ai: {
-        token_ttl_ms: 600_000,
-        now_ms: () => now
-      }
+    const expirySdk = new GrainSdk();
+    const expiryAi = createGrainSdkAi(expirySdk, {
+      token_ttl_ms: 600_000,
+      now_ms: () => now
     });
     await expirySdk.identity.createRoot();
-    const accepted = await expirySdk.ai.accept({
+    const accepted = await expiryAi.accept({
       candidate_version: 1,
       kind: "object",
       target_schema_major: 1,
@@ -190,7 +197,7 @@ async function run(): Promise<number> {
       fail("SDK-AI-002 token expiry setup", "accept failed in expiry setup");
     } else {
       now += 601_000;
-      const expired = await expirySdk.ai.applyAccepted(accepted.token);
+      const expired = await expiryAi.applyAccepted(accepted.token);
       if (expired.status !== "rejected" || expired.error.code !== "SDK_ERR_ACCEPT_TOKEN_EXPIRED") {
         fail("SDK-AI-002 token expiry", "expected SDK_ERR_ACCEPT_TOKEN_EXPIRED");
       } else {
@@ -200,13 +207,12 @@ async function run(): Promise<number> {
   }
 
   {
-    const capSdk = new GrainSdk(undefined, {
-      ai: {
-        max_pending_tokens: 1
-      }
+    const capSdk = new GrainSdk();
+    const capAi = createGrainSdkAi(capSdk, {
+      max_pending_tokens: 1
     });
     await capSdk.identity.createRoot();
-    const first = await capSdk.ai.accept({
+    const first = await capAi.accept({
       candidate_version: 1,
       kind: "object",
       target_schema_major: 1,
@@ -217,7 +223,7 @@ async function run(): Promise<number> {
         data: { amount: "1", tags: ["cap-1"] }
       }
     });
-    const second = await capSdk.ai.accept({
+    const second = await capAi.accept({
       candidate_version: 1,
       kind: "object",
       target_schema_major: 1,
@@ -238,7 +244,7 @@ async function run(): Promise<number> {
   }
 
   const dagBytes = new Uint8Array([0xa1, 0x61, 0x61, 0x01]);
-  const dagAccepted = await sdk.ai.accept({
+  const dagAccepted = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,
@@ -252,7 +258,7 @@ async function run(): Promise<number> {
     ok("SDK-AI-002 dagcbor accept path");
   }
 
-  const privacy = await sdk.ai.accept({
+  const privacy = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,
@@ -276,7 +282,7 @@ async function run(): Promise<number> {
     }
   }
 
-  const sensitive = await sdk.ai.accept({
+  const sensitive = await ai.accept({
     candidate_version: 1,
     kind: "object",
     target_schema_major: 1,

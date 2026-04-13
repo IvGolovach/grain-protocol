@@ -1,0 +1,20 @@
+[tools]
+node = "22.22.0"
+python = "3.11"
+rust = "1.86.0"
+
+[tasks.bootstrap]
+description = "Install pinned toolchains and local TypeScript package dependencies"
+run = "./scripts/bootstrap"
+
+[tasks.doctor]
+description = "Show repo and toolchain health"
+run = "./scripts/doctor"
+
+[tasks.verify]
+description = "Run fast developer verification"
+run = "./scripts/verify"
+
+[tasks.certify]
+description = "Run release-grade certification"
+run = "./scripts/certify"

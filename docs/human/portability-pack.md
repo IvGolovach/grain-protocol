@@ -5,6 +5,12 @@ If you want one command and a clear answer, start here.
 
 ## Verification paths
 
+Blessed local bootstrap:
+
+```bash
+./scripts/bootstrap
+```
+
 Quick health view:
 
 ```bash
@@ -96,3 +102,4 @@ It is intentionally excluded from `evidence_content.sha256`.
 `inputs-hashes.json` records `node -v`, so evidence-generating paths must use the exact Node patch version pinned in `.nvmrc`.
 The same version must also be pinned in `docker/grain-certify.Dockerfile`.
 `python3 tools/ci/check_node_runtime_pin.py` enforces that parity.
+`python3 tools/ci/check_toolchain_bootstrap.py` keeps `mise.toml` aligned with the repo pins.

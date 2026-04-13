@@ -41,6 +41,7 @@ Update:
 Update:
 
 - `core/ts/grain-sdk/src/*`
+- `core/ts/grain-sdk-ai/src/*`
 - SDK tests
 - `docs/llm/SDK_FILE_MAP.md`
 - `docs/llm/SDK_INVARIANTS.md`
@@ -65,6 +66,7 @@ Update:
 - `docs/human/maintainer-writing.md`
 - `docs/human/sdk/minimal-app-example.md`
 - `core/ts/grain-sdk/README.md`
+- `core/ts/grain-sdk-ai/README.md`
 - `docs/human/future-vision.md` if the product direction claim changed
 
 ### Contributor and maintenance changes

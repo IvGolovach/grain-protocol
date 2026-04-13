@@ -27,7 +27,7 @@ This page is the capability map after that first run.
 - `transport`: GR1 encode/decode/verify wrappers
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
-- `ai`: deterministic ingestion firewall (`accept` -> `applyAccepted`)
+- optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
   - structured_v1 uses explicit field profiles/maps (no implicit numeric guessing)
 
 ## What SDK does not do
@@ -41,6 +41,7 @@ This page is the capability map after that first run.
 ## Package path
 
 - `core/ts/grain-sdk`
+- `core/ts/grain-sdk-ai`
 - compatibility matrix:
   - SDK `0.2.x` -> Protocol major `1`
 - domain adapter example: `core/ts/grain-sdk/examples/sensor-event-v1.ts`
@@ -65,4 +66,11 @@ npm ci --prefix core/ts/grain-sdk
 npm --prefix core/ts/grain-sdk run demo:e2e
 npm --prefix core/ts/grain-sdk run test:invariants
 npm --prefix core/ts/grain-sdk run run:protocol-suite
+```
+
+Optional AI sidecar:
+
+```bash
+npm ci --prefix core/ts/grain-sdk-ai
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 ```

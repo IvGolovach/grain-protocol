@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/bootstrap
+
+Install the repo's blessed local toolchain with mise, then install local
+TypeScript package dependencies through that pinned runtime.
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+if [[ $# -gt 0 ]]; then
+  echo "Unknown argument: $1" >&2
+  usage >&2
+  exit 2
+fi
+
+if ! command -v mise >/dev/null 2>&1; then
+  echo "BOOTSTRAP_ERR_MISE_MISSING: install mise first: https://mise.jdx.dev/getting-started.html" >&2
+  exit 1
+fi
+
+mise trust "$ROOT/mise.toml" >/dev/null
+mise install
+
+packages=(
+  core/ts/grain-ts-core
+  runner/typescript
+  core/ts/grain-sdk
+  core/ts/grain-sdk-ai
+)
+
+for prefix in "${packages[@]}"; do
+  mise exec -- npm ci --prefix "$prefix"
+done
+
+echo "bootstrap: PASS"
+echo "toolchains: $ROOT/mise.toml"
+echo "next: ./scripts/doctor"

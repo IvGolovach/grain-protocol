@@ -65,6 +65,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_node_runtime_pin.py
 
+    - name: Check bootstrap toolchain alignment
+      shell: bash
+      run: python3 tools/ci/check_toolchain_bootstrap.py
+
     - name: Check workflow action pinning
       shell: bash
       run: python3 tools/ci/check_workflow_action_pinning.py
@@ -96,6 +100,10 @@ runs:
     - name: Check SDK no-network guard
       shell: bash
       run: python3 tools/ci/check_sdk_no_network.py
+
+    - name: Check SDK AI boundary guard
+      shell: bash
+      run: python3 tools/ci/check_sdk_ai_boundary.py
 
     - name: Check main ruleset drift (main)
       if: inputs.run_main_ruleset_drift == 'true' && inputs.gh_token != ''

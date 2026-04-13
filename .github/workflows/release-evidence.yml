@@ -71,8 +71,8 @@ jobs:
 
       - uses: ./.github/actions/run-node-package-script
         with:
-          prefix: core/ts/grain-sdk
-          script: test:ai-boundary
+          prefix: core/ts/grain-sdk-ai
+          script: test:boundary
 
       - uses: ./.github/actions/run-node-package-script
         with:

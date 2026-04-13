@@ -1,4 +1,4 @@
-import { SdkError } from "../errors.js";
+import { SdkError } from "grain-sdk-ts/errors";
 import type { AICandidateEnvelopeV1 } from "./adapter.js";
 
 export type NumericKind = "u63" | "i64";

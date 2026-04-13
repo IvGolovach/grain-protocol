@@ -37,6 +37,10 @@ If you only read one more page, read [Quickstart](./quickstart.md).
 
 ## Verification paths
 
+Blessed local bootstrap:
+
+- `./scripts/bootstrap`
+
 Quick health view:
 
 - `./scripts/doctor`

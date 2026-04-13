@@ -25,4 +25,4 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 
 These checks are asserted in:
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`
-- `core/ts/grain-sdk/scripts/test-sdk-ai-boundary.ts`
+- `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`

@@ -7,16 +7,18 @@ No cape required. The repo already has strong guardrails. This page helps you fi
 
 1. Run `./scripts/doctor`.
    - This gives you a quick health check for branch state, toolchains, and recent verification artifacts.
-2. Run `./scripts/verify`.
+2. Run `./scripts/bootstrap` if this clone does not already have the pinned local toolchains.
+   - This is the blessed host setup path. It uses `mise` plus the repo package installs.
+3. Run `./scripts/verify`.
    - This is the normal day-to-day confidence pass.
-3. Read `CONTRIBUTING.md`.
+4. Read `CONTRIBUTING.md`.
    - It tells you the repo rules that matter during normal work.
-4. Read `docs/human/release-process.md`.
+5. Read `docs/human/release-process.md`.
    - This is the shortest reliable path to a release.
-5. Read `docs/human/repository-settings.md`.
+6. Read `docs/human/repository-settings.md`.
    - This explains the GitHub rules the repo expects to stay true.
 
-If you only do one thing before reviewing or merging changes, do steps 1 and 2.
+If you only do one thing before reviewing or merging changes, do steps 1 through 3.
 
 ## What matters most
 
@@ -31,26 +33,29 @@ If you only do one thing before reviewing or merging changes, do steps 1 and 2.
 ### Review and merge a PR
 
 1. Run `./scripts/doctor`.
-2. Read the PR for scope, risk, and docs sync.
-3. Run the relevant checks, or ask for them if the PR does not include proof.
-4. Make sure the diff is one logical change.
-5. Merge only when the story in code, tests, and docs matches.
+2. Run `./scripts/bootstrap` if the host toolchain is not ready yet.
+3. Read the PR for scope, risk, and docs sync.
+4. Run the relevant checks, or ask for them if the PR does not include proof.
+5. Make sure the diff is one logical change.
+6. Merge only when the story in code, tests, and docs matches.
 
 ### Debug a red branch
 
 1. Run `./scripts/doctor`.
-2. Run `./scripts/verify`.
-3. If the problem is release-grade only, run `./scripts/certify`.
-4. Use `docs/human/repro-checklist.md` when you need a clean-clone path.
-5. Use `docs/human/repository-settings.md` if the failure smells like GitHub rules or branch protection drift.
+2. Run `./scripts/bootstrap` if the host toolchain drift is part of the failure.
+3. Run `./scripts/verify`.
+4. If the problem is release-grade only, run `./scripts/certify`.
+5. Use `docs/human/repro-checklist.md` when you need a clean-clone path.
+6. Use `docs/human/repository-settings.md` if the failure smells like GitHub rules or branch protection drift.
 
 ### Cut a release
 
 1. Start with `docs/human/release-process.md`.
 2. Use `./scripts/doctor` to confirm your local state is sane.
-3. Run `./scripts/verify`.
-4. Run `./scripts/certify`.
-5. Follow the tag and artifact steps exactly.
+3. Use `./scripts/bootstrap` if the host toolchain is not already aligned.
+4. Run `./scripts/verify`.
+5. Run `./scripts/certify`.
+6. Follow the tag and artifact steps exactly.
 
 ## Repo map for maintainers
 

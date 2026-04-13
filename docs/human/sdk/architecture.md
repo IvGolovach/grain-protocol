@@ -6,7 +6,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 
 - If you are building an app, start with `identity`, `events`, `manifest`, `e2e`, and `transport`.
 - If you need byte validation or diagnostics explanation, use `codec`.
-- If you are handling model output, the safe path is `ai.accept()` then `ai.applyAccepted()`.
+- If you are handling model output, use the optional sidecar in `core/ts/grain-sdk-ai`.
 
 ## Layer boundaries
 
@@ -21,7 +21,10 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 4. SDK (`core/ts/grain-sdk`)
    - typed primitives + safe builders
    - orchestration for identity/events/e2e/manifest/transport/evidence
+   - no rule rewrites
+5. Optional AI sidecar (`core/ts/grain-sdk-ai`)
    - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
+   - explicit host bridge into SDK object storage only
    - no rule rewrites
 
 ## What the SDK is allowed to do
@@ -48,13 +51,14 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder
-- `src/ai/*`: model-agnostic candidate ingestion, deterministic accept/apply, opaque token registry
+- `src/ai-host.ts`: narrow bridge that the optional AI sidecar can use
+- `core/ts/grain-sdk-ai/src/ai/*`: model-agnostic candidate ingestion, deterministic accept/apply, opaque token registry
 
 ## Non-goals (enforced)
 
 - no domain semantics
 - no alternative conflict or revoke semantics
-- no vendor model clients or outbound network calls in SDK core
+- no vendor model clients or outbound network calls in SDK core or AI sidecar
 
 ## Audit anchors
 

@@ -16,6 +16,7 @@ Start with:
 
 ```bash
 ./scripts/doctor
+./scripts/bootstrap
 ```
 
 ## Normal release flow
@@ -26,6 +27,7 @@ Start with:
    - `./scripts/certify --out-dir artifacts/verify-local`
    - `cat artifacts/verify-local/evidence/evidence_content.sha256`
    - `python3 tools/ci/check_node_runtime_pin.py`
+   - `python3 tools/ci/check_toolchain_bootstrap.py`
    - `python3 tools/ci/check_runner_contract_compat.py`
    - `python3 tools/ci/check_prohibition_coverage.py`
    - `python3 tools/ci/check_capid_csprng.py`

@@ -32,7 +32,7 @@ Rules:
 - JSON numbers are forbidden in `data`.
 - Numeric protocol fields are accepted as decimal strings for ingestion convenience only, then converted deterministically.
 - Field typing must be explicit:
-  - either via known `profile_id` (see `sdk.ai.exportContract().profiles`)
+  - either via known `profile_id` (see `ai.exportContract().profiles`)
   - or via explicit `numeric_fields` / `bytes_fields` / `set_array_fields`.
 - If no profile and no explicit field maps are provided, SDK rejects (`SDK_ERR_AI_PROFILE_MISSING`).
 - `bytes_fields` must be base64 standard strings.

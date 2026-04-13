@@ -4,8 +4,24 @@
   "private": true,
   "description": "Grain SDK universal primitives layer (TOR-SDK-A01)",
   "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "engines": {
     "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./ai-host": {
+      "types": "./dist/src/ai-host.d.ts",
+      "default": "./dist/src/ai-host.js"
+    },
+    "./errors": {
+      "types": "./dist/src/errors.d.ts",
+      "default": "./dist/src/errors.js"
+    }
   },
   "bin": {
     "grain-sdk-runner": "dist/src/cli.js"
@@ -16,7 +32,6 @@
     "run:vector": "npm run build --silent && node dist/src/cli.js run --strict --vector",
     "run:protocol-suite": "npm run build --silent && node dist/scripts/run-protocol-suite.js",
     "test:invariants": "npm run build --silent && node dist/scripts/test-sdk-invariants.js",
-    "test:ai-boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-boundary.js",
     "demo:e2e": "npm run build --silent && node dist/scripts/demo-end-to-end.js"
   },
   "dependencies": {

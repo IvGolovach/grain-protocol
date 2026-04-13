@@ -63,6 +63,7 @@ python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
 python3 tools/ci/check_node_runtime_pin.py
+python3 tools/ci/check_toolchain_bootstrap.py
 python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
@@ -72,6 +73,7 @@ python3 tools/ci/check_runner_shim_boundary.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
 python3 tools/ci/check_sdk_no_network.py
+python3 tools/ci/check_sdk_ai_boundary.py
 
 cargo test --manifest-path core/rust/Cargo.toml --workspace
 cargo build --manifest-path core/rust/Cargo.toml -p grain-runner
@@ -84,6 +86,9 @@ npm ci --prefix runner/typescript
 if [[ -f core/ts/grain-sdk/package-lock.json ]]; then
   npm ci --prefix core/ts/grain-sdk
 fi
+if [[ -f core/ts/grain-sdk-ai/package-lock.json ]]; then
+  npm ci --prefix core/ts/grain-sdk-ai
+fi
 
 npm --prefix runner/typescript run run:c01
 GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:c01
@@ -94,7 +99,7 @@ npm --prefix runner/typescript run test:properties
 npm --prefix runner/typescript run test:integer-precision
 npm --prefix core/ts/grain-sdk run run:protocol-suite
 npm --prefix core/ts/grain-sdk run test:invariants
-npm --prefix core/ts/grain-sdk run test:ai-boundary
+npm --prefix core/ts/grain-sdk-ai run test:boundary
 
 cp runner/typescript/.c01-last-run.json "$OUT_DIR_ABS/ts-c01-summary.json"
 cp runner/typescript/.divergence-c01.json "$OUT_DIR_ABS/divergence-c01.json"
