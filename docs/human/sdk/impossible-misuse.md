@@ -22,13 +22,16 @@ This checklist documents what public SDK APIs reject by construction.
 6. Invalid transport bundle payload/schema
    - rejected by `transport.bundleImport(...)`
    - code: `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA` / `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
-7. Forged/expired/unknown AI accepted token
+7. Verify call without explicit trust material
+   - rejected by `transport.verifyGR1(...)`
+   - code: `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED`
+8. Forged/expired/unknown AI accepted token
    - rejected by `ai.applyAccepted(...)`
    - code: `SDK_ERR_ACCEPT_TOKEN_FORGED` / `SDK_ERR_ACCEPT_TOKEN_UNKNOWN` / `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
-8. AI candidate bypass around deterministic firewall
+9. AI candidate bypass around deterministic firewall
    - no public `sdk.store` access; side effects require sidecar `accept()` then opaque token apply
    - code path: `SDK-AI-001` gate suite
-9. Unknown critical AI candidate extensions
+10. Unknown critical AI candidate extensions
    - quarantined deterministically
    - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
 
@@ -36,6 +39,8 @@ This checklist documents what public SDK APIs reject by construction.
 
 - `identity.addDeviceKey()` and `identity.revokeDeviceKey()` persist their matching ledger lifecycle events before returning.
 - Public SDK callers do not need a second manual `events.append()` step to keep authorization state aligned with reducer-visible ledger history.
+- `identity.importBundle()` either finishes fully or rolls back.
+- `events.correct()` either writes both events or rolls back both.
 
 ## Validation command
 

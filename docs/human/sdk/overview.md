@@ -25,6 +25,9 @@ This page is the capability map after that first run.
 - `e2e`: deterministic derive+encrypt+decrypt primitives, cap_id single-assignment guards
 - `manifest`: deterministic put/del/resolve wrappers
 - `transport`: GR1 encode/decode/verify wrappers
+  - `decodeGR1()` is decode-only
+  - `verifyGR1()` is verify-only and requires explicit `trust.pub_b64`
+  - transport bundles reject malformed event/manifest rows instead of guessing
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
@@ -37,6 +40,7 @@ This page is the capability map after that first run.
 - no hidden conflict/quarantine/revoke suppression
 - no protocol rule rewrites
 - no vendor model clients or outbound network calls in SDK core
+- no partial success on multi-step SDK writes; failed import/correction paths roll back
 
 ## Package path
 

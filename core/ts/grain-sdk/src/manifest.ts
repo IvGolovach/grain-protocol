@@ -21,35 +21,39 @@ export class ManifestManager {
   }
 
   async put(plaintextCid: string, capId: Uint8Array, chash: Uint8Array): Promise<ManifestRecord> {
-    const ak = await this.identity.requireAuthorizedAk();
-    const seq = await this.store.sequence.reserveNextSeq(ak);
+    return this.store.atomic(async () => {
+      const ak = await this.identity.requireAuthorizedAk();
+      const seq = await this.store.sequence.reserveNextSeq(ak);
 
-    const rec: ManifestRecord = {
-      op: "put",
-      cid: plaintextCid,
-      ak,
-      seq,
-      cap_id: new Uint8Array(capId),
-      chash: new Uint8Array(chash),
-      eligible: true
-    };
-    await this.store.manifest.append(rec);
-    return rec;
+      const rec: ManifestRecord = {
+        op: "put",
+        cid: plaintextCid,
+        ak,
+        seq,
+        cap_id: new Uint8Array(capId),
+        chash: new Uint8Array(chash),
+        eligible: true
+      };
+      await this.store.manifest.append(rec);
+      return rec;
+    });
   }
 
   async del(plaintextCid: string): Promise<ManifestRecord> {
-    const ak = await this.identity.requireAuthorizedAk();
-    const seq = await this.store.sequence.reserveNextSeq(ak);
+    return this.store.atomic(async () => {
+      const ak = await this.identity.requireAuthorizedAk();
+      const seq = await this.store.sequence.reserveNextSeq(ak);
 
-    const rec: ManifestRecord = {
-      op: "del",
-      cid: plaintextCid,
-      ak,
-      seq,
-      eligible: true
-    };
-    await this.store.manifest.append(rec);
-    return rec;
+      const rec: ManifestRecord = {
+        op: "del",
+        cid: plaintextCid,
+        ak,
+        seq,
+        eligible: true
+      };
+      await this.store.manifest.append(rec);
+      return rec;
+    });
   }
 
   async resolve(plaintextCid: string): Promise<ManifestResolution> {

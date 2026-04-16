@@ -18,6 +18,31 @@ export class InMemorySdkStore implements GrainSdkStore {
   private readonly blobMap = new Map<string, { ciphertext: Uint8Array; chash: Uint8Array }>();
   private readonly manifestList: ManifestRecord[] = [];
   private identityBundle: IdentityBundleV1 | null = null;
+  private atomicDepth = 0;
+  private atomicSnapshot: StoreSnapshot | null = null;
+
+  public readonly atomic = async <T>(mutation: () => Promise<T>): Promise<T> => {
+    const outermost = this.atomicDepth === 0;
+    if (outermost) {
+      this.atomicSnapshot = this.captureSnapshot();
+    }
+    this.atomicDepth += 1;
+    try {
+      const result = await mutation();
+      this.atomicDepth -= 1;
+      if (outermost) {
+        this.atomicSnapshot = null;
+      }
+      return result;
+    } catch (err) {
+      this.atomicDepth -= 1;
+      if (outermost && this.atomicSnapshot) {
+        this.restoreSnapshot(this.atomicSnapshot);
+        this.atomicSnapshot = null;
+      }
+      throw err;
+    }
+  };
 
   public readonly sequence = {
     reserveNextSeq: async (ak: string): Promise<bigint> => {
@@ -121,4 +146,66 @@ export class InMemorySdkStore implements GrainSdkStore {
     }
     return out;
   }
+
+  private captureSnapshot(): StoreSnapshot {
+    return {
+      seqByAk: new Map(this.seqByAk),
+      eventsList: this.eventsList.map((ev) => ({ ...ev, body: { ...ev.body } })),
+      objectMap: new Map([...this.objectMap.entries()].map(([cid, bytes]) => [cid, copy(bytes)])),
+      blobMap: new Map(
+        [...this.blobMap.entries()].map(([cid, value]) => [
+          cid,
+          { ciphertext: copy(value.ciphertext), chash: copy(value.chash) }
+        ])
+      ),
+      manifestList: this.manifestList.map((record) => ({
+        ...record,
+        cap_id: record.cap_id ? copy(record.cap_id) : undefined,
+        chash: record.chash ? copy(record.chash) : undefined
+      })),
+      identityBundle: this.identityBundle ? (JSON.parse(JSON.stringify(this.identityBundle)) as IdentityBundleV1) : null
+    };
+  }
+
+  private restoreSnapshot(snapshot: StoreSnapshot): void {
+    this.seqByAk.clear();
+    for (const [ak, seq] of snapshot.seqByAk.entries()) {
+      this.seqByAk.set(ak, seq);
+    }
+
+    this.eventsList.splice(0, this.eventsList.length, ...snapshot.eventsList.map((ev) => ({ ...ev, body: { ...ev.body } })));
+
+    this.objectMap.clear();
+    for (const [cid, bytes] of snapshot.objectMap.entries()) {
+      this.objectMap.set(cid, copy(bytes));
+    }
+
+    this.blobMap.clear();
+    for (const [cid, value] of snapshot.blobMap.entries()) {
+      this.blobMap.set(cid, { ciphertext: copy(value.ciphertext), chash: copy(value.chash) });
+    }
+
+    this.manifestList.splice(
+      0,
+      this.manifestList.length,
+      ...snapshot.manifestList.map((record) => ({
+        ...record,
+        cap_id: record.cap_id ? copy(record.cap_id) : undefined,
+        chash: record.chash ? copy(record.chash) : undefined
+      }))
+    );
+
+    this.identityBundle = snapshot.identityBundle
+      ? (JSON.parse(JSON.stringify(snapshot.identityBundle)) as IdentityBundleV1)
+      : null;
+  }
 }
+
+type StoreSnapshot = {
+  seqByAk: Map<string, bigint>;
+  eventsList: LedgerEvent[];
+  objectMap: Map<string, Uint8Array>;
+  blobMap: Map<string, { ciphertext: Uint8Array; chash: Uint8Array }>;
+  manifestList: ManifestRecord[];
+  identityBundle: IdentityBundleV1 | null;
+};

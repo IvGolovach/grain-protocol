@@ -89,6 +89,34 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
     nes_ref: "docs/human/sdk/overview.md",
     vector_refs: ["SDK-NEG-0005"]
   },
+  SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED: {
+    category: "CONTRACT",
+    summary: "GR1 verification requires an explicit trust public key.",
+    human_hint: "Use decodeGR1() for transport decode-only flows, or pass trust.pub_b64 to verifyGR1().",
+    nes_ref: "docs/human/sdk/overview.md",
+    vector_refs: ["SDK-NEG-0009"]
+  },
+  SDK_ERR_TRANSPORT_DECODE: {
+    category: "VALIDATION",
+    summary: "Transport decode output is malformed.",
+    human_hint: "Use a valid GR1 payload and keep the qr_decode_gr1 bridge strict.",
+    nes_ref: "spec/NES-v0.1.md §8",
+    vector_refs: ["NEG-QR-001", "NEG-QR-002", "NEG-QR-003"]
+  },
+  SDK_ERR_TRANSPORT_BUNDLE_DECODE: {
+    category: "VALIDATION",
+    summary: "Transport bundle bytes are not valid JSON.",
+    human_hint: "Use UTF-8 JSON bytes emitted by bundleExport() or another bundle producer that matches the contract.",
+    nes_ref: "docs/human/sdk/overview.md",
+    vector_refs: ["SDK-NEG-0008"]
+  },
+  SDK_ERR_TRANSPORT_BUNDLE_SCHEMA: {
+    category: "VALIDATION",
+    summary: "Transport bundle payload does not match the strict SDK schema.",
+    human_hint: "Keep transport bundle rows on the documented event/manifest shape with string fields and object bodies.",
+    nes_ref: "docs/human/sdk/overview.md",
+    vector_refs: ["SDK-NEG-0007"]
+  },
   SDK_ERR_AI_ENVELOPE_INVALID: {
     category: "VALIDATION",
     summary: "AI candidate envelope is malformed.",

@@ -22,19 +22,7 @@ export class EventLifecycle {
   }
 
   async append(input: AppendEventInput): Promise<{ event: LedgerEvent; event_id: string }> {
-    const ak = await this.identity.requireAuthorizedAk(input.ak);
-    const seq = await this.store.sequence.reserveNextSeq(ak);
-
-    const event: LedgerEvent = {
-      t: input.t,
-      ak,
-      seq,
-      payload_cid: input.payload_cid,
-      body: { ...input.body }
-    };
-
-    await this.store.events.append(event);
-    return { event, event_id: eventId(event) };
+    return this.store.atomic(async () => this.appendWithinMutation(input));
   }
 
   async void(targetEventId: string, reason = "void"): Promise<{ event: LedgerEvent; event_id: string }> {
@@ -46,13 +34,15 @@ export class EventLifecycle {
   }
 
   async correct(targetEventId: string, replacementEvent: AppendEventInput, reason = "correction"): Promise<{ correction: LedgerEvent; replacement: LedgerEvent }> {
-    const correction = await this.append({
-      t: "CorrectionEvent",
-      payload_cid: `corr:${targetEventId}`,
-      body: { target: targetEventId, reason }
+    return this.store.atomic(async () => {
+      const correction = await this.appendWithinMutation({
+        t: "CorrectionEvent",
+        payload_cid: `corr:${targetEventId}`,
+        body: { target: targetEventId, reason }
+      });
+      const replacement = await this.appendWithinMutation(replacementEvent);
+      return { correction: correction.event, replacement: replacement.event };
     });
-    const replacement = await this.append(replacementEvent);
-    return { correction: correction.event, replacement: replacement.event };
   }
 
   async merge(streamA: LedgerEvent[], streamB: LedgerEvent[]): Promise<LedgerEvent[]> {
@@ -106,6 +96,22 @@ export class EventLifecycle {
       encodeLedgerEvent(ev, out);
     }
     return new Uint8Array(out);
+  }
+
+  private async appendWithinMutation(input: AppendEventInput): Promise<{ event: LedgerEvent; event_id: string }> {
+    const ak = await this.identity.requireAuthorizedAk(input.ak);
+    const seq = await this.store.sequence.reserveNextSeq(ak);
+
+    const event: LedgerEvent = {
+      t: input.t,
+      ak,
+      seq,
+      payload_cid: input.payload_cid,
+      body: { ...input.body }
+    };
+
+    await this.store.events.append(event);
+    return { event, event_id: eventId(event) };
   }
 }
 

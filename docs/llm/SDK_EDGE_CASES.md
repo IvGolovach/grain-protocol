@@ -10,6 +10,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0006: duplicate entries through set-array builder -> `GRAIN_ERR_SET_ARRAY_DUP`
 - SDK-NEG-0007: malformed bundle import payload/root schema -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
 - SDK-NEG-0008: invalid bundle JSON bytes -> `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
+- SDK-NEG-0009: `verifyGR1()` without explicit trust material -> `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED`
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
