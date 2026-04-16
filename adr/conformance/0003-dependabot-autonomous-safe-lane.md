@@ -1,6 +1,6 @@
 # ADR 0003: Dependabot Autonomous Safe Lane (TOR-GH-DEPS-A02)
 
-- Status: Accepted
+- Status: Superseded by ADR 0004
 - Date: 2026-02-21
 - Owners: Repository maintainers
 - Related TOR: TOR-GH-DEPS-A02

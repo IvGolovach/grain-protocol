@@ -1,6 +1,6 @@
 # Grain Protocol v0.1 — Audit-Ready Public Launch Packet
 
-This document is self-contained. It is written for independent architects/auditors who have no prior context.
+This packet is for auditors and technical reviewers who want the shortest accurate view of the repo.
 
 ## 1) Executive technical summary
 
@@ -152,7 +152,7 @@ Prohibited without major bump:
 
 None for v0.1, except external cryptographic breaks (future major bump class).
 
-## 12) Interop certification gate (TOR-CERT-D01)
+## 11) Interop certification gate (TOR-CERT-D01)
 
 - Certification workflow: `/.github/workflows/interop-certify.yml` (manual or tag-triggered).
 - Script: `tools/interop_certify.sh`.
@@ -168,7 +168,7 @@ None for v0.1, except external cryptographic breaks (future major bump class).
   - `interop-report.md`
   - `evidence.sha256`
 
-## 11) Provenance migration and release discipline
+## 12) Provenance migration and release discipline
 
 - Repository provenance expectations are documented in `MIGRATION.md` and ADR `adr/conformance/0002-bundle-provenance-migration.md`.
 - Tag namespaces are intentionally split:

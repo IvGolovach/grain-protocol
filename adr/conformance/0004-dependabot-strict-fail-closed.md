@@ -1,4 +1,4 @@
-# ADR 0003: Dependabot Automerge Strict Fail-Closed Lane
+# ADR 0004: Dependabot Automerge Strict Fail-Closed Lane
 
 - Status: Accepted
 - Date: 2026-02-24
@@ -7,7 +7,7 @@
 ## Context
 
 The previous Dependabot lane allowed fallback token behavior and warning-only paths.
-This created non-deterministic automation outcomes (`works sometimes`) and could leave PRs stuck in `BEHIND` or review-blocked states.
+This created unreliable automation outcomes and could leave PRs stuck in `BEHIND` or review-blocked states.
 
 Dependabot-triggered PR workflows are constrained in secret/token behavior, so privileged operations must run in a trusted workflow context.
 
@@ -44,4 +44,3 @@ Adopt a strict fail-closed automerge lane:
 - Cons:
   - lane depends on correct secret provisioning and permissions,
   - failures are hard and immediate (by design).
-
