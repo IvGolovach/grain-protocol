@@ -14,8 +14,9 @@ Prerequisites:
 
 - Docker or Podman installed locally
 - no host Rust, Node, or Python toolchain is required for `./scripts/certify`
-- `./scripts/verify` uses host Rust, Node, and Python toolchains
-- `./scripts/bootstrap` is the blessed way to install those host toolchains and package dependencies
+- `./scripts/verify` uses the pinned local toolchain through `mise` when it is available
+- if `mise` is not available, `./scripts/verify` fails fast unless ambient Rust, Node, and Python already match the repo pins
+- `./scripts/bootstrap` is the blessed way to install those toolchains and package dependencies
 - if you run host-side TS commands, developer verification, or RC stabilization manually, use the exact Node patch version pinned in `.nvmrc`
 
 ## 2) Git parity checks
@@ -37,6 +38,8 @@ Expected:
 - empty `git status --porcelain`
 
 ## 3) Repository hygiene checks
+
+If this clone is not already on the pinned local toolchain, run `./scripts/bootstrap` first.
 
 ```bash
 python3 tools/ci/check_gitattributes_policy.py

@@ -11,7 +11,7 @@ Usage:
   ./scripts/verify --mode certify [certify options]
 
 Default:
-  Fast developer verification on host toolchains.
+  Fast developer verification on pinned local toolchains.
 
 Certify path:
   Release-grade containerized verification with evidence bundle output.
