@@ -136,6 +136,7 @@ Full precedence order:
 ## Contributing
 
 - `CONTRIBUTING.md`
+- `SECURITY.md`
 - `docs/human/maintainer-start-here.md`
 - `docs/human/maintainer-writing.md`
 - `docs/llm/CHANGE_POLICY.md`
