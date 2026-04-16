@@ -42,66 +42,82 @@ export class IdentityManager {
   }
 
   async addDeviceKey(label = "device"): Promise<{ device: DeviceKey; grant_event: LedgerEvent }> {
-    const bundle = await this.requireBundle();
-    const nextBundle = cloneIdentityBundle(bundle);
-    const rootKid = nextBundle.root_kid;
-
     const pub = randomBytes32();
+    const pubB64 = encodeB64(pub);
     const ak = deriveKid(pub);
+    let grantEvent: LedgerEvent | null = null;
 
-    if (nextBundle.device_keys.some((k) => k.ak === ak)) {
-      throw new SdkError("SDK_ERR_DEVICE_EXISTS", "Derived device key already exists");
+    await this.store.atomic(async () => {
+      const bundle = await this.requireBundle();
+      const nextBundle = cloneIdentityBundle(bundle);
+      const rootKid = nextBundle.root_kid;
+
+      if (nextBundle.device_keys.some((k) => k.ak === ak)) {
+        throw new SdkError("SDK_ERR_DEVICE_EXISTS", "Derived device key already exists");
+      }
+
+      const seq = await this.store.sequence.reserveNextSeq(rootKid);
+      nextBundle.seq_state[rootKid] = seq.toString();
+      nextBundle.device_keys.push({ ak, label, pub_b64: pubB64 });
+
+      grantEvent = {
+        t: "DeviceKeyGrant",
+        ak: rootKid,
+        seq,
+        payload_cid: `grant:${ak}`,
+        body: { grant_ak: ak }
+      };
+
+      await this.store.identity.save(nextBundle);
+      await this.store.events.append(grantEvent);
+    });
+
+    if (!grantEvent) {
+      throw new SdkError("SDK_ERR_INTERNAL", "Device grant event was not created");
     }
-
-    const seq = await this.store.sequence.reserveNextSeq(rootKid);
-    nextBundle.seq_state[rootKid] = seq.toString();
-    nextBundle.device_keys.push({ ak, label, pub_b64: encodeB64(pub) });
-
-    const grantEvent: LedgerEvent = {
-      t: "DeviceKeyGrant",
-      ak: rootKid,
-      seq,
-      payload_cid: `grant:${ak}`,
-      body: { grant_ak: ak }
-    };
-
-    await this.persistIdentityAndEvent(bundle, nextBundle, grantEvent);
-
-    return { device: { ak, label, pub_b64: encodeB64(pub) }, grant_event: grantEvent };
+    return { device: { ak, label, pub_b64: pubB64 }, grant_event: grantEvent };
   }
 
   async revokeDeviceKey(ak: string): Promise<{ revoked_ak: string; revoke_event: LedgerEvent }> {
-    const bundle = await this.requireBundle();
-    const nextBundle = cloneIdentityBundle(bundle);
-    const rootKid = nextBundle.root_kid;
+    let revokeEvent: LedgerEvent | null = null;
 
-    if (ak === rootKid) {
-      throw new SdkError("SDK_ERR_REVOKE_ROOT_FORBIDDEN", "Root key cannot be revoked in v0.1");
+    await this.store.atomic(async () => {
+      const bundle = await this.requireBundle();
+      const nextBundle = cloneIdentityBundle(bundle);
+      const rootKid = nextBundle.root_kid;
+
+      if (ak === rootKid) {
+        throw new SdkError("SDK_ERR_REVOKE_ROOT_FORBIDDEN", "Root key cannot be revoked in v0.1");
+      }
+      if (!nextBundle.device_keys.some((k) => k.ak === ak)) {
+        throw new SdkError("SDK_ERR_DEVICE_UNKNOWN", "Device key not found");
+      }
+      if (!nextBundle.revoked_aks.includes(ak)) {
+        nextBundle.revoked_aks.push(ak);
+        nextBundle.revoked_aks.sort();
+      }
+
+      if (nextBundle.active_ak === ak) {
+        nextBundle.active_ak = rootKid;
+      }
+
+      const seq = await this.store.sequence.reserveNextSeq(rootKid);
+      nextBundle.seq_state[rootKid] = seq.toString();
+      revokeEvent = {
+        t: "DeviceKeyRevoke",
+        ak: rootKid,
+        seq,
+        payload_cid: `revoke:${ak}`,
+        body: { revoke_ak: ak }
+      };
+
+      await this.store.identity.save(nextBundle);
+      await this.store.events.append(revokeEvent);
+    });
+
+    if (!revokeEvent) {
+      throw new SdkError("SDK_ERR_INTERNAL", "Device revoke event was not created");
     }
-    if (!nextBundle.device_keys.some((k) => k.ak === ak)) {
-      throw new SdkError("SDK_ERR_DEVICE_UNKNOWN", "Device key not found");
-    }
-    if (!nextBundle.revoked_aks.includes(ak)) {
-      nextBundle.revoked_aks.push(ak);
-      nextBundle.revoked_aks.sort();
-    }
-
-    if (nextBundle.active_ak === ak) {
-      nextBundle.active_ak = rootKid;
-    }
-
-    const seq = await this.store.sequence.reserveNextSeq(rootKid);
-    nextBundle.seq_state[rootKid] = seq.toString();
-    const revokeEvent: LedgerEvent = {
-      t: "DeviceKeyRevoke",
-      ak: rootKid,
-      seq,
-      payload_cid: `revoke:${ak}`,
-      body: { revoke_ak: ak }
-    };
-
-    await this.persistIdentityAndEvent(bundle, nextBundle, revokeEvent);
-
     return { revoked_ak: ak, revoke_event: revokeEvent };
   }
 
@@ -135,8 +151,11 @@ export class IdentityManager {
     decodeB64(bundle.root_pub_b64);
     decodeB64(bundle.sync_secret_b64);
 
-    await this.store.identity.save(bundle);
-    await this.store.sequence.importSnapshot(bundle.seq_state);
+    const nextBundle = cloneIdentityBundle(bundle);
+    await this.store.atomic(async () => {
+      await this.store.sequence.importSnapshot(nextBundle.seq_state);
+      await this.store.identity.save(nextBundle);
+    });
   }
 
   async getState(): Promise<{ root_kid: string; active_ak: string; authorized_aks: string[]; revoked_aks: string[] }> {
@@ -168,21 +187,6 @@ export class IdentityManager {
     const bundle = await this.requireBundle();
     return decodeB64(bundle.sync_secret_b64);
   }
-
-  private async persistIdentityAndEvent(
-    previous: IdentityBundleV1,
-    next: IdentityBundleV1,
-    event: LedgerEvent
-  ): Promise<void> {
-    try {
-      await this.store.identity.save(next);
-      await this.store.events.append(event);
-    } catch (err) {
-      await this.store.identity.save(previous);
-      throw err;
-    }
-  }
-
   private async requireBundle(): Promise<IdentityBundleV1> {
     const bundle = await this.store.identity.load();
     if (!bundle) {

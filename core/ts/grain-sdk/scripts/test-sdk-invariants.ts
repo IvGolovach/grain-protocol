@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-import { GrainSdk } from "../src/index.js";
+import { readFileSync } from "node:fs";
+
+import { GrainSdk, InMemorySdkStore } from "../src/index.js";
 import { SdkError } from "../src/errors.js";
 import { buildSetArray } from "../src/primitives.js";
-import type { LedgerEvent } from "../src/index.js";
+import type { GrainSdkStore, IdentityBundleV1, LedgerEvent } from "../src/index.js";
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 
@@ -151,6 +153,81 @@ async function run(): Promise<number> {
       ok("SDK-INV-0010 transport bundle determinism");
     }
 
+    const qrVector = loadJsonFixture<{ input: { qr_string: string } }>("../../../../../conformance/vectors/qr/POS-QR-001.json");
+    const coseVector = loadJsonFixture<{ input: { pub_b64: string } }>("../../../../../conformance/vectors/cose/POS-COSE-001.json");
+
+    try {
+      const verified = sdk.transport.verifyGR1({
+        qr_string: qrVector.input.qr_string,
+        trust: { pub_b64: coseVector.input.pub_b64 }
+      });
+      if (!verified.pass || verified.diag.length > 0 || verified.cose_bytes.length === 0) {
+        fail("SDK-INV-0010 transport verify requires explicit trust", "verifyGR1 did not produce a clean verified result");
+      } else {
+        ok("SDK-INV-0010 transport verify requires explicit trust");
+      }
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      fail("SDK-INV-0010 transport verify requires explicit trust", `unexpected code: ${code}`);
+    }
+
+    try {
+      sdk.transport.gr1Verify(qrVector.input.qr_string, undefined as never);
+      fail("SDK-NEG-0009 verifyGR1 rejects missing trust", "verifyGR1 accepted a decode-only call");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED") {
+        ok("SDK-NEG-0009 verifyGR1 rejects missing trust");
+      } else {
+        fail("SDK-NEG-0009 verifyGR1 rejects missing trust", `unexpected code: ${code}`);
+      }
+    }
+
+    try {
+      sdk.transport.bundleImport(
+        new TextEncoder().encode(
+          JSON.stringify({
+            schema: "grain-transport-bundle-v1",
+            strict: true,
+            objects: {},
+            events: [{ t: [] }],
+            manifest: [{ op: 123, cid: "cid:bad" }],
+            evidence: {}
+          })
+        )
+      );
+      fail("SDK-NEG-0007 transport bundle row schema", "bundleImport accepted malformed rows");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA") {
+        ok("SDK-NEG-0007 transport bundle row schema");
+      } else {
+        fail("SDK-NEG-0007 transport bundle row schema", `unexpected code: ${code}`);
+      }
+    }
+
+    try {
+      sdk.transport.bundleExport({
+        events: [
+          {
+            t: "IntakeEvent",
+            payload_cid: "cid:bad:seq",
+            seq: 123
+          }
+        ],
+        manifest: [{ op: "put", cid: "cid:obj:1" }],
+        evidence: {}
+      });
+      fail("SDK-NEG-0007 transport bundle export rejects malformed rows", "bundleExport accepted an unsafe row");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA") {
+        ok("SDK-NEG-0007 transport bundle export rejects malformed rows");
+      } else {
+        fail("SDK-NEG-0007 transport bundle export rejects malformed rows", `unexpected code: ${code}`);
+      }
+    }
+
     const seqEvents: LedgerEvent[] = [
       {
         t: "IntakeEvent",
@@ -226,6 +303,73 @@ async function run(): Promise<number> {
       ok("SDK-INV-0012 identity lifecycle stays synced with ledger");
     }
 
+    const originalBundle = await lifecycleSdk.identity.exportBundle();
+    const replacementSeed = new GrainSdk();
+    await replacementSeed.identity.createRoot("replacement-root");
+    const replacementBundle = await replacementSeed.identity.exportBundle();
+
+    const importRollbackBase = new InMemorySdkStore();
+    await importRollbackBase.identity.save(originalBundle);
+    await importRollbackBase.sequence.importSnapshot(originalBundle.seq_state);
+
+    const importRollbackStore = withStoreOverrides(importRollbackBase, {
+      sequence: {
+        ...importRollbackBase.sequence,
+        importSnapshot: async (snapshot: Record<string, string>): Promise<void> => {
+          await importRollbackBase.sequence.importSnapshot(snapshot);
+          throw new Error("synthetic import snapshot failure");
+        }
+      }
+    });
+    const importRollbackSdk = new GrainSdk(importRollbackStore);
+
+    try {
+      await importRollbackSdk.identity.importBundle(replacementBundle);
+      fail("SDK-INV-0013 identity import rollback", "importBundle accepted a store that fails mid-import");
+    } catch {
+      const restoredBundle = await importRollbackBase.identity.load();
+      const restoredSeq = await importRollbackBase.sequence.snapshot();
+      if (
+        !restoredBundle
+        || stableJson(restoredBundle) !== stableJson(originalBundle)
+        || stableJson(restoredSeq) !== stableJson(originalBundle.seq_state)
+      ) {
+        fail("SDK-INV-0013 identity import rollback", "importBundle left partially imported identity or sequence state");
+      } else {
+        ok("SDK-INV-0013 identity import rollback");
+      }
+    }
+
+    const correctionStore = new InMemorySdkStore();
+    const correctionSdk = new GrainSdk(correctionStore);
+    await correctionSdk.identity.createRoot();
+    const revokedDevice = await correctionSdk.identity.addDeviceKey("revoked-device");
+    await correctionSdk.identity.revokeDeviceKey(revokedDevice.device.ak);
+    const eventsBeforeFailedCorrection = await correctionStore.events.list();
+
+    try {
+      await correctionSdk.events.correct("event:target:1", {
+        ak: revokedDevice.device.ak,
+        t: "IntakeEvent",
+        payload_cid: "cid:intake:correction-replacement",
+        body: { mean: { kcal: 5 }, var: { kcal: 0 } }
+      });
+      fail("SDK-INV-0013 correct rollback", "events.correct accepted a replacement that should fail");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      const eventsAfterFailedCorrection = await correctionStore.events.list();
+      const correctionCount = eventsAfterFailedCorrection.filter((event) => event.t === "CorrectionEvent").length;
+      if (
+        code !== "SDK_ERR_UNAUTHORIZED_AK"
+        || eventsAfterFailedCorrection.length !== eventsBeforeFailedCorrection.length
+        || correctionCount !== 0
+      ) {
+        fail("SDK-INV-0013 correct rollback", `partial correction state escaped rollback (code=${code})`);
+      } else {
+        ok("SDK-INV-0013 correct rollback");
+      }
+    }
+
     const summary = {
       total: checks.length,
       failed: checks.filter((c) => !c.pass).length,
@@ -249,4 +393,33 @@ function extractKcal(value: unknown): number | null {
   }
   const kcal = (value as Record<string, unknown>).kcal;
   return typeof kcal === "number" ? kcal : null;
+}
+
+function loadJsonFixture<T>(relativePath: string): T {
+  return JSON.parse(readFileSync(new URL(relativePath, import.meta.url), "utf8")) as T;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableJson(entry)).join(",")}]`;
+  }
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableJson(entry)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function withStoreOverrides(base: InMemorySdkStore, overrides: Partial<GrainSdkStore>): GrainSdkStore {
+  return {
+    atomic: overrides.atomic ?? base.atomic,
+    sequence: overrides.sequence ?? base.sequence,
+    events: overrides.events ?? base.events,
+    objects: overrides.objects ?? base.objects,
+    blobs: overrides.blobs ?? base.blobs,
+    manifest: overrides.manifest ?? base.manifest,
+    identity: overrides.identity ?? base.identity
+  };
 }

@@ -1,5 +1,7 @@
 import type { IdentityBundleV1, LedgerEvent, ManifestRecord } from "./types.js";
 
+export type AtomicStoreMutation<T> = () => Promise<T>;
+
 export interface SequenceStore {
   reserveNextSeq(ak: string): Promise<bigint>;
   snapshot(): Promise<Record<string, string>>;
@@ -34,6 +36,7 @@ export interface IdentityStore {
 }
 
 export interface GrainSdkStore {
+  atomic<T>(mutation: AtomicStoreMutation<T>): Promise<T>;
   sequence: SequenceStore;
   events: EventStore;
   objects: ObjectStore;

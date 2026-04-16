@@ -19,8 +19,10 @@ What it does for you:
 - strict-by-default behavior
 - fail-closed handling for risky paths like CSPRNG and `cap_id` overwrite
 - deterministic error messages with NES/vector references
-- deterministic transport bundle import/export (`grain-transport-bundle-v1`)
+- deterministic transport bundle import/export with strict row validation (`grain-transport-bundle-v1`)
+- clear transport boundary: `decodeGR1()` decodes, `verifyGR1()` requires explicit trust
 - device lifecycle APIs that keep local authorization and ledger history in sync
+- atomic rollback for multi-step SDK mutations like `identity.importBundle()` and `events.correct()`
 - no outbound network behavior in the SDK core
 
 What it does not do:

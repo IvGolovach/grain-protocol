@@ -33,6 +33,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 - stop on unsafe paths instead of guessing
 - preserve core diagnostics (SDK-only codes stay in `SDK_ERR_*`)
 - surface conflict/quarantine/unauthorized status explicitly
+- require atomic store mutations for multi-step public SDK writes
 
 ## What the SDK is not allowed to do
 
@@ -48,6 +49,9 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 - `src/e2e.ts`: deterministic derive/encrypt/decrypt wrappers + manifest glue
 - `src/manifest.ts`: deterministic resolution bridge
 - `src/transport.ts`: GR1 helpers + deterministic bundle import/export
+  - decode and verify stay separate
+  - `verifyGR1()` requires explicit trust material
+  - bundle rows are schema-checked before export/import
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder
@@ -59,6 +63,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 - no domain semantics
 - no alternative conflict or revoke semantics
 - no vendor model clients or outbound network calls in SDK core or AI sidecar
+- no partial commit semantics for public multi-step SDK writes
 
 ## Audit anchors
 
