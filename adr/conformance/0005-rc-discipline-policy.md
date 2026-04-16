@@ -1,4 +1,4 @@
-# ADR 0004: RC Discipline and Claim Signoff Policy
+# ADR 0005: RC Discipline and Claim Signoff Policy
 
 - Status: Accepted
 - Date: 2026-02-24
@@ -46,4 +46,3 @@ Introduce RC governance as first-class spec policy:
 - Cons:
   - additional release process overhead,
   - explicit signoff operations required per RC cycle.
-

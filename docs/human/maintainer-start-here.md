@@ -1,7 +1,7 @@
 # Maintainer Start Here
 
 If you just landed in the maintainer seat, start here.
-No cape required. The repo already has strong guardrails. This page helps you find them fast.
+The repo already has strong guardrails. This page helps you find them fast.
 
 ## Fast path (15 minutes)
 

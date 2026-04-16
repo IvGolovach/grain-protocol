@@ -78,7 +78,7 @@ Scope:
 Deliverables:
 - corpus manifest with hash anchors for malformed CBOR/COSE/E2E/CBOR-seq classes.
 - deterministic smoke subset for gate path.
-- expanded fuzz in nightly lane.
+- expanded fuzz in the deep lane.
 
 ### V. Runner contract as public API
 
@@ -194,7 +194,7 @@ Mitigation: pinned Node version in container and byte-level checks.
 Mitigation: pinned wasm toolchain and hash-anchored artifacts.
 
 5. Fuzz nondeterminism  
-Mitigation: deterministic gate subset + nightly deep fuzz with seed capture.
+Mitigation: deterministic gate subset + deep fuzz with seed capture.
 
 ## 8) Audit visibility
 

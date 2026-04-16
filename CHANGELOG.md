@@ -113,8 +113,8 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - added corpus location:
     - `stabilization/RC-STAB-A01/corpus/README.md`
   - integrated PR smoke stabilization gate into required `ts-full` context.
-  - added nightly deep stabilization workflow:
-    - `/.github/workflows/rc-stabilization-nightly.yml`
+  - added deep stabilization workflow:
+    - `/.github/workflows/rc-stabilization-deep-check.yml`
 
 ## [0.4.0-rc1] - 2026-02-24
 - TOR-04 / TOR-TS-IND-C02 (TypeScript full independent engine):

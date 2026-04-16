@@ -1,8 +1,8 @@
 # TOR-SDK-A01
 
-Grain SDK — Universal, Professional, Zero-Ambiguity Surface
+Grain SDK — Strict App-Facing Surface
 
-Status: implemented in progress-gated form (RC discipline compatible)
+Status: active and RC-discipline compatible
 
 ## Scope
 

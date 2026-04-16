@@ -41,9 +41,8 @@ npm ci --prefix core/ts/grain-ts-core
 npm ci --prefix core/ts/grain-sdk
 ```
 
-The SDK does not reach into `runner/typescript/dist` anymore.
-Both the runner and the SDK build on top of the shared TypeScript core in
-`core/ts/grain-ts-core`, then emit their own package output.
+The shared TypeScript core lives in `core/ts/grain-ts-core`.
+The runner and the SDK both build on top of that package, then emit their own outputs.
 
 Try the smallest end-to-end demo:
 

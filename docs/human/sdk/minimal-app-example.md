@@ -17,8 +17,7 @@ npm ci --prefix core/ts/grain-sdk
 
 ## 2) Build the SDK once
 
-The SDK build is self-contained at the package boundary: it builds the shared
-TypeScript core first, then emits the SDK files.
+The SDK build handles the shared TypeScript core for you, then emits the SDK files.
 
 ```bash
 npm --prefix core/ts/grain-sdk run build
@@ -26,7 +25,7 @@ npm --prefix core/ts/grain-sdk run build
 
 ## 3) Create a tiny app file
 
-Save this as `minimal-app.mjs` in the repo root:
+Create `minimal-app.mjs` in the repo root:
 
 ```js
 import { GrainSdk } from "./core/ts/grain-sdk/dist/src/index.js";
