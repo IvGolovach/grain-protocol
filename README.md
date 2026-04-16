@@ -72,7 +72,7 @@ Quick repo health view:
 ./scripts/doctor
 ```
 
-Fast local verification on host toolchains:
+Fast local verification on the pinned local toolchain:
 
 ```bash
 ./scripts/verify

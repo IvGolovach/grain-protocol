@@ -29,6 +29,11 @@ have_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+read_mise_tool_pin() {
+  local key="$1"
+  awk -F'"' -v key="$key" '$0 ~ "^[[:space:]]*" key " = " { print $2; exit }' "$ROOT/mise.toml"
+}
+
 tool_state() {
   local tool="$1"
   if have_cmd "$tool"; then
@@ -63,19 +68,41 @@ fi
 pinned_node="$(tr -d '\n' < .nvmrc 2>/dev/null || printf 'missing')"
 node_state="missing"
 node_next_step=""
+pinned_python="$(read_mise_tool_pin python)"
+python_state="missing"
+python_next_step=""
 if have_cmd node; then
   node_version="$(node -v)"
   if [[ "$node_version" == "v${pinned_node}" ]]; then
     node_state="${node_version} (matches .nvmrc)"
   else
     node_state="${node_version} (expected v${pinned_node})"
-    if have_cmd nvm; then
-      node_next_step="run: nvm use"
-    elif [[ -f "$HOME/.nvm/nvm.sh" ]]; then
-      node_next_step="run: . \"$HOME/.nvm/nvm.sh\" && nvm use"
+    if have_cmd mise; then
+      node_next_step="run: ./scripts/bootstrap"
     else
-      node_next_step="next step: switch to Node v${pinned_node}"
+      node_next_step="next step: install mise, then run ./scripts/bootstrap"
     fi
+  fi
+fi
+
+if have_cmd python3; then
+  python_version="$(python3 --version 2>&1 | awk '{print $2}')"
+  if [[ "$python_version" == "${pinned_python}" || "$python_version" == "${pinned_python}".* ]]; then
+    python_state="${python_version} (matches mise.toml)"
+  else
+    python_state="${python_version} (expected ${pinned_python}.x)"
+    if have_cmd mise; then
+      python_next_step="run: ./scripts/bootstrap"
+    else
+      python_next_step="next step: install mise, then run ./scripts/bootstrap"
+    fi
+  fi
+else
+  python_state="missing (expected ${pinned_python}.x)"
+  if have_cmd mise; then
+    python_next_step="run: ./scripts/bootstrap"
+  else
+    python_next_step="next step: install mise, then run ./scripts/bootstrap"
   fi
 fi
 
@@ -98,8 +125,11 @@ printf "node: %s\n" "$node_state"
 if [[ -n "$node_next_step" ]]; then
   printf "node next step: %s\n" "$node_next_step"
 fi
+printf "python3: %s\n" "$python_state"
+if [[ -n "$python_next_step" ]]; then
+  printf "python next step: %s\n" "$python_next_step"
+fi
 printf "mise: %s\n" "$(tool_state mise)"
-printf "python3: %s\n" "$(tool_state python3)"
 printf "cargo: %s\n" "$(tool_state cargo)"
 printf "npm: %s\n" "$(tool_state npm)"
 printf "docker: %s\n" "$(tool_state docker)"

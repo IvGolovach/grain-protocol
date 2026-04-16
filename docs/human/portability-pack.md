@@ -25,7 +25,8 @@ Fast developer verification:
 
 What you get:
 
-- host toolchains required (`Rust`, `Node`, `Python`)
+- pinned local toolchain path through `mise` when available
+- ambient host toolchains are accepted only when they already match the repo pins
 - no clean-tree requirement
 - no container image build
 - no evidence bundle generation
