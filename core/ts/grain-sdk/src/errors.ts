@@ -96,6 +96,13 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
     nes_ref: "docs/human/sdk/overview.md",
     vector_refs: ["SDK-NEG-0009"]
   },
+  SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID: {
+    category: "VALIDATION",
+    summary: "GR1 verification trust public key is not valid base64 standard.",
+    human_hint: "Pass trust.pub_b64 as standard base64 bytes for the trusted verification key.",
+    nes_ref: "docs/human/sdk/overview.md",
+    vector_refs: ["SDK-NEG-0009"]
+  },
   SDK_ERR_TRANSPORT_DECODE: {
     category: "VALIDATION",
     summary: "Transport decode output is malformed.",

@@ -6,11 +6,11 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0002: cap_id overwrite under same key with different ciphertext/chash -> `SDK_ERR_CAP_OVERWRITE_OR_CORRUPTION`
 - SDK-NEG-0003: missing CSPRNG during cap generation -> `SDK_ERR_CSPRNG_UNAVAILABLE`
 - SDK-NEG-0004: non-canonical bytes into codec strict validate -> core reject diagnostic (`GRAIN_ERR_NONCANONICAL` or equivalent)
-- SDK-NEG-0005: invalid identity bundle format/version -> `SDK_ERR_IDENTITY_BUNDLE_INVALID` / `SDK_ERR_IDENTITY_BUNDLE_VERSION`
+- SDK-NEG-0005: invalid identity bundle format/version/base64 on imported binary fields -> `SDK_ERR_IDENTITY_BUNDLE_INVALID` / `SDK_ERR_IDENTITY_BUNDLE_VERSION`
 - SDK-NEG-0006: duplicate entries through set-array builder -> `GRAIN_ERR_SET_ARRAY_DUP`
-- SDK-NEG-0007: malformed bundle import payload/root schema -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
+- SDK-NEG-0007: malformed bundle import payload/root schema or invalid base64 on imported bundle fields -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
 - SDK-NEG-0008: invalid bundle JSON bytes -> `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
-- SDK-NEG-0009: `verifyGR1()` without explicit trust material -> `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED`
+- SDK-NEG-0009: `verifyGR1()` without explicit trust material or with malformed `trust.pub_b64` -> `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED` / `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`

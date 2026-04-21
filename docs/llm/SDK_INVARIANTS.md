@@ -38,7 +38,7 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0009 deterministic error model`)
   Modules: `core/ts/grain-sdk/src/errors.ts`, `core/ts/grain-sdk/src/codec.ts`
 
-- SDK-INV-0010: transport decode and verify MUST stay separate; verify requires explicit trust, and bundle import/export MUST be deterministic + schema-checked.
+- SDK-INV-0010: transport decode and verify MUST stay separate; verify requires explicit trust, and bundle import/export MUST be deterministic + schema-checked + strict-base64-validated on imported binary fields.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`, `SDK-INV-0010 transport verify requires explicit trust`)
   Modules: `core/ts/grain-sdk/src/transport.ts`
 
@@ -53,6 +53,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
 - SDK-INV-0013: public multi-step SDK mutations MUST roll back on failure instead of leaving partial persisted state.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0013 identity import rollback`, `SDK-INV-0013 correct rollback`)
   Modules: `core/ts/grain-sdk/src/store.ts`, `core/ts/grain-sdk/src/memory-store.ts`, `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/events.ts`, `core/ts/grain-sdk/src/manifest.ts`
+
+- SDK-INV-0014: public import surfaces MUST reject non-standard base64 on binary fields before mutation or verification.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-NEG-0005 identity bundle base64 validation`, `SDK-NEG-0007 transport bundle base64 validation`, `SDK-NEG-0009 verifyGR1 rejects malformed trust bytes`)
+  Modules: `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/transport.ts`, `core/ts/grain-sdk/src/utils.ts`
 
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)

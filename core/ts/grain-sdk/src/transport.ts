@@ -1,7 +1,7 @@
 import { deflateSync } from "node:zlib";
 
 import { SdkError } from "./errors.js";
-import { decodeB64, encodeB64, stableStringify, toUtf8 } from "./utils.js";
+import { decodeB64Strict, encodeB64, stableStringify, toUtf8, requireBase64Standard } from "./utils.js";
 import type { TsCoreEngine } from "./engine.js";
 import type { Json } from "./utils.js";
 
@@ -29,7 +29,13 @@ export class TransportToolkit {
     if (typeof b64 !== "string") {
       throw new SdkError("SDK_ERR_TRANSPORT_DECODE", "Missing COSE bytes in decode output");
     }
-    return { cose_bytes: decodeB64(b64) };
+    return {
+      cose_bytes: decodeB64Strict(
+        b64,
+        "SDK_ERR_TRANSPORT_DECODE",
+        "COSE bytes in decode output must be standard base64"
+      )
+    };
   }
 
   decodeGR1(input: { qr_string: string }): { payload_bytes: Uint8Array; cose_bytes: Uint8Array } {
@@ -121,7 +127,11 @@ export class TransportToolkit {
       if (typeof b64 !== "string") {
         throw new SdkError("SDK_ERR_TRANSPORT_BUNDLE_SCHEMA", "Bundle object payload must be base64 string");
       }
-      objects[cid] = decodeB64(b64);
+      objects[cid] = decodeB64Strict(
+        b64,
+        "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA",
+        `Bundle objects.${cid} payload must be standard base64`
+      );
     }
 
     const events = parseEventRows(root.events, "events");
@@ -146,7 +156,11 @@ function requireTrustPublicKey(trust: { pub_b64: string } | undefined): string {
       "verifyGR1 requires trust.pub_b64. Use decodeGR1 for decode-only flows."
     );
   }
-  return trust.pub_b64;
+  return requireBase64Standard(
+    trust.pub_b64,
+    "SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID",
+    "verifyGR1 trust.pub_b64 must be standard base64"
+  );
 }
 
 function base45Encode(data: Uint8Array): string {
@@ -244,12 +258,20 @@ function normalizeManifestRow(row: Record<string, Json>, field: string): Record<
 
   const capId = optionalString(row.cap_id_b64, `${field}.cap_id_b64`);
   if (capId !== undefined) {
-    normalized.cap_id_b64 = capId;
+    normalized.cap_id_b64 = requireBase64Standard(
+      capId,
+      "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA",
+      `${field}.cap_id_b64 must be standard base64`
+    );
   }
 
   const chash = optionalString(row.chash_b64, `${field}.chash_b64`);
   if (chash !== undefined) {
-    normalized.chash_b64 = chash;
+    normalized.chash_b64 = requireBase64Standard(
+      chash,
+      "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA",
+      `${field}.chash_b64 must be standard base64`
+    );
   }
 
   if (row.eligible !== undefined) {

@@ -45,13 +45,14 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 ## Module map
 
 - `src/identity.ts`: root/device lifecycle, bundle import/export
+  - bundle import validates required binary fields before mutation
 - `src/events.ts`: append/void/correct/merge/reduce orchestration
 - `src/e2e.ts`: deterministic derive/encrypt/decrypt wrappers + manifest glue
 - `src/manifest.ts`: deterministic resolution bridge
 - `src/transport.ts`: GR1 helpers + deterministic bundle import/export
   - decode and verify stay separate
-  - `verifyGR1()` requires explicit trust material
-  - bundle rows are schema-checked before export/import
+  - `verifyGR1()` requires explicit trust material and rejects malformed `trust.pub_b64`
+  - bundle rows are schema-checked and binary-bearing fields are strict-base64-validated before export/import
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder
