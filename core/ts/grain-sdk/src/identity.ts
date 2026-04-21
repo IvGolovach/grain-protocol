@@ -249,7 +249,6 @@ function isDeviceKey(value: unknown): value is DeviceKey {
   return typeof candidate.ak === "string"
     && candidate.ak.length > 0
     && typeof candidate.label === "string"
-    && candidate.label.length > 0
     && typeof candidate.pub_b64 === "string"
     && candidate.pub_b64.length > 0;
 }

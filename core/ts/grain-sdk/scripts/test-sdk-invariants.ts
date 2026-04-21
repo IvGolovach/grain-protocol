@@ -471,6 +471,25 @@ async function run(): Promise<number> {
     await replacementSeed.identity.createRoot("replacement-root");
     const replacementBundle = await replacementSeed.identity.exportBundle();
 
+    const emptyLabelSeed = new GrainSdk();
+    await emptyLabelSeed.identity.createRoot("");
+    await emptyLabelSeed.identity.addDeviceKey("");
+    const emptyLabelBundle = await emptyLabelSeed.identity.exportBundle();
+    const emptyLabelImportSdk = new GrainSdk();
+    try {
+      await emptyLabelImportSdk.identity.importBundle(emptyLabelBundle);
+      const importedEmptyLabelBundle = await emptyLabelImportSdk.identity.exportBundle();
+      const labels = importedEmptyLabelBundle.device_keys.map((device) => device.label);
+      if (!labels.includes("")) {
+        fail("SDK-REG-0001 identity bundle accepts empty labels", "import/export lost an empty device label");
+      } else {
+        ok("SDK-REG-0001 identity bundle accepts empty labels");
+      }
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      fail("SDK-REG-0001 identity bundle accepts empty labels", `unexpected code: ${code}`);
+    }
+
     const importRollbackBase = new InMemorySdkStore();
     await importRollbackBase.identity.save(originalBundle);
     await importRollbackBase.sequence.importSnapshot(originalBundle.seq_state);
