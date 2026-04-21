@@ -22,16 +22,25 @@ This checklist documents what public SDK APIs reject by construction.
 6. Invalid transport bundle payload/schema
    - rejected by `transport.bundleImport(...)`
    - code: `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA` / `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
-7. Verify call without explicit trust material
+7. Invalid imported transport binary fields
+   - non-standard base64 in `objects[*]`, `manifest[*].cap_id_b64`, or `manifest[*].chash_b64`
+   - code: `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
+8. Invalid imported identity-bundle binary fields
+   - non-standard base64 in `root_pub_b64`, `sync_secret_b64`, or `device_keys[*].pub_b64`
+   - code: `SDK_ERR_IDENTITY_BUNDLE_INVALID`
+9. Verify call without explicit trust material
    - rejected by `transport.verifyGR1(...)`
    - code: `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED`
-8. Forged/expired/unknown AI accepted token
+10. Verify call with malformed trust bytes
+   - rejected by `transport.verifyGR1(...)`
+   - code: `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`
+11. Forged/expired/unknown AI accepted token
    - rejected by `ai.applyAccepted(...)`
    - code: `SDK_ERR_ACCEPT_TOKEN_FORGED` / `SDK_ERR_ACCEPT_TOKEN_UNKNOWN` / `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
-9. AI candidate bypass around deterministic firewall
+12. AI candidate bypass around deterministic firewall
    - no public `sdk.store` access; side effects require sidecar `accept()` then opaque token apply
    - code path: `SDK-AI-001` gate suite
-10. Unknown critical AI candidate extensions
+13. Unknown critical AI candidate extensions
    - quarantined deterministically
    - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
 

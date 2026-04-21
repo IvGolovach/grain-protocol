@@ -27,12 +27,13 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0012` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0014` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Diagnostics contract
 
 - Core diagnostics are preserved and not renamed.
 - SDK-only diagnostics use `SDK_ERR_*` namespace.
+- SDK import/transport boundaries reject malformed non-standard base64 deterministically.
 - AI boundary explain payload is deterministic and redacted by default.
 - structured_v1 field typing must be explicit (profile table or explicit pointer maps).
 

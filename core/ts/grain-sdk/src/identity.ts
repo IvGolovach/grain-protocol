@@ -1,7 +1,7 @@
 import type { GrainSdkStore } from "./store.js";
 import type { DeviceKey, IdentityBundleV1, LedgerEvent } from "./types.js";
 import { SdkError } from "./errors.js";
-import { randomBytes32, encodeB64, sha256Hex, decodeB64 } from "./utils.js";
+import { randomBytes32, encodeB64, sha256Hex, decodeB64Strict } from "./utils.js";
 
 export class IdentityManager {
   private readonly store: GrainSdkStore;
@@ -143,13 +143,30 @@ export class IdentityManager {
       throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle missing required fields");
     }
 
-    if (!bundle.device_keys.some((d) => d.ak === bundle.root_kid)) {
+    assertIdentityBundle(Array.isArray(bundle.device_keys), "Identity bundle device_keys must be an array");
+    if (!bundle.device_keys.some((device) => isDeviceKey(device) && device.ak === bundle.root_kid)) {
       throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle missing root key in device_keys");
     }
 
-    // Validate binary payloads early to keep fail-closed behavior deterministic.
-    decodeB64(bundle.root_pub_b64);
-    decodeB64(bundle.sync_secret_b64);
+    // Validate imported binary payloads before any mutation so import stays fail-closed.
+    decodeB64Strict(
+      bundle.root_pub_b64,
+      "SDK_ERR_IDENTITY_BUNDLE_INVALID",
+      "Identity bundle root_pub_b64 must be standard base64"
+    );
+    decodeB64Strict(
+      bundle.sync_secret_b64,
+      "SDK_ERR_IDENTITY_BUNDLE_INVALID",
+      "Identity bundle sync_secret_b64 must be standard base64"
+    );
+    for (const [index, device] of bundle.device_keys.entries()) {
+      assertIdentityBundle(isDeviceKey(device), `Identity bundle device_keys[${index}] is malformed`);
+      decodeB64Strict(
+        device.pub_b64,
+        "SDK_ERR_IDENTITY_BUNDLE_INVALID",
+        `Identity bundle device_keys[${index}].pub_b64 must be standard base64`
+      );
+    }
 
     const nextBundle = cloneIdentityBundle(bundle);
     await this.store.atomic(async () => {
@@ -185,7 +202,11 @@ export class IdentityManager {
 
   async getSyncSecret(): Promise<Uint8Array> {
     const bundle = await this.requireBundle();
-    return decodeB64(bundle.sync_secret_b64);
+    return decodeB64Strict(
+      bundle.sync_secret_b64,
+      "SDK_ERR_IDENTITY_BUNDLE_INVALID",
+      "Identity bundle sync_secret_b64 must be standard base64"
+    );
   }
   private async requireBundle(): Promise<IdentityBundleV1> {
     const bundle = await this.store.identity.load();
@@ -212,4 +233,23 @@ function isAuthorized(bundle: IdentityBundleV1, ak: string): boolean {
 
 function cloneIdentityBundle(bundle: IdentityBundleV1): IdentityBundleV1 {
   return JSON.parse(JSON.stringify(bundle)) as IdentityBundleV1;
+}
+
+function assertIdentityBundle(condition: boolean, message: string): asserts condition {
+  if (!condition) {
+    throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", message);
+  }
+}
+
+function isDeviceKey(value: unknown): value is DeviceKey {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const candidate = value as Partial<DeviceKey>;
+  return typeof candidate.ak === "string"
+    && candidate.ak.length > 0
+    && typeof candidate.label === "string"
+    && candidate.label.length > 0
+    && typeof candidate.pub_b64 === "string"
+    && candidate.pub_b64.length > 0;
 }

@@ -8,6 +8,31 @@ export function decodeB64(value: string): Uint8Array {
   return new Uint8Array(Buffer.from(value, "base64"));
 }
 
+export function isBase64Standard(value: string): boolean {
+  if (value.length === 0) {
+    return true;
+  }
+  if (value.length % 4 !== 0) {
+    return false;
+  }
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    return false;
+  }
+  return Buffer.from(value, "base64").toString("base64") === value;
+}
+
+export function requireBase64Standard(value: string, code: string, message: string): string {
+  if (!isBase64Standard(value)) {
+    throw new SdkError(code, message);
+  }
+  return value;
+}
+
+export function decodeB64Strict(value: string, code: string, message: string): Uint8Array {
+  requireBase64Standard(value, code, message);
+  return decodeB64(value);
+}
+
 export function encodeB64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
 }

@@ -183,6 +183,29 @@ async function run(): Promise<number> {
       }
     }
 
+    for (const invalidTrustCase of [
+      { label: "garbage", value: "!!!" },
+      { label: "url-safe alphabet", value: "YWJj-_==" },
+      { label: "whitespace", value: "YWJj\n" },
+      { label: "bad padding", value: "YQ=" }
+    ]) {
+      const checkName = `SDK-NEG-0009 verifyGR1 rejects malformed trust bytes (${invalidTrustCase.label})`;
+      try {
+        sdk.transport.verifyGR1({
+          qr_string: qrVector.input.qr_string,
+          trust: { pub_b64: invalidTrustCase.value }
+        });
+        fail(checkName, `verifyGR1 accepted malformed trust.pub_b64=${JSON.stringify(invalidTrustCase.value)}`);
+      } catch (err) {
+        const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+        if (code === "SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID") {
+          ok(checkName);
+        } else {
+          fail(checkName, `unexpected code: ${code}`);
+        }
+      }
+    }
+
     try {
       sdk.transport.bundleImport(
         new TextEncoder().encode(
@@ -206,6 +229,66 @@ async function run(): Promise<number> {
       }
     }
 
+    for (const invalidBundleCase of [
+      {
+        label: "object payload garbage",
+        payload: {
+          schema: "grain-transport-bundle-v1",
+          strict: true,
+          objects: { "cid:obj:bad": "!!!" },
+          events: [],
+          manifest: [],
+          evidence: {}
+        }
+      },
+      {
+        label: "object payload bad padding",
+        payload: {
+          schema: "grain-transport-bundle-v1",
+          strict: true,
+          objects: { "cid:obj:bad": "YQ=" },
+          events: [],
+          manifest: [],
+          evidence: {}
+        }
+      },
+      {
+        label: "manifest cap_id url-safe alphabet",
+        payload: {
+          schema: "grain-transport-bundle-v1",
+          strict: true,
+          objects: {},
+          events: [],
+          manifest: [{ op: "put", cid: "cid:obj:1", cap_id_b64: "YWJj-_==" }],
+          evidence: {}
+        }
+      },
+      {
+        label: "manifest chash whitespace",
+        payload: {
+          schema: "grain-transport-bundle-v1",
+          strict: true,
+          objects: {},
+          events: [],
+          manifest: [{ op: "put", cid: "cid:obj:1", chash_b64: "YWJj\n" }],
+          evidence: {}
+        }
+      }
+    ]) {
+      const checkName = `SDK-NEG-0007 transport bundle base64 validation (${invalidBundleCase.label})`;
+      try {
+        sdk.transport.bundleImport(new TextEncoder().encode(JSON.stringify(invalidBundleCase.payload)));
+        fail(checkName, `bundleImport accepted invalid base64 (${invalidBundleCase.label})`);
+      } catch (err) {
+        const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+        if (code === "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA") {
+          ok(checkName);
+        } else {
+          fail(checkName, `unexpected code: ${code}`);
+        }
+      }
+    }
+
     try {
       sdk.transport.bundleExport({
         events: [
@@ -225,6 +308,86 @@ async function run(): Promise<number> {
         ok("SDK-NEG-0007 transport bundle export rejects malformed rows");
       } else {
         fail("SDK-NEG-0007 transport bundle export rejects malformed rows", `unexpected code: ${code}`);
+      }
+    }
+
+    try {
+      sdk.transport.bundleExport({
+        manifest: [
+          {
+            op: "put",
+            cid: "cid:obj:1",
+            cap_id_b64: "!!!"
+          }
+        ],
+        evidence: {}
+      });
+      fail("SDK-NEG-0007 transport bundle export rejects invalid base64", "bundleExport accepted malformed base64 field");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "SDK_ERR_TRANSPORT_BUNDLE_SCHEMA") {
+        ok("SDK-NEG-0007 transport bundle export rejects invalid base64");
+      } else {
+        fail("SDK-NEG-0007 transport bundle export rejects invalid base64", `unexpected code: ${code}`);
+      }
+    }
+
+    const identityImportSeed = new GrainSdk();
+    await identityImportSeed.identity.createRoot("identity-import-seed");
+    const validIdentityBundle = await identityImportSeed.identity.exportBundle();
+
+    const identityRejectStore = new InMemorySdkStore();
+    await identityRejectStore.identity.save(validIdentityBundle);
+    await identityRejectStore.sequence.importSnapshot(validIdentityBundle.seq_state);
+    const identityRejectSdk = new GrainSdk(identityRejectStore);
+    const identityBeforeReject = stableJson(await identityRejectStore.identity.load());
+    const identitySeqBeforeReject = stableJson(await identityRejectStore.sequence.snapshot());
+
+    for (const invalidIdentityCase of [
+      {
+        label: "root_pub_b64 garbage",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.root_pub_b64 = "!!!";
+        }
+      },
+      {
+        label: "sync_secret_b64 url-safe alphabet",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.sync_secret_b64 = "YWJj-_==";
+        }
+      },
+      {
+        label: "device key pub_b64 whitespace",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.device_keys[0].pub_b64 = "YWJj\n";
+        }
+      },
+      {
+        label: "root_pub_b64 bad padding",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.root_pub_b64 = "YQ=";
+        }
+      }
+    ]) {
+      const invalidBundle = cloneJson(validIdentityBundle);
+      invalidIdentityCase.mutate(invalidBundle);
+      const checkName = `SDK-NEG-0005 identity bundle base64 validation (${invalidIdentityCase.label})`;
+      try {
+        await identityRejectSdk.identity.importBundle(invalidBundle);
+        fail(checkName, `identity.importBundle accepted invalid base64 (${invalidIdentityCase.label})`);
+      } catch (err) {
+        const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+        const identityAfterReject = stableJson(await identityRejectStore.identity.load());
+        const identitySeqAfterReject = stableJson(await identityRejectStore.sequence.snapshot());
+        if (
+          code !== "SDK_ERR_IDENTITY_BUNDLE_INVALID"
+          || identityAfterReject !== identityBeforeReject
+          || identitySeqAfterReject !== identitySeqBeforeReject
+        ) {
+          fail(checkName, `invalid identity import changed state or returned unexpected code (${invalidIdentityCase.label}, code=${code})`);
+        } else {
+          ok(checkName);
+        }
       }
     }
 
@@ -410,6 +573,10 @@ function stableJson(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value);
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function withStoreOverrides(base: InMemorySdkStore, overrides: Partial<GrainSdkStore>): GrainSdkStore {

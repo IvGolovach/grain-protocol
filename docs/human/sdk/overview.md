@@ -21,13 +21,14 @@ This page is the capability map after that first run.
 ## Modules
 
 - `identity`: root/device lifecycle, bundle export/import, explicit retroactive revoke behavior
+  - `identity.importBundle()` rejects malformed imported binary fields (`root_pub_b64`, `sync_secret_b64`, `device_keys[*].pub_b64`) instead of accepting permissive base64
 - `events`: append/void/correct, deterministic merge helpers, reducer bridge
 - `e2e`: deterministic derive+encrypt+decrypt primitives, cap_id single-assignment guards
 - `manifest`: deterministic put/del/resolve wrappers
 - `transport`: GR1 encode/decode/verify wrappers
   - `decodeGR1()` is decode-only
-  - `verifyGR1()` is verify-only and requires explicit `trust.pub_b64`
-  - transport bundles reject malformed event/manifest rows instead of guessing
+  - `verifyGR1()` is verify-only, requires explicit `trust.pub_b64`, and rejects malformed trust bytes before verification runs
+  - transport bundles reject malformed event/manifest rows and invalid base64 on imported binary fields instead of guessing
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
