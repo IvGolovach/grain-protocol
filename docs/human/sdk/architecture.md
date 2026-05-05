@@ -22,7 +22,11 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
    - typed primitives + safe builders
    - orchestration for identity/events/e2e/manifest/transport/evidence
    - no rule rewrites
-5. Optional AI sidecar (`core/ts/grain-sdk-ai`)
+5. Portable client core (`core/rust/grain-client-core`)
+   - workflow-shaped Rust APIs for generated platform SDKs
+   - scan preview/accept style APIs for camera-first clients
+   - no rule rewrites
+6. Optional AI sidecar (`core/ts/grain-sdk-ai`)
    - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
    - explicit host bridge into SDK object storage only
    - no rule rewrites
@@ -53,6 +57,8 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - decode and verify stay separate
   - `verifyGR1()` requires explicit trust material and rejects malformed `trust.pub_b64`
   - bundle rows are schema-checked and binary-bearing fields are strict-base64-validated before export/import
+- `core/rust/grain-client-core/src/lib.rs`: portable scan workflow core for generated platform SDKs
+  - `scan_preview()` keeps untrusted decode-only preview separate from verified preview
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder
@@ -70,6 +76,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 
 - ADR: `adr/sdk/0001-sdk-universal-primitives-layer.md`
 - ADR: `adr/sdk/0003-ai-boundary-deterministic-ingestion.md`
+- ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`
 - Invariants: `docs/llm/SDK_INVARIANTS.md`
 - Reject paths: `docs/llm/SDK_EDGE_CASES.md`
 - Conformance binding: `docs/llm/SDK_CONFORMANCE.md`

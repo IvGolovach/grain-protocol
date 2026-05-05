@@ -3,6 +3,7 @@ members = [
   "grain-core",
   "grain-runner",
   "grain-core-wasm",
+  "grain-client-core",
 ]
 resolver = "2"
 

@@ -3,6 +3,17 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- TOR-SDK-A04 (portable client core for generated platform SDKs):
+  - added Rust client workflow crate:
+    - `core/rust/grain-client-core`
+  - added first portable scan workflow:
+    - `scan_preview(qr_string, trust_pub_b64)`
+    - valid scan + explicit valid trust -> `Verified`
+    - valid scan + no trust -> `Untrusted`
+    - malformed scan/trust/signature -> `Rejected` with deterministic diagnostics
+  - added focused Rust tests for trusted, untrusted, malformed scan, malformed trust, and wrong trust-key paths.
+  - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
+  - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`
   - `GrainSdk` no longer exposes `sdk.ai`; callers opt in with `createGrainSdkAi(sdk)`
