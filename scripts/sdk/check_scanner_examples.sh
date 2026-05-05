@@ -18,7 +18,7 @@ fi
 
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 
-if rg -n -i 'grain_run_vector|runvector|qrdecode|qr_decode(_gr1)?|coseverify|cose_verify|dagcbor|dag_cbor|dagcbor_validate|protocolrunner|executeoperation|execute_operation|uniffi\.grain_client_core' examples >/dev/null; then
+if rg -n -i 'grain_run_vector|runvector|qrdecode\b|qr_decode(_gr1)?\b|coseverify|cose_verify|dagcbor|dag_cbor|dagcbor_validate|protocolrunner|executeoperation|execute_operation|uniffi\.grain_client_core' examples >/dev/null; then
   echo "SDK_SCANNER_ERR_RAW_PROTOCOL_API: scanner examples must use public workflow SDK APIs only" >&2
   exit 1
 fi
@@ -42,6 +42,16 @@ rm -rf examples/android-scanner/.gradle
 
 npm --prefix examples/wasm-scanner run check
 npm --prefix examples/wasm-scanner run test:smoke
+
+LEFTOVER_JUNK="$(
+  find examples \
+    \( -name .build -o -name .gradle -o -name build -o -name dist -o -name node_modules -o -name '*.wasm' \) \
+    -print -quit
+)"
+if [[ -n "$LEFTOVER_JUNK" ]]; then
+  echo "SDK_SCANNER_ERR_GENERATED_JUNK: scanner example check left generated files at $LEFTOVER_JUNK" >&2
+  exit 1
+fi
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then

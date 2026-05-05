@@ -11,9 +11,9 @@ semantics.
   state and unit-testable outside a device.
 - `wasm-scanner`: browser/mobile-web shell over `sdk/wasm`.
 
-These shells start with paste/string input. Camera adapters are intentionally a
-separate layer: the adapter turns a camera frame into a GR1 string, then the
-same SDK workflow validates, previews, accepts, and lists saved scans.
+These shells start with paste/string input and now include thin camera adapter
+boundaries. The adapter turns a camera frame into a GR1 string, then the same
+SDK workflow validates, previews, accepts, and lists saved scans.
 
 ## Check
 

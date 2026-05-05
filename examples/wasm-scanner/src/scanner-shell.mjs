@@ -31,6 +31,11 @@ export function createScannerShell(client) {
       resetDecisionState(state);
     },
 
+    receiveCameraPayload(payload) {
+      state.qrString = requireCameraPayload(payload).qrString;
+      resetDecisionState(state);
+    },
+
     preview() {
       const preview = client.scanPreview({
         qrString: state.qrString,
@@ -79,7 +84,7 @@ export function createScannerShell(client) {
   };
 }
 
-export function mountScannerShell(root, client) {
+export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
   const shell = createScannerShell(client);
   root.replaceChildren();
   root.classList.add("grain-scanner");
@@ -102,6 +107,16 @@ export function mountScannerShell(root, client) {
   acceptButton.type = "button";
   acceptButton.textContent = "Accept";
   acceptButton.disabled = true;
+
+  const cameraButton = document.createElement("button");
+  cameraButton.type = "button";
+  cameraButton.textContent = "Camera";
+  cameraButton.hidden = cameraAdapter === null;
+
+  const video = document.createElement("video");
+  video.playsInline = true;
+  video.muted = true;
+  video.hidden = cameraAdapter === null;
 
   const status = document.createElement("output");
   const diagnostics = document.createElement("ul");
@@ -137,8 +152,17 @@ export function mountScannerShell(root, client) {
     shell.accept();
     render();
   });
+  cameraButton.addEventListener("click", async () => {
+    if (cameraAdapter.start) {
+      await cameraAdapter.start(video);
+    }
+    const payload = await cameraAdapter.scanOnce(video);
+    shell.receiveCameraPayload(payload);
+    scanInput.value = payload.qrString;
+    render();
+  });
 
-  root.append(scanInput, trustInput, previewButton, acceptButton, status, diagnostics);
+  root.append(scanInput, trustInput, previewButton, acceptButton, cameraButton, video, status, diagnostics);
   render();
   return shell;
 }
@@ -154,6 +178,13 @@ function requireClient(client) {
 function normalizedTrustInput(state) {
   const trimmed = state.trustPubB64.trim();
   return trimmed.length === 0 ? null : trimmed;
+}
+
+function requireCameraPayload(payload) {
+  if (!payload || typeof payload.qrString !== "string" || payload.qrString.length === 0) {
+    throw new TypeError("SDK_ERR_EXAMPLE_CAMERA_PAYLOAD_INVALID");
+  }
+  return payload;
 }
 
 function resetDecisionState(state) {

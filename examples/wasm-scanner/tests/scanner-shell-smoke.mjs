@@ -5,6 +5,7 @@ import {
   SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG,
   createScannerShell,
 } from "../src/scanner-shell.mjs";
+import { createInjectedCameraAdapter } from "../src/camera-adapter.mjs";
 
 const savedRecords = [];
 const client = {
@@ -52,8 +53,9 @@ let state = shell.accept();
 assert.equal(state.canAccept, false);
 assert.deepEqual(state.diagnostics, [SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG]);
 
-shell.setQrString("gr1:demo");
 shell.setTrustPubB64(" trust-demo ");
+const cameraAdapter = createInjectedCameraAdapter(["gr1:demo"]);
+shell.receiveCameraPayload(await cameraAdapter.scanOnce());
 state = shell.preview();
 assert.equal(state.previewStatus, "Verified");
 assert.equal(state.canAccept, true);

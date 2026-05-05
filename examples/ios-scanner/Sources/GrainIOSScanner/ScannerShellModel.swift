@@ -64,6 +64,11 @@ public final class ScannerShellModel: ObservableObject {
         resetDecisionState()
     }
 
+    public func receiveCameraPayload(_ payload: CameraScanPayload) {
+        state.qrString = payload.qrString
+        resetDecisionState()
+    }
+
     public func preview() {
         let preview = client.scanPreview(
             qrString: state.qrString,

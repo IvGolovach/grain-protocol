@@ -56,6 +56,10 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `examples/android-scanner` uses the Kotlin client wrapper behind a unit-testable scanner controller
     - `examples/wasm-scanner` uses the WASM client wrapper shape for browser/mobile-web scanner UI
     - `scripts/sdk/check_scanner_examples.sh` builds/tests the scanner shells and fails on raw protocol API exposure
+  - added thin camera adapter boundaries for the scanner shells:
+    - iOS maps AVFoundation QR metadata into scanner workflow input
+    - Android/Kotlin accepts an injected CameraX-style frame decoder and maps decoded QR strings into scanner workflow input
+    - WASM/browser uses `getUserMedia` with an injected QR decoder and maps decoded strings into scanner workflow input
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

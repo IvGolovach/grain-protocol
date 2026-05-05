@@ -85,7 +85,15 @@ The reference scanner-shell slice is now present:
 
 These shells prove that app code can stay thin: a camera adapter, paste box, robot sensor, or glasses frame reader produces a GR1 string, then the SDK owns preview, diagnostics, accept, and accepted-scan listing.
 
-They are not camera integrations yet. AVFoundation, CameraX, browser camera capture, QR decoder dependency choice, platform-backed storage, and production app packaging are intentionally kept as the next adapter slice.
+They were introduced as paste-first shells. Camera capture stays as a separate adapter layer so the scanner UI can remain thin and the SDK can keep owning validation.
+
+The first camera adapter slice is now present:
+
+- iOS has a deterministic camera payload adapter and an AVFoundation QR metadata adapter that feed the scanner shell
+- Android/Kotlin has a CameraX-style frame adapter with an injected QR decoder that feeds the scanner shell
+- WASM/browser has a `getUserMedia` camera adapter with an injected QR decoder that feeds the scanner shell
+
+These adapters still do not own protocol semantics. They only turn platform camera output into a GR1 string and pass it to the same SDK workflow path. QR decoder package choice, platform-backed storage, production app packaging, and device/browser automation suites remain later hardening work.
 
 ## Client workflow conformance
 
@@ -109,7 +117,6 @@ The second fixture set covers `scan_accept`:
 
 ## Next additive slices
 
-- Camera adapters for the reference scanner shells: iOS capture, Android CameraX, and browser camera capture should produce GR1 strings and then call the same SDK workflows.
 - Client scenario fixtures that every generated SDK must pass.
 
 ## Rule of thumb

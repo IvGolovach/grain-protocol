@@ -59,6 +59,10 @@ class ScannerController(
         state = state.copy(trustPubB64 = value).withoutDecision()
     }
 
+    fun receiveCameraPayload(payload: CameraScanPayload) {
+        state = state.copy(qrString = payload.qrString).withoutDecision()
+    }
+
     fun preview() {
         val preview = client.scanPreview(
             qrString = state.qrString,

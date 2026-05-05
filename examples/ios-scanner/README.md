@@ -2,13 +2,15 @@
 
 SwiftUI reference shell over the portable `sdk/swift` client package.
 
-It accepts a pasted GR1/QR payload string and explicit trust public key, calls
-`GrainClient.scanPreview`, enables accept only after a verified preview, then
-calls `GrainClient.scanAccept`.
+It accepts a pasted or camera-adapter-provided GR1/QR payload string and explicit
+trust public key, calls `GrainClient.scanPreview`, enables accept only after a
+verified preview, then calls `GrainClient.scanAccept`.
 
-Camera capture, QR decoding, Keychain-backed storage, and iOS binary packaging
-are intentionally outside this shell. Add them as adapters that produce a GR1
-string and pass it into the same workflow.
+`CameraScanAdapter` is intentionally thin. The included deterministic adapter is
+used by the smoke check, and `AVFoundationQRCodeMetadataAdapter` maps
+AVFoundation QR metadata objects into the same GR1 string path. Session
+management, Keychain-backed storage, and iOS binary packaging stay outside this
+shell.
 
 ## Check
 
