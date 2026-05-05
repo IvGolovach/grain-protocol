@@ -27,6 +27,10 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - failed atomic mutations roll back to the pre-call state
   - added `ClientStore` and `MemoryClientStore` with nested-atomic and outside-atomic mutation guards.
   - added scan-accept workflow fixtures, including duplicate-scan idempotency, and extended the Rust/Python fixture runners.
+  - added platform-neutral storage/trust adapter contracts and binding-safe DTOs for generated SDKs:
+    - storage adapters must preserve deterministic listing, idempotent re-put, and rollback-at-boundary semantics
+    - trust adapters return explicit material or none; Rust core does not perform hidden fallback or network trust lookup
+    - FFI-facing DTOs use owned strings, vectors, and optional strings instead of Rust generics or borrowed lifetimes
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

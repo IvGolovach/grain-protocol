@@ -62,6 +62,8 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `scan_accept_prepare()` requires explicit verified trust and returns deterministic, persistence-ready records without writing storage
   - `scan_accept()` persists verified records through an atomic store boundary and leaves rejected scans unwritten
   - `store.rs` and `memory_store.rs` define the platform-neutral storage contract and reference rollback/idempotency behavior
+  - `platform/storage.rs` and `platform/trust.rs` define adapter contracts without importing platform-specific storage or network trust APIs
+  - `ffi_types.rs` flattens workflow values into owned binding-safe DTOs
   - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle

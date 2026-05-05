@@ -72,6 +72,8 @@ Expected contract:
 - every `scan_preview` fixture expects `store_mutation: "none"`
 - `scan_accept` fixtures currently cover accepted persistence, duplicate-scan idempotency, and rejected no-write behavior
 - every `scan_accept` fixture asserts `store_mutation` and `accepted_record_count`
+- platform adapter contract tests cover deterministic storage listing, idempotent re-put, rollback at the repository boundary, no anchor, missing anchor, malformed anchor, and valid anchor
+- FFI DTO contract tests keep binding-facing values owned and flat: strings, vectors, optional strings, no borrowed Rust lifetimes
 
 Rust fixture execution must load these fixtures and compare them against the public `grain_client_core::scan_preview()` and `grain_client_core::scan_accept()` APIs.
 

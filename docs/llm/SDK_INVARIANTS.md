@@ -70,6 +70,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/rust/grain-client-core/tests/scan_accept.rs`, `core/rust/grain-client-core/tests/store_atomic.rs`, `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`
   Modules: `core/rust/grain-client-core/src/scan.rs`, `core/rust/grain-client-core/src/store.rs`, `core/rust/grain-client-core/src/memory_store.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/diag.rs`
 
+- SDK-INV-0018: portable platform adapters MUST preserve storage/trust contracts before generated SDKs bind them: deterministic accepted-scan ordering, idempotent re-put, rollback at the repository boundary, no hidden trust fallback, no network trust lookup in Rust core, and owned FFI DTO values only.
+  Tests: `core/rust/grain-client-core/tests/storage_contract.rs`, `core/rust/grain-client-core/tests/trust_adapter_contract.rs`, `core/rust/grain-client-core/tests/platform_scan_accept.rs`
+  Modules: `core/rust/grain-client-core/src/platform/storage.rs`, `core/rust/grain-client-core/src/platform/trust.rs`, `core/rust/grain-client-core/src/ffi_types.rs`, `core/rust/grain-client-core/src/store.rs`, `core/rust/grain-client-core/src/diag.rs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

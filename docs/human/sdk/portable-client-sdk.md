@@ -35,6 +35,12 @@ The durable workflow is scan accept:
 - rejected scans -> no persisted record
 - failed store mutation -> rollback to the pre-call state
 
+The platform contract slice is now defined:
+
+- storage adapters implement the same atomic, idempotent, deterministic listing behavior as `ClientStore`
+- trust adapters return explicit public-key material or no material; Rust core does not perform hidden fallback or network trust lookup
+- generated bindings use owned DTO values: strings, vectors, optional strings, and no borrowed Rust lifetimes
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -57,7 +63,6 @@ The second fixture set covers `scan_accept`:
 
 ## Next additive slices
 
-- Platform storage adapters over the `ClientStore` contract.
 - Generated Swift package over the Rust client core.
 - Generated Kotlin package over the same Rust client core.
 - WASM/mobile-web binding over the same contract.

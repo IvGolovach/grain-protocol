@@ -14,6 +14,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0010: portable `scan_preview()` malformed scan/trust/signature -> `Rejected` with deterministic core or `SDK_ERR_*` diagnostic; valid scan without trust -> `Untrusted`, not `Verified`
 - SDK-NEG-0011: portable `scan_accept_prepare()` missing trust/malformed trust/malformed scan/signature -> `Rejected` with deterministic core or `SDK_ERR_*` diagnostic and no prepared record
 - SDK-NEG-0012: portable `scan_accept()` rejected scans write no records; duplicate accepted scans are idempotent; mutation outside `atomic(...)`, nested atomic, and injected atomic failure reject or roll back deterministically
+- SDK-NEG-0013: portable platform adapters missing/unknown trust anchor -> `SDK_ERR_TRUST_ANCHOR_REQUIRED` / `SDK_ERR_TRUST_ANCHOR_NOT_FOUND`; malformed anchor material -> `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`; storage adapter failure must roll back before generated SDKs expose saved records
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
@@ -34,6 +35,9 @@ These checks are asserted in:
 - `core/rust/grain-client-core/tests/scan_accept_prepare.rs`
 - `core/rust/grain-client-core/tests/scan_preview.rs`
 - `core/rust/grain-client-core/tests/store_atomic.rs`
+- `core/rust/grain-client-core/tests/storage_contract.rs`
+- `core/rust/grain-client-core/tests/trust_adapter_contract.rs`
+- `core/rust/grain-client-core/tests/platform_scan_accept.rs`
 - `sdk/workflows/fixtures/scan-accept/*.json`
 - `sdk/workflows/fixtures/scan-preview/*.json`
 - `tools/ci/check_client_workflow_fixtures.py`

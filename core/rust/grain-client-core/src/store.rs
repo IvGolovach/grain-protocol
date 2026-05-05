@@ -19,5 +19,6 @@ pub trait ClientStore: Sized {
 
     fn put_accepted_scan(&mut self, record: AcceptedScanRecord) -> Result<StorePutResult, String>;
 
+    /// Return accepted scans in deterministic `scan_id` order.
     fn list_accepted_scans(&self) -> Vec<AcceptedScanRecord>;
 }
