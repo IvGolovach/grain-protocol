@@ -51,8 +51,8 @@
 | 1 | Client workflow contract and scan-preview fixtures | Merged | `codex/client-workflow-contract-fixtures` | #27 | `f3d68bcd872ac8468b303ffcdf57544f0b80e61e` | `workflow fixture refs`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `58ab443674548abe0f6ca3a8341825a140107e69`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25362169893` passed |
 | 2 | Rust client workflow fixture runner | Merged | `codex/client-workflow-fixture-runner` | #28 | `71d9b3197bb048ff089bc69cbb2f43fc2411d43f` | `python3 tools/ci/check_client_workflow_fixtures.py`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `6ab18cd6e90004563f39ad5e8ae3405c6b0d9ce3`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25364160258` passed |
 | 3a | `scan_accept_prepare`, deterministic ID, module boundaries | Merged | `codex/scan-accept-prepare` | #29 | `1f7c6debca15daea89d40b47ac5977a221cc8081` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `aecb4b68012322ccc1edf867170aa31273035940`; Greptile P2 findings fixed and threads resolved, rerun skipped by org usage limit; CodeRabbit PASS; post-merge `main` CI run `25365199685` passed |
-| 3b | `scan_accept`, atomic store abstraction, memory store | In progress | `codex/scan-accept-store` |  |  |  |  |
-| 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Pending |  |  |  |  |  |
+| 3b | `scan_accept`, atomic store abstraction, memory store | Merged | `codex/scan-accept-store` | #30 | `952df09380851508c93f0ca9194885bb688af44a` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `1e2a029bc6fffe4555405a20d6e906cd44e480e1`; CodeRabbit status SUCCESS but generated review was rate-limited/skipped; Greptile was manually requested and did not return a review; post-merge `main` CI run `25366301749` passed |
+| 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | In progress | `codex/platform-adapter-contracts` |  |  |  |  |
 | 5 | UniFFI/generation harness over stable client-core facade | Pending |  |  |  |  |  |
 | 6 | Swift package over generated client workflow API | Pending |  |  |  |  |  |
 | 7 | Kotlin package over generated client workflow API | Pending |  |  |  |  |  |
@@ -97,7 +97,7 @@
 
 | Inserted After | Extra PR Scope | Reason | Dependency | Status |
 | --- | --- | --- | --- | --- |
-| PR 3a | PR 3b: `scan_accept`, atomic store abstraction, memory store | PR 3 mixed scan-workflow logic with store infrastructure in the original plan. | PR 3b depends on PR 3a. | Pending |
+| PR 3a | PR 3b: `scan_accept`, atomic store abstraction, memory store | PR 3 mixed scan-workflow logic with store infrastructure in the original plan. | PR 3b depends on PR 3a. | Merged in PR #30 (`952df09380851508c93f0ca9194885bb688af44a`) |
 
 ---
 
@@ -391,8 +391,9 @@ Fixtures:
 
 - `SDK-WF-SCAN-ACCEPT-0001`: valid QR + valid trust -> `Accepted`, exactly one accepted record persisted.
 - `SDK-WF-SCAN-ACCEPT-0002`: rejected scan -> `Rejected`, no store mutation.
+- `SDK-WF-SCAN-ACCEPT-0003`: repeated valid QR + valid trust -> `AlreadyAccepted`, still exactly one accepted record.
 
-- [ ] **Step 4: Validate and PR**
+- [x] **Step 4: Validate and PR**
 
 Run:
 
@@ -418,17 +419,25 @@ Run `./scripts/verify --out-dir artifacts/dev-verify-scan-accept` if the diff to
 - Create: `core/rust/grain-client-core/src/platform/storage.rs`
 - Create: `core/rust/grain-client-core/src/platform/trust.rs`
 - Create: `core/rust/grain-client-core/src/ffi_types.rs`
+- Modify: `core/rust/grain-client-core/src/diag.rs`
+- Modify: `core/rust/grain-client-core/src/lib.rs`
+- Modify: `core/rust/grain-client-core/src/store.rs`
 - Create: `core/rust/grain-client-core/tests/storage_contract.rs`
 - Create: `core/rust/grain-client-core/tests/trust_adapter_contract.rs`
 - Create: `core/rust/grain-client-core/tests/platform_scan_accept.rs`
+- Modify: `core/rust/grain-client-core/README.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
 - Modify: `docs/human/sdk/cross-lang-bridge.md`
+- Modify: `docs/human/sdk/architecture.md`
 - Modify: `docs/llm/SDK_FILE_MAP.md`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_INVARIANTS.md`
+- Modify: `docs/llm/SDK_EDGE_CASES.md`
+- Modify: `docs/llm/CHANGE_POLICY.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 3b evidence
 
-- [ ] **Step 1: Define platform-neutral storage and trust traits**
+- [x] **Step 1: Define platform-neutral storage and trust traits**
 
 Rules:
 
@@ -437,11 +446,11 @@ Rules:
 - no platform Keychain, Keystore, SQLite, or IndexedDB APIs in Rust core;
 - trust provider returns explicit material or none.
 
-- [ ] **Step 2: Add reusable adapter contract tests**
+- [x] **Step 2: Add reusable adapter contract tests**
 
 Test deterministic ordering, idempotent re-put, rollback at repository boundary, no anchor, malformed anchor, and valid anchor.
 
-- [ ] **Step 3: Add binding-safe DTO types**
+- [x] **Step 3: Add binding-safe DTO types**
 
 Keep binding-facing values boring: strings, vectors of strings, optional strings, and no Rust generics or borrowed lifetimes in DTOs.
 
