@@ -20,6 +20,7 @@ let package = Package(
             name: "GrainIOSScanner",
             dependencies: [
                 .product(name: "GrainClient", package: "GrainClient"),
+                .product(name: "GrainClientIOSAdapters", package: "GrainClient"),
             ],
             path: "Sources/GrainIOSScanner"
         ),

@@ -3,8 +3,8 @@
 Swift package for the portable Grain client workflow surface.
 
 This package wraps the generated UniFFI bindings with a small `GrainClient`
-API. App code calls scan workflows; it does not call QR, COSE, DAG-CBOR, or
-protocol runner internals.
+API plus iOS adapter helpers. App code calls scan workflows; it does not call
+QR, COSE, DAG-CBOR, or protocol runner internals.
 
 ## Regenerate bindings
 
@@ -22,8 +22,13 @@ scripts/sdk/check_swift_package.sh
 
 ```swift
 import GrainClient
+import GrainClientIOSAdapters
 
 let client = GrainClient()
+let snapshots = GrainSnapshotCoordinator(
+    persistence: try GrainFileSnapshotPersistence.applicationSupport()
+)
+_ = try snapshots.restore(into: client)
 
 // Trust setup stays in app/platform code. This provider can resolve enrolled
 // publisher keys, device-management policy, or test fixtures by stable ID.
@@ -60,12 +65,7 @@ if preview.status == .verified {
     if accepted.status == .accepted || accepted.status == .alreadyAccepted {
         let saved = client.listAcceptedScans()
         print(saved.count)
-
-        // Portable evidence/state export for backup, handoff, or audit.
-        let evidence = client.exportSyncBundle()
-        if evidence.status == "Exported", let bundleB64 = evidence.bundleB64 {
-            print(bundleB64)
-        }
+        _ = try snapshots.persist(from: client)
     }
 }
 ```
@@ -82,6 +82,10 @@ if preview.status == .verified {
   backup or pairing setup.
 - `exportSyncBundle` exports identity, accepted scans, and lifecycle events as a
   portable evidence/state bundle.
-- Production apps should place the same workflow surface behind platform-backed
-  storage such as Keychain; the current package proves the generated SDK API
-  shape and workflow conformance.
+- `GrainClientIOSAdapters` adds an opaque snapshot persistence seam for iOS
+  apps. File persistence is deterministic for tests and simulator smoke; the
+  Keychain-backed implementation keeps the same `snapshotB64` boundary isolated
+  from protocol semantics.
+- Do not log `snapshotB64`, identity bundles, sync bundles, or trust material.
+  Persist them through app-owned protected storage and expose only statuses,
+  counts, or diagnostics to UI/logs.

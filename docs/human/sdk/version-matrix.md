@@ -14,6 +14,7 @@ and Rust crates that were not reviewed together.
 | Client workflow contract | `sdk/workflows/contract/client_workflow_v1.md` | v1 | Platform SDKs are conformant only after their public APIs pass the v1 workflow fixtures. |
 | UniFFI binding generator | `core/rust/uniffi-bindgen`, workspace `uniffi` | `0.31.1` | Regenerate Swift/Kotlin bindings with repo scripts; do not patch generated files by hand. |
 | Swift client package | `sdk/swift` | repo-SHA versioned | Use with the matching `grain-client-core` native library and checked-in generated Swift sources. |
+| Swift iOS adapter pack | `sdk/swift/Sources/GrainClientIOSAdapters`, `examples/ios-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence and explicit trust-anchor wiring, not App Store packaging. |
 | Kotlin client package | `sdk/kotlin` | `0.1.0` | Use with the matching `grain-client-core` native library and checked-in generated Kotlin source. |
 | WASM client crate | `core/rust/grain-client-wasm` | `0.1.0` | Builds against `grain-client-core` with default features disabled for `wasm32-wasip1`. |
 | WASM/mobile-web package | `sdk/wasm` | `0.1.0` | Use with the matching `grain-client-wasm.wasm` artifact and JavaScript wrapper. |
@@ -74,7 +75,8 @@ not have every platform target installed.
   unknown anchors fail closed with `SDK_ERR_TRUST_ANCHOR_*`; the SDK does not
   discover trust over the network or use fallback trust.
 - Platform persistence can later move to Keychain, Keystore, IndexedDB, robot
-  secure elements, or device-management storage. Until native adapters exist,
-  platform wrappers persist the opaque `snapshotB64` returned by
-  `exportStoreSnapshot` and restore it with `restoreStoreSnapshot`, preserving
-  the Rust-owned `ClientStore` atomic/idempotent semantics.
+  secure elements, or device-management storage. The iOS adapter pack now
+  provides the first native Swift persistence boundary: apps persist the opaque
+  `snapshotB64` returned by `exportStoreSnapshot` and restore it with
+  `restoreStoreSnapshot`, preserving the Rust-owned `ClientStore`
+  atomic/idempotent semantics.

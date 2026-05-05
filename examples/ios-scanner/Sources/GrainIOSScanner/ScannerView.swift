@@ -3,7 +3,7 @@ import SwiftUI
 public struct ScannerView: View {
     @StateObject private var model: ScannerShellModel
 
-    public init(model: ScannerShellModel = ScannerShellModel()) {
+    public init(model: ScannerShellModel) {
         _model = StateObject(wrappedValue: model)
     }
 
@@ -21,10 +21,10 @@ public struct ScannerView: View {
                 .lineLimit(3...8)
 
                 TextField(
-                    "Trust public key",
+                    "Trust anchor ID",
                     text: Binding(
-                        get: { model.state.trustPubB64 },
-                        set: { model.updateTrustPubB64($0) }
+                        get: { model.state.trustAnchorID },
+                        set: { model.updateTrustAnchorID($0) }
                     )
                 )
             }
@@ -52,6 +52,10 @@ public struct ScannerView: View {
 
                 LabeledContent("Saved", value: "\(model.state.acceptedCount)")
 
+                if let snapshotStatus = model.state.snapshotStatus {
+                    LabeledContent("Snapshot", value: snapshotStatus)
+                }
+
                 ForEach(model.state.diagnostics, id: \.self) { diagnostic in
                     Text(diagnostic)
                         .font(.footnote.monospaced())
@@ -73,6 +77,10 @@ public struct ScannerView: View {
                         model.accept()
                     }
                     .disabled(!model.state.canAccept)
+
+                    Button("Restore") {
+                        model.restorePersistedSnapshot()
+                    }
                 }
             }
         }

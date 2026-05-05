@@ -56,7 +56,20 @@ The first platform package slice is now the Swift client package:
 - Swift app code sees typed workflow statuses instead of raw QR/COSE internals
 - `scripts/sdk/check_swift_package.sh` regenerates the Swift bindings, rebuilds Rust client-core, builds the Swift package, runs the shared workflow fixtures through Swift, and fails if generated sources drift
 
-This proves the iOS-facing package shape. It is not an iOS scanner app yet and it does not introduce Keychain storage, camera capture, or platform trust lookup.
+The iOS adapter pack is now present in the Swift package:
+
+- `GrainClientIOSAdapters` provides `GrainSnapshotPersistence`,
+  `GrainSnapshotCoordinator`, deterministic file-backed persistence, and a
+  Keychain-backed persistence implementation behind the same opaque
+  `snapshotB64` contract
+- `examples/ios-scanner` wires camera/injected GR1 payloads through
+  `trustAnchorID` plus `GrainTrustProvider`, never raw trust input in the
+  production preview/accept path
+- the iOS smoke proves preview, accept, duplicate accept, restore-after-restart,
+  and blank/unknown trust-anchor rejection through public SDK APIs
+
+This is still an adapter pack and reference shell, not App Store packaging or
+live AVFoundation session automation.
 
 The next platform package slice is the Kotlin/JVM client package:
 
@@ -103,7 +116,9 @@ The identity, device lifecycle, pairing, and sync slice is now present:
 - sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics
 - Swift, Kotlin, and WASM wrappers expose the same workflow methods through their public `GrainClient` APIs
 
-This is still a portable SDK core, not production key custody. Real iOS/Android apps should put the same workflow surface behind Keychain/Keystore-backed stores in a later adapter slice.
+This is still a portable SDK core, not final production key custody. iOS now has
+the first native adapter boundary; Android, WASM, and future devices should get
+the same shape in later slices.
 
 ## Client workflow conformance
 

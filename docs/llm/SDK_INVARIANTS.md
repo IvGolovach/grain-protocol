@@ -114,6 +114,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `scripts/sdk/check_generated_bindings.sh`, `scripts/sdk/check_swift_package.sh`, `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/check_wasm_package.sh`
   Modules: `core/rust/grain-client-core/src/binding_api.rs`, `core/rust/grain-client-core/src/grain_client_core.udl`, `sdk/swift/Sources/GrainClient/GrainClient.swift`, `sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt`, `sdk/wasm/src/index.mjs`
 
+- SDK-INV-0027: iOS adapter pack MUST keep app code workflow-shaped: scanner preview/accept use explicit `trustAnchorID` plus `GrainTrustProvider`, durable state is persisted only as opaque `snapshotB64` through `GrainClientIOSAdapters`, injected camera payloads become GR1 strings, and scanner code MUST NOT perform raw protocol operations, hidden trust lookup, network trust discovery, TOFU, or fallback trust.
+  Tests: `scripts/sdk/check_swift_package.sh`, `scripts/sdk/check_scanner_examples.sh`, `examples/ios-scanner/Sources/GrainIOSScannerSmoke/main.swift`
+  Modules: `sdk/swift/Sources/GrainClientIOSAdapters/GrainSnapshotPersistence.swift`, `sdk/swift/Sources/GrainClientIOSAdaptersSmoke/main.swift`, `examples/ios-scanner/Sources/GrainIOSScanner/ScannerShellModel.swift`, `examples/ios-scanner/Sources/GrainIOSScanner/CameraScanAdapter.swift`, `examples/ios-scanner/Sources/GrainIOSScannerSmoke/main.swift`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

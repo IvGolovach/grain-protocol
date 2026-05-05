@@ -16,6 +16,8 @@ The generated SDK stack is:
 4. `sdk/swift`, `sdk/kotlin`, and `sdk/wasm`
    - expose small app-facing wrapper APIs over the generated or WASM workflow
      surface.
+   - `sdk/swift/Sources/GrainClientIOSAdapters` is the first native adapter
+     pack; it persists opaque snapshots without changing workflow semantics.
 5. `sdk/workflows/**`
    - executable client workflow contract for every generated SDK.
 
@@ -99,6 +101,9 @@ scripts/sdk/package_client_sdks.sh
   platform trust provider; unknown anchors fail closed with
   `SDK_ERR_TRUST_ANCHOR_*`. SDK core does not perform hidden lookup, network
   discovery, or vendor fallback.
+- Swift iOS adapters must keep storage app-owned and opaque. File persistence
+  is allowed for deterministic smoke; Keychain persistence stays behind the same
+  `GrainSnapshotPersistence` contract and must not parse or log snapshots.
 
 ## Packaging Rules
 

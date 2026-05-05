@@ -75,8 +75,10 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
 - `sdk/swift/*`: Swift Package Manager client package over generated workflow bindings
   - `Sources/GrainClient` is the public wrapper surface
+  - `Sources/GrainClientIOSAdapters` is the iOS adapter pack for app-owned opaque snapshot persistence through file or Keychain storage
   - `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI` are synchronized generated binding sources
   - `Sources/GrainClientFixtureRunner` executes `sdk/workflows` fixtures through the public Swift API
+  - `Sources/GrainClientIOSAdaptersSmoke` proves adapter persistence without XCTest/device-only state
   - the public wrapper exposes `exportStoreSnapshot` / `restoreStoreSnapshot` for platform persistence adapters
   - the public wrapper exposes `GrainTrustProvider` / `GrainStaticTrustProvider` so apps can resolve explicit trust anchor IDs without fallback trust
   - `scripts/sdk/sync_swift_bindings.sh` and `scripts/sdk/check_swift_package.sh` keep generated sources reproducible

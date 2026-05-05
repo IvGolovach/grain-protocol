@@ -33,7 +33,7 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 14. `core/rust/uniffi-bindgen`, `scripts/sdk/*generated_bindings.sh`, and `sdk/generated/README.md`
    - Binding generation harness and docs. These are not published platform SDK packages.
 15. `sdk/swift/**`
-   - Swift Package Manager client package over generated workflow bindings. Public app API lives in `Sources/GrainClient`, generated binding sources live in `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI`, and the executable fixture runner lives in `Sources/GrainClientFixtureRunner`. Store snapshot methods are the persistence bridge until platform-native adapters are added.
+   - Swift Package Manager client package over generated workflow bindings. Public app API lives in `Sources/GrainClient`, generated binding sources live in `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI`, the executable fixture runner lives in `Sources/GrainClientFixtureRunner`, and the iOS adapter pack lives in `Sources/GrainClientIOSAdapters` plus `Sources/GrainClientIOSAdaptersSmoke`. Store snapshot methods remain the Rust-owned persistence bridge; the iOS adapter pack persists only opaque snapshots.
 16. `sdk/kotlin/**`
    - Kotlin/JVM client package over generated workflow bindings. Public app API lives in `src/main/kotlin/dev/grain`, generated binding source lives in `src/main/kotlin/uniffi/grain_client_core`, and the executable fixture runner lives in `src/test/kotlin/dev/grain/fixture`. Store snapshot methods are the persistence bridge until platform-native adapters are added.
 17. `core/rust/grain-client-wasm/**`
