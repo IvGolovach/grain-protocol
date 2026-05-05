@@ -41,6 +41,7 @@ Before publishing or handing SDK artifacts to app teams, run:
 
 ```bash
 scripts/sdk/verify_all_sdks.sh --strict
+scripts/sdk/package_client_sdks.sh
 ```
 
 That command proves:
@@ -50,11 +51,21 @@ That command proves:
 - `sdk/workflows/**` fixtures pass through Rust, Swift, Kotlin, and WASM public APIs when the local platform prerequisites are present
 - scanner examples use public workflow SDK APIs instead of raw protocol internals
 - SDK code stays network/vendor agnostic
+- the SDK release package contains same-commit source artifacts, generated
+  bindings, workflow contract/docs, `manifest.json`, `SHA256SUMS`, and
+  `sbom.spdx.json`
+- the release package checker verifies artifact checksums, archive cleanliness,
+  SDK component versions, the version-matrix hash, and SBOM package checksums
+- the release package is source-only: registry publication, compiled WASM
+  binaries, PWA packaging, app-store packaging, and device custody policy stay
+  outside this certificate
 
 The `ci` workflow runs the same strict platform SDK gate in the `sdk-platform`
-job on a Swift 6-capable macOS runner. Set `SDK_KOTLIN_GRADLE_OFFLINE=1` only
-on machines with warmed Gradle caches when you need the Kotlin package and
-Android scanner example checks to prove offline dependency resolution.
+job on a Swift 6-capable macOS runner, packages the SDK release artifacts after
+that strict gate, and re-checks the release manifest before final evidence
+build. Set `SDK_KOTLIN_GRADLE_OFFLINE=1` only on machines with warmed Gradle
+caches when you need the Kotlin package and Android scanner example checks to
+prove offline dependency resolution.
 
 For a full repository release proof, also run:
 

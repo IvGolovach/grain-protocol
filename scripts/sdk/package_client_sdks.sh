@@ -9,6 +9,7 @@ OUT_DIR="artifacts/sdk-release/$COMMIT_SHA"
 RUN_VERIFY=1
 ALLOW_DIRTY=0
 DIRTY_STATUS=""
+VERIFIED_BY=""
 
 usage() {
   cat <<'EOF'
@@ -19,6 +20,7 @@ Builds local SDK release artifacts under artifacts/sdk-release/<commit>/.
 Options:
   --out-dir <path>  Output directory inside the repository
   --skip-verify     Do not run scripts/sdk/verify_all_sdks.sh --strict first
+  --verified-by <id> Record an upstream strict SDK gate when used with --skip-verify
   --allow-dirty     Permit packaging from a dirty worktree
   -h, --help        Show this help
 
@@ -37,6 +39,14 @@ while [[ $# -gt 0 ]]; do
       RUN_VERIFY=0
       shift
       ;;
+    --verified-by)
+      if [[ $# -lt 2 ]]; then
+        echo "SDK_PACKAGE_ERR_ARG_MISSING: --verified-by requires a value" >&2
+        exit 2
+      fi
+      VERIFIED_BY="$2"
+      shift 2
+      ;;
     --allow-dirty)
       ALLOW_DIRTY=1
       shift
@@ -52,6 +62,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "$VERIFIED_BY" && "$RUN_VERIFY" -eq 1 ]]; then
+  echo "SDK_PACKAGE_ERR_VERIFIED_BY_WITHOUT_SKIP: --verified-by requires --skip-verify" >&2
+  exit 2
+fi
 
 resolve_out_dir() {
   local raw="$1"
@@ -140,51 +155,43 @@ while IFS= read -r artifact_path; do
   assert_archive_clean "$(basename "$artifact_path")"
 done < <(find "$OUT_DIR_ABS" -maxdepth 1 -type f -name '*.tar.gz' | sort)
 
-sha256_file() {
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | awk '{print $1}'
-  elif command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
-  else
-    echo "SDK_PACKAGE_ERR_SHA256_TOOL_MISSING: expected shasum or sha256sum" >&2
-    exit 1
-  fi
-}
-
 MANIFEST="$OUT_DIR_ABS/manifest.json"
 SUMS="$OUT_DIR_ABS/SHA256SUMS"
-: > "$SUMS"
-{
-  printf '{\n'
-  printf '  "commit": "%s",\n' "$COMMIT_SHA"
-  printf '  "created_at": "%s",\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-  if [[ -n "$DIRTY_STATUS" ]]; then
-    printf '  "dirty": true,\n'
-  else
-    printf '  "dirty": false,\n'
-  fi
-  if [[ "$RUN_VERIFY" -eq 1 ]]; then
-    printf '  "verification": "strict",\n'
-  else
-    printf '  "verification": "skipped",\n'
-  fi
-  printf '  "workflow_contract": "client_workflow_v1",\n'
-  printf '  "artifacts": [\n'
-  first=1
-  while IFS= read -r artifact; do
-    [[ -n "$artifact" ]] || continue
-    if [[ "$first" -eq 0 ]]; then
-      printf ',\n'
-    fi
-    first=0
-    checksum="$(sha256_file "$OUT_DIR_ABS/$artifact")"
-    size="$(wc -c < "$OUT_DIR_ABS/$artifact" | tr -d '[:space:]')"
-    printf '%s  %s\n' "$checksum" "$artifact" >> "$SUMS"
-    printf '    {"file": "%s", "sha256": "%s", "bytes": %s}' "$artifact" "$checksum" "$size"
-  done < <(find "$OUT_DIR_ABS" -maxdepth 1 -type f -name '*.tar.gz' -exec basename {} \; | sort)
-  printf '\n  ]\n'
-  printf '}\n'
-} > "$MANIFEST"
+if [[ -n "$DIRTY_STATUS" ]]; then
+  DIRTY_FLAG="true"
+else
+  DIRTY_FLAG="false"
+fi
+
+if [[ "$RUN_VERIFY" -eq 1 ]]; then
+  VERIFICATION_MODE="strict"
+  VERIFICATION_SOURCE="package_client_sdks.sh"
+elif [[ -n "$VERIFIED_BY" ]]; then
+  VERIFICATION_MODE="strict-upstream"
+  VERIFICATION_SOURCE="$VERIFIED_BY"
+else
+  VERIFICATION_MODE="skipped"
+  VERIFICATION_SOURCE="--skip-verify"
+fi
+
+python3 tools/ci/build_sdk_release_metadata.py \
+  --out-dir "$OUT_DIR_ABS" \
+  --commit "$COMMIT_SHA" \
+  --dirty "$DIRTY_FLAG" \
+  --verification-mode "$VERIFICATION_MODE" \
+  --verification-source "$VERIFICATION_SOURCE"
+
+check_args=(
+  --out-dir "$OUT_DIR_ABS"
+  --expected-commit "$COMMIT_SHA"
+)
+if [[ "$DIRTY_FLAG" == "false" ]]; then
+  check_args+=(--require-clean)
+fi
+if [[ "$VERIFICATION_MODE" != "skipped" ]]; then
+  check_args+=(--require-strict)
+fi
+python3 tools/ci/check_sdk_release_package.py "${check_args[@]}"
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 if [[ "$AFTER_STATUS" != "$DIRTY_STATUS" ]]; then
@@ -197,3 +204,4 @@ printf 'sdk package: PASS\n'
 printf 'artifacts: %s\n' "$OUT_DIR_ABS"
 printf 'manifest: %s\n' "$MANIFEST"
 printf 'sha256sums: %s\n' "$SUMS"
+printf 'sbom: %s\n' "$OUT_DIR_ABS/sbom.spdx.json"

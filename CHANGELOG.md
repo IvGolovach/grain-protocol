@@ -86,6 +86,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `sdk/wasm` persists opaque client snapshots through deterministic memory storage or IndexedDB-backed browser storage without parsing protocol state
     - `examples/wasm-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
     - WASM scanner smoke proves injected/browser camera handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
+  - hardened SDK release certification:
+    - SDK packaging now emits `manifest.json`, `SHA256SUMS`, and SPDX JSON SBOM metadata for generated bindings, Swift, Kotlin, WASM/mobile-web, and workflow-contract artifacts
+    - release package checking verifies same-SHA version-matrix hashes, SDK component versions, artifact byte counts, SHA-256 sums, archive cleanliness, and SBOM package checksums
+    - CI packages the SDK release artifacts after the strict platform SDK gate and re-checks the package metadata before final evidence build
+    - forbidden tracked-file checks now reject forced-added release artifacts, build outputs, WASM binaries, and secret-like local files
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`
