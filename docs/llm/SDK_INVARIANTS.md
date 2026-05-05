@@ -78,6 +78,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/rust/grain-client-core/tests/binding_api.rs`, `scripts/sdk/check_generated_bindings.sh`
   Modules: `core/rust/grain-client-core/src/binding_api.rs`, `core/rust/grain-client-core/src/grain_client_core.udl`, `core/rust/grain-client-core/build.rs`, `core/rust/uniffi-bindgen/src/main.rs`, `scripts/sdk/generate_client_bindings.sh`, `scripts/sdk/check_generated_bindings.sh`
 
+- SDK-INV-0020: Swift client package MUST wrap generated workflow bindings with a small app-facing API, expose typed preview/accept statuses, execute shared workflow fixtures through `GrainClient`, constrain fixture references to protocol vectors, and fail checks on generated Swift drift.
+  Tests: `scripts/sdk/check_swift_package.sh`, `scripts/sdk/sync_swift_bindings.sh`, `sdk/swift/Sources/GrainClientFixtureRunner/main.swift`
+  Modules: `sdk/swift/Package.swift`, `sdk/swift/Sources/GrainClient/GrainClient.swift`, `sdk/swift/Sources/GrainClientFFI/grain_client_core.swift`, `sdk/swift/Sources/grain_client_coreFFI/include/grain_client_coreFFI.h`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

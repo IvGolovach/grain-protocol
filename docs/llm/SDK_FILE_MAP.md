@@ -28,13 +28,15 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - Portable Rust workflow layer for generated platform SDKs: `scan.rs` owns workflows, `types.rs` owns Rust DTOs, `ffi_types.rs` owns binding-safe DTOs, `binding_api.rs` and `grain_client_core.udl` own the UniFFI-safe generated-binding facade, `platform/storage.rs` and `platform/trust.rs` own adapter contracts, `trust.rs` owns explicit trust decoding, `store.rs` owns the atomic storage contract, `memory_store.rs` owns the reference store, and `diag.rs` owns SDK-only diagnostics.
 12. `core/rust/uniffi-bindgen`, `scripts/sdk/*generated_bindings.sh`, and `sdk/generated/README.md`
    - Binding generation harness and docs. These are not published platform SDK packages.
-13. `docs/human/sdk/impossible-misuse.md`
+13. `sdk/swift/**`
+   - Swift Package Manager client package over generated workflow bindings. Public app API lives in `Sources/GrainClient`, generated binding sources live in `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI`, and the executable fixture runner lives in `Sources/GrainClientFixtureRunner`.
+14. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
-14. `docs/human/sdk/errors.md`
+15. `docs/human/sdk/errors.md`
    - Human-readable error contract.
-15. `core/ts/grain-sdk/src/*`
+16. `core/ts/grain-sdk/src/*`
    - Core SDK implementation modules.
-16. `core/ts/grain-sdk-ai/src/*`
+17. `core/ts/grain-sdk-ai/src/*`
    - Optional AI sidecar implementation modules.
 
 ## Source-of-truth hierarchy for SDK decisions
@@ -46,9 +48,10 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 5. `core/ts/grain-ts-core/src/*` (shared TS protocol engine behavior)
 6. `runner/typescript/src/*` (runner harness and compatibility surface)
 7. `core/rust/grain-client-core/src/*` (portable client workflows over Rust core)
-8. `core/ts/grain-sdk/src/*` (orchestration only)
-9. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
-10. `docs/llm/*` (maintainer maps, sync rules, and indexes)
-11. `docs/human/sdk/*` (explanatory, not normative)
+8. `sdk/swift/**` (generated Swift client package wrapper and fixture runner)
+9. `core/ts/grain-sdk/src/*` (orchestration only)
+10. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
+11. `docs/llm/*` (maintainer maps, sync rules, and indexes)
+12. `docs/human/sdk/*` (explanatory, not normative)
 
 If SDK behavior diverges from protocol vectors, treat it as a bug in SDK and update the matching docs and tests in the same change.

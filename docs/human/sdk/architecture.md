@@ -26,7 +26,11 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
    - workflow-shaped Rust APIs for generated platform SDKs
    - scan preview/accept style APIs for camera-first clients
    - no rule rewrites
-6. Optional AI sidecar (`core/ts/grain-sdk-ai`)
+6. Generated platform packages (`sdk/swift`, later `sdk/kotlin` and `sdk/wasm`)
+   - small app-facing wrappers over generated client workflow bindings
+   - shared fixture execution through public package APIs
+   - no raw QR/COSE/DAG-CBOR/protocol-runner APIs as the app surface
+7. Optional AI sidecar (`core/ts/grain-sdk-ai`)
    - deterministic AI ingestion firewall (`accept` -> `applyAccepted`)
    - explicit host bridge into SDK object storage only
    - no rule rewrites
@@ -67,6 +71,11 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `binding_api.rs`, `grain_client_core.udl`, and `build.rs` define the UniFFI-safe generated-binding facade
   - `core/rust/uniffi-bindgen` and `scripts/sdk/*generated_bindings.sh` generate/check Swift and Kotlin bindings without committing generated output
   - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
+- `sdk/swift/*`: Swift Package Manager client package over generated workflow bindings
+  - `Sources/GrainClient` is the public wrapper surface
+  - `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI` are synchronized generated binding sources
+  - `Sources/GrainClientFixtureRunner` executes `sdk/workflows` fixtures through the public Swift API
+  - `scripts/sdk/sync_swift_bindings.sh` and `scripts/sdk/check_swift_package.sh` keep generated sources reproducible
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder

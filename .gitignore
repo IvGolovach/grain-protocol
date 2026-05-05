@@ -3,6 +3,8 @@
 /core/rust/target/
 /dist/
 /build/
+/.build/
+/sdk/swift/.build/
 /artifacts/
 *.log
 __pycache__/

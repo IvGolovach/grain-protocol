@@ -36,6 +36,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - repo-local `uniffi-bindgen` helper crate, avoiding a global bindgen dependency
     - deterministic generation/check scripts for Swift and Kotlin bindings into ignored or temporary output directories
     - generated surface exposes workflow APIs and a reference memory-store object, not raw QR/COSE/DAG-CBOR/protocol-runner operations
+  - added Swift Package Manager client package over the generated workflow API:
+    - checked-in sanitized Swift binding sources generated from the UniFFI harness
+    - thin `GrainClient` wrapper with typed preview/accept statuses
+    - executable fixture runner that exercises `sdk/workflows` scan-preview and scan-accept fixtures through the public Swift API
+    - deterministic sync/check scripts that rebuild Rust client-core, build SwiftPM, run fixtures, and fail on generated drift
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

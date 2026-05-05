@@ -49,6 +49,15 @@ The generated-binding harness is now present:
 
 This proves the shared facade can be generated reproducibly. It is not yet the Swift, Kotlin, or WASM SDK package.
 
+The first platform package slice is now the Swift client package:
+
+- `sdk/swift` builds with Swift Package Manager
+- `GrainClient` exposes `scanPreview`, `scanAccept`, and `listAcceptedScans`
+- Swift app code sees typed workflow statuses instead of raw QR/COSE internals
+- `scripts/sdk/check_swift_package.sh` regenerates the Swift bindings, rebuilds Rust client-core, builds the Swift package, runs the shared workflow fixtures through Swift, and fails if generated sources drift
+
+This proves the iOS-facing package shape. It is not an iOS scanner app yet and it does not introduce Keychain storage, camera capture, or platform trust lookup.
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -71,7 +80,6 @@ The second fixture set covers `scan_accept`:
 
 ## Next additive slices
 
-- Generated Swift package over the Rust client core.
 - Generated Kotlin package over the same Rust client core.
 - WASM/mobile-web binding over the same contract.
 - Client scenario fixtures that every generated SDK must pass.
