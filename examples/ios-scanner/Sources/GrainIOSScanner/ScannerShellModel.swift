@@ -8,6 +8,9 @@ public protocol ScannerWorkflowClient {
     func scanPreview(qrString: String, trustPubB64: String?) -> GrainScanPreview
     func scanAccept(qrString: String, trustPubB64: String) -> GrainScanAccept
     func listAcceptedScans() -> [GrainAcceptedScan]
+    func createRootIdentity(label: String) -> GrainIdentityResult
+    func addDeviceKey(label: String) -> GrainDeviceResult
+    func clientLifecycle() -> GrainClientLifecycle
 }
 
 extension GrainClient: ScannerWorkflowClient {}
@@ -21,6 +24,9 @@ public struct ScannerShellState: Equatable, Sendable {
     public var canAccept: Bool
     public var acceptedCount: Int
     public var acceptedScanID: String?
+    public var lifecycleStatus: String?
+    public var deviceCount: UInt64
+    public var lifecycleEventCount: UInt64
 
     public init(
         qrString: String = "",
@@ -30,7 +36,10 @@ public struct ScannerShellState: Equatable, Sendable {
         diagnostics: [String] = [],
         canAccept: Bool = false,
         acceptedCount: Int = 0,
-        acceptedScanID: String? = nil
+        acceptedScanID: String? = nil,
+        lifecycleStatus: String? = nil,
+        deviceCount: UInt64 = 0,
+        lifecycleEventCount: UInt64 = 0
     ) {
         self.qrString = qrString
         self.trustPubB64 = trustPubB64
@@ -40,6 +49,9 @@ public struct ScannerShellState: Equatable, Sendable {
         self.canAccept = canAccept
         self.acceptedCount = acceptedCount
         self.acceptedScanID = acceptedScanID
+        self.lifecycleStatus = lifecycleStatus
+        self.deviceCount = deviceCount
+        self.lifecycleEventCount = lifecycleEventCount
     }
 }
 
@@ -67,6 +79,27 @@ public final class ScannerShellModel: ObservableObject {
     public func receiveCameraPayload(_ payload: CameraScanPayload) {
         state.qrString = payload.qrString
         resetDecisionState()
+    }
+
+    public func prepareLocalIdentity(rootLabel: String = "phone", deviceLabel: String = "scanner") {
+        let lifecycle = client.clientLifecycle()
+        if lifecycle.status == "Ready" {
+            state.diagnostics = lifecycle.diag
+            applyLifecycle(lifecycle)
+            return
+        }
+        if lifecycle.status == "Uninitialized" {
+            let root = client.createRootIdentity(label: rootLabel)
+            if !root.diag.isEmpty {
+                state.diagnostics = root.diag
+                refreshLifecycle()
+                return
+            }
+        }
+
+        let device = client.addDeviceKey(label: deviceLabel)
+        state.diagnostics = device.diag
+        refreshLifecycle()
     }
 
     public func preview() {
@@ -111,6 +144,17 @@ public final class ScannerShellModel: ObservableObject {
     private func normalizedTrustInput() -> String? {
         let trimmed = state.trustPubB64.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func refreshLifecycle() {
+        let lifecycle = client.clientLifecycle()
+        applyLifecycle(lifecycle)
+    }
+
+    private func applyLifecycle(_ lifecycle: GrainClientLifecycle) {
+        state.lifecycleStatus = lifecycle.status
+        state.deviceCount = lifecycle.deviceCount
+        state.lifecycleEventCount = lifecycle.lifecycleEventCount
     }
 
     private func resetDecisionState() {

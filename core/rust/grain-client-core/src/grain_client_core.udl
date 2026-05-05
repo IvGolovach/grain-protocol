@@ -1,12 +1,24 @@
 namespace grain_client_core {
     FfiScanPreview grain_scan_preview(FfiScanPreviewRequest request);
     FfiScanAccept grain_scan_accept_prepare(FfiScanAcceptRequest request);
+    FfiPairingResult grain_pairing_preview_envelope(FfiPairingEnvelopeRequest request);
 };
 
 interface GrainClientMemoryStore {
     constructor();
     FfiScanAccept scan_accept(FfiScanAcceptRequest request);
     sequence<FfiAcceptedScan> list_accepted_scans();
+    FfiIdentityResult create_root_identity(string label);
+    FfiIdentityResult export_identity_bundle();
+    FfiIdentityResult import_identity_bundle(string bundle_b64);
+    FfiDeviceResult add_device_key(string label);
+    FfiDeviceResult revoke_device_key(string ak);
+    FfiDeviceResult set_active_device(string ak);
+    FfiClientLifecycle client_lifecycle();
+    FfiPairingResult create_pairing_envelope();
+    FfiPairingResult accept_pairing_envelope(FfiPairingEnvelopeRequest request);
+    FfiSyncResult export_sync_bundle();
+    FfiSyncResult import_sync_bundle(FfiSyncBundleRequest request);
 };
 
 dictionary FfiScanPreviewRequest {
@@ -37,4 +49,63 @@ dictionary FfiScanAccept {
     string? scan_id;
     string? cose_b64;
     string? trust_pub_b64;
+};
+
+dictionary FfiIdentityResult {
+    string status;
+    sequence<string> diag;
+    string? root_kid;
+    string? active_ak;
+    string? bundle_b64;
+    u64 device_count;
+    u64 revoked_count;
+    u64 lifecycle_event_count;
+};
+
+dictionary FfiDeviceResult {
+    string status;
+    sequence<string> diag;
+    string? device_ak;
+    string? active_ak;
+    string? root_kid;
+    u64 device_count;
+    u64 revoked_count;
+    u64 lifecycle_event_count;
+};
+
+dictionary FfiClientLifecycle {
+    string status;
+    sequence<string> diag;
+    string? root_kid;
+    string? active_ak;
+    u64 device_count;
+    u64 revoked_count;
+    u64 accepted_record_count;
+    u64 lifecycle_event_count;
+};
+
+dictionary FfiPairingEnvelopeRequest {
+    string envelope_b64;
+};
+
+dictionary FfiPairingResult {
+    string status;
+    sequence<string> diag;
+    string? pairing_id;
+    string? envelope_b64;
+    string? root_kid;
+    u64 device_count;
+};
+
+dictionary FfiSyncBundleRequest {
+    string bundle_b64;
+};
+
+dictionary FfiSyncResult {
+    string status;
+    sequence<string> diag;
+    string? bundle_b64;
+    u64 accepted_record_count;
+    u64 device_count;
+    u64 lifecycle_event_count;
 };

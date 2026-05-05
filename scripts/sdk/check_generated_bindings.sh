@@ -26,8 +26,18 @@ for expected in \
   GrainClientMemoryStore \
   "scanAccept(request" \
   listAcceptedScans \
+  createRootIdentity \
+  addDeviceKey \
+  clientLifecycle \
+  createPairingEnvelope \
+  acceptPairingEnvelope \
+  importSyncBundle \
   FfiScanPreviewRequest \
-  FfiScanAcceptRequest; do
+  FfiScanAcceptRequest \
+  FfiIdentityResult \
+  FfiDeviceResult \
+  FfiPairingEnvelopeRequest \
+  FfiSyncBundleRequest; do
   if ! grep -R "$expected" "$OUT_DIR" >/dev/null 2>&1; then
     echo "SDK_BINDGEN_ERR_PUBLIC_SYMBOL_MISSING: expected generated symbol $expected" >&2
     exit 1

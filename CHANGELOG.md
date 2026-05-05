@@ -60,6 +60,14 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - iOS maps AVFoundation QR metadata into scanner workflow input
     - Android/Kotlin accepts an injected CameraX-style frame decoder and maps decoded QR strings into scanner workflow input
     - WASM/browser uses `getUserMedia` with an injected QR decoder and maps decoded strings into scanner workflow input
+  - added portable identity, device lifecycle, pairing, and sync workflows:
+    - identity root create/export/import with strict bundle validation
+    - device add/activate/revoke with lifecycle event counters
+    - app-controlled pairing envelope create/preview/accept/replay
+    - sync bundle export/import/replay for identity, accepted scans, and lifecycle events
+    - atomic rollback/idempotency tests for malformed imports, pairing conflicts, and sync conflicts
+  - expanded generated Swift/Kotlin/WASM wrappers and shared client workflow fixtures for lifecycle, pairing, and sync parity.
+  - added rationale: `docs/human/rationale/TOR-PAIRING-A01.md`.
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

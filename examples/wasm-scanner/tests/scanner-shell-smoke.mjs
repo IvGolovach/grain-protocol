@@ -8,6 +8,17 @@ import {
 import { createInjectedCameraAdapter } from "../src/camera-adapter.mjs";
 
 const savedRecords = [];
+let lifecycle = {
+  status: "Uninitialized",
+  diag: ["SDK_ERR_IDENTITY_MISSING"],
+  rootKid: null,
+  activeAk: null,
+  deviceCount: 0,
+  revokedCount: 0,
+  acceptedRecordCount: 0,
+  lifecycleEventCount: 0,
+};
+let addDeviceKeyCallCount = 0;
 const client = {
   scanPreview(input) {
     assert.equal(input.qrString, "gr1:demo");
@@ -46,12 +57,67 @@ const client = {
   listAcceptedScans() {
     return savedRecords;
   },
+  clientLifecycle() {
+    return lifecycle;
+  },
+  createRootIdentity(input) {
+    assert.equal(input.label, "phone");
+    lifecycle = {
+      status: "Ready",
+      diag: [],
+      rootKid: "root-demo",
+      activeAk: "root-demo",
+      deviceCount: 1,
+      revokedCount: 0,
+      acceptedRecordCount: savedRecords.length,
+      lifecycleEventCount: 0,
+    };
+    return {
+      status: "Created",
+      diag: [],
+      rootKid: "root-demo",
+      activeAk: "root-demo",
+      bundleB64: "eyJidW5kbGVfdiI6MX0=",
+      deviceCount: 1,
+      revokedCount: 0,
+      lifecycleEventCount: 0,
+    };
+  },
+  addDeviceKey(input) {
+    addDeviceKeyCallCount += 1;
+    assert.equal(input.label, "scanner");
+    lifecycle = {
+      ...lifecycle,
+      status: "Ready",
+      deviceCount: 2,
+      lifecycleEventCount: 1,
+    };
+    return {
+      status: "Added",
+      diag: [],
+      deviceAk: "device-demo",
+      activeAk: "root-demo",
+      rootKid: "root-demo",
+      deviceCount: 2,
+      revokedCount: 0,
+      lifecycleEventCount: 1,
+    };
+  },
 };
 
 const shell = createScannerShell(client);
 let state = shell.accept();
 assert.equal(state.canAccept, false);
 assert.deepEqual(state.diagnostics, [SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG]);
+
+state = shell.prepareLocalIdentity();
+assert.equal(state.lifecycleStatus, "Ready");
+assert.equal(state.deviceCount, 2);
+assert.equal(state.lifecycleEventCount, 1);
+state = shell.prepareLocalIdentity();
+assert.equal(state.deviceCount, 2);
+assert.equal(state.lifecycleEventCount, 1);
+assert.equal(addDeviceKeyCallCount, 1);
 
 shell.setTrustPubB64(" trust-demo ");
 const cameraAdapter = createInjectedCameraAdapter(["gr1:demo"]);

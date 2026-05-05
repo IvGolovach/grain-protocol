@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0022` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0026` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -48,14 +48,20 @@ Expected contract:
 - rejected scan accept writes no records
 - duplicate scan accept is idempotent
 - failed or nested store mutations reject or roll back deterministically
+- identity/device lifecycle workflows create, import/export, activate, revoke, and report lifecycle counts deterministically
+- pairing preview is pure, pairing accept is atomic, and repeated pairing accept is idempotent
+- sync bundle export/import carries identity, accepted scans, and lifecycle events atomically
 
 ## Client workflow fixtures
 
 Workflow fixtures:
 - `sdk/workflows/contract/client_workflow_v1.md`
 - `sdk/workflows/contract/client_workflow_v1.schema.json`
+- `sdk/workflows/fixtures/device-lifecycle/*.json`
+- `sdk/workflows/fixtures/pairing/*.json`
 - `sdk/workflows/fixtures/scan-accept/*.json`
 - `sdk/workflows/fixtures/scan-preview/*.json`
+- `sdk/workflows/fixtures/sync-bundle/*.json`
 
 Fixture validation:
 
@@ -72,10 +78,13 @@ Expected contract:
 - every `scan_preview` fixture expects `store_mutation: "none"`
 - `scan_accept` fixtures currently cover accepted persistence, duplicate-scan idempotency, and rejected no-write behavior
 - every `scan_accept` fixture asserts `store_mutation` and `accepted_record_count`
+- `device_lifecycle` fixtures cover root creation, device add/activate/revoke, and lifecycle counters
+- `pairing` fixtures cover create/preview/accept/replay behavior through public client APIs
+- `sync_bundle` fixtures cover export/import/replay of identity, accepted scans, and lifecycle events
 - platform adapter contract tests cover deterministic storage listing, idempotent re-put, rollback at the repository boundary, no anchor, missing anchor, malformed anchor, and valid anchor
 - FFI DTO contract tests keep binding-facing values owned and flat: strings, vectors, optional strings, no borrowed Rust lifetimes
 
-Rust fixture execution must load these fixtures and compare them against the public `grain_client_core::scan_preview()` and `grain_client_core::scan_accept()` APIs.
+Rust fixture execution must load these fixtures and compare them against public `grain_client_core` workflow APIs.
 
 ## Generated binding harness
 
@@ -89,7 +98,7 @@ Expected contract:
 - `grain-client-core` builds UniFFI scaffolding from `core/rust/grain-client-core/src/grain_client_core.udl`
 - `core/rust/uniffi-bindgen` is the repo-local binding generator entrypoint
 - Swift and Kotlin bindings can be generated into ignored or temporary output directories
-- generated output contains the expected workflow symbols: preview, accept preparation, accept, listing, and binding-safe request DTOs
+- generated output contains the expected workflow symbols: preview, accept preparation, accept, listing, identity, device lifecycle, pairing, sync, and binding-safe request DTOs
 - generated output and UDL do not expose raw QR/COSE/DAG-CBOR/protocol-runner operations as app APIs
 - the check leaves git status unchanged except for pre-existing unrelated local work
 
@@ -105,7 +114,7 @@ Expected contract:
 - `scripts/sdk/sync_swift_bindings.sh` regenerates Swift binding sources from the checked-in UniFFI harness and updates only the tracked Swift binding files
 - `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core` builds the native library linked by SwiftPM
 - `swift build --package-path sdk/swift` builds the `GrainClient` package
-- `swift run --package-path sdk/swift GrainClientFixtureRunner` executes scan-preview and scan-accept fixtures through the public Swift `GrainClient` API
+- `swift run --package-path sdk/swift GrainClientFixtureRunner` executes scan, lifecycle, pairing, and sync fixtures through the public Swift `GrainClient` API
 - the package exposes workflow methods and typed Swift statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
 - fixture references are constrained to `conformance/vectors/**`
 - the check leaves git status unchanged except for pre-existing unrelated local work
@@ -124,7 +133,7 @@ Expected contract:
 - `scripts/sdk/sync_kotlin_bindings.sh` regenerates Kotlin binding source from the checked-in UniFFI harness and updates only the tracked Kotlin binding file
 - `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core` builds the native library loaded by JNA
 - Gradle/Kotlin compiles the public `GrainClient` wrapper and fixture runner
-- the executable fixture runner executes scan-preview and scan-accept fixtures through the public Kotlin `GrainClient` API
+- the executable fixture runner executes scan, lifecycle, pairing, and sync fixtures through the public Kotlin `GrainClient` API
 - the package exposes workflow methods and typed Kotlin statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
 - fixture references are constrained to `conformance/vectors/**`
 - the check leaves git status unchanged except for pre-existing unrelated local work
@@ -143,7 +152,7 @@ Expected contract:
 - `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-wasm --target wasm32-wasip1 --release` builds the WASM client workflow export over `grain-client-core`
 - `grain-client-wasm` depends on `grain-client-core` with default features disabled, so the target-side WASM dependency tree does not include the UniFFI runtime
 - `sdk/wasm` loads that WASM export behind a small public `GrainClient` API
-- the Node fixture runner executes scan-preview and scan-accept fixtures through the public web API
+- the Node fixture runner executes scan, lifecycle, pairing, and sync fixtures through the public web API
 - the package exposes workflow methods and typed web statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
 - fixture references are constrained to `conformance/vectors/**`
 - the check leaves git status unchanged except for pre-existing unrelated local work

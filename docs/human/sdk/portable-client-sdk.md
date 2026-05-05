@@ -95,6 +95,16 @@ The first camera adapter slice is now present:
 
 These adapters still do not own protocol semantics. They only turn platform camera output into a GR1 string and pass it to the same SDK workflow path. QR decoder package choice, platform-backed storage, production app packaging, and device/browser automation suites remain later hardening work.
 
+The identity, device lifecycle, pairing, and sync slice is now present:
+
+- `grain-client-core` can create/export/import a portable identity bundle
+- device authorization keys can be added, activated, revoked, and reported through `client_lifecycle`
+- pairing envelopes move an identity bundle through an app-controlled transfer channel and are idempotent on replay
+- sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics
+- Swift, Kotlin, and WASM wrappers expose the same workflow methods through their public `GrainClient` APIs
+
+This is still a portable SDK core, not production key custody. Real iOS/Android apps should put the same workflow surface behind Keychain/Keystore-backed stores in a later adapter slice.
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -115,10 +125,12 @@ The second fixture set covers `scan_accept`:
 - repeated valid scan -> `AlreadyAccepted`, no duplicate accepted record
 - malformed scan -> `Rejected`, no store mutation, zero accepted records
 
-## Next additive slices
+The lifecycle fixture sets now also cover:
 
-- Client scenario fixtures that every generated SDK must pass.
+- `device_lifecycle`: root identity creation, device add/activate/revoke, and lifecycle counts
+- `pairing`: create/preview/accept/replay of an app-transferred pairing envelope
+- `sync_bundle`: export/import/replay of identity, accepted scans, and lifecycle events
 
 ## Rule of thumb
 
-Generated SDKs should expose product workflows: preview a scan, accept a scan, list saved objects, export evidence. They should not expose raw QR/COSE runner operations as the main app API.
+Generated SDKs should expose product workflows: preview a scan, accept a scan, manage device lifecycle, pair a client, sync local state, list saved objects, export evidence. They should not expose raw QR/COSE runner operations as the main app API.

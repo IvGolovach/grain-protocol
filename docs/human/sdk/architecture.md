@@ -24,7 +24,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
    - no rule rewrites
 5. Portable client core (`core/rust/grain-client-core`)
    - workflow-shaped Rust APIs for generated platform SDKs
-   - scan preview/accept style APIs for camera-first clients
+   - scan, identity, device lifecycle, pairing, and sync APIs for camera-first clients
    - no rule rewrites
 6. Generated platform packages (`sdk/swift`, `sdk/kotlin`, `sdk/wasm`)
    - small app-facing wrappers over generated client workflow bindings
@@ -65,6 +65,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `scan.rs` keeps `scan_preview()` decode-only preview separate from verified preview
   - `scan_accept_prepare()` requires explicit verified trust and returns deterministic, persistence-ready records without writing storage
   - `scan_accept()` persists verified records through an atomic store boundary and leaves rejected scans unwritten
+  - `identity.rs`, `device.rs`, `pairing.rs`, and `sync.rs` keep portable lifecycle workflows in Rust core rather than platform apps
   - `store.rs` and `memory_store.rs` define the platform-neutral storage contract and reference rollback/idempotency behavior
   - `platform/storage.rs` and `platform/trust.rs` define adapter contracts without importing platform-specific storage or network trust APIs
   - `ffi_types.rs` flattens workflow values into owned binding-safe DTOs

@@ -90,6 +90,22 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `scripts/sdk/check_wasm_package.sh`, `sdk/wasm/tests/run-workflow-fixtures.mjs`
   Modules: `core/rust/grain-client-wasm/src/lib.rs`, `sdk/wasm/src/index.mjs`, `sdk/wasm/src/node.mjs`, `sdk/wasm/package.json`
 
+- SDK-INV-0023: portable identity and device lifecycle workflows MUST create CSPRNG-backed identity material, reject malformed imported bundles before mutation, keep active/revoked device state synchronized with lifecycle events, and report client lifecycle counts through generated SDKs.
+  Tests: `core/rust/grain-client-core/tests/identity_device_lifecycle.rs`, `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`, `scripts/sdk/check_swift_package.sh`, `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/check_wasm_package.sh`
+  Modules: `core/rust/grain-client-core/src/identity.rs`, `core/rust/grain-client-core/src/device.rs`, `core/rust/grain-client-core/src/store.rs`, `core/rust/grain-client-core/src/memory_store.rs`, `sdk/workflows/fixtures/device-lifecycle/*.json`
+
+- SDK-INV-0024: pairing workflows MUST preview app-transferred envelopes without mutation, accept valid envelopes atomically into an uninitialized client, reject malformed or conflicting envelopes, and treat replay of the same envelope as idempotent.
+  Tests: `core/rust/grain-client-core/tests/pairing_sync_bundle.rs`, `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`, `scripts/sdk/check_swift_package.sh`, `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/check_wasm_package.sh`
+  Modules: `core/rust/grain-client-core/src/pairing.rs`, `core/rust/grain-client-core/src/identity.rs`, `core/rust/grain-client-core/src/memory_store.rs`, `sdk/workflows/fixtures/pairing/*.json`
+
+- SDK-INV-0025: sync bundle workflows MUST export identity, accepted scans, and lifecycle events together, import them atomically, reject identity root conflicts before partial writes, and treat repeated imports as idempotent.
+  Tests: `core/rust/grain-client-core/tests/pairing_sync_bundle.rs`, `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`, `scripts/sdk/check_swift_package.sh`, `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/check_wasm_package.sh`
+  Modules: `core/rust/grain-client-core/src/sync.rs`, `core/rust/grain-client-core/src/store.rs`, `core/rust/grain-client-core/src/memory_store.rs`, `sdk/workflows/fixtures/sync-bundle/*.json`
+
+- SDK-INV-0026: generated platform SDKs MUST expose the expanded workflow surface consistently across Swift, Kotlin, and WASM while keeping app APIs workflow-shaped and raw QR/COSE/DAG-CBOR/protocol-runner operations out of public wrappers.
+  Tests: `scripts/sdk/check_generated_bindings.sh`, `scripts/sdk/check_swift_package.sh`, `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/check_wasm_package.sh`
+  Modules: `core/rust/grain-client-core/src/binding_api.rs`, `core/rust/grain-client-core/src/grain_client_core.udl`, `sdk/swift/Sources/GrainClient/GrainClient.swift`, `sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt`, `sdk/wasm/src/index.mjs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

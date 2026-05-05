@@ -2,6 +2,11 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const PREVIEW_STATUSES = new Set(["Verified", "Untrusted", "Rejected"]);
 const ACCEPT_STATUSES = new Set(["Accepted", "AlreadyAccepted", "Rejected"]);
+const IDENTITY_STATUSES = new Set(["Created", "Exported", "Imported", "AlreadyExists", "Uninitialized", "Rejected"]);
+const DEVICE_STATUSES = new Set(["Added", "Revoked", "Active", "Rejected"]);
+const LIFECYCLE_STATUSES = new Set(["Ready", "Uninitialized"]);
+const PAIRING_STATUSES = new Set(["Created", "Valid", "Paired", "AlreadyPaired", "Rejected"]);
+const SYNC_STATUSES = new Set(["Exported", "Empty", "Imported", "AlreadyImported", "Rejected"]);
 
 export class GrainClient {
   #exports;
@@ -49,6 +54,110 @@ export class GrainClient {
     }));
   }
 
+  createRootIdentity(input = {}) {
+    this.#assertOpen();
+    return toIdentity(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_create_root_identity(this.#storePtr, ptr, len),
+      toLabelPayload(input, "root", "createRootIdentity"),
+    ));
+  }
+
+  exportIdentityBundle() {
+    this.#assertOpen();
+    return toIdentity(callNoInputJson(
+      this.#exports,
+      () => this.#exports.grain_client_export_identity_bundle(this.#storePtr),
+    ));
+  }
+
+  importIdentityBundle(input) {
+    this.#assertOpen();
+    return toIdentity(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_import_identity_bundle(this.#storePtr, ptr, len),
+      toB64Payload(input, "bundleB64", "bundle_b64", "importIdentityBundle"),
+    ));
+  }
+
+  addDeviceKey(input = {}) {
+    this.#assertOpen();
+    return toDevice(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_add_device_key(this.#storePtr, ptr, len),
+      toLabelPayload(input, "device", "addDeviceKey"),
+    ));
+  }
+
+  revokeDeviceKey(input) {
+    this.#assertOpen();
+    return toDevice(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_revoke_device_key(this.#storePtr, ptr, len),
+      toAkPayload(input, "revokeDeviceKey"),
+    ));
+  }
+
+  setActiveDevice(input) {
+    this.#assertOpen();
+    return toDevice(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_set_active_device(this.#storePtr, ptr, len),
+      toAkPayload(input, "setActiveDevice"),
+    ));
+  }
+
+  clientLifecycle() {
+    this.#assertOpen();
+    return toLifecycle(callNoInputJson(
+      this.#exports,
+      () => this.#exports.grain_client_lifecycle(this.#storePtr),
+    ));
+  }
+
+  createPairingEnvelope() {
+    this.#assertOpen();
+    return toPairing(callNoInputJson(
+      this.#exports,
+      () => this.#exports.grain_client_create_pairing_envelope(this.#storePtr),
+    ));
+  }
+
+  previewPairingEnvelope(input) {
+    this.#assertOpen();
+    return toPairing(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_pairing_preview(ptr, len),
+      toB64Payload(input, "envelopeB64", "envelope_b64", "previewPairingEnvelope"),
+    ));
+  }
+
+  acceptPairingEnvelope(input) {
+    this.#assertOpen();
+    return toPairing(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_accept_pairing_envelope(this.#storePtr, ptr, len),
+      toB64Payload(input, "envelopeB64", "envelope_b64", "acceptPairingEnvelope"),
+    ));
+  }
+
+  exportSyncBundle() {
+    this.#assertOpen();
+    return toSync(callNoInputJson(
+      this.#exports,
+      () => this.#exports.grain_client_export_sync_bundle(this.#storePtr),
+    ));
+  }
+
+  importSyncBundle(input) {
+    this.#assertOpen();
+    return toSync(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_import_sync_bundle(this.#storePtr, ptr, len),
+      toB64Payload(input, "bundleB64", "bundle_b64", "importSyncBundle"),
+    ));
+  }
+
   close() {
     if (!this.#closed) {
       this.#exports.grain_client_store_free(this.#storePtr);
@@ -78,6 +187,18 @@ function requireExports(wasmExports) {
     "grain_client_scan_preview",
     "grain_client_scan_accept",
     "grain_client_list_accepted_scans",
+    "grain_client_create_root_identity",
+    "grain_client_export_identity_bundle",
+    "grain_client_import_identity_bundle",
+    "grain_client_add_device_key",
+    "grain_client_revoke_device_key",
+    "grain_client_set_active_device",
+    "grain_client_lifecycle",
+    "grain_client_pairing_preview",
+    "grain_client_create_pairing_envelope",
+    "grain_client_accept_pairing_envelope",
+    "grain_client_export_sync_bundle",
+    "grain_client_import_sync_bundle",
   ];
   for (const name of required) {
     if (!(name in wasmExports)) {
@@ -152,6 +273,33 @@ function toAcceptPayload(input) {
   };
 }
 
+function toLabelPayload(input, defaultLabel, functionName) {
+  if (input === undefined || input === null) {
+    return { label: defaultLabel };
+  }
+  if (typeof input !== "object") {
+    throw new TypeError(`${functionName} input must be an object`);
+  }
+  if (input.label !== undefined && typeof input.label !== "string") {
+    throw new TypeError(`${functionName} label must be a string`);
+  }
+  return { label: input.label ?? defaultLabel };
+}
+
+function toAkPayload(input, functionName) {
+  if (!input || typeof input.ak !== "string") {
+    throw new TypeError(`${functionName} requires ak`);
+  }
+  return { ak: input.ak };
+}
+
+function toB64Payload(input, publicName, wireName, functionName) {
+  if (!input || typeof input[publicName] !== "string") {
+    throw new TypeError(`${functionName} requires ${publicName}`);
+  }
+  return { [wireName]: input[publicName] };
+}
+
 function toPreview(raw) {
   const status = requireEnum(raw.status, PREVIEW_STATUSES, "status");
   return {
@@ -169,6 +317,72 @@ function toAccept(raw) {
     scanId: optionalString(raw.scan_id, "scan_id"),
     coseB64: optionalString(raw.cose_b64, "cose_b64"),
     trustPubB64: optionalString(raw.trust_pub_b64, "trust_pub_b64"),
+  };
+}
+
+function toIdentity(raw) {
+  const status = requireEnum(raw.status, IDENTITY_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    rootKid: optionalString(raw.root_kid, "root_kid"),
+    activeAk: optionalString(raw.active_ak, "active_ak"),
+    bundleB64: optionalString(raw.bundle_b64, "bundle_b64"),
+    deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
+    revokedCount: requireNonNegativeInteger(raw.revoked_count, "revoked_count"),
+    lifecycleEventCount: requireNonNegativeInteger(raw.lifecycle_event_count, "lifecycle_event_count"),
+  };
+}
+
+function toDevice(raw) {
+  const status = requireEnum(raw.status, DEVICE_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    deviceAk: optionalString(raw.device_ak, "device_ak"),
+    activeAk: optionalString(raw.active_ak, "active_ak"),
+    rootKid: optionalString(raw.root_kid, "root_kid"),
+    deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
+    revokedCount: requireNonNegativeInteger(raw.revoked_count, "revoked_count"),
+    lifecycleEventCount: requireNonNegativeInteger(raw.lifecycle_event_count, "lifecycle_event_count"),
+  };
+}
+
+function toLifecycle(raw) {
+  const status = requireEnum(raw.status, LIFECYCLE_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    rootKid: optionalString(raw.root_kid, "root_kid"),
+    activeAk: optionalString(raw.active_ak, "active_ak"),
+    deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
+    revokedCount: requireNonNegativeInteger(raw.revoked_count, "revoked_count"),
+    acceptedRecordCount: requireNonNegativeInteger(raw.accepted_record_count, "accepted_record_count"),
+    lifecycleEventCount: requireNonNegativeInteger(raw.lifecycle_event_count, "lifecycle_event_count"),
+  };
+}
+
+function toPairing(raw) {
+  const status = requireEnum(raw.status, PAIRING_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    pairingId: optionalString(raw.pairing_id, "pairing_id"),
+    envelopeB64: optionalString(raw.envelope_b64, "envelope_b64"),
+    rootKid: optionalString(raw.root_kid, "root_kid"),
+    deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
+  };
+}
+
+function toSync(raw) {
+  const status = requireEnum(raw.status, SYNC_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    bundleB64: optionalString(raw.bundle_b64, "bundle_b64"),
+    acceptedRecordCount: requireNonNegativeInteger(raw.accepted_record_count, "accepted_record_count"),
+    deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
+    lifecycleEventCount: requireNonNegativeInteger(raw.lifecycle_event_count, "lifecycle_event_count"),
   };
 }
 
@@ -202,6 +416,13 @@ function optionalString(value, fieldName) {
 
 function requireString(value, fieldName) {
   if (typeof value !== "string") {
+    throw new Error(`SDK_WASM_ERR_RESPONSE_SHAPE:${fieldName}`);
+  }
+  return value;
+}
+
+function requireNonNegativeInteger(value, fieldName) {
+  if (!Number.isSafeInteger(value) || value < 0) {
     throw new Error(`SDK_WASM_ERR_RESPONSE_SHAPE:${fieldName}`);
   }
   return value;

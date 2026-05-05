@@ -416,6 +416,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -459,9 +475,31 @@ fileprivate struct FfiConverterString: FfiConverter {
 
 public protocol GrainClientMemoryStoreProtocol: AnyObject, Sendable {
 
+    func acceptPairingEnvelope(request: FfiPairingEnvelopeRequest)  -> FfiPairingResult
+
+    func addDeviceKey(label: String)  -> FfiDeviceResult
+
+    func clientLifecycle()  -> FfiClientLifecycle
+
+    func createPairingEnvelope()  -> FfiPairingResult
+
+    func createRootIdentity(label: String)  -> FfiIdentityResult
+
+    func exportIdentityBundle()  -> FfiIdentityResult
+
+    func exportSyncBundle()  -> FfiSyncResult
+
+    func importIdentityBundle(bundleB64: String)  -> FfiIdentityResult
+
+    func importSyncBundle(request: FfiSyncBundleRequest)  -> FfiSyncResult
+
     func listAcceptedScans()  -> [FfiAcceptedScan]
 
+    func revokeDeviceKey(ak: String)  -> FfiDeviceResult
+
     func scanAccept(request: FfiScanAcceptRequest)  -> FfiScanAccept
+
+    func setActiveDevice(ak: String)  -> FfiDeviceResult
 
 }
 open class GrainClientMemoryStore: GrainClientMemoryStoreProtocol, @unchecked Sendable {
@@ -524,10 +562,96 @@ public convenience init() {
 
 
 
+open func acceptPairingEnvelope(request: FfiPairingEnvelopeRequest) -> FfiPairingResult  {
+    return try!  FfiConverterTypeFfiPairingResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_accept_pairing_envelope(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeFfiPairingEnvelopeRequest_lower(request),$0
+    )
+})
+}
+
+open func addDeviceKey(label: String) -> FfiDeviceResult  {
+    return try!  FfiConverterTypeFfiDeviceResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_add_device_key(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(label),$0
+    )
+})
+}
+
+open func clientLifecycle() -> FfiClientLifecycle  {
+    return try!  FfiConverterTypeFfiClientLifecycle_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_client_lifecycle(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func createPairingEnvelope() -> FfiPairingResult  {
+    return try!  FfiConverterTypeFfiPairingResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_create_pairing_envelope(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func createRootIdentity(label: String) -> FfiIdentityResult  {
+    return try!  FfiConverterTypeFfiIdentityResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_create_root_identity(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(label),$0
+    )
+})
+}
+
+open func exportIdentityBundle() -> FfiIdentityResult  {
+    return try!  FfiConverterTypeFfiIdentityResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_export_identity_bundle(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func exportSyncBundle() -> FfiSyncResult  {
+    return try!  FfiConverterTypeFfiSyncResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func importIdentityBundle(bundleB64: String) -> FfiIdentityResult  {
+    return try!  FfiConverterTypeFfiIdentityResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_import_identity_bundle(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(bundleB64),$0
+    )
+})
+}
+
+open func importSyncBundle(request: FfiSyncBundleRequest) -> FfiSyncResult  {
+    return try!  FfiConverterTypeFfiSyncResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_import_sync_bundle(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeFfiSyncBundleRequest_lower(request),$0
+    )
+})
+}
+
 open func listAcceptedScans() -> [FfiAcceptedScan]  {
     return try!  FfiConverterSequenceTypeFfiAcceptedScan.lift(try! rustCall() {
     uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(
             self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func revokeDeviceKey(ak: String) -> FfiDeviceResult  {
+    return try!  FfiConverterTypeFfiDeviceResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_revoke_device_key(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(ak),$0
     )
 })
 }
@@ -537,6 +661,15 @@ open func scanAccept(request: FfiScanAcceptRequest) -> FfiScanAccept  {
     uniffi_grain_client_core_fn_method_grainclientmemorystore_scan_accept(
             self.uniffiCloneHandle(),
         FfiConverterTypeFfiScanAcceptRequest_lower(request),$0
+    )
+})
+}
+
+open func setActiveDevice(ak: String) -> FfiDeviceResult  {
+    return try!  FfiConverterTypeFfiDeviceResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_set_active_device(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(ak),$0
     )
 })
 }
@@ -644,6 +777,360 @@ public func FfiConverterTypeFfiAcceptedScan_lift(_ buf: RustBuffer) throws -> Ff
 #endif
 public func FfiConverterTypeFfiAcceptedScan_lower(_ value: FfiAcceptedScan) -> RustBuffer {
     return FfiConverterTypeFfiAcceptedScan.lower(value)
+}
+
+
+public struct FfiClientLifecycle: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var rootKid: String?
+    public var activeAk: String?
+    public var deviceCount: UInt64
+    public var revokedCount: UInt64
+    public var acceptedRecordCount: UInt64
+    public var lifecycleEventCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], rootKid: String?, activeAk: String?, deviceCount: UInt64, revokedCount: UInt64, acceptedRecordCount: UInt64, lifecycleEventCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.rootKid = rootKid
+        self.activeAk = activeAk
+        self.deviceCount = deviceCount
+        self.revokedCount = revokedCount
+        self.acceptedRecordCount = acceptedRecordCount
+        self.lifecycleEventCount = lifecycleEventCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiClientLifecycle: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiClientLifecycle: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiClientLifecycle {
+        return
+            try FfiClientLifecycle(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                rootKid: FfiConverterOptionString.read(from: &buf),
+                activeAk: FfiConverterOptionString.read(from: &buf),
+                deviceCount: FfiConverterUInt64.read(from: &buf),
+                revokedCount: FfiConverterUInt64.read(from: &buf),
+                acceptedRecordCount: FfiConverterUInt64.read(from: &buf),
+                lifecycleEventCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiClientLifecycle, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.rootKid, into: &buf)
+        FfiConverterOptionString.write(value.activeAk, into: &buf)
+        FfiConverterUInt64.write(value.deviceCount, into: &buf)
+        FfiConverterUInt64.write(value.revokedCount, into: &buf)
+        FfiConverterUInt64.write(value.acceptedRecordCount, into: &buf)
+        FfiConverterUInt64.write(value.lifecycleEventCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiClientLifecycle_lift(_ buf: RustBuffer) throws -> FfiClientLifecycle {
+    return try FfiConverterTypeFfiClientLifecycle.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiClientLifecycle_lower(_ value: FfiClientLifecycle) -> RustBuffer {
+    return FfiConverterTypeFfiClientLifecycle.lower(value)
+}
+
+
+public struct FfiDeviceResult: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var deviceAk: String?
+    public var activeAk: String?
+    public var rootKid: String?
+    public var deviceCount: UInt64
+    public var revokedCount: UInt64
+    public var lifecycleEventCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], deviceAk: String?, activeAk: String?, rootKid: String?, deviceCount: UInt64, revokedCount: UInt64, lifecycleEventCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.deviceAk = deviceAk
+        self.activeAk = activeAk
+        self.rootKid = rootKid
+        self.deviceCount = deviceCount
+        self.revokedCount = revokedCount
+        self.lifecycleEventCount = lifecycleEventCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiDeviceResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiDeviceResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiDeviceResult {
+        return
+            try FfiDeviceResult(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                deviceAk: FfiConverterOptionString.read(from: &buf),
+                activeAk: FfiConverterOptionString.read(from: &buf),
+                rootKid: FfiConverterOptionString.read(from: &buf),
+                deviceCount: FfiConverterUInt64.read(from: &buf),
+                revokedCount: FfiConverterUInt64.read(from: &buf),
+                lifecycleEventCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiDeviceResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.deviceAk, into: &buf)
+        FfiConverterOptionString.write(value.activeAk, into: &buf)
+        FfiConverterOptionString.write(value.rootKid, into: &buf)
+        FfiConverterUInt64.write(value.deviceCount, into: &buf)
+        FfiConverterUInt64.write(value.revokedCount, into: &buf)
+        FfiConverterUInt64.write(value.lifecycleEventCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiDeviceResult_lift(_ buf: RustBuffer) throws -> FfiDeviceResult {
+    return try FfiConverterTypeFfiDeviceResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiDeviceResult_lower(_ value: FfiDeviceResult) -> RustBuffer {
+    return FfiConverterTypeFfiDeviceResult.lower(value)
+}
+
+
+public struct FfiIdentityResult: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var rootKid: String?
+    public var activeAk: String?
+    public var bundleB64: String?
+    public var deviceCount: UInt64
+    public var revokedCount: UInt64
+    public var lifecycleEventCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], rootKid: String?, activeAk: String?, bundleB64: String?, deviceCount: UInt64, revokedCount: UInt64, lifecycleEventCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.rootKid = rootKid
+        self.activeAk = activeAk
+        self.bundleB64 = bundleB64
+        self.deviceCount = deviceCount
+        self.revokedCount = revokedCount
+        self.lifecycleEventCount = lifecycleEventCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiIdentityResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiIdentityResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiIdentityResult {
+        return
+            try FfiIdentityResult(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                rootKid: FfiConverterOptionString.read(from: &buf),
+                activeAk: FfiConverterOptionString.read(from: &buf),
+                bundleB64: FfiConverterOptionString.read(from: &buf),
+                deviceCount: FfiConverterUInt64.read(from: &buf),
+                revokedCount: FfiConverterUInt64.read(from: &buf),
+                lifecycleEventCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiIdentityResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.rootKid, into: &buf)
+        FfiConverterOptionString.write(value.activeAk, into: &buf)
+        FfiConverterOptionString.write(value.bundleB64, into: &buf)
+        FfiConverterUInt64.write(value.deviceCount, into: &buf)
+        FfiConverterUInt64.write(value.revokedCount, into: &buf)
+        FfiConverterUInt64.write(value.lifecycleEventCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiIdentityResult_lift(_ buf: RustBuffer) throws -> FfiIdentityResult {
+    return try FfiConverterTypeFfiIdentityResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiIdentityResult_lower(_ value: FfiIdentityResult) -> RustBuffer {
+    return FfiConverterTypeFfiIdentityResult.lower(value)
+}
+
+
+public struct FfiPairingEnvelopeRequest: Equatable, Hashable {
+    public var envelopeB64: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(envelopeB64: String) {
+        self.envelopeB64 = envelopeB64
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiPairingEnvelopeRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiPairingEnvelopeRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPairingEnvelopeRequest {
+        return
+            try FfiPairingEnvelopeRequest(
+                envelopeB64: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiPairingEnvelopeRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.envelopeB64, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiPairingEnvelopeRequest_lift(_ buf: RustBuffer) throws -> FfiPairingEnvelopeRequest {
+    return try FfiConverterTypeFfiPairingEnvelopeRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiPairingEnvelopeRequest_lower(_ value: FfiPairingEnvelopeRequest) -> RustBuffer {
+    return FfiConverterTypeFfiPairingEnvelopeRequest.lower(value)
+}
+
+
+public struct FfiPairingResult: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var pairingId: String?
+    public var envelopeB64: String?
+    public var rootKid: String?
+    public var deviceCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], pairingId: String?, envelopeB64: String?, rootKid: String?, deviceCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.pairingId = pairingId
+        self.envelopeB64 = envelopeB64
+        self.rootKid = rootKid
+        self.deviceCount = deviceCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiPairingResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiPairingResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiPairingResult {
+        return
+            try FfiPairingResult(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                pairingId: FfiConverterOptionString.read(from: &buf),
+                envelopeB64: FfiConverterOptionString.read(from: &buf),
+                rootKid: FfiConverterOptionString.read(from: &buf),
+                deviceCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiPairingResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.pairingId, into: &buf)
+        FfiConverterOptionString.write(value.envelopeB64, into: &buf)
+        FfiConverterOptionString.write(value.rootKid, into: &buf)
+        FfiConverterUInt64.write(value.deviceCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiPairingResult_lift(_ buf: RustBuffer) throws -> FfiPairingResult {
+    return try FfiConverterTypeFfiPairingResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiPairingResult_lower(_ value: FfiPairingResult) -> RustBuffer {
+    return FfiConverterTypeFfiPairingResult.lower(value)
 }
 
 
@@ -878,6 +1365,126 @@ public func FfiConverterTypeFfiScanPreviewRequest_lower(_ value: FfiScanPreviewR
     return FfiConverterTypeFfiScanPreviewRequest.lower(value)
 }
 
+
+public struct FfiSyncBundleRequest: Equatable, Hashable {
+    public var bundleB64: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(bundleB64: String) {
+        self.bundleB64 = bundleB64
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiSyncBundleRequest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiSyncBundleRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiSyncBundleRequest {
+        return
+            try FfiSyncBundleRequest(
+                bundleB64: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiSyncBundleRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.bundleB64, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSyncBundleRequest_lift(_ buf: RustBuffer) throws -> FfiSyncBundleRequest {
+    return try FfiConverterTypeFfiSyncBundleRequest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSyncBundleRequest_lower(_ value: FfiSyncBundleRequest) -> RustBuffer {
+    return FfiConverterTypeFfiSyncBundleRequest.lower(value)
+}
+
+
+public struct FfiSyncResult: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var bundleB64: String?
+    public var acceptedRecordCount: UInt64
+    public var deviceCount: UInt64
+    public var lifecycleEventCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], bundleB64: String?, acceptedRecordCount: UInt64, deviceCount: UInt64, lifecycleEventCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.bundleB64 = bundleB64
+        self.acceptedRecordCount = acceptedRecordCount
+        self.deviceCount = deviceCount
+        self.lifecycleEventCount = lifecycleEventCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiSyncResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiSyncResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiSyncResult {
+        return
+            try FfiSyncResult(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                bundleB64: FfiConverterOptionString.read(from: &buf),
+                acceptedRecordCount: FfiConverterUInt64.read(from: &buf),
+                deviceCount: FfiConverterUInt64.read(from: &buf),
+                lifecycleEventCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiSyncResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.bundleB64, into: &buf)
+        FfiConverterUInt64.write(value.acceptedRecordCount, into: &buf)
+        FfiConverterUInt64.write(value.deviceCount, into: &buf)
+        FfiConverterUInt64.write(value.lifecycleEventCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSyncResult_lift(_ buf: RustBuffer) throws -> FfiSyncResult {
+    return try FfiConverterTypeFfiSyncResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSyncResult_lower(_ value: FfiSyncResult) -> RustBuffer {
+    return FfiConverterTypeFfiSyncResult.lower(value)
+}
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -951,6 +1558,13 @@ fileprivate struct FfiConverterSequenceTypeFfiAcceptedScan: FfiConverterRustBuff
         return seq
     }
 }
+public func grainPairingPreviewEnvelope(request: FfiPairingEnvelopeRequest) -> FfiPairingResult  {
+    return try!  FfiConverterTypeFfiPairingResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_func_grain_pairing_preview_envelope(
+        FfiConverterTypeFfiPairingEnvelopeRequest_lower(request),$0
+    )
+})
+}
 public func grainScanAcceptPrepare(request: FfiScanAcceptRequest) -> FfiScanAccept  {
     return try!  FfiConverterTypeFfiScanAccept_lift(try! rustCall() {
     uniffi_grain_client_core_fn_func_grain_scan_accept_prepare(
@@ -981,16 +1595,52 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_grain_client_core_checksum_func_grain_pairing_preview_envelope() != 30814) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_grain_client_core_checksum_func_grain_scan_accept_prepare() != 15446) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_grain_client_core_checksum_func_grain_scan_preview() != 16442) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_accept_pairing_envelope() != 36871) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_add_device_key() != 21084) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_client_lifecycle() != 17197) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_create_pairing_envelope() != 50408) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_create_root_identity() != 47300) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_identity_bundle() != 55887) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_sync_bundle() != 32552) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_identity_bundle() != 8443) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_sync_bundle() != 51237) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_list_accepted_scans() != 25163) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_revoke_device_key() != 6663) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_scan_accept() != 58218) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_set_active_device() != 10852) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_grain_client_core_checksum_constructor_grainclientmemorystore_new() != 12349) {

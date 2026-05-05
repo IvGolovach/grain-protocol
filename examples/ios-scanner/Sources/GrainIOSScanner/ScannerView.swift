@@ -30,6 +30,12 @@ public struct ScannerView: View {
             }
 
             Section("Result") {
+                if let lifecycleStatus = model.state.lifecycleStatus {
+                    LabeledContent("Lifecycle", value: lifecycleStatus)
+                    LabeledContent("Devices", value: "\(model.state.deviceCount)")
+                    LabeledContent("Lifecycle events", value: "\(model.state.lifecycleEventCount)")
+                }
+
                 if let previewStatus = model.state.previewStatus {
                     LabeledContent("Preview", value: previewStatus.rawValue)
                 }
@@ -55,6 +61,10 @@ public struct ScannerView: View {
 
             Section {
                 HStack {
+                    Button("Prepare device") {
+                        model.prepareLocalIdentity()
+                    }
+
                     Button("Preview") {
                         model.preview()
                     }

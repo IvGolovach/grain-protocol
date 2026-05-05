@@ -19,4 +19,10 @@ The second workflow is `scan_accept`:
 - prove duplicate-scan idempotency by repeating the public accept workflow in fixtures;
 - never persist rejected scans.
 
+The lifecycle workflows are:
+
+- `device_lifecycle`: create a portable identity, add a device key, activate it, revoke it, and report lifecycle counts;
+- `pairing`: create an app-transferred pairing envelope, preview it, accept it, and prove replay idempotency;
+- `sync_bundle`: export identity, accepted scans, and lifecycle events, import them into another client, and prove repeated import idempotency.
+
 Fixtures live under `sdk/workflows/fixtures/<workflow>/`. They may reference protocol vectors with JSON pointers, but they are not protocol vectors themselves and must not be consumed by the protocol runner.

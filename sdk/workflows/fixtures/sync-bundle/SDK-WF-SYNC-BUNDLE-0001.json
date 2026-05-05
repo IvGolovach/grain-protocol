@@ -1,0 +1,23 @@
+{
+  "fixture_id": "SDK-WF-SYNC-BUNDLE-0001",
+  "workflow": "sync_bundle",
+  "strict": true,
+  "input": {
+    "root_label": "phone",
+    "device_label": "glasses",
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64",
+    "import_attempts": 2
+  },
+  "expect": {
+    "status": "AlreadyImported",
+    "diag": [],
+    "bundle_b64": "present",
+    "accepted_record_count": 1,
+    "device_count": 2,
+    "lifecycle_event_count": 1
+  },
+  "meta": {
+    "desc": "A sync bundle carries identity, lifecycle events, and accepted scans into another client, and repeated import is idempotent."
+  }
+}

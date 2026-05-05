@@ -31,6 +31,8 @@ This page is the capability map after that first run.
   - transport bundles reject malformed event/manifest rows and invalid base64 on imported binary fields instead of guessing
 - portable client core (`core/rust/grain-client-core`): Rust workflow layer for generated Swift/Kotlin/WASM/device SDKs
   - `scan_preview()` returns `Verified`, `Untrusted`, or `Rejected` without exposing raw protocol runner operations
+  - `scan_accept()` atomically persists verified scans and stays idempotent for duplicate scans
+  - identity/device/pairing/sync workflows expose portable lifecycle state without making platform apps own bundle parsing or rollback semantics
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)

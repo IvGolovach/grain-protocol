@@ -2,6 +2,9 @@ package dev.grain.examples.androidscanner
 
 import dev.grain.GrainAcceptedScan
 import dev.grain.GrainClient
+import dev.grain.GrainClientLifecycle
+import dev.grain.GrainDeviceResult
+import dev.grain.GrainIdentityResult
 import dev.grain.GrainScanAccept
 import dev.grain.GrainScanAcceptStatus
 import dev.grain.GrainScanPreview
@@ -15,6 +18,9 @@ interface ScannerWorkflowClient {
     fun scanPreview(qrString: String, trustPubB64: String? = null): GrainScanPreview
     fun scanAccept(qrString: String, trustPubB64: String): GrainScanAccept
     fun listAcceptedScans(): List<GrainAcceptedScan>
+    fun createRootIdentity(label: String = "root"): GrainIdentityResult
+    fun addDeviceKey(label: String = "device"): GrainDeviceResult
+    fun clientLifecycle(): GrainClientLifecycle
 }
 
 class GrainScannerWorkflowClient(
@@ -28,6 +34,15 @@ class GrainScannerWorkflowClient(
 
     override fun listAcceptedScans(): List<GrainAcceptedScan> =
         client.listAcceptedScans()
+
+    override fun createRootIdentity(label: String): GrainIdentityResult =
+        client.createRootIdentity(label = label)
+
+    override fun addDeviceKey(label: String): GrainDeviceResult =
+        client.addDeviceKey(label = label)
+
+    override fun clientLifecycle(): GrainClientLifecycle =
+        client.clientLifecycle()
 
     override fun close() {
         client.close()
@@ -43,6 +58,9 @@ data class ScannerUiState(
     val canAccept: Boolean = false,
     val acceptedCount: Int = 0,
     val acceptedScanId: String? = null,
+    val lifecycleStatus: String? = null,
+    val deviceCount: ULong = 0UL,
+    val lifecycleEventCount: ULong = 0UL,
 )
 
 class ScannerController(
@@ -61,6 +79,26 @@ class ScannerController(
 
     fun receiveCameraPayload(payload: CameraScanPayload) {
         state = state.copy(qrString = payload.qrString).withoutDecision()
+    }
+
+    fun prepareLocalIdentity(rootLabel: String = "phone", deviceLabel: String = "scanner") {
+        val lifecycle = client.clientLifecycle()
+        if (lifecycle.status == "Ready") {
+            state = state.copy(diagnostics = lifecycle.diag).withLifecycle(lifecycle)
+            return
+        }
+        if (lifecycle.status == "Uninitialized") {
+            val root = client.createRootIdentity(label = rootLabel)
+            if (root.diag.isNotEmpty()) {
+                state = state.copy(diagnostics = root.diag).withLifecycle(client.clientLifecycle())
+                return
+            }
+        }
+
+        val device = client.addDeviceKey(label = deviceLabel)
+        state = state
+            .copy(diagnostics = device.diag)
+            .withLifecycle(client.clientLifecycle())
     }
 
     fun preview() {
@@ -121,5 +159,12 @@ class ScannerController(
             diagnostics = emptyList(),
             canAccept = false,
             acceptedScanId = null,
+        )
+
+    private fun ScannerUiState.withLifecycle(lifecycle: GrainClientLifecycle): ScannerUiState =
+        copy(
+            lifecycleStatus = lifecycle.status,
+            deviceCount = lifecycle.deviceCount,
+            lifecycleEventCount = lifecycle.lifecycleEventCount,
         )
 }

@@ -28,6 +28,14 @@ private func acceptsOnlyAfterVerifiedPreview() async throws {
         )
 
         let model = ScannerShellModel()
+        model.prepareLocalIdentity()
+        try require(model.state.lifecycleStatus == "Ready", "lifecycle status mismatch")
+        try require(model.state.deviceCount == 2, "device count mismatch")
+        try require(model.state.lifecycleEventCount == 1, "lifecycle event count mismatch")
+        model.prepareLocalIdentity()
+        try require(model.state.deviceCount == 2, "repeat prepare duplicated device")
+        try require(model.state.lifecycleEventCount == 1, "repeat prepare duplicated lifecycle event")
+
         model.updateTrustPubB64(trustPubB64)
         model.receiveCameraPayload(cameraPayload)
         model.preview()

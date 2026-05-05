@@ -1,0 +1,21 @@
+{
+  "fixture_id": "SDK-WF-PAIRING-0001",
+  "workflow": "pairing",
+  "strict": true,
+  "input": {
+    "root_label": "phone",
+    "device_label": "glasses",
+    "accept_attempts": 2
+  },
+  "expect": {
+    "status": "AlreadyPaired",
+    "diag": [],
+    "root_kid": "present",
+    "pairing_id": "present",
+    "envelope_b64": "present",
+    "device_count": 2
+  },
+  "meta": {
+    "desc": "A pairing envelope previews as valid, imports into a fresh client, and remains idempotent when accepted again."
+  }
+}
