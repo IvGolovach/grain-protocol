@@ -51,6 +51,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `sdk/wasm` hides the pointer ABI behind a small `GrainClient` web API with typed preview/accept statuses
     - Node fixture runner exercises `sdk/workflows` scan-preview and scan-accept fixtures through the public web API
     - `scripts/sdk/check_wasm_package.sh` builds/loads the WASM binding, runs fixtures, and fails on raw protocol API exposure or dirty output
+  - added paste-first reference scanner shells:
+    - `examples/ios-scanner` uses the Swift client wrapper and enables accept only after a verified preview
+    - `examples/android-scanner` uses the Kotlin client wrapper behind a unit-testable scanner controller
+    - `examples/wasm-scanner` uses the WASM client wrapper shape for browser/mobile-web scanner UI
+    - `scripts/sdk/check_scanner_examples.sh` builds/tests the scanner shells and fails on raw protocol API exposure
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
