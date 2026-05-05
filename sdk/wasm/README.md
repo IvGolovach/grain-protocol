@@ -31,24 +31,41 @@ const client = await createNodeGrainClient({
 });
 
 try {
-  const identity = client.createRootIdentity({ label: "phone" });
-  if (identity.status === "Created" || identity.status === "AlreadyExists") {
-    client.addDeviceKey({ label: "glasses" });
+  // Trust setup stays in app/platform code. This value can come from an
+  // enrolled publisher key, device-management policy, or a test fixture.
+  const trustedIssuerPublicKeyB64 = "<trusted publisher public key base64>";
+  const scannedQRCode = "<GR1...>";
+
+  if (client.clientLifecycle().status !== "Ready") {
+    const identity = client.createRootIdentity({ label: "phone" });
+    if (identity.status === "Created" || identity.status === "AlreadyExists") {
+      const device = client.addDeviceKey({ label: "glasses" });
+      if (device.deviceAk !== null) {
+        client.setActiveDevice({ ak: device.deviceAk });
+      }
+    }
   }
 
   const preview = client.scanPreview({
     qrString: scannedQRCode,
-    trustPubB64: trustedPublicKey,
+    trustPubB64: trustedIssuerPublicKeyB64,
   });
 
   if (preview.status === "Verified") {
     const accepted = client.scanAccept({
       qrString: scannedQRCode,
-      trustPubB64: trustedPublicKey,
+      trustPubB64: trustedIssuerPublicKeyB64,
     });
 
     if (accepted.status === "Accepted" || accepted.status === "AlreadyAccepted") {
-      console.log(client.listAcceptedScans().length);
+      const saved = client.listAcceptedScans();
+      console.log(saved.length);
+
+      // Portable evidence/state export for backup, handoff, or audit.
+      const evidence = client.exportSyncBundle();
+      if (evidence.status === "Exported" && evidence.bundleB64 !== null) {
+        console.log(evidence.bundleB64);
+      }
     }
   }
 } finally {
@@ -59,3 +76,19 @@ try {
 The Node helper is the first smoke-tested loader. Browser and framework loaders
 should instantiate the same WASM exports and pass the instance to
 `GrainClient` without exposing raw protocol operations.
+
+## Workflow notes
+
+- `scanPreview` never writes local storage.
+- `scanAccept` requires explicit `trustPubB64` and persists at most one accepted
+  record for the same verified scan.
+- `listAcceptedScans` returns deterministic accepted records from the local
+  store.
+- `exportIdentityBundle` exports portable identity material for app-controlled
+  backup or pairing setup.
+- `exportSyncBundle` exports identity, accepted scans, and lifecycle events as a
+  portable evidence/state bundle.
+- Production browser apps should place the same workflow surface behind
+  platform-backed persistence such as IndexedDB or an app-controlled secure
+  store; the current package proves the generated SDK API shape and workflow
+  conformance.

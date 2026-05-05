@@ -29,20 +29,28 @@ import dev.grain.GrainScanAcceptStatus
 import dev.grain.GrainScanPreviewStatus
 
 GrainClient().use { client ->
-    val identity = client.createRootIdentity(label = "phone")
-    if (identity.status == "Created" || identity.status == "AlreadyExists") {
-        client.addDeviceKey(label = "glasses")
+    // Trust setup stays in app/platform code. This value can come from an
+    // enrolled publisher key, device-management policy, or a test fixture.
+    val trustedIssuerPublicKeyB64 = "<trusted publisher public key base64>"
+    val scannedQRCode = "<GR1...>"
+
+    if (client.clientLifecycle().status != "Ready") {
+        val identity = client.createRootIdentity(label = "phone")
+        if (identity.status == "Created" || identity.status == "AlreadyExists") {
+            val device = client.addDeviceKey(label = "glasses")
+            device.deviceAk?.let { client.setActiveDevice(ak = it) }
+        }
     }
 
     val preview = client.scanPreview(
         qrString = scannedQRCode,
-        trustPubB64 = trustedPublicKey,
+        trustPubB64 = trustedIssuerPublicKeyB64,
     )
 
     if (preview.status == GrainScanPreviewStatus.Verified) {
         val accepted = client.scanAccept(
             qrString = scannedQRCode,
-            trustPubB64 = trustedPublicKey,
+            trustPubB64 = trustedIssuerPublicKeyB64,
         )
 
         if (
@@ -51,7 +59,31 @@ GrainClient().use { client ->
         ) {
             val saved = client.listAcceptedScans()
             println(saved.size)
+
+            // Portable evidence/state export for backup, handoff, or audit.
+            val evidence = client.exportSyncBundle()
+            if (evidence.status == "Exported") {
+                println("sync bundle exported")
+                // Store or transmit evidence.bundleB64 only through encrypted
+                // storage or an authenticated secure channel. Do not log it.
+            }
         }
     }
 }
 ```
+
+## Workflow notes
+
+- `scanPreview` never writes local storage.
+- `scanAccept` requires explicit `trustPubB64` and persists at most one accepted
+  record for the same verified scan.
+- `listAcceptedScans` returns deterministic accepted records from the local
+  store.
+- `exportIdentityBundle` exports portable identity material for app-controlled
+  backup or pairing setup.
+- `exportSyncBundle` exports identity, accepted scans, and lifecycle events as a
+  portable evidence/state bundle. Treat `bundleB64` as secret portable state and
+  never log the raw value.
+- Production Android apps should place the same workflow surface behind
+  platform-backed storage such as Keystore; the current package proves the
+  generated SDK API shape and workflow conformance.

@@ -1,0 +1,120 @@
+# SDK_GENERATED_VERIFICATION
+
+Hi teammate LLM. Use this when changing generated platform SDKs, SDK release
+packaging, or docs that claim Swift/Kotlin/WASM readiness.
+
+## Source Of Truth
+
+The generated SDK stack is:
+
+1. `core/rust/grain-client-core`
+   - owns workflow semantics, store atomicity, identity, pairing, and sync.
+2. `core/rust/grain-client-core/src/grain_client_core.udl`
+   - owns the UniFFI-safe generated binding surface.
+3. `scripts/sdk/generate_client_bindings.sh`
+   - generates Swift and Kotlin bindings into a caller-provided output dir.
+4. `sdk/swift`, `sdk/kotlin`, and `sdk/wasm`
+   - expose small app-facing wrapper APIs over the generated or WASM workflow
+     surface.
+5. `sdk/workflows/**`
+   - executable client workflow contract for every generated SDK.
+
+Do not claim platform SDK conformance from protocol vectors alone. Protocol
+vectors prove Grain bytes and diagnostics. Workflow fixtures prove the generated
+SDK app surface.
+
+## One-Command Check
+
+```bash
+scripts/sdk/verify_all_sdks.sh
+```
+
+Use strict mode for release or PR merge-readiness when every local prerequisite
+is installed:
+
+```bash
+scripts/sdk/verify_all_sdks.sh --strict
+```
+
+The command writes an ignored summary under `artifacts/sdk-verify-all/` by
+default and fails on dirty output from the underlying checks.
+
+## Required Individual Checks
+
+Generated binding harness:
+
+```bash
+scripts/sdk/check_generated_bindings.sh
+```
+
+Rust client workflows:
+
+```bash
+cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core
+python3 tools/ci/check_client_workflow_fixtures.py
+```
+
+Swift package:
+
+```bash
+scripts/sdk/check_swift_package.sh
+```
+
+Kotlin package:
+
+```bash
+SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh
+```
+
+WASM package:
+
+```bash
+scripts/sdk/check_wasm_package.sh
+```
+
+Scanner examples:
+
+```bash
+scripts/sdk/check_scanner_examples.sh
+```
+
+Release packaging:
+
+```bash
+scripts/sdk/package_client_sdks.sh
+```
+
+## Compatibility Rules
+
+- Keep Swift, Kotlin, WASM, generated bindings, and `grain-client-core` on the
+  same repo SHA or release tag unless `docs/human/sdk/version-matrix.md`
+  explicitly allows a cross-version pairing.
+- Generated Swift/Kotlin sources must be updated only through the sync scripts.
+- WASM app code must call the JavaScript `GrainClient` wrapper, not the raw
+  pointer ABI.
+- Platform wrappers may expose workflow names and typed statuses; they must not
+  expose raw QR decode, COSE verify, DAG-CBOR validation, or protocol runner
+  operations as app APIs.
+- Trust remains explicit. Apps pass `trustPubB64`; SDK core does not perform
+  hidden lookup, network discovery, or vendor fallback.
+
+## Packaging Rules
+
+Release SDK artifacts belong under `artifacts/` during local packaging. Do not
+commit package tarballs, generated temp directories, Gradle caches, Swift build
+scratch space, WASM binaries, `node_modules`, or evidence bundles unless a
+future release process explicitly names a tracked artifact.
+
+`scripts/sdk/package_client_sdks.sh` creates:
+
+- generated binding snapshot tarball
+- Swift client source tarball
+- Kotlin client source tarball
+- WASM/mobile-web source tarball
+- workflow contract/docs tarball
+- manifest with commit SHA and SHA-256 checksums
+- `SHA256SUMS` for the tarballs
+
+The default path refuses a dirty worktree and runs strict SDK verification before
+packaging. Archives must not contain `node_modules`, `dist`, `build`, `.build`,
+`.gradle`, `.kotlin`, `target`, `pkg`, or `.wasm` build output.
