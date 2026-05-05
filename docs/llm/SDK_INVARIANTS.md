@@ -60,7 +60,11 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
 
 - SDK-INV-0015: portable client scan preview MUST preserve explicit trust boundaries across generated platform SDKs.
   Tests: `core/rust/grain-client-core/tests/scan_preview.rs`
-  Modules: `core/rust/grain-client-core/src/lib.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-core/src/cose.rs`
+  Modules: `core/rust/grain-client-core/src/scan.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/trust.rs`, `core/rust/grain-client-core/src/diag.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-core/src/cose.rs`
+
+- SDK-INV-0016: portable client scan accept preparation MUST require explicit verified trust, derive a deterministic `scan-sha256:<hex>` ID from verified COSE bytes, and perform no storage mutation.
+  Tests: `core/rust/grain-client-core/tests/scan_accept_prepare.rs`
+  Modules: `core/rust/grain-client-core/src/scan.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/trust.rs`, `core/rust/grain-client-core/src/diag.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-core/src/cose.rs`
 
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)

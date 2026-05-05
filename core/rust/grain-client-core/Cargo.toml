@@ -7,6 +7,7 @@ license = "Apache-2.0"
 [dependencies]
 base64 = { workspace = true }
 grain-core = { path = "../grain-core" }
+sha2 = { workspace = true }
 
 [dev-dependencies]
 serde = { workspace = true }

@@ -14,6 +14,12 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - added focused Rust tests for trusted, untrusted, malformed scan, malformed trust, and wrong trust-key paths.
   - added client workflow conformance contract and scan-preview fixtures under `sdk/workflows/`.
   - added Rust and Python checks that execute/lint the client workflow fixtures against `grain-client-core`.
+  - split `grain-client-core` scan workflow internals into explicit `scan`, `types`, `trust`, and `diag` modules.
+  - added pure `scan_accept_prepare(qr_string, trust_pub_b64)` workflow:
+    - valid scan + explicit valid trust -> prepared accepted record
+    - prepared records use deterministic `scan-sha256:<hex>` IDs derived from verified COSE bytes
+    - missing trust, malformed trust, malformed scan, and signature failure reject without a prepared record
+    - preparation performs no local storage mutation
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

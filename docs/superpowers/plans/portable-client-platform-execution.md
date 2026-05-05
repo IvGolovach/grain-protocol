@@ -49,8 +49,8 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Persistent execution tracker | Merged | `codex/portable-client-platform-plan` | #26 | `e010d9a1349498a70a2ae02e2519d0b0e502e28a` | `python3 tools/check_llm_docs.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `437890e5b792098fbe770d22c57a5680f577936f`; Greptile safe to merge; CodeRabbit PASS; post-merge `main` CI run `25360950306` passed |
 | 1 | Client workflow contract and scan-preview fixtures | Merged | `codex/client-workflow-contract-fixtures` | #27 | `f3d68bcd872ac8468b303ffcdf57544f0b80e61e` | `workflow fixture refs`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `58ab443674548abe0f6ca3a8341825a140107e69`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25362169893` passed |
-| 2 | Rust client workflow fixture runner | In progress | `codex/client-workflow-fixture-runner` |  |  |  |  |
-| 3a | `scan_accept_prepare`, deterministic ID, module boundaries | Pending |  |  |  |  |  |
+| 2 | Rust client workflow fixture runner | Merged | `codex/client-workflow-fixture-runner` | #28 | `71d9b3197bb048ff089bc69cbb2f43fc2411d43f` | `python3 tools/ci/check_client_workflow_fixtures.py`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `6ab18cd6e90004563f39ad5e8ae3405c6b0d9ce3`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25364160258` passed |
+| 3a | `scan_accept_prepare`, deterministic ID, module boundaries | In progress | `codex/scan-accept-prepare` |  |  |  |  |
 | 3b | `scan_accept`, atomic store abstraction, memory store | Pending |  |  |  |  |  |
 | 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Pending |  |  |  |  |  |
 | 5 | UniFFI/generation harness over stable client-core facade | Pending |  |  |  |  |  |
@@ -85,6 +85,13 @@
 | #27 | Greptile | Malformed QR fixture used exact `diag` while source protocol vector uses `diag_contains`. | Fix in PR #27. | Added `diag_contains` workflow expectation and updated fixture `SDK-WF-SCAN-PREVIEW-0003`. |
 | #27 | Greptile | `store_mutation` enum needed a planned-extension note. | Fix in PR #27. | Added schema `$comment` explaining the v1 `scan_preview` single-value enum. |
 | #27 | Greptile | `cose_b64: present` semantics were unclear for rejected scans. | Fix in PR #27. | Clarified that `present` means QR COSE decode succeeded, not trust verification. |
+| #28 | Greptile | Fixture runner should not enforce an exact fixture count. | Fix in PR #28. | Required a non-empty fixture set instead of exact cardinality. |
+| #28 | Greptile | Fixture schema should reject unknown object fields. | Fix in PR #28. | Added strict `deny_unknown_fields` parsing for Rust fixture structs. |
+| #28 | CodeRabbit | Python fixture checker needed hardened unreadable/invalid JSON and bad-reference diagnostics. | Fix in PR #28. | Added read/parse guards, non-string ref checks, and empty `diag_contains` rejection. |
+| #28 | CodeRabbit | Python 3.9-only path helper could break older local lanes. | Fix in PR #28. | Replaced `Path.is_relative_to()` with Python 3.8-compatible parent checks. |
+| #29 | Greptile | `ScanAcceptRequest.trust_pub_b64` was optional even though accept preparation requires trust. | Fix in PR #29. | Made the request DTO field non-optional while preserving `scan_accept_prepare(..., Option<&str>)` reject behavior for callers that do not use the DTO. |
+| #29 | Greptile | `ScanAcceptStatus::AlreadyAccepted` was public before any producing store path existed. | Fix in PR #29. | Deferred `AlreadyAccepted` until PR 3b adds `scan_accept` and store idempotency. |
+| #29 | CodeRabbit | Empty trust strings decoded to empty bytes before COSE verification. | Fix in PR #29. | Rejected empty trust input in `decode_trust_pub_b64` and added preview / accept-prepare tests. |
 
 ## Split Log
 
@@ -247,6 +254,8 @@ scripts/ledger/check --history --base origin/main
 ## PR 3a: `scan_accept_prepare`, Deterministic ID, Module Boundaries
 
 **Files:**
+- Modify: `core/rust/Cargo.lock`
+- Modify: `core/rust/grain-client-core/Cargo.toml`
 - Modify: `core/rust/grain-client-core/src/lib.rs`
 - Create: `core/rust/grain-client-core/src/scan.rs`
 - Create: `core/rust/grain-client-core/src/types.rs`
@@ -257,11 +266,13 @@ scripts/ledger/check --history --base origin/main
 - Modify: `docs/llm/SDK_INVARIANTS.md`
 - Modify: `docs/llm/SDK_EDGE_CASES.md`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_FILE_MAP.md`
+- Modify: `docs/human/sdk/architecture.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 2 evidence
 
-- [ ] **Step 1: Normalize module boundaries**
+- [x] **Step 1: Normalize module boundaries**
 
 Move implementation out of `lib.rs` while preserving public API:
 
@@ -273,7 +284,7 @@ pub use types::{
 };
 ```
 
-- [ ] **Step 2: Write failing tests for `scan_accept_prepare`**
+- [x] **Step 2: Write failing tests for `scan_accept_prepare`**
 
 Required behavior:
 
@@ -285,20 +296,19 @@ Required behavior:
 - wrong trust rejects with `GRAIN_ERR_COSE_PROFILE`.
 - repeated prepare returns the same accepted record.
 
-- [ ] **Step 3: Implement `scan_accept_prepare`**
+- [x] **Step 3: Implement `scan_accept_prepare`**
 
 Proposed public shape:
 
 ```rust
 pub struct ScanAcceptRequest {
     pub qr_string: String,
-    pub trust_pub_b64: Option<String>,
+    pub trust_pub_b64: String,
 }
 
 pub enum ScanAcceptStatus {
     Accepted,
     Rejected,
-    AlreadyAccepted,
 }
 
 pub struct AcceptedScan {
@@ -313,6 +323,8 @@ pub struct ScanAccept {
     pub accepted: Option<AcceptedScan>,
 }
 ```
+
+`ScanAcceptRequest.trust_pub_b64` is intentionally non-optional for generated DTOs. The function-level `scan_accept_prepare(_, Option<&str>)` remains optional so non-DTO callers can receive the deterministic `SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED` rejection path described in the #29 Review Log entry and implemented in `core/rust/grain-client-core/src/types.rs`.
 
 - [ ] **Step 4: Validate and PR**
 

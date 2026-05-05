@@ -57,8 +57,10 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - decode and verify stay separate
   - `verifyGR1()` requires explicit trust material and rejects malformed `trust.pub_b64`
   - bundle rows are schema-checked and binary-bearing fields are strict-base64-validated before export/import
-- `core/rust/grain-client-core/src/lib.rs`: portable scan workflow core for generated platform SDKs
-  - `scan_preview()` keeps untrusted decode-only preview separate from verified preview
+- `core/rust/grain-client-core/src/*`: portable scan workflow core for generated platform SDKs
+  - `scan.rs` keeps `scan_preview()` decode-only preview separate from verified preview
+  - `scan_accept_prepare()` requires explicit verified trust and returns deterministic, persistence-ready records without writing storage
+  - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder

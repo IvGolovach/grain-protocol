@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0015` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0016` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -41,6 +41,9 @@ Expected contract:
 - scan preview preserves explicit trust boundaries
 - malformed scan/trust/signature paths reject deterministically
 - valid scan without trust remains `Untrusted`, not `Verified`
+- scan accept preparation requires explicit verified trust
+- accepted scan preparation returns a deterministic `scan-sha256:<hex>` ID derived from verified COSE bytes
+- scan accept preparation is pure and performs no storage mutation
 
 ## Client workflow fixtures
 

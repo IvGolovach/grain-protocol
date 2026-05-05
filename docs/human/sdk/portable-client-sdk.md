@@ -21,6 +21,13 @@ The first portable workflow is scan preview:
 
 This lets a client show or stage a scan without pretending it is trusted.
 
+The next implemented workflow is scan accept preparation:
+
+- valid scan with explicit valid trust -> prepared accepted record
+- prepared record includes deterministic `scan-sha256:<hex>` ID over verified COSE bytes
+- missing trust, malformed trust, malformed scan, or failed verification -> `Rejected`
+- no local storage mutation occurs in preparation
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -33,7 +40,7 @@ The first fixture set covers `scan_preview`:
 - valid scan plus malformed trust -> `Rejected`
 - valid scan plus wrong trust key -> `Rejected`
 
-Every scan-preview fixture expects no local storage mutation. Durable writes start with the later `scan_accept` workflow.
+Every scan-preview fixture expects no local storage mutation. `scan_accept_prepare` also performs no local storage mutation; durable writes start with the later `scan_accept` workflow.
 
 ## Next additive slices
 
