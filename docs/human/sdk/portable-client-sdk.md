@@ -58,6 +58,15 @@ The first platform package slice is now the Swift client package:
 
 This proves the iOS-facing package shape. It is not an iOS scanner app yet and it does not introduce Keychain storage, camera capture, or platform trust lookup.
 
+The next platform package slice is now the Kotlin/JVM client package:
+
+- `sdk/kotlin` builds with Gradle/Kotlin JVM tooling
+- `GrainClient` exposes `scanPreview`, `scanAccept`, and `listAcceptedScans`
+- Kotlin app code sees typed workflow statuses instead of raw QR/COSE internals
+- `scripts/sdk/check_kotlin_package.sh` regenerates the Kotlin binding, rebuilds Rust client-core, runs the shared workflow fixtures through Kotlin, and fails if generated sources drift
+
+This proves the Android-facing package shape. It is not an Android scanner app yet and it does not introduce Keystore storage, CameraX capture, or platform trust lookup.
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -80,7 +89,6 @@ The second fixture set covers `scan_accept`:
 
 ## Next additive slices
 
-- Generated Kotlin package over the same Rust client core.
 - WASM/mobile-web binding over the same contract.
 - Client scenario fixtures that every generated SDK must pass.
 

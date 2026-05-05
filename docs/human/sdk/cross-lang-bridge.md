@@ -21,6 +21,7 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - storage adapter behavior: deterministic order, idempotent re-put, rollback boundary
 - trust adapter behavior: no anchor, missing anchor, malformed anchor, valid anchor
 - Swift package wrapper behavior: typed workflow statuses, no raw QR/COSE runner APIs, and public scan fixtures passing through `GrainClient`
+- Kotlin package wrapper behavior: typed workflow statuses, no raw QR/COSE runner APIs, and public scan fixtures passing through `GrainClient`
 
 ## Required checks
 
@@ -30,6 +31,7 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - `cargo build --manifest-path core/rust/Cargo.toml -p uniffi-bindgen`
 - `scripts/sdk/check_generated_bindings.sh`
 - `scripts/sdk/check_swift_package.sh`
+- `scripts/sdk/check_kotlin_package.sh`
 - `python3 tools/ci/check_client_workflow_fixtures.py`
 - CI `ts-full` keeps the TypeScript SDK and client workflow checks wired into the required repository lane; platform package checks may be added as their own lane as the generated SDKs become release artifacts.
 
@@ -46,3 +48,5 @@ If generated platform SDK output diverges from `grain-client-core` workflow fixt
 If UniFFI generation or expected public symbols drift, treat that as a generated-binding harness failure first, not a protocol issue.
 
 If the Swift wrapper drifts from generated binding output, treat it as a Swift package failure first. Regenerate with `scripts/sdk/sync_swift_bindings.sh`, then run `scripts/sdk/check_swift_package.sh`; do not patch checked-in generated Swift by hand.
+
+If the Kotlin wrapper drifts from generated binding output, treat it as a Kotlin package failure first. Regenerate with `scripts/sdk/sync_kotlin_bindings.sh`, then run `scripts/sdk/check_kotlin_package.sh`; do not patch checked-in generated Kotlin by hand.

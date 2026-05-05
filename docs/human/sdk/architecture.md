@@ -26,7 +26,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
    - workflow-shaped Rust APIs for generated platform SDKs
    - scan preview/accept style APIs for camera-first clients
    - no rule rewrites
-6. Generated platform packages (`sdk/swift`, later `sdk/kotlin` and `sdk/wasm`)
+6. Generated platform packages (`sdk/swift`, `sdk/kotlin`, later `sdk/wasm`)
    - small app-facing wrappers over generated client workflow bindings
    - shared fixture execution through public package APIs
    - no raw QR/COSE/DAG-CBOR/protocol-runner APIs as the app surface
@@ -76,6 +76,11 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI` are synchronized generated binding sources
   - `Sources/GrainClientFixtureRunner` executes `sdk/workflows` fixtures through the public Swift API
   - `scripts/sdk/sync_swift_bindings.sh` and `scripts/sdk/check_swift_package.sh` keep generated sources reproducible
+- `sdk/kotlin/*`: Kotlin/JVM client package over generated workflow bindings
+  - `src/main/kotlin/dev/grain` is the public wrapper surface
+  - `src/main/kotlin/uniffi/grain_client_core` is the synchronized generated binding source
+  - `src/test/kotlin/dev/grain/fixture` executes `sdk/workflows` fixtures through the public Kotlin API
+  - `scripts/sdk/sync_kotlin_bindings.sh` and `scripts/sdk/check_kotlin_package.sh` keep generated sources reproducible
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder

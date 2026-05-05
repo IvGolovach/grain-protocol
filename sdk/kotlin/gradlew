@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+set -eu
+
+GRADLE_VERSION="7.6.4"
+GRADLE_SHA256="bed1da33cca0f557ab13691c77f38bb67388119e4794d113e051039b80af9bb1"
+GRADLE_URL="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+
+if command -v gradle >/dev/null 2>&1; then
+  exec gradle "$@"
+fi
+
+GRADLE_HOME_ROOT="${GRADLE_USER_HOME:-$HOME/.gradle}/wrapper/dists/gradle-${GRADLE_VERSION}-bin"
+GRADLE_DIR="${GRADLE_HOME_ROOT}/gradle-${GRADLE_VERSION}"
+GRADLE_ZIP="${GRADLE_HOME_ROOT}/gradle-${GRADLE_VERSION}-bin.zip"
+
+if [ ! -x "${GRADLE_DIR}/bin/gradle" ]; then
+  mkdir -p "$GRADLE_HOME_ROOT"
+  tmp_zip="${GRADLE_ZIP}.tmp"
+  curl -fsSL "$GRADLE_URL" -o "$tmp_zip"
+  actual_sha="$(shasum -a 256 "$tmp_zip" | awk '{print $1}')"
+  if [ "$actual_sha" != "$GRADLE_SHA256" ]; then
+    echo "SDK_KOTLIN_ERR_GRADLE_SHA256: expected $GRADLE_SHA256, got $actual_sha" >&2
+    rm -f "$tmp_zip"
+    exit 1
+  fi
+  rm -rf "$GRADLE_DIR"
+  unzip -q "$tmp_zip" -d "$GRADLE_HOME_ROOT"
+  mv "$tmp_zip" "$GRADLE_ZIP"
+fi
+
+exec "${GRADLE_DIR}/bin/gradle" "$@"

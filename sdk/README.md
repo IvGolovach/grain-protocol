@@ -18,3 +18,4 @@ Portable client SDK lanes:
 - `sdk/workflows`: app-facing scan workflow contracts and fixtures
 - `sdk/generated`: documentation for generated Swift/Kotlin binding output
 - `sdk/swift`: Swift Package Manager wrapper over generated client workflow bindings
+- `sdk/kotlin`: Kotlin/JVM wrapper over generated client workflow bindings

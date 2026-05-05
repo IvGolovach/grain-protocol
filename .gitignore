@@ -5,6 +5,9 @@
 /build/
 /.build/
 /sdk/swift/.build/
+/sdk/kotlin/.gradle/
+/sdk/kotlin/.kotlin/
+/sdk/kotlin/build/
 /artifacts/
 *.log
 __pycache__/

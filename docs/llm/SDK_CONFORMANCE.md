@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0020` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0021` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -111,6 +111,25 @@ Expected contract:
 - the check leaves git status unchanged except for pre-existing unrelated local work
 
 Local note: some environments do not ship `XCTest` or Swift Testing modules. This repository uses an executable fixture runner for the Swift package lane so the same deterministic workflow proof works in that toolchain shape.
+
+## Kotlin client package
+
+Kotlin package check:
+
+```bash
+scripts/sdk/check_kotlin_package.sh
+```
+
+Expected contract:
+- `scripts/sdk/sync_kotlin_bindings.sh` regenerates Kotlin binding source from the checked-in UniFFI harness and updates only the tracked Kotlin binding file
+- `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core` builds the native library loaded by JNA
+- Gradle/Kotlin compiles the public `GrainClient` wrapper and fixture runner
+- the executable fixture runner executes scan-preview and scan-accept fixtures through the public Kotlin `GrainClient` API
+- the package exposes workflow methods and typed Kotlin statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
+- fixture references are constrained to `conformance/vectors/**`
+- the check leaves git status unchanged except for pre-existing unrelated local work
+
+Local note: Apple silicon environments must use a JVM with the same architecture as the Rust client-core dylib. Set `JAVA_HOME` to an arm64 JDK before running the Kotlin package check on arm64 macOS.
 
 ## Diagnostics contract
 
