@@ -1,0 +1,18 @@
+{
+  "fixture_id": "SDK-WF-SCAN-PREVIEW-0004",
+  "workflow": "scan_preview",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_pub_b64": "not standard base64"
+  },
+  "expect": {
+    "status": "Rejected",
+    "diag": ["SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID"],
+    "cose_b64": "present",
+    "store_mutation": "none"
+  },
+  "meta": {
+    "desc": "Valid scan with malformed trust material rejects at the SDK boundary without mutating client storage."
+  }
+}

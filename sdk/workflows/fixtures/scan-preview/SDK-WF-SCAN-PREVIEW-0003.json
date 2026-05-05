@@ -1,0 +1,18 @@
+{
+  "fixture_id": "SDK-WF-SCAN-PREVIEW-0003",
+  "workflow": "scan_preview",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/NEG-QR-002.json#/input/qr_string",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64"
+  },
+  "expect": {
+    "status": "Rejected",
+    "diag_contains": ["GRAIN_ERR_SCHEMA"],
+    "cose_b64": "absent",
+    "store_mutation": "none"
+  },
+  "meta": {
+    "desc": "Malformed QR input is rejected with the core schema diagnostic and does not mutate client storage."
+  }
+}

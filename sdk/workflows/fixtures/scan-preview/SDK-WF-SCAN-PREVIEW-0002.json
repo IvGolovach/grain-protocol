@@ -1,0 +1,17 @@
+{
+  "fixture_id": "SDK-WF-SCAN-PREVIEW-0002",
+  "workflow": "scan_preview",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string"
+  },
+  "expect": {
+    "status": "Untrusted",
+    "diag": [],
+    "cose_b64": "present",
+    "store_mutation": "none"
+  },
+  "meta": {
+    "desc": "Valid scan without explicit trust remains an untrusted preview and does not mutate client storage."
+  }
+}

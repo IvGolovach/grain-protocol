@@ -1,0 +1,18 @@
+{
+  "fixture_id": "SDK-WF-SCAN-PREVIEW-0005",
+  "workflow": "scan_preview",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_pub_b64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "expect": {
+    "status": "Rejected",
+    "diag": ["GRAIN_ERR_COSE_PROFILE"],
+    "cose_b64": "present",
+    "store_mutation": "none"
+  },
+  "meta": {
+    "desc": "Valid scan with the wrong trust key preserves the core COSE profile diagnostic and does not mutate client storage."
+  }
+}

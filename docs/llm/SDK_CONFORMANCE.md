@@ -42,6 +42,22 @@ Expected contract:
 - malformed scan/trust/signature paths reject deterministically
 - valid scan without trust remains `Untrusted`, not `Verified`
 
+## Client workflow fixtures
+
+Workflow fixtures:
+- `sdk/workflows/contract/client_workflow_v1.md`
+- `sdk/workflows/contract/client_workflow_v1.schema.json`
+- `sdk/workflows/fixtures/scan-preview/*.json`
+
+Expected contract:
+- `sdk/workflows/**` is client workflow conformance, not protocol conformance
+- workflow fixtures may reference protocol vectors, but must not be consumed by the protocol runner
+- generated Swift, Kotlin, WASM, and future device SDKs are client-workflow conformant only after they pass these fixtures through their public workflow APIs
+- `scan_preview` fixtures currently cover verified, untrusted, malformed QR, malformed trust, and wrong trust-key paths
+- every `scan_preview` fixture expects `store_mutation: "none"`
+
+Rust fixture execution is added in the next implementation slice. Until then these files are the contract that the runner must implement.
+
 ## Diagnostics contract
 
 - Core diagnostics are preserved and not renamed.
