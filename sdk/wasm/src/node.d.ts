@@ -1,12 +1,15 @@
-export { GrainClient } from "./index.mjs";
+export { GrainClient, GrainStaticTrustProvider } from "./index.mjs";
 export type {
   AcceptedScan,
+  GrainAcceptedScan,
   GrainScanAccept,
   GrainScanAcceptInput,
   GrainScanAcceptStatus,
   GrainScanPreview,
   GrainScanPreviewInput,
   GrainScanPreviewStatus,
+  GrainTrustProvider,
+  GrainTrustProviderInput,
   GrainStoreSnapshotInput,
   GrainStoreSnapshotResult,
   GrainStoreSnapshotStatus,

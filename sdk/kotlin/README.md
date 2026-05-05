@@ -27,11 +27,16 @@ dynamic library built for the host.
 import dev.grain.GrainClient
 import dev.grain.GrainScanAcceptStatus
 import dev.grain.GrainScanPreviewStatus
+import dev.grain.GrainStaticTrustProvider
 
 GrainClient().use { client ->
-    // Trust setup stays in app/platform code. This value can come from an
-    // enrolled publisher key, device-management policy, or a test fixture.
-    val trustedIssuerPublicKeyB64 = "<trusted publisher public key base64>"
+    // Trust setup stays in app/platform code. This provider can resolve enrolled
+    // publisher keys, device-management policy, or test fixtures by stable ID.
+    val trustAnchorId = "publisher:primary"
+    val trustProvider = GrainStaticTrustProvider(
+        anchorId = trustAnchorId,
+        trustPubB64 = "<trusted publisher public key base64>",
+    )
     val scannedQRCode = "<GR1...>"
 
     if (client.clientLifecycle().status != "Ready") {
@@ -44,13 +49,15 @@ GrainClient().use { client ->
 
     val preview = client.scanPreview(
         qrString = scannedQRCode,
-        trustPubB64 = trustedIssuerPublicKeyB64,
+        trustAnchorId = trustAnchorId,
+        trustProvider = trustProvider,
     )
 
     if (preview.status == GrainScanPreviewStatus.Verified) {
         val accepted = client.scanAccept(
             qrString = scannedQRCode,
-            trustPubB64 = trustedIssuerPublicKeyB64,
+            trustAnchorId = trustAnchorId,
+            trustProvider = trustProvider,
         )
 
         if (
@@ -75,8 +82,9 @@ GrainClient().use { client ->
 ## Workflow notes
 
 - `scanPreview` never writes local storage.
-- `scanAccept` requires explicit `trustPubB64` and persists at most one accepted
-  record for the same verified scan.
+- `scanAccept` should use an explicit `trustAnchorId` plus `GrainTrustProvider`
+  in production and persists at most one accepted record for the same verified
+  scan.
 - `listAcceptedScans` returns deterministic accepted records from the local
   store.
 - `exportIdentityBundle` exports portable identity material for app-controlled

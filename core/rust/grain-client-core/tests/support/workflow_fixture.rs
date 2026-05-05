@@ -30,6 +30,7 @@ pub enum WorkflowName {
 #[serde(deny_unknown_fields)]
 pub struct WorkflowInput {
     pub qr_string_ref: Option<String>,
+    pub trust_anchor_id: Option<String>,
     pub trust_pub_b64_ref: Option<String>,
     pub trust_pub_b64: Option<String>,
     pub accept_attempts: Option<usize>,

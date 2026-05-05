@@ -8,6 +8,27 @@ const LIFECYCLE_STATUSES = new Set(["Ready", "Uninitialized"]);
 const PAIRING_STATUSES = new Set(["Created", "Valid", "Paired", "AlreadyPaired", "Rejected"]);
 const SYNC_STATUSES = new Set(["Exported", "Empty", "Imported", "AlreadyImported", "Rejected"]);
 const STORE_SNAPSHOT_STATUSES = new Set(["Exported", "Restored", "Empty", "Rejected"]);
+const SDK_ERR_TRUST_ANCHOR_REQUIRED = "SDK_ERR_TRUST_ANCHOR_REQUIRED";
+const SDK_ERR_TRUST_ANCHOR_NOT_FOUND = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND";
+
+export class GrainStaticTrustProvider {
+  #anchors;
+
+  constructor(anchors = {}) {
+    if (anchors instanceof Map) {
+      this.#anchors = new Map(anchors);
+      return;
+    }
+    if (!anchors || typeof anchors !== "object" || Array.isArray(anchors)) {
+      throw new TypeError("GrainStaticTrustProvider anchors must be an object or Map");
+    }
+    this.#anchors = new Map(Object.entries(anchors));
+  }
+
+  trustPubB64(anchorId) {
+    return this.#anchors.get(anchorId) ?? null;
+  }
+}
 
 export class GrainClient {
   #exports;
@@ -28,6 +49,15 @@ export class GrainClient {
     return toPreview(callJson(this.#exports, (ptr, len) => this.#exports.grain_client_scan_preview(ptr, len), payload));
   }
 
+  scanPreviewWithTrustProvider(input) {
+    this.#assertOpen();
+    const resolution = resolveTrustInput(input, "scanPreviewWithTrustProvider");
+    if (resolution.diag !== null) {
+      return rejectedPreview(resolution.diag);
+    }
+    return this.scanPreview({ qrString: input.qrString, trustPubB64: resolution.trustPubB64 });
+  }
+
   scanAccept(input) {
     this.#assertOpen();
     const payload = toAcceptPayload(input);
@@ -36,6 +66,15 @@ export class GrainClient {
       (ptr, len) => this.#exports.grain_client_scan_accept(this.#storePtr, ptr, len),
       payload,
     ));
+  }
+
+  scanAcceptWithTrustProvider(input) {
+    this.#assertOpen();
+    const resolution = resolveTrustInput(input, "scanAcceptWithTrustProvider");
+    if (resolution.diag !== null) {
+      return rejectedAccept(resolution.diag);
+    }
+    return this.scanAccept({ qrString: input.qrString, trustPubB64: resolution.trustPubB64 });
   }
 
   listAcceptedScans() {
@@ -293,6 +332,33 @@ function toAcceptPayload(input) {
   };
 }
 
+function resolveTrustInput(input, functionName) {
+  if (!input || typeof input.qrString !== "string") {
+    throw new TypeError(`${functionName} requires qrString`);
+  }
+  if (input.trustAnchorId === null || input.trustAnchorId === undefined) {
+    return { diag: SDK_ERR_TRUST_ANCHOR_REQUIRED, trustPubB64: null };
+  }
+  if (typeof input.trustAnchorId !== "string") {
+    throw new TypeError(`${functionName} requires trustAnchorId`);
+  }
+  if (input.trustAnchorId.trim().length === 0) {
+    return { diag: SDK_ERR_TRUST_ANCHOR_REQUIRED, trustPubB64: null };
+  }
+  const provider = input.trustProvider;
+  if (!provider || typeof provider.trustPubB64 !== "function") {
+    throw new TypeError(`${functionName} requires trustProvider.trustPubB64(anchorId)`);
+  }
+  const trustPubB64 = provider.trustPubB64(input.trustAnchorId);
+  if (trustPubB64 === null || trustPubB64 === undefined) {
+    return { diag: SDK_ERR_TRUST_ANCHOR_NOT_FOUND, trustPubB64: null };
+  }
+  if (typeof trustPubB64 !== "string") {
+    throw new TypeError(`${functionName} trustProvider.trustPubB64 must return a string, null, or undefined`);
+  }
+  return { diag: null, trustPubB64 };
+}
+
 function toLabelPayload(input, defaultLabel, functionName) {
   if (input === undefined || input === null) {
     return { label: defaultLabel };
@@ -329,6 +395,14 @@ function toPreview(raw) {
   };
 }
 
+function rejectedPreview(diag) {
+  return {
+    status: "Rejected",
+    diag: [diag],
+    coseB64: null,
+  };
+}
+
 function toAccept(raw) {
   const status = requireEnum(raw.status, ACCEPT_STATUSES, "status");
   return {
@@ -337,6 +411,16 @@ function toAccept(raw) {
     scanId: optionalString(raw.scan_id, "scan_id"),
     coseB64: optionalString(raw.cose_b64, "cose_b64"),
     trustPubB64: optionalString(raw.trust_pub_b64, "trust_pub_b64"),
+  };
+}
+
+function rejectedAccept(diag) {
+  return {
+    status: "Rejected",
+    diag: [diag],
+    scanId: null,
+    coseB64: null,
+    trustPubB64: null,
   };
 }
 

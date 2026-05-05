@@ -25,9 +25,13 @@ import GrainClient
 
 let client = GrainClient()
 
-// Trust setup stays in app/platform code. This value can come from an enrolled
-// publisher key, device-management policy, or a test fixture.
-let trustedIssuerPublicKeyB64 = "<trusted publisher public key base64>"
+// Trust setup stays in app/platform code. This provider can resolve enrolled
+// publisher keys, device-management policy, or test fixtures by stable ID.
+let trustAnchorID = "publisher:primary"
+let trustProvider = GrainStaticTrustProvider(
+    anchorID: trustAnchorID,
+    trustPubB64: "<trusted publisher public key base64>"
+)
 let scannedQRCode = "<GR1...>"
 
 if client.clientLifecycle().status != "Ready" {
@@ -42,13 +46,15 @@ if client.clientLifecycle().status != "Ready" {
 
 let preview = client.scanPreview(
     qrString: scannedQRCode,
-    trustPubB64: trustedIssuerPublicKeyB64
+    trustAnchorID: trustAnchorID,
+    trustProvider: trustProvider
 )
 
 if preview.status == .verified {
     let accepted = client.scanAccept(
         qrString: scannedQRCode,
-        trustPubB64: trustedIssuerPublicKeyB64
+        trustAnchorID: trustAnchorID,
+        trustProvider: trustProvider
     )
 
     if accepted.status == .accepted || accepted.status == .alreadyAccepted {
@@ -67,8 +73,9 @@ if preview.status == .verified {
 ## Workflow notes
 
 - `scanPreview` never writes local storage.
-- `scanAccept` requires explicit `trustPubB64` and persists at most one accepted
-  record for the same verified scan.
+- `scanAccept` should use an explicit `trustAnchorID` plus `GrainTrustProvider`
+  in production and persists at most one accepted record for the same verified
+  scan.
 - `listAcceptedScans` returns deterministic accepted records from the local
   store.
 - `exportIdentityBundle` exports portable identity material for app-controlled

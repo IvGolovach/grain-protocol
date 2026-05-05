@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createNodeGrainClient } from "../src/node.mjs";
+import { GrainStaticTrustProvider, createNodeGrainClient } from "../src/node.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const vectorsRoot = realpathSync(resolve(repoRoot, "conformance/vectors"));
@@ -29,10 +29,16 @@ async function runScanPreviewFixtures() {
 
     const client = await createNodeGrainClient({ wasmPath });
     try {
-      const preview = client.scanPreview({
-        qrString: fixtureQrString(fixture),
-        trustPubB64: resolveTrustInput(fixture.input),
-      });
+      const preview = fixture.input.trust_anchor_id !== undefined
+        ? client.scanPreviewWithTrustProvider({
+          qrString: fixtureQrString(fixture),
+          trustAnchorId: fixture.input.trust_anchor_id,
+          trustProvider: fixtureTrustProvider(fixture.input),
+        })
+        : client.scanPreview({
+          qrString: fixtureQrString(fixture),
+          trustPubB64: resolveTrustInput(fixture.input),
+        });
 
       requireFixture(preview.status === fixture.expect.status, `${fixture.fixture_id} status mismatch`);
       requireDiagnostics(preview.diag, fixture.expect, fixture.fixture_id);
@@ -50,8 +56,6 @@ async function runScanAcceptFixtures() {
     requireFixture(fixture.strict === true, `${fixture.fixture_id} must be strict`);
 
     const qrString = fixtureQrString(fixture);
-    const trustPubB64 = resolveTrustInput(fixture.input);
-    requireFixture(typeof trustPubB64 === "string", `${fixture.fixture_id} missing trust material`);
 
     const attempts = fixture.input.accept_attempts ?? 1;
     requireFixture(Number.isInteger(attempts) && attempts > 0, `${fixture.fixture_id} accept_attempts must be positive`);
@@ -60,7 +64,17 @@ async function runScanAcceptFixtures() {
     try {
       let accepted = null;
       for (let i = 0; i < attempts; i += 1) {
-        accepted = client.scanAccept({ qrString, trustPubB64 });
+        if (fixture.input.trust_anchor_id !== undefined) {
+          accepted = client.scanAcceptWithTrustProvider({
+            qrString,
+            trustAnchorId: fixture.input.trust_anchor_id,
+            trustProvider: fixtureTrustProvider(fixture.input),
+          });
+        } else {
+          const trustPubB64 = resolveTrustInput(fixture.input);
+          requireFixture(typeof trustPubB64 === "string", `${fixture.fixture_id} missing trust material`);
+          accepted = client.scanAccept({ qrString, trustPubB64 });
+        }
       }
 
       requireFixture(accepted !== null, `${fixture.fixture_id} missing accept result`);
@@ -320,6 +334,17 @@ function resolveTrustInput(input) {
     return resolveStringRef(input.trust_pub_b64_ref);
   }
   return input.trust_pub_b64 ?? null;
+}
+
+function fixtureTrustProvider(input) {
+  if (typeof input.trust_anchor_id !== "string") {
+    throw new Error("trust_anchor_id is required for provider fixtures");
+  }
+  const trustPubB64 = resolveTrustInput(input);
+  if (trustPubB64 === null) {
+    return new GrainStaticTrustProvider();
+  }
+  return new GrainStaticTrustProvider({ [input.trust_anchor_id]: trustPubB64 });
 }
 
 function fixtureQrString(fixture) {

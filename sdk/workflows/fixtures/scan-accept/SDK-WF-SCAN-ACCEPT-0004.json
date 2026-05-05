@@ -1,0 +1,20 @@
+{
+  "fixture_id": "SDK-WF-SCAN-ACCEPT-0004",
+  "workflow": "scan_accept",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_anchor_id": "fixture:primary",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64"
+  },
+  "expect": {
+    "status": "Accepted",
+    "diag": [],
+    "cose_b64": "present",
+    "store_mutation": "accepted_scan_inserted",
+    "accepted_record_count": 1
+  },
+  "meta": {
+    "desc": "Valid scan accepts through an explicit trust anchor ID resolved by the platform trust provider."
+  }
+}

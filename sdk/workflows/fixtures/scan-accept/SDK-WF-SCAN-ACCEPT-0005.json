@@ -1,0 +1,19 @@
+{
+  "fixture_id": "SDK-WF-SCAN-ACCEPT-0005",
+  "workflow": "scan_accept",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_anchor_id": "fixture:missing"
+  },
+  "expect": {
+    "status": "Rejected",
+    "diag": ["SDK_ERR_TRUST_ANCHOR_NOT_FOUND"],
+    "cose_b64": "absent",
+    "store_mutation": "none",
+    "accepted_record_count": 0
+  },
+  "meta": {
+    "desc": "Provider-backed scan accept fails closed when the explicit trust anchor ID is unknown and persists no record."
+  }
+}

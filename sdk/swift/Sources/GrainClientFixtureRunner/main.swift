@@ -29,6 +29,7 @@ private struct FixtureInput: Decodable {
     let qrStringRef: String?
     let trustPubB64Ref: String?
     let trustPubB64: String?
+    let trustAnchorID: String?
     let acceptAttempts: Int?
     let importAttempts: Int?
     let rootLabel: String?
@@ -38,6 +39,7 @@ private struct FixtureInput: Decodable {
         case qrStringRef = "qr_string_ref"
         case trustPubB64Ref = "trust_pub_b64_ref"
         case trustPubB64 = "trust_pub_b64"
+        case trustAnchorID = "trust_anchor_id"
         case acceptAttempts = "accept_attempts"
         case importAttempts = "import_attempts"
         case rootLabel = "root_label"
@@ -89,10 +91,18 @@ private func runScanPreviewFixtures() throws {
         try require(fixture.strict, "\(fixture.fixtureID) must be strict")
 
         let qrString = try fixtureQRString(fixture)
-        let trustPubB64 = try resolveTrustInput(fixture.input)
 
         let client = GrainClient()
-        let preview = client.scanPreview(qrString: qrString, trustPubB64: trustPubB64)
+        let preview: GrainScanPreview
+        if let trustAnchorID = fixture.input.trustAnchorID {
+            preview = client.scanPreview(
+                qrString: qrString,
+                trustAnchorID: trustAnchorID,
+                trustProvider: try fixtureTrustProvider(fixture.input)
+            )
+        } else {
+            preview = client.scanPreview(qrString: qrString, trustPubB64: try resolveTrustInput(fixture.input))
+        }
 
         try require(preview.status.rawValue == fixture.expect.status, "\(fixture.fixtureID) status mismatch")
         try requireDiagnostics(preview.diag, fixture.expect, fixture.fixtureID)
@@ -111,9 +121,6 @@ private func runScanAcceptFixtures() throws {
         try require(fixture.strict, "\(fixture.fixtureID) must be strict")
 
         let qrString = try fixtureQRString(fixture)
-        guard let trustPubB64 = try resolveTrustInput(fixture.input) else {
-            throw FixtureError.invalidReference("\(fixture.fixtureID) missing trust material")
-        }
 
         let attempts = fixture.input.acceptAttempts ?? 1
         try require(attempts > 0, "\(fixture.fixtureID) accept_attempts must be positive")
@@ -121,7 +128,18 @@ private func runScanAcceptFixtures() throws {
         let client = GrainClient()
         var accepted: GrainScanAccept?
         for _ in 0..<attempts {
-            accepted = client.scanAccept(qrString: qrString, trustPubB64: trustPubB64)
+            if let trustAnchorID = fixture.input.trustAnchorID {
+                accepted = client.scanAccept(
+                    qrString: qrString,
+                    trustAnchorID: trustAnchorID,
+                    trustProvider: try fixtureTrustProvider(fixture.input)
+                )
+            } else {
+                guard let trustPubB64 = try resolveTrustInput(fixture.input) else {
+                    throw FixtureError.invalidReference("\(fixture.fixtureID) missing trust material")
+                }
+                accepted = client.scanAccept(qrString: qrString, trustPubB64: trustPubB64)
+            }
         }
 
         guard let result = accepted else {
@@ -389,6 +407,16 @@ private func resolveTrustInput(_ input: FixtureInput) throws -> String? {
     case (.some, .some):
         throw FixtureError.invalidReference("trust_pub_b64_ref and trust_pub_b64 are mutually exclusive")
     }
+}
+
+private func fixtureTrustProvider(_ input: FixtureInput) throws -> GrainStaticTrustProvider {
+    guard let trustAnchorID = input.trustAnchorID else {
+        throw FixtureError.invalidReference("trust_anchor_id is required for provider fixtures")
+    }
+    guard let trustPubB64 = try resolveTrustInput(input) else {
+        return GrainStaticTrustProvider(anchors: [:])
+    }
+    return GrainStaticTrustProvider(anchorID: trustAnchorID, trustPubB64: trustPubB64)
 }
 
 private func fixtureQRString(_ fixture: WorkflowFixture) throws -> String {
