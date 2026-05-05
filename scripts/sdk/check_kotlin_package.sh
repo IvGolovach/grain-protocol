@@ -29,9 +29,19 @@ if [[ "$AFTER_GENERATED" != "$BEFORE_GENERATED" ]]; then
   exit 1
 fi
 
-if rg -n 'qrDecode|coseVerify|dagCbor|runVector|protocolRunner' sdk/kotlin/src/main/kotlin/dev/grain >/dev/null; then
+has_raw_protocol_api() {
+  local pattern='qrDecode|coseVerify|dagCbor|runVector|protocolRunner'
+  python3 tools/ci/find_regex_match.py "$pattern" sdk/kotlin/src/main/kotlin/dev/grain >/dev/null
+}
+
+if has_raw_protocol_api; then
   echo "SDK_KOTLIN_ERR_RAW_PROTOCOL_API: Kotlin public wrapper must expose workflow APIs only" >&2
   exit 1
+else
+  RAW_API_STATUS=$?
+  if [[ "$RAW_API_STATUS" -ne 1 ]]; then
+    exit "$RAW_API_STATUS"
+  fi
 fi
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
@@ -41,13 +51,19 @@ if [[ "${SDK_KOTLIN_GRADLE_OFFLINE:-0}" == "1" ]]; then
   GRADLE_ARGS+=(--offline)
 fi
 
-sdk/kotlin/gradlew \
-  -p sdk/kotlin \
-  --project-cache-dir "$TMP_DIR/project-cache" \
-  --no-daemon \
-  -Dgrain.kotlin.buildDir="$TMP_DIR/build" \
-  "${GRADLE_ARGS[@]}" \
-  check
+GRADLE_CMD=(
+  sdk/kotlin/gradlew
+  -p sdk/kotlin
+  --project-cache-dir "$TMP_DIR/project-cache"
+  --no-daemon
+  -Dgrain.kotlin.buildDir="$TMP_DIR/build"
+)
+if [[ ${#GRADLE_ARGS[@]} -gt 0 ]]; then
+  GRADLE_CMD+=("${GRADLE_ARGS[@]}")
+fi
+GRADLE_CMD+=(check)
+
+"${GRADLE_CMD[@]}"
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then

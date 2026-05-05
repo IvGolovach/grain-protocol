@@ -48,6 +48,11 @@ That command proves:
 - scanner examples use public workflow SDK APIs instead of raw protocol internals
 - SDK code stays network/vendor agnostic
 
+The `ci` workflow runs the same strict platform SDK gate in the `sdk-platform`
+job on a Swift 6-capable macOS runner. Set `SDK_KOTLIN_GRADLE_OFFLINE=1` only
+on machines with warmed Gradle caches when you need the Kotlin package and
+Android scanner example checks to prove offline dependency resolution.
+
 For a full repository release proof, also run:
 
 ```bash

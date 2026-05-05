@@ -18,9 +18,19 @@ fi
 
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 
-if rg -n -i 'grain_run_vector|runvector|qrdecode\b|qr_decode(_gr1)?\b|coseverify|cose_verify|dagcbor|dag_cbor|dagcbor_validate|protocolrunner|executeoperation|execute_operation|uniffi\.grain_client_core' examples >/dev/null; then
+has_raw_protocol_api() {
+  local pattern='grain_run_vector\b|runvector\b|qrdecode\b|qr_decode(_gr1)?\b|coseverify\b|cose_verify\b|dagcbor\b|dag_cbor\b|dagcbor_validate\b|protocolrunner\b|executeoperation\b|execute_operation\b|uniffi\.grain_client_core'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples >/dev/null
+}
+
+if has_raw_protocol_api; then
   echo "SDK_SCANNER_ERR_RAW_PROTOCOL_API: scanner examples must use public workflow SDK APIs only" >&2
   exit 1
+else
+  RAW_API_STATUS=$?
+  if [[ "$RAW_API_STATUS" -ne 1 ]]; then
+    exit "$RAW_API_STATUS"
+  fi
 fi
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
@@ -31,13 +41,19 @@ if [[ "${SDK_KOTLIN_GRADLE_OFFLINE:-0}" == "1" ]]; then
   GRADLE_ARGS+=(--offline)
 fi
 
-sdk/kotlin/gradlew \
-  -p examples/android-scanner \
-  --project-cache-dir "$TMP_DIR/gradle-cache" \
-  --no-daemon \
-  -Dgrain.kotlin.buildDir="$TMP_DIR/android-build" \
-  "${GRADLE_ARGS[@]}" \
-  check
+GRADLE_CMD=(
+  sdk/kotlin/gradlew
+  -p examples/android-scanner
+  --project-cache-dir "$TMP_DIR/gradle-cache"
+  --no-daemon
+  -Dgrain.kotlin.buildDir="$TMP_DIR/android-build"
+)
+if [[ ${#GRADLE_ARGS[@]} -gt 0 ]]; then
+  GRADLE_CMD+=("${GRADLE_ARGS[@]}")
+fi
+GRADLE_CMD+=(check)
+
+"${GRADLE_CMD[@]}"
 rm -rf examples/android-scanner/.gradle
 
 npm --prefix examples/wasm-scanner run check

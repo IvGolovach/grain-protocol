@@ -49,9 +49,12 @@ For release-grade local proof, require every platform prerequisite:
 scripts/sdk/verify_all_sdks.sh --strict
 ```
 
-The strict path expects Swift, Java/Kotlin tooling, Node/npm, Cargo, and the
+The strict path expects Swift 6, Java/Kotlin tooling, Node/npm, Cargo, and the
 `wasm32-wasip1` Rust target to be available. GitHub CI installs the WASM target
-for the required `wasm-smoke` lane.
+for the required `wasm-smoke` and `sdk-platform` lanes.
+
+Set `SDK_KOTLIN_GRADLE_OFFLINE=1` only after warming Gradle caches when you need
+the Kotlin and scanner-example checks to prove offline dependency resolution.
 
 ## Package SDK artifacts
 

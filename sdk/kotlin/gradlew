@@ -5,10 +5,6 @@ GRADLE_VERSION="7.6.4"
 GRADLE_SHA256="bed1da33cca0f557ab13691c77f38bb67388119e4794d113e051039b80af9bb1"
 GRADLE_URL="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
 
-if command -v gradle >/dev/null 2>&1; then
-  exec gradle "$@"
-fi
-
 GRADLE_HOME_ROOT="${GRADLE_USER_HOME:-$HOME/.gradle}/wrapper/dists/gradle-${GRADLE_VERSION}-bin"
 GRADLE_DIR="${GRADLE_HOME_ROOT}/gradle-${GRADLE_VERSION}"
 GRADLE_ZIP="${GRADLE_HOME_ROOT}/gradle-${GRADLE_VERSION}-bin.zip"
