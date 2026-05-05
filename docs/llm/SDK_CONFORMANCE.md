@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0021` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0022` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -130,6 +130,25 @@ Expected contract:
 - the check leaves git status unchanged except for pre-existing unrelated local work
 
 Local note: Apple silicon environments must use a JVM with the same architecture as the Rust client-core dylib. Set `JAVA_HOME` to an arm64 JDK before running the Kotlin package check on arm64 macOS.
+
+## WASM/mobile-web client package
+
+WASM package check:
+
+```bash
+scripts/sdk/check_wasm_package.sh
+```
+
+Expected contract:
+- `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-wasm --target wasm32-wasip1 --release` builds the WASM client workflow export over `grain-client-core`
+- `grain-client-wasm` depends on `grain-client-core` with default features disabled, so the target-side WASM dependency tree does not include the UniFFI runtime
+- `sdk/wasm` loads that WASM export behind a small public `GrainClient` API
+- the Node fixture runner executes scan-preview and scan-accept fixtures through the public web API
+- the package exposes workflow methods and typed web statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
+- fixture references are constrained to `conformance/vectors/**`
+- the check leaves git status unchanged except for pre-existing unrelated local work
+
+Local note: environments without a locally installed `wasm32-wasip1` Rust standard library cannot complete the full WASM build. Required CI `wasm-smoke` installs the target and runs this check on PR and main SHAs.
 
 ## Diagnostics contract
 

@@ -1,0 +1,24 @@
+{
+  "name": "@grain/client-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Grain client workflow WASM wrapper",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.mjs"
+    },
+    "./node": {
+      "types": "./src/node.d.ts",
+      "default": "./src/node.mjs"
+    }
+  },
+  "scripts": {
+    "check": "node --check src/index.mjs && node --check src/node.mjs && node --check tests/run-workflow-fixtures.mjs",
+    "test:fixtures": "node tests/run-workflow-fixtures.mjs"
+  }
+}

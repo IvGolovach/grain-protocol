@@ -1,0 +1,208 @@
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+const PREVIEW_STATUSES = new Set(["Verified", "Untrusted", "Rejected"]);
+const ACCEPT_STATUSES = new Set(["Accepted", "AlreadyAccepted", "Rejected"]);
+
+export class GrainClient {
+  #exports;
+  #storePtr;
+  #closed = false;
+
+  constructor(wasmExports) {
+    this.#exports = requireExports(wasmExports);
+    this.#storePtr = this.#exports.grain_client_store_new();
+    if (!Number.isInteger(this.#storePtr) || this.#storePtr === 0) {
+      throw new Error("SDK_WASM_ERR_STORE_INIT");
+    }
+  }
+
+  scanPreview(input) {
+    this.#assertOpen();
+    const payload = toPreviewPayload(input);
+    return toPreview(callJson(this.#exports, (ptr, len) => this.#exports.grain_client_scan_preview(ptr, len), payload));
+  }
+
+  scanAccept(input) {
+    this.#assertOpen();
+    const payload = toAcceptPayload(input);
+    return toAccept(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_scan_accept(this.#storePtr, ptr, len),
+      payload,
+    ));
+  }
+
+  listAcceptedScans() {
+    this.#assertOpen();
+    const raw = callNoInputJson(this.#exports, () => this.#exports.grain_client_list_accepted_scans(this.#storePtr));
+    if (raw.status !== "Ok") {
+      throw new Error(`SDK_WASM_ERR_LIST_FAILED:${diagList(raw).join(",")}`);
+    }
+    if (!Array.isArray(raw.records)) {
+      throw new Error("SDK_WASM_ERR_RESPONSE_SHAPE:records");
+    }
+    const records = raw.records;
+    return records.map((record) => ({
+      scanId: requireString(record.scan_id, "records[].scan_id"),
+      coseB64: requireString(record.cose_b64, "records[].cose_b64"),
+      trustPubB64: requireString(record.trust_pub_b64, "records[].trust_pub_b64"),
+    }));
+  }
+
+  close() {
+    if (!this.#closed) {
+      this.#exports.grain_client_store_free(this.#storePtr);
+      this.#closed = true;
+      this.#storePtr = 0;
+    }
+  }
+
+  #assertOpen() {
+    if (this.#closed) {
+      throw new Error("SDK_WASM_ERR_CLIENT_CLOSED");
+    }
+  }
+}
+
+export function createGrainClientFromInstance(instance) {
+  return new GrainClient(instance.exports);
+}
+
+function requireExports(wasmExports) {
+  const required = [
+    "memory",
+    "grain_client_alloc",
+    "grain_client_dealloc",
+    "grain_client_store_new",
+    "grain_client_store_free",
+    "grain_client_scan_preview",
+    "grain_client_scan_accept",
+    "grain_client_list_accepted_scans",
+  ];
+  for (const name of required) {
+    if (!(name in wasmExports)) {
+      throw new Error(`SDK_WASM_ERR_EXPORT_MISSING:${name}`);
+    }
+  }
+  return wasmExports;
+}
+
+function callJson(wasmExports, invoke, payload) {
+  const bytes = textEncoder.encode(JSON.stringify(payload));
+  const inputPtr = wasmExports.grain_client_alloc(bytes.length);
+  new Uint8Array(wasmExports.memory.buffer, inputPtr, bytes.length).set(bytes);
+
+  let packed;
+  try {
+    packed = invoke(inputPtr, bytes.length);
+  } finally {
+    wasmExports.grain_client_dealloc(inputPtr, bytes.length);
+  }
+
+  return decodeJsonResponse(wasmExports, packed);
+}
+
+function callNoInputJson(wasmExports, invoke) {
+  return decodeJsonResponse(wasmExports, invoke());
+}
+
+function decodeJsonResponse(wasmExports, packed) {
+  const { ptr, len } = decodePacked(packed);
+  const bytes = new Uint8Array(wasmExports.memory.buffer, ptr, len);
+  const jsonText = textDecoder.decode(bytes.slice());
+  wasmExports.grain_client_dealloc(ptr, len);
+  return JSON.parse(jsonText);
+}
+
+function decodePacked(raw) {
+  const value = typeof raw === "bigint" ? raw : BigInt(raw);
+  return {
+    ptr: Number((value >> 32n) & 0xffffffffn),
+    len: Number(value & 0xffffffffn),
+  };
+}
+
+function toPreviewPayload(input) {
+  if (!input || typeof input.qrString !== "string") {
+    throw new TypeError("scanPreview requires qrString");
+  }
+  if (
+    input.trustPubB64 !== undefined &&
+    input.trustPubB64 !== null &&
+    typeof input.trustPubB64 !== "string"
+  ) {
+    throw new TypeError("scanPreview trustPubB64 must be a string, null, or undefined");
+  }
+  return {
+    qr_string: input.qrString,
+    trust_pub_b64: input.trustPubB64 ?? null,
+  };
+}
+
+function toAcceptPayload(input) {
+  if (!input || typeof input.qrString !== "string") {
+    throw new TypeError("scanAccept requires qrString");
+  }
+  if (typeof input.trustPubB64 !== "string") {
+    throw new TypeError("scanAccept requires trustPubB64");
+  }
+  return {
+    qr_string: input.qrString,
+    trust_pub_b64: input.trustPubB64,
+  };
+}
+
+function toPreview(raw) {
+  const status = requireEnum(raw.status, PREVIEW_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    coseB64: optionalString(raw.cose_b64, "cose_b64"),
+  };
+}
+
+function toAccept(raw) {
+  const status = requireEnum(raw.status, ACCEPT_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    scanId: optionalString(raw.scan_id, "scan_id"),
+    coseB64: optionalString(raw.cose_b64, "cose_b64"),
+    trustPubB64: optionalString(raw.trust_pub_b64, "trust_pub_b64"),
+  };
+}
+
+function diagList(raw) {
+  return requireStringArray(raw.diag, "diag");
+}
+
+function requireEnum(value, allowed, fieldName) {
+  if (typeof value !== "string" || !allowed.has(value)) {
+    throw new Error(`SDK_WASM_ERR_RESPONSE_SHAPE:${fieldName}`);
+  }
+  return value;
+}
+
+function requireStringArray(value, fieldName) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`SDK_WASM_ERR_RESPONSE_SHAPE:${fieldName}`);
+  }
+  return value;
+}
+
+function optionalString(value, fieldName) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`SDK_WASM_ERR_RESPONSE_SHAPE:${fieldName}`);
+  }
+  return value;
+}
+
+function requireString(value, fieldName) {
+  if (typeof value !== "string") {
+    throw new Error(`SDK_WASM_ERR_RESPONSE_SHAPE:${fieldName}`);
+  }
+  return value;
+}

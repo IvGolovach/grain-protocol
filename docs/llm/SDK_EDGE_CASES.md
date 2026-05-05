@@ -18,6 +18,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0014: generated binding harness missing expected workflow symbols, exposing raw protocol/runner operations, or leaving generated repository junk -> `scripts/sdk/check_generated_bindings.sh` failure
 - SDK-NEG-0015: Swift client package stale generated sources, failed native library link, unsupported workflow fixture refs, raw protocol API exposure, or fixture behavior drift -> `scripts/sdk/check_swift_package.sh` failure
 - SDK-NEG-0016: Kotlin client package stale generated sources, failed native library link, unsupported workflow fixture refs, wrong JVM/native architecture, raw protocol API exposure, or fixture behavior drift -> `scripts/sdk/check_kotlin_package.sh` failure
+- SDK-NEG-0017: WASM/mobile-web client package stale glue, failed WASM build/load, unsupported workflow fixture refs, browser/Node fixture behavior drift, raw protocol API exposure, or generated-output dirtiness -> `scripts/sdk/check_wasm_package.sh` failure
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
@@ -44,6 +45,7 @@ These checks are asserted in:
 - `core/rust/grain-client-core/tests/binding_api.rs`
 - `sdk/swift/Sources/GrainClientFixtureRunner/main.swift`
 - `sdk/kotlin/src/test/kotlin/dev/grain/fixture/GrainClientFixtureRunner.kt`
+- `sdk/wasm/tests/run-workflow-fixtures.mjs`
 - `sdk/workflows/fixtures/scan-accept/*.json`
 - `sdk/workflows/fixtures/scan-preview/*.json`
 - `scripts/sdk/check_generated_bindings.sh`
@@ -51,5 +53,6 @@ These checks are asserted in:
 - `scripts/sdk/sync_swift_bindings.sh`
 - `scripts/sdk/check_kotlin_package.sh`
 - `scripts/sdk/sync_kotlin_bindings.sh`
+- `scripts/sdk/check_wasm_package.sh`
 - `tools/ci/check_client_workflow_fixtures.py`
 - `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`

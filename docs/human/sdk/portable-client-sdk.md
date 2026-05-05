@@ -47,7 +47,7 @@ The generated-binding harness is now present:
 - repo-local scripts generate Swift and Kotlin bindings into ignored or temporary directories
 - the generation check verifies expected workflow symbols and rejects raw protocol/runner API exposure
 
-This proves the shared facade can be generated reproducibly. It is not yet the Swift, Kotlin, or WASM SDK package.
+This proves the shared facade can be generated reproducibly. The package slices below wrap it for Swift, Kotlin, and mobile-web clients.
 
 The first platform package slice is now the Swift client package:
 
@@ -58,7 +58,7 @@ The first platform package slice is now the Swift client package:
 
 This proves the iOS-facing package shape. It is not an iOS scanner app yet and it does not introduce Keychain storage, camera capture, or platform trust lookup.
 
-The next platform package slice is now the Kotlin/JVM client package:
+The next platform package slice is the Kotlin/JVM client package:
 
 - `sdk/kotlin` builds with Gradle/Kotlin JVM tooling
 - `GrainClient` exposes `scanPreview`, `scanAccept`, and `listAcceptedScans`
@@ -66,6 +66,15 @@ The next platform package slice is now the Kotlin/JVM client package:
 - `scripts/sdk/check_kotlin_package.sh` regenerates the Kotlin binding, rebuilds Rust client-core, runs the shared workflow fixtures through Kotlin, and fails if generated sources drift
 
 This proves the Android-facing package shape. It is not an Android scanner app yet and it does not introduce Keystore storage, CameraX capture, or platform trust lookup.
+
+The mobile-web package slice is now the WASM client package:
+
+- `core/rust/grain-client-wasm` exports scan workflow operations over `grain-client-core`
+- `sdk/wasm` exposes a small `GrainClient` web API over the WASM exports
+- mobile-web app code sees typed workflow statuses instead of raw QR/COSE internals
+- `scripts/sdk/check_wasm_package.sh` builds the WASM binding, loads it in Node, runs the shared workflow fixtures through the public web API, and fails on raw protocol API exposure
+
+This proves the mobile-web package shape. It is not a camera scanner app yet and it does not introduce browser camera capture, IndexedDB persistence, service workers, or production npm release packaging.
 
 ## Client workflow conformance
 
@@ -89,7 +98,6 @@ The second fixture set covers `scan_accept`:
 
 ## Next additive slices
 
-- WASM/mobile-web binding over the same contract.
 - Client scenario fixtures that every generated SDK must pass.
 
 ## Rule of thumb

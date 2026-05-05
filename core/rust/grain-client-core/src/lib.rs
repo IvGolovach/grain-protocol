@@ -1,7 +1,9 @@
 //! Workflow-shaped client SDK core for generated platform bindings.
 
+#[cfg(feature = "bindings")]
 mod binding_api;
 pub mod diag;
+#[cfg(feature = "bindings")]
 mod ffi_types;
 mod memory_store;
 pub mod platform;
@@ -10,7 +12,9 @@ mod store;
 mod trust;
 mod types;
 
+#[cfg(feature = "bindings")]
 pub use binding_api::{grain_scan_accept_prepare, grain_scan_preview, GrainClientMemoryStore};
+#[cfg(feature = "bindings")]
 pub use ffi_types::{
     FfiAcceptedScan, FfiScanAccept, FfiScanAcceptRequest, FfiScanPreview, FfiScanPreviewRequest,
     FfiStorePutResult,
@@ -23,4 +27,5 @@ pub use types::{
     ScanPreviewStatus,
 };
 
+#[cfg(feature = "bindings")]
 uniffi::include_scaffolding!("grain_client_core");
