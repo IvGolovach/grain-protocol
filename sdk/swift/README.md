@@ -25,6 +25,11 @@ import GrainClient
 
 let client = GrainClient()
 
+let identity = client.createRootIdentity(label: "phone")
+if identity.status == "Created" || identity.status == "AlreadyExists" {
+    _ = client.addDeviceKey(label: "glasses")
+}
+
 let preview = client.scanPreview(
     qrString: scannedQRCode,
     trustPubB64: trustedPublicKey

@@ -633,13 +633,37 @@ internal object IntegrityCheckingUniffiLib {
         uniffiCheckContractApiVersion(this)
         uniffiCheckApiChecksums(this)
     }
+    external fun uniffi_grain_client_core_checksum_func_grain_pairing_preview_envelope(
+    ): Short
     external fun uniffi_grain_client_core_checksum_func_grain_scan_accept_prepare(
     ): Short
     external fun uniffi_grain_client_core_checksum_func_grain_scan_preview(
     ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_accept_pairing_envelope(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_add_device_key(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_client_lifecycle(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_create_pairing_envelope(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_create_root_identity(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_identity_bundle(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_sync_bundle(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_identity_bundle(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_sync_bundle(
+    ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_list_accepted_scans(
     ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_revoke_device_key(
+    ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_scan_accept(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_set_active_device(
     ): Short
     external fun uniffi_grain_client_core_checksum_constructor_grainclientmemorystore_new(
     ): Short
@@ -667,9 +691,33 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_grain_client_core_fn_constructor_grainclientmemorystore_new(uniffi_out_err: UniffiRustCallStatus,
     ): Long
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_accept_pairing_envelope(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_add_device_key(`ptr`: Long,`label`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_client_lifecycle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_create_pairing_envelope(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_create_root_identity(`ptr`: Long,`label`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_identity_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_identity_bundle(`ptr`: Long,`bundleB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_sync_bundle(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_revoke_device_key(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_scan_accept(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_set_active_device(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_func_grain_pairing_preview_envelope(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_func_grain_scan_accept_prepare(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
@@ -794,16 +842,52 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
+    if (lib.uniffi_grain_client_core_checksum_func_grain_pairing_preview_envelope() != 30814.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_grain_client_core_checksum_func_grain_scan_accept_prepare() != 15446.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_grain_client_core_checksum_func_grain_scan_preview() != 16442.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_accept_pairing_envelope() != 36871.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_add_device_key() != 21084.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_client_lifecycle() != 17197.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_create_pairing_envelope() != 50408.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_create_root_identity() != 47300.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_identity_bundle() != 55887.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_sync_bundle() != 32552.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_identity_bundle() != 8443.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_sync_bundle() != 51237.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_list_accepted_scans() != 25163.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_revoke_device_key() != 6663.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_scan_accept() != 58218.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_set_active_device() != 10852.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_grain_client_core_checksum_constructor_grainclientmemorystore_new() != 12349.toShort()) {
@@ -969,6 +1053,29 @@ private class JavaLangRefCleanable(
 /**
  * @suppress
  */
+public object FfiConverterULong: FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong {
+        return value.toULong()
+    }
+
+    override fun read(buf: ByteBuffer): ULong {
+        return lift(buf.getLong())
+    }
+
+    override fun lower(value: ULong): Long {
+        return value.toLong()
+    }
+
+    override fun allocationSize(value: ULong) = 8UL
+
+    override fun write(value: ULong, buf: ByteBuffer) {
+        buf.putLong(value.toLong())
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
@@ -1121,9 +1228,31 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 
 public interface GrainClientMemoryStoreInterface {
 
+    fun `acceptPairingEnvelope`(`request`: FfiPairingEnvelopeRequest): FfiPairingResult
+
+    fun `addDeviceKey`(`label`: kotlin.String): FfiDeviceResult
+
+    fun `clientLifecycle`(): FfiClientLifecycle
+
+    fun `createPairingEnvelope`(): FfiPairingResult
+
+    fun `createRootIdentity`(`label`: kotlin.String): FfiIdentityResult
+
+    fun `exportIdentityBundle`(): FfiIdentityResult
+
+    fun `exportSyncBundle`(): FfiSyncResult
+
+    fun `importIdentityBundle`(`bundleB64`: kotlin.String): FfiIdentityResult
+
+    fun `importSyncBundle`(`request`: FfiSyncBundleRequest): FfiSyncResult
+
     fun `listAcceptedScans`(): List<FfiAcceptedScan>
 
+    fun `revokeDeviceKey`(`ak`: kotlin.String): FfiDeviceResult
+
     fun `scanAccept`(`request`: FfiScanAcceptRequest): FfiScanAccept
+
+    fun `setActiveDevice`(`ak`: kotlin.String): FfiDeviceResult
 
     companion object
 }
@@ -1232,6 +1361,123 @@ open class GrainClientMemoryStore: Disposable, AutoCloseable, GrainClientMemoryS
         }
     }
 
+    override fun `acceptPairingEnvelope`(`request`: FfiPairingEnvelopeRequest): FfiPairingResult {
+            return FfiConverterTypeFfiPairingResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_accept_pairing_envelope(
+        it,
+        FfiConverterTypeFfiPairingEnvelopeRequest.lower(`request`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `addDeviceKey`(`label`: kotlin.String): FfiDeviceResult {
+            return FfiConverterTypeFfiDeviceResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_add_device_key(
+        it,
+        FfiConverterString.lower(`label`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `clientLifecycle`(): FfiClientLifecycle {
+            return FfiConverterTypeFfiClientLifecycle.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_client_lifecycle(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
+    override fun `createPairingEnvelope`(): FfiPairingResult {
+            return FfiConverterTypeFfiPairingResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_create_pairing_envelope(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
+    override fun `createRootIdentity`(`label`: kotlin.String): FfiIdentityResult {
+            return FfiConverterTypeFfiIdentityResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_create_root_identity(
+        it,
+        FfiConverterString.lower(`label`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `exportIdentityBundle`(): FfiIdentityResult {
+            return FfiConverterTypeFfiIdentityResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_export_identity_bundle(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
+    override fun `exportSyncBundle`(): FfiSyncResult {
+            return FfiConverterTypeFfiSyncResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
+    override fun `importIdentityBundle`(`bundleB64`: kotlin.String): FfiIdentityResult {
+            return FfiConverterTypeFfiIdentityResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_import_identity_bundle(
+        it,
+        FfiConverterString.lower(`bundleB64`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `importSyncBundle`(`request`: FfiSyncBundleRequest): FfiSyncResult {
+            return FfiConverterTypeFfiSyncResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_import_sync_bundle(
+        it,
+        FfiConverterTypeFfiSyncBundleRequest.lower(`request`),_status)
+}
+    }
+    )
+    }
+
+
     override fun `listAcceptedScans`(): List<FfiAcceptedScan> {
             return FfiConverterSequenceTypeFfiAcceptedScan.lift(
     callWithHandle {
@@ -1245,6 +1491,19 @@ open class GrainClientMemoryStore: Disposable, AutoCloseable, GrainClientMemoryS
     }
 
 
+    override fun `revokeDeviceKey`(`ak`: kotlin.String): FfiDeviceResult {
+            return FfiConverterTypeFfiDeviceResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_revoke_device_key(
+        it,
+        FfiConverterString.lower(`ak`),_status)
+}
+    }
+    )
+    }
+
+
     override fun `scanAccept`(`request`: FfiScanAcceptRequest): FfiScanAccept {
             return FfiConverterTypeFfiScanAccept.lift(
     callWithHandle {
@@ -1252,6 +1511,19 @@ open class GrainClientMemoryStore: Disposable, AutoCloseable, GrainClientMemoryS
     UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_scan_accept(
         it,
         FfiConverterTypeFfiScanAcceptRequest.lower(`request`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `setActiveDevice`(`ak`: kotlin.String): FfiDeviceResult {
+            return FfiConverterTypeFfiDeviceResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_set_active_device(
+        it,
+        FfiConverterString.lower(`ak`),_status)
 }
     }
     )
@@ -1336,6 +1608,301 @@ public object FfiConverterTypeFfiAcceptedScan: FfiConverterRustBuffer<FfiAccepte
             FfiConverterString.write(value.`scanId`, buf)
             FfiConverterString.write(value.`coseB64`, buf)
             FfiConverterString.write(value.`trustPubB64`, buf)
+    }
+}
+
+
+
+data class FfiClientLifecycle (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `rootKid`: kotlin.String?
+    ,
+    var `activeAk`: kotlin.String?
+    ,
+    var `deviceCount`: kotlin.ULong
+    ,
+    var `revokedCount`: kotlin.ULong
+    ,
+    var `acceptedRecordCount`: kotlin.ULong
+    ,
+    var `lifecycleEventCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiClientLifecycle: FfiConverterRustBuffer<FfiClientLifecycle> {
+    override fun read(buf: ByteBuffer): FfiClientLifecycle {
+        return FfiClientLifecycle(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiClientLifecycle) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`rootKid`) +
+            FfiConverterOptionalString.allocationSize(value.`activeAk`) +
+            FfiConverterULong.allocationSize(value.`deviceCount`) +
+            FfiConverterULong.allocationSize(value.`revokedCount`) +
+            FfiConverterULong.allocationSize(value.`acceptedRecordCount`) +
+            FfiConverterULong.allocationSize(value.`lifecycleEventCount`)
+    )
+
+    override fun write(value: FfiClientLifecycle, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`rootKid`, buf)
+            FfiConverterOptionalString.write(value.`activeAk`, buf)
+            FfiConverterULong.write(value.`deviceCount`, buf)
+            FfiConverterULong.write(value.`revokedCount`, buf)
+            FfiConverterULong.write(value.`acceptedRecordCount`, buf)
+            FfiConverterULong.write(value.`lifecycleEventCount`, buf)
+    }
+}
+
+
+
+data class FfiDeviceResult (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `deviceAk`: kotlin.String?
+    ,
+    var `activeAk`: kotlin.String?
+    ,
+    var `rootKid`: kotlin.String?
+    ,
+    var `deviceCount`: kotlin.ULong
+    ,
+    var `revokedCount`: kotlin.ULong
+    ,
+    var `lifecycleEventCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDeviceResult: FfiConverterRustBuffer<FfiDeviceResult> {
+    override fun read(buf: ByteBuffer): FfiDeviceResult {
+        return FfiDeviceResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDeviceResult) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`deviceAk`) +
+            FfiConverterOptionalString.allocationSize(value.`activeAk`) +
+            FfiConverterOptionalString.allocationSize(value.`rootKid`) +
+            FfiConverterULong.allocationSize(value.`deviceCount`) +
+            FfiConverterULong.allocationSize(value.`revokedCount`) +
+            FfiConverterULong.allocationSize(value.`lifecycleEventCount`)
+    )
+
+    override fun write(value: FfiDeviceResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`deviceAk`, buf)
+            FfiConverterOptionalString.write(value.`activeAk`, buf)
+            FfiConverterOptionalString.write(value.`rootKid`, buf)
+            FfiConverterULong.write(value.`deviceCount`, buf)
+            FfiConverterULong.write(value.`revokedCount`, buf)
+            FfiConverterULong.write(value.`lifecycleEventCount`, buf)
+    }
+}
+
+
+
+data class FfiIdentityResult (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `rootKid`: kotlin.String?
+    ,
+    var `activeAk`: kotlin.String?
+    ,
+    var `bundleB64`: kotlin.String?
+    ,
+    var `deviceCount`: kotlin.ULong
+    ,
+    var `revokedCount`: kotlin.ULong
+    ,
+    var `lifecycleEventCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiIdentityResult: FfiConverterRustBuffer<FfiIdentityResult> {
+    override fun read(buf: ByteBuffer): FfiIdentityResult {
+        return FfiIdentityResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiIdentityResult) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`rootKid`) +
+            FfiConverterOptionalString.allocationSize(value.`activeAk`) +
+            FfiConverterOptionalString.allocationSize(value.`bundleB64`) +
+            FfiConverterULong.allocationSize(value.`deviceCount`) +
+            FfiConverterULong.allocationSize(value.`revokedCount`) +
+            FfiConverterULong.allocationSize(value.`lifecycleEventCount`)
+    )
+
+    override fun write(value: FfiIdentityResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`rootKid`, buf)
+            FfiConverterOptionalString.write(value.`activeAk`, buf)
+            FfiConverterOptionalString.write(value.`bundleB64`, buf)
+            FfiConverterULong.write(value.`deviceCount`, buf)
+            FfiConverterULong.write(value.`revokedCount`, buf)
+            FfiConverterULong.write(value.`lifecycleEventCount`, buf)
+    }
+}
+
+
+
+data class FfiPairingEnvelopeRequest (
+    var `envelopeB64`: kotlin.String
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairingEnvelopeRequest: FfiConverterRustBuffer<FfiPairingEnvelopeRequest> {
+    override fun read(buf: ByteBuffer): FfiPairingEnvelopeRequest {
+        return FfiPairingEnvelopeRequest(
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPairingEnvelopeRequest) = (
+            FfiConverterString.allocationSize(value.`envelopeB64`)
+    )
+
+    override fun write(value: FfiPairingEnvelopeRequest, buf: ByteBuffer) {
+            FfiConverterString.write(value.`envelopeB64`, buf)
+    }
+}
+
+
+
+data class FfiPairingResult (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `pairingId`: kotlin.String?
+    ,
+    var `envelopeB64`: kotlin.String?
+    ,
+    var `rootKid`: kotlin.String?
+    ,
+    var `deviceCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPairingResult: FfiConverterRustBuffer<FfiPairingResult> {
+    override fun read(buf: ByteBuffer): FfiPairingResult {
+        return FfiPairingResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPairingResult) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`pairingId`) +
+            FfiConverterOptionalString.allocationSize(value.`envelopeB64`) +
+            FfiConverterOptionalString.allocationSize(value.`rootKid`) +
+            FfiConverterULong.allocationSize(value.`deviceCount`)
+    )
+
+    override fun write(value: FfiPairingResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`pairingId`, buf)
+            FfiConverterOptionalString.write(value.`envelopeB64`, buf)
+            FfiConverterOptionalString.write(value.`rootKid`, buf)
+            FfiConverterULong.write(value.`deviceCount`, buf)
     }
 }
 
@@ -1513,6 +2080,97 @@ public object FfiConverterTypeFfiScanPreviewRequest: FfiConverterRustBuffer<FfiS
 
 
 
+data class FfiSyncBundleRequest (
+    var `bundleB64`: kotlin.String
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiSyncBundleRequest: FfiConverterRustBuffer<FfiSyncBundleRequest> {
+    override fun read(buf: ByteBuffer): FfiSyncBundleRequest {
+        return FfiSyncBundleRequest(
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiSyncBundleRequest) = (
+            FfiConverterString.allocationSize(value.`bundleB64`)
+    )
+
+    override fun write(value: FfiSyncBundleRequest, buf: ByteBuffer) {
+            FfiConverterString.write(value.`bundleB64`, buf)
+    }
+}
+
+
+
+data class FfiSyncResult (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `bundleB64`: kotlin.String?
+    ,
+    var `acceptedRecordCount`: kotlin.ULong
+    ,
+    var `deviceCount`: kotlin.ULong
+    ,
+    var `lifecycleEventCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiSyncResult: FfiConverterRustBuffer<FfiSyncResult> {
+    override fun read(buf: ByteBuffer): FfiSyncResult {
+        return FfiSyncResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiSyncResult) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`bundleB64`) +
+            FfiConverterULong.allocationSize(value.`acceptedRecordCount`) +
+            FfiConverterULong.allocationSize(value.`deviceCount`) +
+            FfiConverterULong.allocationSize(value.`lifecycleEventCount`)
+    )
+
+    override fun write(value: FfiSyncResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`bundleB64`, buf)
+            FfiConverterULong.write(value.`acceptedRecordCount`, buf)
+            FfiConverterULong.write(value.`deviceCount`, buf)
+            FfiConverterULong.write(value.`lifecycleEventCount`, buf)
+    }
+}
+
+
+
 
 /**
  * @suppress
@@ -1597,7 +2255,17 @@ public object FfiConverterSequenceTypeFfiAcceptedScan: FfiConverterRustBuffer<Li
             FfiConverterTypeFfiAcceptedScan.write(it, buf)
         }
     }
-} fun `grainScanAcceptPrepare`(`request`: FfiScanAcceptRequest): FfiScanAccept {
+} fun `grainPairingPreviewEnvelope`(`request`: FfiPairingEnvelopeRequest): FfiPairingResult {
+            return FfiConverterTypeFfiPairingResult.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_func_grain_pairing_preview_envelope(
+
+        FfiConverterTypeFfiPairingEnvelopeRequest.lower(`request`),_status)
+}
+    )
+    }
+
+ fun `grainScanAcceptPrepare`(`request`: FfiScanAcceptRequest): FfiScanAccept {
             return FfiConverterTypeFfiScanAccept.lift(
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_grain_client_core_fn_func_grain_scan_accept_prepare(

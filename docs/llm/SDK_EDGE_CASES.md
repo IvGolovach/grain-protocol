@@ -19,6 +19,10 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0015: Swift client package stale generated sources, failed native library link, unsupported workflow fixture refs, raw protocol API exposure, or fixture behavior drift -> `scripts/sdk/check_swift_package.sh` failure
 - SDK-NEG-0016: Kotlin client package stale generated sources, failed native library link, unsupported workflow fixture refs, wrong JVM/native architecture, raw protocol API exposure, or fixture behavior drift -> `scripts/sdk/check_kotlin_package.sh` failure
 - SDK-NEG-0017: WASM/mobile-web client package stale glue, failed WASM build/load, unsupported workflow fixture refs, browser/Node fixture behavior drift, raw protocol API exposure, or generated-output dirtiness -> `scripts/sdk/check_wasm_package.sh` failure
+- SDK-NEG-0018: portable identity lifecycle duplicate root creation, malformed bundle import, unsupported bundle version, missing identity, CSPRNG failure, unauthorized active device, unknown device revoke, or root revoke -> explicit `SDK_ERR_*` rejection without partial mutation
+- SDK-NEG-0019: portable pairing malformed envelope, invalid envelope version/transfer/id, malformed embedded identity bundle, replay into the same identity, or conflicting existing identity -> `Rejected` or `AlreadyPaired` with atomic store semantics
+- SDK-NEG-0020: portable sync bundle malformed payload/version, malformed embedded identity, malformed accepted scan/event rows, identity root conflict, or repeated import -> `Rejected` or `AlreadyImported` with atomic store semantics
+- SDK-NEG-0021: expanded generated SDK surface missing identity/device/pairing/sync symbols or exposing lifecycle workflows only in one platform wrapper -> generated binding or platform package check failure
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
@@ -43,11 +47,16 @@ These checks are asserted in:
 - `core/rust/grain-client-core/tests/trust_adapter_contract.rs`
 - `core/rust/grain-client-core/tests/platform_scan_accept.rs`
 - `core/rust/grain-client-core/tests/binding_api.rs`
+- `core/rust/grain-client-core/tests/identity_device_lifecycle.rs`
+- `core/rust/grain-client-core/tests/pairing_sync_bundle.rs`
 - `sdk/swift/Sources/GrainClientFixtureRunner/main.swift`
 - `sdk/kotlin/src/test/kotlin/dev/grain/fixture/GrainClientFixtureRunner.kt`
 - `sdk/wasm/tests/run-workflow-fixtures.mjs`
 - `sdk/workflows/fixtures/scan-accept/*.json`
 - `sdk/workflows/fixtures/scan-preview/*.json`
+- `sdk/workflows/fixtures/device-lifecycle/*.json`
+- `sdk/workflows/fixtures/pairing/*.json`
+- `sdk/workflows/fixtures/sync-bundle/*.json`
 - `scripts/sdk/check_generated_bindings.sh`
 - `scripts/sdk/check_swift_package.sh`
 - `scripts/sdk/sync_swift_bindings.sh`

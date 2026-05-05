@@ -16,10 +16,9 @@ uniffi_build = { workspace = true }
 
 [dependencies]
 base64 = { workspace = true }
+getrandom = { workspace = true }
 grain-core = { path = "../grain-core" }
-sha2 = { workspace = true }
-uniffi = { workspace = true, optional = true }
-
-[dev-dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true }
+uniffi = { workspace = true, optional = true }

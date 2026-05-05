@@ -1,5 +1,7 @@
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
+use serde::{Deserialize, Serialize};
+use std::{collections::BTreeMap, fmt};
 
 /// Preview status for a scanned transport payload.
 ///
@@ -81,7 +83,7 @@ pub struct AcceptedScan {
 }
 
 /// Persisted accepted scan record.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AcceptedScanRecord {
     pub scan_id: String,
     pub cose_b64: String,
@@ -95,6 +97,186 @@ impl From<AcceptedScan> for AcceptedScanRecord {
             cose_b64: accepted.cose_b64,
             trust_pub_b64: accepted.trust_pub_b64,
         }
+    }
+}
+
+/// Device authorization key tracked by the portable client lifecycle.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DeviceKey {
+    pub ak: String,
+    pub label: String,
+    pub pub_b64: String,
+}
+
+/// Portable identity bundle shared by generated SDKs.
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IdentityBundleV1 {
+    pub bundle_v: u32,
+    pub root_kid: String,
+    pub root_pub_b64: String,
+    pub active_ak: String,
+    pub device_keys: Vec<DeviceKey>,
+    pub revoked_aks: Vec<String>,
+    pub sync_secret_b64: String,
+    pub seq_state: BTreeMap<String, String>,
+}
+
+impl fmt::Debug for IdentityBundleV1 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IdentityBundleV1")
+            .field("bundle_v", &self.bundle_v)
+            .field("root_kid", &self.root_kid)
+            .field("root_pub_b64", &self.root_pub_b64)
+            .field("active_ak", &self.active_ak)
+            .field("device_keys", &self.device_keys)
+            .field("revoked_aks", &self.revoked_aks)
+            .field("sync_secret_b64", &"[REDACTED]")
+            .field("seq_state", &self.seq_state)
+            .finish()
+    }
+}
+
+/// SDK lifecycle record used to keep generated-client authorization history
+/// synchronized with local identity state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LifecycleEventRecord {
+    pub event_id: String,
+    pub t: String,
+    pub ak: String,
+    pub seq: u64,
+    pub payload_cid: String,
+    pub target_ak: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IdentityStatus {
+    Created,
+    Exported,
+    Imported,
+    AlreadyExists,
+    Uninitialized,
+    Rejected,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct IdentityResult {
+    pub status: IdentityStatus,
+    pub diag: Vec<String>,
+    pub root_kid: Option<String>,
+    pub active_ak: Option<String>,
+    pub bundle_b64: Option<String>,
+    pub device_count: u64,
+    pub revoked_count: u64,
+    pub lifecycle_event_count: u64,
+}
+
+impl fmt::Debug for IdentityResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IdentityResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("root_kid", &self.root_kid)
+            .field("active_ak", &self.active_ak)
+            .field(
+                "bundle_b64",
+                &self.bundle_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("device_count", &self.device_count)
+            .field("revoked_count", &self.revoked_count)
+            .field("lifecycle_event_count", &self.lifecycle_event_count)
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeviceStatus {
+    Added,
+    Revoked,
+    Active,
+    Rejected,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceResult {
+    pub status: DeviceStatus,
+    pub diag: Vec<String>,
+    pub device_ak: Option<String>,
+    pub active_ak: Option<String>,
+    pub root_kid: Option<String>,
+    pub device_count: u64,
+    pub revoked_count: u64,
+    pub lifecycle_event_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ClientLifecycleStatus {
+    Ready,
+    Uninitialized,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClientLifecycle {
+    pub status: ClientLifecycleStatus,
+    pub diag: Vec<String>,
+    pub root_kid: Option<String>,
+    pub active_ak: Option<String>,
+    pub device_count: u64,
+    pub revoked_count: u64,
+    pub accepted_record_count: u64,
+    pub lifecycle_event_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PairingStatus {
+    Created,
+    Valid,
+    Paired,
+    AlreadyPaired,
+    Rejected,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PairingResult {
+    pub status: PairingStatus,
+    pub diag: Vec<String>,
+    pub pairing_id: Option<String>,
+    pub envelope_b64: Option<String>,
+    pub root_kid: Option<String>,
+    pub device_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SyncStatus {
+    Exported,
+    Empty,
+    Imported,
+    AlreadyImported,
+    Rejected,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct SyncResult {
+    pub status: SyncStatus,
+    pub diag: Vec<String>,
+    pub bundle_b64: Option<String>,
+    pub accepted_record_count: u64,
+    pub device_count: u64,
+    pub lifecycle_event_count: u64,
+}
+
+impl fmt::Debug for SyncResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SyncResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field(
+                "bundle_b64",
+                &self.bundle_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("accepted_record_count", &self.accepted_record_count)
+            .field("device_count", &self.device_count)
+            .field("lifecycle_event_count", &self.lifecycle_event_count)
+            .finish()
     }
 }
 

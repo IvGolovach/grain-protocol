@@ -12,7 +12,7 @@
     },
     "workflow": {
       "type": "string",
-      "enum": ["scan_preview", "scan_accept"]
+      "enum": ["scan_preview", "scan_accept", "device_lifecycle", "pairing", "sync_bundle"]
     },
     "strict": {
       "const": true
@@ -20,7 +20,6 @@
     "input": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["qr_string_ref"],
       "properties": {
         "qr_string_ref": {
           "$ref": "#/$defs/ref"
@@ -34,6 +33,16 @@
         "accept_attempts": {
           "type": "integer",
           "minimum": 1
+        },
+        "import_attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "root_label": {
+          "type": "string"
+        },
+        "device_label": {
+          "type": "string"
         }
       },
       "not": {
@@ -43,7 +52,7 @@
     "expect": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "cose_b64", "store_mutation"],
+      "required": ["status"],
       "oneOf": [
         {
           "required": ["diag"]
@@ -55,7 +64,23 @@
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["Verified", "Untrusted", "Accepted", "AlreadyAccepted", "Rejected"]
+          "enum": [
+            "Verified",
+            "Untrusted",
+            "Accepted",
+            "AlreadyAccepted",
+            "Created",
+            "Valid",
+            "Paired",
+            "AlreadyPaired",
+            "Ready",
+            "Uninitialized",
+            "Exported",
+            "Empty",
+            "Imported",
+            "AlreadyImported",
+            "Rejected"
+          ]
         },
         "diag": {
           "type": "array",
@@ -70,8 +95,7 @@
           }
         },
         "cose_b64": {
-          "type": "string",
-          "enum": ["present", "absent"]
+          "$ref": "#/$defs/presence"
         },
         "store_mutation": {
           "type": "string",
@@ -80,6 +104,36 @@
         "accepted_record_count": {
           "type": "integer",
           "minimum": 0
+        },
+        "device_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "revoked_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lifecycle_event_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "root_kid": {
+          "$ref": "#/$defs/presence"
+        },
+        "active_ak": {
+          "$ref": "#/$defs/presence"
+        },
+        "device_ak": {
+          "$ref": "#/$defs/presence"
+        },
+        "pairing_id": {
+          "$ref": "#/$defs/presence"
+        },
+        "envelope_b64": {
+          "$ref": "#/$defs/presence"
+        },
+        "bundle_b64": {
+          "$ref": "#/$defs/presence"
         }
       }
     },
@@ -98,6 +152,10 @@
     "ref": {
       "type": "string",
       "pattern": "^conformance/vectors/[A-Za-z0-9_/-]+\\.json#/[A-Za-z0-9_~./-]+$"
+    },
+    "presence": {
+      "type": "string",
+      "enum": ["present", "absent"]
     }
   }
 }

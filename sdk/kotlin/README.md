@@ -29,6 +29,11 @@ import dev.grain.GrainScanAcceptStatus
 import dev.grain.GrainScanPreviewStatus
 
 GrainClient().use { client ->
+    val identity = client.createRootIdentity(label = "phone")
+    if (identity.status == "Created" || identity.status == "AlreadyExists") {
+        client.addDeviceKey(label = "glasses")
+    }
+
     val preview = client.scanPreview(
         qrString = scannedQRCode,
         trustPubB64 = trustedPublicKey,

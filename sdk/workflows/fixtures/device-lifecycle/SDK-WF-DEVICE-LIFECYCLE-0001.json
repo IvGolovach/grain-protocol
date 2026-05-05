@@ -1,0 +1,23 @@
+{
+  "fixture_id": "SDK-WF-DEVICE-LIFECYCLE-0001",
+  "workflow": "device_lifecycle",
+  "strict": true,
+  "input": {
+    "root_label": "phone",
+    "device_label": "glasses"
+  },
+  "expect": {
+    "status": "Ready",
+    "diag": [],
+    "root_kid": "present",
+    "active_ak": "present",
+    "device_ak": "present",
+    "device_count": 2,
+    "revoked_count": 1,
+    "accepted_record_count": 0,
+    "lifecycle_event_count": 2
+  },
+  "meta": {
+    "desc": "Creating a root identity, adding a device, activating it, and revoking it leaves the client lifecycle ready with deterministic counts."
+  }
+}

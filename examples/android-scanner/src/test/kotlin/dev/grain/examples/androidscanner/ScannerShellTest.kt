@@ -31,6 +31,14 @@ private fun verifiedPreviewEnablesAcceptAndPersistsOnce() {
 
     GrainScannerWorkflowClient().use { client ->
         val controller = ScannerController(client)
+        controller.prepareLocalIdentity()
+        requireSmoke(controller.state.lifecycleStatus == "Ready", "lifecycle status mismatch")
+        requireSmoke(controller.state.deviceCount == 2UL, "device count mismatch")
+        requireSmoke(controller.state.lifecycleEventCount == 1UL, "lifecycle event count mismatch")
+        controller.prepareLocalIdentity()
+        requireSmoke(controller.state.deviceCount == 2UL, "repeat prepare duplicated device")
+        requireSmoke(controller.state.lifecycleEventCount == 1UL, "repeat prepare duplicated lifecycle event")
+
         controller.updateTrustPubB64(trustPubB64)
         val cameraAdapter = CameraXFrameScanAdapter<String> { frame -> frame }
         val cameraPayload = cameraAdapter.decode(qrString) ?: error("camera payload missing")

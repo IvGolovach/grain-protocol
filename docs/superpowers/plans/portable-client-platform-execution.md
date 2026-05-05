@@ -58,8 +58,8 @@
 | 7 | Kotlin package over generated client workflow API | Merged | `codex/kotlin-generated-client-sdk` | #34 | `eb1bed9615006c82f179ed46b8ee1400a0673275` | `JAVA_HOME`/`PATH` set to an arm64 JDK with `SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25372064355` passed on final SHA `07f93c3449b6d9675df1ffa2af3bdbe8f193649c`; CodeRabbit context SUCCESS but generated review was rate-limited; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25372380102` passed |
 | 8 | WASM/mobile-web client workflow binding | Merged | `codex/wasm-client-workflow-sdk` | #35 | `1507e25869a6e9911fda4925696478c028c94892` | Initial local proof plus CI correction: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p grain-client-wasm --check`; `cargo check --manifest-path core/rust/Cargo.toml -p grain-client-core --no-default-features`; `cargo check --manifest-path core/rust/Cargo.toml -p grain-client-wasm`; `cargo tree --manifest-path core/rust/Cargo.toml -p grain-client-wasm --target wasm32-wasip1 -e normal`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main`. Full `scripts/sdk/check_wasm_package.sh` requires `wasm32-wasip1` locally and was proven by required remote `wasm-smoke`. | PR CI run `25374354540` passed on final SHA `3022577dccc24c78586fd4df570314376dec868c`; CodeRabbit findings fixed and threads resolved/outdated; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25374545310` passed |
 | 9a | Reference scanner shells | Merged | `codex/reference-scanner-shells` | #36 | `f45bd494652e9fc65da69d455ed43865f5b3bfac` | `scripts/sdk/check_scanner_examples.sh`; `scripts/sdk/check_swift_package.sh`; `scripts/sdk/check_kotlin_package.sh`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25375665431` passed on final SHA `cca5fd1b0608f2a6e3ec562c2b163288559f1975`; CodeRabbit status SUCCESS but generated review was rate-limited with no actionable threads; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25375922032` passed |
-| 9b | Camera adapters for scanner shells | In review | `codex/scanner-camera-adapters` | #37 |  | `scripts/sdk/check_scanner_examples.sh` with arm64 JDK and `SDK_KOTLIN_GRADLE_OFFLINE=1`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR #37 opened; remote CI and review pending |
-| 10 | Pairing, identity, sync, and device lifecycle | Pending |  |  |  |  |  |
+| 9b | Camera adapters for scanner shells | Merged | `codex/scanner-camera-adapters` | #37 | `465e0a3fcca54a3fd6a691f2b1c2cb95b674ef54` | `scripts/sdk/check_scanner_examples.sh` with arm64 JDK and `SDK_KOTLIN_GRADLE_OFFLINE=1`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25376799674` passed on final SHA `4f727b225a607cec2a74e0c6d76c50c547f073c0`; CodeRabbit final-SHA status SUCCESS after rate-limit/no actionable threads; Greptile was manually requested twice and did not return a review/comment before merge readiness; post-merge `main` CI run `25377111364` passed |
+| 10 | Pairing, identity, sync, and device lifecycle | In progress | `codex/pairing-sync-lifecycle` | #38 |  | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p grain-client-wasm --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `scripts/sdk/check_generated_bindings.sh`; `scripts/sdk/check_swift_package.sh`; `scripts/sdk/check_kotlin_package.sh`; `scripts/sdk/check_scanner_examples.sh`; `npm --prefix sdk/wasm run check`; fixture/docs/spec/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR #38 CI passed on initial SHA; CodeRabbit review correction in progress; Greptile manually requested |
 | 11 | Developer experience, version matrix, release packaging, final certification | Pending |  |  |  |  |  |
 
 ### PR Dependencies
@@ -106,13 +106,15 @@
 | #35 | CodeRabbit | WASM store handles used raw heap pointers, raw-API grep missed snake_case names, response parsing was too permissive, Node loader destructured before validation, and JSON Pointer array indices used permissive `parseInt`. | Fix in PR #35. | Added opaque generated store handles, expanded the raw API guard, made WASM response parsing strict, made `createNodeGrainClient()` validate omitted options, and required strict array-index tokens. |
 | #36 | CodeRabbit | Generated review comment was rate-limited although the status context succeeded. | No code change. | No actionable review threads were present; required CI and post-merge `main` CI passed. |
 | #36 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
+| #37 | CodeRabbit | Final-SHA review request was rate-limited, but the CodeRabbit status context completed successfully and no review threads were present. | No code change. | Required CI and post-merge `main` CI passed. |
+| #37 | Greptile | Manual review was requested twice and did not return a review/comment before merge readiness. | No code change. | Required CI and post-merge `main` CI passed. |
 
 ## Split Log
 
 | Inserted After | Extra PR Scope | Reason | Dependency | Status |
 | --- | --- | --- | --- | --- |
 | PR 3a | PR 3b: `scan_accept`, atomic store abstraction, memory store | PR 3 mixed scan-workflow logic with store infrastructure in the original plan. | PR 3b depends on PR 3a. | Merged in PR #30 (`952df09380851508c93f0ca9194885bb688af44a`) |
-| PR 9a | PR 9b: camera adapters for scanner shells | Camera capture brings AVFoundation, CameraX, browser permissions, QR decoder dependency choice, and device/browser test concerns that should not obscure shell parity review. | PR 9b depends on PR 9a. | PR 9a merged in PR #36 (`f45bd494652e9fc65da69d455ed43865f5b3bfac`); PR 9b in progress |
+| PR 9a | PR 9b: camera adapters for scanner shells | Camera capture brings AVFoundation, CameraX, browser permissions, QR decoder dependency choice, and device/browser test concerns that should not obscure shell parity review. | PR 9b depends on PR 9a. | Merged in PR #37 (`465e0a3fcca54a3fd6a691f2b1c2cb95b674ef54`) |
 
 ---
 
@@ -792,6 +794,7 @@ Run available platform app checks, scanner example checks, SDK tests, docs check
 - Create: `core/rust/grain-client-core/src/device.rs`
 - Create: `sdk/workflows/fixtures/pairing/`
 - Create: `sdk/workflows/fixtures/device-lifecycle/`
+- Create: `sdk/workflows/fixtures/sync-bundle/`
 - Create: `docs/human/rationale/TOR-PAIRING-A01.md`
 - Modify: `sdk/swift/`
 - Modify: `sdk/kotlin/`
@@ -806,23 +809,23 @@ Run available platform app checks, scanner example checks, SDK tests, docs check
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 9 evidence
 
-- [ ] **Step 1: Add pairing ADR before implementation**
+- [x] **Step 1: Add pairing ADR before implementation**
 
 Define what pairing transfers, what expires, how replay is rejected, and whether pairing transfers `sync_secret`, a wrapped device grant, or a constrained invite.
 
-- [ ] **Step 2: Add pure pairing preview**
+- [x] **Step 2: Add pure pairing preview**
 
 Parse and validate pairing intent without storing secrets.
 
-- [ ] **Step 3: Add explicit pairing accept**
+- [x] **Step 3: Add explicit pairing accept**
 
 Persist identity/trust material atomically. Reject replay and revoked-device paths.
 
-- [ ] **Step 4: Add device lifecycle workflows**
+- [x] **Step 4: Add device lifecycle workflows**
 
 Add create root, export/import identity bundle, add device, revoke device, active-device state, and sync metadata.
 
-- [ ] **Step 5: Add sync bundle workflows**
+- [x] **Step 5: Add sync bundle workflows**
 
 Add export/import sync bundle, list saved objects, export evidence. Treat server sync as dumb transport: no server truth and no hidden trust.
 
@@ -888,7 +891,7 @@ The initiative is complete only when:
 - [x] PR 7 is merged and post-merge `main` CI passes.
 - [x] PR 8 is merged and post-merge `main` CI passes.
 - [x] PR 9a is merged and post-merge `main` CI passes.
-- [ ] PR 9b is merged and post-merge `main` CI passes.
+- [x] PR 9b is merged and post-merge `main` CI passes.
 - [ ] PR 10 is merged and post-merge `main` CI passes.
 - [ ] PR 11 is merged and post-merge `main` CI passes.
 - [ ] This tracker records every PR number, merge SHA, validation result, remote CI result, review result, and split decision.

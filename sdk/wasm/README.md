@@ -31,6 +31,11 @@ const client = await createNodeGrainClient({
 });
 
 try {
+  const identity = client.createRootIdentity({ label: "phone" });
+  if (identity.status === "Created" || identity.status === "AlreadyExists") {
+    client.addDeviceKey({ label: "glasses" });
+  }
+
   const preview = client.scanPreview({
     qrString: scannedQRCode,
     trustPubB64: trustedPublicKey,

@@ -1,4 +1,6 @@
-use grain_client_core::{ScanAcceptStatus, ScanPreviewStatus};
+use grain_client_core::{
+    ClientLifecycleStatus, PairingStatus, ScanAcceptStatus, ScanPreviewStatus, SyncStatus,
+};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -19,15 +21,21 @@ pub struct WorkflowFixture {
 pub enum WorkflowName {
     ScanPreview,
     ScanAccept,
+    DeviceLifecycle,
+    Pairing,
+    SyncBundle,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WorkflowInput {
-    pub qr_string_ref: String,
+    pub qr_string_ref: Option<String>,
     pub trust_pub_b64_ref: Option<String>,
     pub trust_pub_b64: Option<String>,
     pub accept_attempts: Option<usize>,
+    pub import_attempts: Option<usize>,
+    pub root_label: Option<String>,
+    pub device_label: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,9 +44,18 @@ pub struct WorkflowExpect {
     pub status: ExpectedStatus,
     pub diag: Option<Vec<String>>,
     pub diag_contains: Option<Vec<String>>,
-    pub cose_b64: CosePresence,
-    pub store_mutation: StoreMutation,
+    pub cose_b64: Option<CosePresence>,
+    pub store_mutation: Option<StoreMutation>,
     pub accepted_record_count: Option<usize>,
+    pub device_count: Option<u64>,
+    pub revoked_count: Option<u64>,
+    pub lifecycle_event_count: Option<u64>,
+    pub root_kid: Option<Presence>,
+    pub active_ak: Option<Presence>,
+    pub device_ak: Option<Presence>,
+    pub pairing_id: Option<Presence>,
+    pub envelope_b64: Option<Presence>,
+    pub bundle_b64: Option<Presence>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,6 +70,16 @@ pub enum ExpectedStatus {
     Untrusted,
     Accepted,
     AlreadyAccepted,
+    Created,
+    Valid,
+    Paired,
+    AlreadyPaired,
+    Ready,
+    Uninitialized,
+    Exported,
+    Empty,
+    Imported,
+    AlreadyImported,
     Rejected,
 }
 
@@ -62,8 +89,19 @@ impl ExpectedStatus {
             Self::Verified => ScanPreviewStatus::Verified,
             Self::Untrusted => ScanPreviewStatus::Untrusted,
             Self::Rejected => ScanPreviewStatus::Rejected,
-            Self::Accepted | Self::AlreadyAccepted => {
-                panic!("scan_accept status used for scan_preview")
+            Self::Accepted
+            | Self::AlreadyAccepted
+            | Self::Created
+            | Self::Valid
+            | Self::Paired
+            | Self::AlreadyPaired
+            | Self::Ready
+            | Self::Uninitialized
+            | Self::Exported
+            | Self::Empty
+            | Self::Imported
+            | Self::AlreadyImported => {
+                panic!("invalid status used for as_preview_status")
             }
         }
     }
@@ -73,9 +111,50 @@ impl ExpectedStatus {
             Self::Accepted => ScanAcceptStatus::Accepted,
             Self::AlreadyAccepted => ScanAcceptStatus::AlreadyAccepted,
             Self::Rejected => ScanAcceptStatus::Rejected,
-            Self::Verified | Self::Untrusted => {
-                panic!("scan_preview status used for scan_accept")
+            Self::Verified
+            | Self::Untrusted
+            | Self::Created
+            | Self::Valid
+            | Self::Paired
+            | Self::AlreadyPaired
+            | Self::Ready
+            | Self::Uninitialized
+            | Self::Exported
+            | Self::Empty
+            | Self::Imported
+            | Self::AlreadyImported => {
+                panic!("invalid status used for as_accept_status")
             }
+        }
+    }
+
+    pub fn as_lifecycle_status(&self) -> ClientLifecycleStatus {
+        match self {
+            Self::Ready => ClientLifecycleStatus::Ready,
+            Self::Uninitialized => ClientLifecycleStatus::Uninitialized,
+            _ => panic!("non-lifecycle status used for device_lifecycle"),
+        }
+    }
+
+    pub fn as_pairing_status(&self) -> PairingStatus {
+        match self {
+            Self::Created => PairingStatus::Created,
+            Self::Valid => PairingStatus::Valid,
+            Self::Paired => PairingStatus::Paired,
+            Self::AlreadyPaired => PairingStatus::AlreadyPaired,
+            Self::Rejected => PairingStatus::Rejected,
+            _ => panic!("non-pairing status used for pairing"),
+        }
+    }
+
+    pub fn as_sync_status(&self) -> SyncStatus {
+        match self {
+            Self::Exported => SyncStatus::Exported,
+            Self::Empty => SyncStatus::Empty,
+            Self::Imported => SyncStatus::Imported,
+            Self::AlreadyImported => SyncStatus::AlreadyImported,
+            Self::Rejected => SyncStatus::Rejected,
+            _ => panic!("non-sync status used for sync_bundle"),
         }
     }
 }
@@ -94,12 +173,31 @@ pub enum StoreMutation {
     AcceptedScanInserted,
 }
 
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Presence {
+    Present,
+    Absent,
+}
+
 pub fn load_scan_preview_fixtures() -> Result<Vec<WorkflowFixture>, String> {
     load_workflow_fixtures("scan-preview")
 }
 
 pub fn load_scan_accept_fixtures() -> Result<Vec<WorkflowFixture>, String> {
     load_workflow_fixtures("scan-accept")
+}
+
+pub fn load_device_lifecycle_fixtures() -> Result<Vec<WorkflowFixture>, String> {
+    load_workflow_fixtures("device-lifecycle")
+}
+
+pub fn load_pairing_fixtures() -> Result<Vec<WorkflowFixture>, String> {
+    load_workflow_fixtures("pairing")
+}
+
+pub fn load_sync_bundle_fixtures() -> Result<Vec<WorkflowFixture>, String> {
+    load_workflow_fixtures("sync-bundle")
 }
 
 fn load_workflow_fixtures(workflow_dir: &str) -> Result<Vec<WorkflowFixture>, String> {

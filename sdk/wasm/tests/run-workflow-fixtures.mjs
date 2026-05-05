@@ -16,6 +16,9 @@ if (!existsSync(wasmPath)) {
 
 await runScanPreviewFixtures();
 await runScanAcceptFixtures();
+await runDeviceLifecycleFixtures();
+await runPairingFixtures();
+await runSyncBundleFixtures();
 console.log("WASM client workflow fixtures: PASS");
 
 async function runScanPreviewFixtures() {
@@ -26,13 +29,13 @@ async function runScanPreviewFixtures() {
     const client = await createNodeGrainClient({ wasmPath });
     try {
       const preview = client.scanPreview({
-        qrString: resolveStringRef(fixture.input.qr_string_ref),
+        qrString: fixtureQrString(fixture),
         trustPubB64: resolveTrustInput(fixture.input),
       });
 
       requireFixture(preview.status === fixture.expect.status, `${fixture.fixture_id} status mismatch`);
       requireDiagnostics(preview.diag, fixture.expect, fixture.fixture_id);
-      requireCosePresence(preview.coseB64, fixture.expect.cose_b64, fixture.fixture_id);
+      requireCosePresence(preview.coseB64, requiredExpectation(fixture.expect.cose_b64, "cose_b64", fixture.fixture_id), fixture.fixture_id);
       requireFixture(client.listAcceptedScans().length === 0, `${fixture.fixture_id} preview mutated storage`);
     } finally {
       client.close();
@@ -45,7 +48,7 @@ async function runScanAcceptFixtures() {
     requireFixture(fixture.workflow === "scan_accept", `${fixture.fixture_id} workflow mismatch`);
     requireFixture(fixture.strict === true, `${fixture.fixture_id} must be strict`);
 
-    const qrString = resolveStringRef(fixture.input.qr_string_ref);
+    const qrString = fixtureQrString(fixture);
     const trustPubB64 = resolveTrustInput(fixture.input);
     requireFixture(typeof trustPubB64 === "string", `${fixture.fixture_id} missing trust material`);
 
@@ -62,12 +65,13 @@ async function runScanAcceptFixtures() {
       requireFixture(accepted !== null, `${fixture.fixture_id} missing accept result`);
       requireFixture(accepted.status === fixture.expect.status, `${fixture.fixture_id} status mismatch`);
       requireDiagnostics(accepted.diag, fixture.expect, fixture.fixture_id);
-      requireCosePresence(accepted.coseB64, fixture.expect.cose_b64, fixture.fixture_id);
+      requireCosePresence(accepted.coseB64, requiredExpectation(fixture.expect.cose_b64, "cose_b64", fixture.fixture_id), fixture.fixture_id);
 
       const records = client.listAcceptedScans();
-      if (fixture.expect.store_mutation === "accepted_scan_inserted") {
+      const storeMutation = requiredExpectation(fixture.expect.store_mutation, "store_mutation", fixture.fixture_id);
+      if (storeMutation === "accepted_scan_inserted") {
         requireFixture(records.length > 0, `${fixture.fixture_id} expected persisted record`);
-      } else if (fixture.expect.store_mutation === "none") {
+      } else if (storeMutation === "none") {
         requireFixture(records.length === 0, `${fixture.fixture_id} expected no persisted records`);
       } else {
         throw new Error(`${fixture.fixture_id} unsupported store mutation`);
@@ -81,6 +85,145 @@ async function runScanAcceptFixtures() {
       }
     } finally {
       client.close();
+    }
+  }
+}
+
+async function runDeviceLifecycleFixtures() {
+  for (const fixture of loadFixtures("device-lifecycle")) {
+    requireFixture(fixture.workflow === "device_lifecycle", `${fixture.fixture_id} workflow mismatch`);
+    requireFixture(fixture.strict === true, `${fixture.fixture_id} must be strict`);
+
+    const client = await createNodeGrainClient({ wasmPath });
+    try {
+      const root = client.createRootIdentity({ label: fixture.input.root_label ?? "root" });
+      requireFixture(root.status === "Created", `${fixture.fixture_id} root create mismatch`);
+      const added = client.addDeviceKey({ label: fixture.input.device_label ?? "device" });
+      requireFixture(added.status === "Added", `${fixture.fixture_id} device add mismatch`);
+      requirePresence(added.deviceAk, "present", "device_ak", fixture.fixture_id);
+
+      const active = client.setActiveDevice({ ak: added.deviceAk });
+      requireFixture(active.status === "Active", `${fixture.fixture_id} active device mismatch`);
+      const revoked = client.revokeDeviceKey({ ak: added.deviceAk });
+      requireFixture(revoked.status === "Revoked", `${fixture.fixture_id} revoke mismatch`);
+
+      const lifecycle = client.clientLifecycle();
+      requireFixture(lifecycle.status === fixture.expect.status, `${fixture.fixture_id} lifecycle status mismatch`);
+      requireDiagnostics(lifecycle.diag, fixture.expect, fixture.fixture_id);
+      requirePresence(lifecycle.rootKid, fixture.expect.root_kid, "root_kid", fixture.fixture_id);
+      requirePresence(lifecycle.activeAk, fixture.expect.active_ak, "active_ak", fixture.fixture_id);
+      requirePresence(added.deviceAk, fixture.expect.device_ak, "device_ak", fixture.fixture_id);
+      requireCount(lifecycle.deviceCount, fixture.expect.device_count, "device_count", fixture.fixture_id);
+      requireCount(lifecycle.revokedCount, fixture.expect.revoked_count, "revoked_count", fixture.fixture_id);
+      requireCount(
+        lifecycle.acceptedRecordCount,
+        fixture.expect.accepted_record_count,
+        "accepted_record_count",
+        fixture.fixture_id,
+      );
+      requireCount(
+        lifecycle.lifecycleEventCount,
+        fixture.expect.lifecycle_event_count,
+        "lifecycle_event_count",
+        fixture.fixture_id,
+      );
+    } finally {
+      client.close();
+    }
+  }
+}
+
+async function runPairingFixtures() {
+  for (const fixture of loadFixtures("pairing")) {
+    requireFixture(fixture.workflow === "pairing", `${fixture.fixture_id} workflow mismatch`);
+    requireFixture(fixture.strict === true, `${fixture.fixture_id} must be strict`);
+
+    const source = await createNodeGrainClient({ wasmPath });
+    const target = await createNodeGrainClient({ wasmPath });
+    try {
+      const root = source.createRootIdentity({ label: fixture.input.root_label ?? "root" });
+      requireFixture(root.status === "Created", `${fixture.fixture_id} root create mismatch`);
+      const added = source.addDeviceKey({ label: fixture.input.device_label ?? "device" });
+      requireFixture(added.status === "Added", `${fixture.fixture_id} device add mismatch`);
+
+      const envelope = source.createPairingEnvelope();
+      requireFixture(envelope.status === "Created", `${fixture.fixture_id} envelope create mismatch`);
+      requirePresence(envelope.envelopeB64, fixture.expect.envelope_b64, "envelope_b64", fixture.fixture_id);
+      const preview = source.previewPairingEnvelope({ envelopeB64: envelope.envelopeB64 });
+      requireFixture(preview.status === "Valid", `${fixture.fixture_id} pairing preview mismatch`);
+
+      const attempts = fixture.input.accept_attempts ?? 1;
+      requireFixture(
+        Number.isInteger(attempts) && attempts > 0,
+        `${fixture.fixture_id} accept_attempts must be positive`,
+      );
+      let paired = null;
+      for (let i = 0; i < attempts; i += 1) {
+        paired = target.acceptPairingEnvelope({ envelopeB64: envelope.envelopeB64 });
+      }
+      requireFixture(paired !== null, `${fixture.fixture_id} missing pairing result`);
+      requireFixture(paired.status === fixture.expect.status, `${fixture.fixture_id} pairing status mismatch`);
+      requireDiagnostics(paired.diag, fixture.expect, fixture.fixture_id);
+      requirePresence(paired.rootKid, fixture.expect.root_kid, "root_kid", fixture.fixture_id);
+      requirePresence(paired.pairingId, fixture.expect.pairing_id, "pairing_id", fixture.fixture_id);
+      requireCount(paired.deviceCount, fixture.expect.device_count, "device_count", fixture.fixture_id);
+    } finally {
+      source.close();
+      target.close();
+    }
+  }
+}
+
+async function runSyncBundleFixtures() {
+  for (const fixture of loadFixtures("sync-bundle")) {
+    requireFixture(fixture.workflow === "sync_bundle", `${fixture.fixture_id} workflow mismatch`);
+    requireFixture(fixture.strict === true, `${fixture.fixture_id} must be strict`);
+
+    const source = await createNodeGrainClient({ wasmPath });
+    const target = await createNodeGrainClient({ wasmPath });
+    try {
+      const root = source.createRootIdentity({ label: fixture.input.root_label ?? "root" });
+      requireFixture(root.status === "Created", `${fixture.fixture_id} root create mismatch`);
+      const added = source.addDeviceKey({ label: fixture.input.device_label ?? "device" });
+      requireFixture(added.status === "Added", `${fixture.fixture_id} device add mismatch`);
+
+      const trustPubB64 = resolveTrustInput(fixture.input);
+      requireFixture(typeof trustPubB64 === "string", `${fixture.fixture_id} missing trust material`);
+      const accepted = source.scanAccept({ qrString: fixtureQrString(fixture), trustPubB64 });
+      requireFixture(accepted.status === "Accepted", `${fixture.fixture_id} scan accept mismatch`);
+
+      const exported = source.exportSyncBundle();
+      requireFixture(exported.status === "Exported", `${fixture.fixture_id} sync export mismatch`);
+      requirePresence(exported.bundleB64, fixture.expect.bundle_b64, "bundle_b64", fixture.fixture_id);
+
+      const attempts = fixture.input.import_attempts ?? 1;
+      requireFixture(
+        Number.isInteger(attempts) && attempts > 0,
+        `${fixture.fixture_id} import_attempts must be positive`,
+      );
+      let imported = null;
+      for (let i = 0; i < attempts; i += 1) {
+        imported = target.importSyncBundle({ bundleB64: exported.bundleB64 });
+      }
+      requireFixture(imported !== null, `${fixture.fixture_id} missing sync result`);
+      requireFixture(imported.status === fixture.expect.status, `${fixture.fixture_id} sync status mismatch`);
+      requireDiagnostics(imported.diag, fixture.expect, fixture.fixture_id);
+      requireCount(
+        imported.acceptedRecordCount,
+        fixture.expect.accepted_record_count,
+        "accepted_record_count",
+        fixture.fixture_id,
+      );
+      requireCount(imported.deviceCount, fixture.expect.device_count, "device_count", fixture.fixture_id);
+      requireCount(
+        imported.lifecycleEventCount,
+        fixture.expect.lifecycle_event_count,
+        "lifecycle_event_count",
+        fixture.fixture_id,
+      );
+    } finally {
+      source.close();
+      target.close();
     }
   }
 }
@@ -103,6 +246,20 @@ function resolveTrustInput(input) {
     return resolveStringRef(input.trust_pub_b64_ref);
   }
   return input.trust_pub_b64 ?? null;
+}
+
+function fixtureQrString(fixture) {
+  if (typeof fixture.input.qr_string_ref !== "string") {
+    throw new Error(`${fixture.fixture_id} missing qr_string_ref`);
+  }
+  return resolveStringRef(fixture.input.qr_string_ref);
+}
+
+function requiredExpectation(value, fieldName, fixtureId) {
+  if (value === undefined || value === null) {
+    throw new Error(`${fixtureId} missing ${fieldName} expectation`);
+  }
+  return value;
 }
 
 function resolveStringRef(ref) {
@@ -174,6 +331,26 @@ function requireCosePresence(coseB64, expectation, fixtureId) {
   } else {
     throw new Error(`${fixtureId} unsupported cose_b64 expectation`);
   }
+}
+
+function requirePresence(value, expectation, fieldName, fixtureId) {
+  if (expectation === undefined || expectation === null) {
+    return;
+  }
+  if (expectation === "present") {
+    requireFixture(typeof value === "string" && value.length > 0, `${fixtureId} expected ${fieldName}`);
+  } else if (expectation === "absent") {
+    requireFixture(value === null, `${fixtureId} expected no ${fieldName}`);
+  } else {
+    throw new Error(`${fixtureId} unsupported ${fieldName} expectation`);
+  }
+}
+
+function requireCount(actual, expectation, fieldName, fixtureId) {
+  if (expectation === undefined || expectation === null) {
+    return;
+  }
+  requireFixture(actual === expectation, `${fixtureId} ${fieldName} mismatch`);
 }
 
 function requireFixture(condition, message) {

@@ -13,10 +13,10 @@ Workflow fixtures can reference protocol vectors as input material. A generated 
 Each fixture is a JSON object with:
 
 - `fixture_id`: stable `SDK-WF-*` identifier.
-- `workflow`: workflow name, currently `scan_preview` or `scan_accept`.
+- `workflow`: workflow name: `scan_preview`, `scan_accept`, `device_lifecycle`, `pairing`, or `sync_bundle`.
 - `strict`: must be `true`.
 - `input`: workflow input references or inline values.
-- `expect`: expected workflow status, diagnostics, COSE output presence, and storage mutation result.
+- `expect`: expected workflow status, diagnostics, output presence, counts, and storage mutation result where applicable.
 - `meta.desc`: short human-readable reason for the fixture.
 
 ## References
@@ -73,3 +73,55 @@ Expected fields:
 - `accepted_record_count`: number of persisted accepted-scan records after the workflow call.
 
 `scan_accept` must mutate storage only inside the client store atomic boundary. Rejected scans must leave `accepted_record_count` unchanged at `0`. `AlreadyAccepted` fixtures must repeat the same accept operation and still end with exactly one persisted accepted-scan record.
+
+## `device_lifecycle`
+
+Input fields:
+
+- `root_label`: optional root device label; defaults to the runner's root label.
+- `device_label`: optional child device label; defaults to the runner's device label.
+
+Expected fields:
+
+- `status`: `Ready` after the fixture completes.
+- `diag`: exact ordered diagnostics.
+- `root_kid`, `active_ak`, `device_ak`: `present` or `absent`.
+- `device_count`, `revoked_count`, `accepted_record_count`, `lifecycle_event_count`: final lifecycle counters.
+
+The fixture runner creates a root identity, adds a device key, activates that device, revokes it, and checks `client_lifecycle()`.
+
+## `pairing`
+
+Input fields:
+
+- `root_label`: optional source root label.
+- `device_label`: optional source child device label.
+- `accept_attempts`: optional positive integer; fixtures use `2` to assert replay idempotency.
+
+Expected fields:
+
+- `status`: final accept status, usually `AlreadyPaired` when `accept_attempts` is `2`.
+- `diag`: exact ordered diagnostics.
+- `root_kid`, `pairing_id`, `envelope_b64`: `present` or `absent`.
+- `device_count`: device count transferred by the pairing envelope.
+
+Pairing envelopes are app-controlled transfer artifacts. They move the portable identity bundle through the generated SDK workflow surface; they are not a claim that the SDK has implemented platform key custody or a secure remote pairing protocol.
+
+## `sync_bundle`
+
+Input fields:
+
+- `root_label`: optional source root label.
+- `device_label`: optional source child device label.
+- `qr_string_ref`: required reference to a scan QR string.
+- `trust_pub_b64_ref` or `trust_pub_b64`: required trust material for the accepted scan inserted before export.
+- `import_attempts`: optional positive integer; fixtures use `2` to assert repeated import idempotency.
+
+Expected fields:
+
+- `status`: final import status, usually `AlreadyImported` when `import_attempts` is `2`.
+- `diag`: exact ordered diagnostics.
+- `bundle_b64`: `present` or `absent`.
+- `accepted_record_count`, `device_count`, `lifecycle_event_count`: final imported counters.
+
+Sync import must be atomic. Identity conflicts reject without importing accepted scans or lifecycle events.

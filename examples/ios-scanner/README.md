@@ -6,6 +6,10 @@ It accepts a pasted or camera-adapter-provided GR1/QR payload string and explici
 trust public key, calls `GrainClient.scanPreview`, enables accept only after a
 verified preview, then calls `GrainClient.scanAccept`.
 
+The shell also has a minimal `prepareLocalIdentity` hook that calls
+`GrainClient.createRootIdentity`, `addDeviceKey`, and `clientLifecycle` through
+the public SDK API. It does not parse or mutate identity bundles itself.
+
 `CameraScanAdapter` is intentionally thin. The included deterministic adapter is
 used by the smoke check, and `AVFoundationQRCodeMetadataAdapter` maps
 AVFoundation QR metadata objects into the same GR1 string path. Session

@@ -14,6 +14,9 @@ export function createScannerShell(client) {
     canAccept: false,
     acceptedCount: 0,
     acceptedScanId: null,
+    lifecycleStatus: null,
+    deviceCount: 0,
+    lifecycleEventCount: 0,
   };
 
   return {
@@ -34,6 +37,28 @@ export function createScannerShell(client) {
     receiveCameraPayload(payload) {
       state.qrString = requireCameraPayload(payload).qrString;
       resetDecisionState(state);
+    },
+
+    prepareLocalIdentity({ rootLabel = "phone", deviceLabel = "scanner" } = {}) {
+      const lifecycle = client.clientLifecycle();
+      if (lifecycle.status === "Ready") {
+        state.diagnostics = lifecycle.diag;
+        applyLifecycle(state, lifecycle);
+        return this.state;
+      }
+      if (lifecycle.status === "Uninitialized") {
+        const root = client.createRootIdentity({ label: rootLabel });
+        if (root.diag.length > 0) {
+          state.diagnostics = root.diag;
+          refreshLifecycle(state, client);
+          return this.state;
+        }
+      }
+
+      const device = client.addDeviceKey({ label: deviceLabel });
+      state.diagnostics = device.diag;
+      refreshLifecycle(state, client);
+      return this.state;
     },
 
     preview() {
@@ -103,6 +128,10 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
   previewButton.type = "button";
   previewButton.textContent = "Preview";
 
+  const prepareButton = document.createElement("button");
+  prepareButton.type = "button";
+  prepareButton.textContent = "Prepare device";
+
   const acceptButton = document.createElement("button");
   acceptButton.type = "button";
   acceptButton.textContent = "Accept";
@@ -127,6 +156,8 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
     status.value = [
       current.previewStatus ? `Preview: ${current.previewStatus}` : null,
       current.acceptStatus ? `Accept: ${current.acceptStatus}` : null,
+      current.lifecycleStatus ? `Lifecycle: ${current.lifecycleStatus}` : null,
+      current.lifecycleStatus ? `Devices: ${current.deviceCount}` : null,
       `Saved: ${current.acceptedCount}`,
     ].filter(Boolean).join(" | ");
     diagnostics.replaceChildren(...current.diagnostics.map((diagnostic) => {
@@ -148,6 +179,10 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
     shell.preview();
     render();
   });
+  prepareButton.addEventListener("click", () => {
+    shell.prepareLocalIdentity();
+    render();
+  });
   acceptButton.addEventListener("click", () => {
     shell.accept();
     render();
@@ -162,17 +197,35 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
     render();
   });
 
-  root.append(scanInput, trustInput, previewButton, acceptButton, cameraButton, video, status, diagnostics);
+  root.append(scanInput, trustInput, prepareButton, previewButton, acceptButton, cameraButton, video, status, diagnostics);
   render();
   return shell;
 }
 
 function requireClient(client) {
-  for (const method of ["scanPreview", "scanAccept", "listAcceptedScans"]) {
+  for (const method of [
+    "scanPreview",
+    "scanAccept",
+    "listAcceptedScans",
+    "createRootIdentity",
+    "addDeviceKey",
+    "clientLifecycle",
+  ]) {
     if (!client || typeof client[method] !== "function") {
       throw new TypeError(`SDK_ERR_EXAMPLE_CLIENT_METHOD_MISSING:${method}`);
     }
   }
+}
+
+function refreshLifecycle(state, client) {
+  const lifecycle = client.clientLifecycle();
+  applyLifecycle(state, lifecycle);
+}
+
+function applyLifecycle(state, lifecycle) {
+  state.lifecycleStatus = lifecycle.status;
+  state.deviceCount = lifecycle.deviceCount;
+  state.lifecycleEventCount = lifecycle.lifecycleEventCount;
 }
 
 function normalizedTrustInput(state) {
