@@ -25,6 +25,8 @@ scripts/sdk/check_wasm_package.sh
 
 ```js
 import {
+  GrainMemorySnapshotPersistence,
+  GrainSnapshotCoordinator,
   GrainStaticTrustProvider,
   createNodeGrainClient,
 } from "@grain/client-wasm/node";
@@ -40,7 +42,11 @@ try {
   const trustProvider = new GrainStaticTrustProvider({
     [trustAnchorId]: "<trusted publisher public key base64>",
   });
+  const snapshotPersistence = new GrainMemorySnapshotPersistence();
+  const snapshots = new GrainSnapshotCoordinator(snapshotPersistence);
   const scannedQRCode = "<GR1...>";
+
+  await snapshots.restore(client);
 
   if (client.clientLifecycle().status !== "Ready") {
     const identity = client.createRootIdentity({ label: "phone" });
@@ -66,13 +72,15 @@ try {
     });
 
     if (accepted.status === "Accepted" || accepted.status === "AlreadyAccepted") {
+      await snapshots.persist(client);
       const saved = client.listAcceptedScans();
       console.log(saved.length);
 
       // Portable evidence/state export for backup, handoff, or audit.
       const evidence = client.exportSyncBundle();
       if (evidence.status === "Exported" && evidence.bundleB64 !== null) {
-        console.log(evidence.bundleB64);
+        // Store or transmit evidence.bundleB64 only through encrypted
+        // app-owned channels; do not log it.
       }
     }
   }
@@ -97,7 +105,7 @@ should instantiate the same WASM exports and pass the instance to
   backup or pairing setup.
 - `exportSyncBundle` exports identity, accepted scans, and lifecycle events as a
   portable evidence/state bundle.
-- Production browser apps should place the same workflow surface behind
-  platform-backed persistence such as IndexedDB or an app-controlled secure
-  store; the current package proves the generated SDK API shape and workflow
-  conformance.
+- Browser/mobile-web apps should place the same workflow surface behind
+  `GrainSnapshotCoordinator` plus `GrainIndexedDBSnapshotPersistence` or an
+  app-controlled secure store. Persist only opaque `snapshotB64` and restore it
+  with `restoreStoreSnapshot`; never parse snapshot internals in app code.

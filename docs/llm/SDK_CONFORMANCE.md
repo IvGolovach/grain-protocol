@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0028` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0029` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -159,6 +159,9 @@ Expected contract:
 - `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-wasm --target wasm32-wasip1 --release` builds the WASM client workflow export over `grain-client-core`
 - `grain-client-wasm` depends on `grain-client-core` with default features disabled, so the target-side WASM dependency tree does not include the UniFFI runtime
 - `sdk/wasm` loads that WASM export behind a small public `GrainClient` API
+- `test:browser-adapters` proves browser/mobile-web snapshot persistence,
+  coordinator behavior, IndexedDB persistence wiring, and missing exported
+  snapshot rejection without parsing protocol state
 - the Node fixture runner executes scan, lifecycle, pairing, and sync fixtures through the public web API
 - the package exposes workflow methods and typed web statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
 - fixture references are constrained to `conformance/vectors/**`
@@ -204,6 +207,17 @@ Expected Android adapter contract:
   GR1 strings and sends them through public Kotlin workflow APIs
 - production preview/accept paths use `trustAnchorId` plus `GrainTrustProvider`
 - the shell persists only opaque `snapshotB64` through `dev.grain.android`
+- blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
+- preview and rejected accept paths do not write accepted records or snapshots
+- static guards reject raw protocol API calls, hidden trust lookup, network
+  trust discovery, TOFU, fallback trust, and secret snapshot/trust logging
+
+Expected WASM/mobile-web adapter contract:
+- `examples/wasm-scanner` accepts injected or browser-decoded QR payloads as
+  GR1 strings and sends them through public WASM workflow APIs
+- production preview/accept paths use `trustAnchorId` plus `GrainTrustProvider`
+- the shell persists only opaque `snapshotB64` through `sdk/wasm` browser
+  storage adapters
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
 - preview and rejected accept paths do not write accepted records or snapshots
 - static guards reject raw protocol API calls, hidden trust lookup, network

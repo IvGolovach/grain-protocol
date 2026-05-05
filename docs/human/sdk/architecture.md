@@ -93,8 +93,10 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `scripts/sdk/sync_kotlin_bindings.sh` and `scripts/sdk/check_kotlin_package.sh` keep generated sources reproducible
 - `sdk/wasm/*`: WASM/mobile-web client package over client workflow bindings
   - `src/index.mjs` is the browser-like public wrapper surface
+  - `src/browser-storage.mjs` is the WASM/mobile-web adapter pack for app-owned opaque snapshot persistence through IndexedDB or injected browser storage
   - `src/node.mjs` is the first smoke-tested Node/WASI loader
   - `tests/run-workflow-fixtures.mjs` executes `sdk/workflows` fixtures through the public web API
+  - `tests/run-browser-adapters-smoke.mjs` proves browser adapter persistence without browser-only automation
   - `exportStoreSnapshot` / `restoreStoreSnapshot` expose the same opaque persistence bridge for browser/mobile-web adapters
   - `GrainStaticTrustProvider` and provider-backed scan methods prove explicit trust anchor resolution for browser/mobile-web adapters
   - `scripts/sdk/check_wasm_package.sh` keeps the WASM package and fixture lane reproducible

@@ -82,6 +82,10 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `dev.grain.android` persists opaque client snapshots through deterministic file storage or a Keystore-ready encrypted boundary without parsing protocol state
     - `examples/android-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
     - Android scanner smoke proves injected CameraX-style handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
+  - added the WASM/mobile-web adapter pack:
+    - `sdk/wasm` persists opaque client snapshots through deterministic memory storage or IndexedDB-backed browser storage without parsing protocol state
+    - `examples/wasm-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
+    - WASM scanner smoke proves injected/browser camera handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`

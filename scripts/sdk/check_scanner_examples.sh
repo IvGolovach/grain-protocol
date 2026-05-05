@@ -35,7 +35,14 @@ fi
 
 has_hidden_trust_lookup() {
   local pattern='URLSession\b|OkHttp\b|HttpURLConnection\b|HttpsURLConnection\b|java\.net|Retrofit\b|Ktor\b|HttpClient\b|Socket\b|SSLSocket\b|X509TrustManager\b|TrustManagerFactory\b|AndroidCAStore|fetch\(|XMLHttpRequest|WebSocket|node:http|node:https|axios|undici|defaultTrust|fallbackTrust|autoDiscover|wellKnown|TOFU|allowAnyIssuer|allowAllIssuers|SecTrustEvaluate'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner examples/android-scanner >/dev/null
+  python3 tools/ci/find_regex_match.py \
+    --ignore-case "$pattern" \
+    examples/ios-scanner \
+    examples/android-scanner \
+    examples/wasm-scanner/src/scanner-shell.mjs \
+    examples/wasm-scanner/src/camera-adapter.mjs \
+    sdk/wasm/src/browser-storage.mjs \
+    >/dev/null
 }
 
 if has_hidden_trust_lookup; then
@@ -49,8 +56,20 @@ else
 fi
 
 has_secret_logging() {
-  local pattern='(print|println|debugPrint|NSLog|os_log|Log\.[a-z]+|Timber\.[a-z]+|Logger\.[a-z]+)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner examples/android-scanner sdk/swift/Sources/GrainClientIOSAdapters sdk/kotlin/src/main/kotlin/dev/grain/android sdk/swift/README.md sdk/kotlin/README.md >/dev/null
+  local pattern='(print|println|debugPrint|NSLog|os_log|Log\.[a-z]+|Timber\.[a-z]+|Logger\.[a-z]+|console\.[a-z]+)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
+  python3 tools/ci/find_regex_match.py \
+    --ignore-case "$pattern" \
+    examples/ios-scanner \
+    examples/android-scanner \
+    examples/wasm-scanner/src/scanner-shell.mjs \
+    examples/wasm-scanner/src/camera-adapter.mjs \
+    sdk/swift/Sources/GrainClientIOSAdapters \
+    sdk/kotlin/src/main/kotlin/dev/grain/android \
+    sdk/wasm/src/browser-storage.mjs \
+    sdk/swift/README.md \
+    sdk/kotlin/README.md \
+    sdk/wasm/README.md \
+    >/dev/null
 }
 
 if has_secret_logging; then

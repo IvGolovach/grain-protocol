@@ -30,6 +30,7 @@ has_raw_protocol_api() {
 }
 
 npm --prefix sdk/wasm run check
+npm --prefix sdk/wasm run test:browser-adapters
 
 if has_raw_protocol_api; then
   echo "SDK_WASM_ERR_RAW_PROTOCOL_API: WASM public wrapper must expose workflow APIs only" >&2

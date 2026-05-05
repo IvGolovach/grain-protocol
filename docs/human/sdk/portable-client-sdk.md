@@ -95,9 +95,20 @@ The mobile-web package slice is now the WASM client package:
 - `core/rust/grain-client-wasm` exports scan workflow operations over `grain-client-core`
 - `sdk/wasm` exposes a small `GrainClient` web API over the WASM exports
 - mobile-web app code sees typed workflow statuses instead of raw QR/COSE internals
-- `scripts/sdk/check_wasm_package.sh` builds the WASM binding, loads it in Node, runs the shared workflow fixtures through the public web API, and fails on raw protocol API exposure
+- `sdk/wasm/src/browser-storage.mjs` provides `GrainSnapshotPersistence`,
+  `GrainSnapshotCoordinator`, deterministic memory-backed persistence, and
+  IndexedDB-backed persistence behind the same opaque `snapshotB64` contract
+- `examples/wasm-scanner` wires browser/injected GR1 payloads through
+  `trustAnchorId` plus `GrainTrustProvider`, never raw trust input in the
+  production preview/accept path
+- the WASM scanner smoke proves preview, accept, duplicate accept,
+  restore-after-restart, and blank/unknown trust-anchor rejection through public
+  SDK APIs
+- `scripts/sdk/check_wasm_package.sh` builds the WASM binding, loads it in Node, runs the shared workflow fixtures and browser adapter smoke through the public web API, and fails on raw protocol API exposure
 
-This proves the mobile-web package shape. It is not a camera scanner app yet and it does not introduce browser camera capture, IndexedDB persistence, service workers, or production npm release packaging.
+This proves the mobile-web package shape. It is not a production PWA yet and it
+does not introduce service workers, offline sync policy, cross-browser device
+automation, or production npm release packaging.
 
 The reference scanner-shell slice is now present:
 
@@ -126,9 +137,9 @@ The identity, device lifecycle, pairing, and sync slice is now present:
 - sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics
 - Swift, Kotlin, and WASM wrappers expose the same workflow methods through their public `GrainClient` APIs
 
-This is still a portable SDK core, not final production key custody. iOS now has
-the first native adapter boundary; Android, WASM, and future devices should get
-the same shape in later slices.
+This is still a portable SDK core, not final production key custody. iOS,
+Android, and WASM/mobile-web now have adapter boundaries; future devices should
+get the same shape in later slices.
 
 ## Client workflow conformance
 
