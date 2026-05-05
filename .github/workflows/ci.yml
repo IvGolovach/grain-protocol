@@ -249,11 +249,24 @@ jobs:
       - name: Verify generated platform SDKs
         run: scripts/sdk/verify_all_sdks.sh --strict --out-dir artifacts/sdk-platform
 
+      - name: Package client SDK release artifacts
+        run: |
+          scripts/sdk/package_client_sdks.sh \
+            --skip-verify \
+            --verified-by sdk-platform \
+            --out-dir artifacts/sdk-release
+
       - name: Upload platform SDK verification summary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: sdk-platform-results
           path: artifacts/sdk-platform
+
+      - name: Upload client SDK release package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: sdk-release-package
+          path: artifacts/sdk-release/*
 
   fuzz-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -320,6 +333,16 @@ jobs:
           gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name ts-full-results --dir artifacts
           gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name wasm-smoke-results --dir artifacts
           gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-platform-results --dir artifacts
+          gh run download "${GITHUB_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-release-package --dir artifacts/sdk-release
+
+      - name: Verify SDK release package metadata
+        run: |
+          expected_commit="$(git rev-parse HEAD)"
+          python3 tools/ci/check_sdk_release_package.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}" \
+            --require-strict \
+            --require-clean
 
       - uses: ./.github/actions/build-evidence-bundle
         with:

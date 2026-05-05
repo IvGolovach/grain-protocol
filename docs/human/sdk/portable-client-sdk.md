@@ -141,6 +141,17 @@ This is still a portable SDK core, not final production key custody. iOS,
 Android, and WASM/mobile-web now have adapter boundaries; future devices should
 get the same shape in later slices.
 
+## Certification Boundary
+
+Current certification covers workflow parity, explicit trust-anchor wiring,
+opaque snapshot persistence, scanner shell smoke tests, same-SHA source
+artifacts, release manifest checksums, and SBOM package checksums.
+
+It does not certify production key custody policy, remote trust registries,
+registry publication, app-store packaging, PWA service-worker/offline policy,
+camera-device automation, or hardware-specific secure elements. Those remain
+app or device integration work above the SDK boundary.
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.

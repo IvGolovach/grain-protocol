@@ -89,6 +89,16 @@ Release packaging:
 scripts/sdk/package_client_sdks.sh
 ```
 
+Release metadata check:
+
+```bash
+python3 tools/ci/check_sdk_release_package.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --require-strict \
+  --require-clean
+```
+
 ## Compatibility Rules
 
 - Keep Swift, Kotlin, WASM, generated bindings, and `grain-client-core` on the
@@ -130,9 +140,25 @@ future release process explicitly names a tracked artifact.
 - Kotlin client source tarball
 - WASM/mobile-web source tarball
 - workflow contract/docs tarball
-- manifest with commit SHA and SHA-256 checksums
-- `SHA256SUMS` for the tarballs
+- manifest with commit SHA, same-SHA version-matrix hash, SDK component
+  versions, artifact byte counts, and SHA-256 checksums
+- SPDX 2.3 JSON SBOM with package checksums for every release artifact
+- `SHA256SUMS` for the tarballs and SBOM
 
 The default path refuses a dirty worktree and runs strict SDK verification before
 packaging. Archives must not contain `node_modules`, `dist`, `build`, `.build`,
 `.gradle`, `.kotlin`, `target`, `pkg`, or `.wasm` build output.
+
+The package is a source-archive release candidate for the same repo SHA. It does
+not publish npm/Maven/SPM registry entries, does not certify App Store, Play
+Store, PWA, or future-device packaging, and does not include compiled WASM
+binaries. Pair it with the matching built WASM artifact when a web app needs a
+runtime binary.
+
+`--skip-verify --verified-by <id>` is allowed only when a just-completed
+upstream strict SDK gate, such as the CI `sdk-platform` job, is the verification
+source for that package. The checker accepts that as `strict-upstream`; plain
+`--skip-verify` remains visibly recorded as `skipped` and must not be presented
+as release certification. Final release authority is clean same-SHA package
+metadata plus strict SDK proof plus the repository release evidence required for
+the tag or PR.

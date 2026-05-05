@@ -1,7 +1,7 @@
 # Grain SDK
 
-The production SDK code lives in `core/ts/grain-sdk`.
-The optional AI sidecar lives in `core/ts/grain-sdk-ai`.
+The production TypeScript SDK code lives in `core/ts/grain-sdk`.
+The optional TypeScript AI sidecar lives in `core/ts/grain-sdk-ai`.
 This top-level `sdk/` path also holds cross-platform client workflow contracts,
 generated-binding lane documentation, and platform package wrappers.
 
@@ -64,9 +64,26 @@ scripts/sdk/package_client_sdks.sh
 
 Artifacts are written under `artifacts/sdk-release/<commit>/`, which is ignored
 by git. The script packages source SDKs, generated binding snapshots, workflow
-fixtures, a manifest, and `SHA256SUMS`. Build caches and local package-manager
-directories are excluded from the archives. By default it refuses a dirty
-working tree and runs strict SDK verification before packaging.
+fixtures, a manifest, `SHA256SUMS`, and an SPDX JSON SBOM. Build caches and
+local package-manager directories are excluded from the archives. By default it
+refuses a dirty working tree and runs strict SDK verification before packaging.
+This is source-artifact certification for the same repo SHA. It does not publish
+to npm, Maven, Swift Package indexes, app stores, or PWA distribution channels,
+and it does not include compiled WASM binaries.
+
+Check the package metadata independently:
+
+```bash
+python3 tools/ci/check_sdk_release_package.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --require-strict \
+  --require-clean
+```
+
+CI may use `--skip-verify --verified-by sdk-platform` only after the strict
+platform SDK gate has just passed on the same checkout. That package is marked
+as `strict-upstream`; plain skipped verification is not a release certificate.
 
 ## Workflow shape
 

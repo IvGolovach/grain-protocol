@@ -28,25 +28,27 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - Compatibility matrix for generated SDK releases and same-SHA binding/wrapper rules.
 12. `docs/llm/SDK_GENERATED_VERIFICATION.md`
    - Verification and release-packaging map for generated platform SDKs.
-13. `core/rust/grain-client-core/src/*`
+13. `scripts/sdk/package_client_sdks.sh`, `tools/ci/build_sdk_release_metadata.py`, and `tools/ci/check_sdk_release_package.py`
+   - SDK release packaging, manifest/SHA256/SBOM generation, and package metadata certification.
+14. `core/rust/grain-client-core/src/*`
    - Portable Rust workflow layer for generated platform SDKs: `scan.rs` owns scan workflows; `identity.rs`, `device.rs`, `pairing.rs`, and `sync.rs` own lifecycle workflows; `types.rs` owns Rust DTOs; `ffi_types.rs` owns binding-safe DTOs; `binding_api.rs` and `grain_client_core.udl` own the UniFFI-safe generated-binding facade; `platform/storage.rs` and `platform/trust.rs` own adapter contracts; `trust.rs` owns explicit trust decoding; `store.rs` owns the atomic storage contract; `memory_store.rs` owns the reference store plus opaque snapshot export/restore; and `diag.rs` owns SDK-only diagnostics.
-14. `core/rust/uniffi-bindgen`, `scripts/sdk/*generated_bindings.sh`, and `sdk/generated/README.md`
+15. `core/rust/uniffi-bindgen`, `scripts/sdk/*generated_bindings.sh`, and `sdk/generated/README.md`
    - Binding generation harness and docs. These are not published platform SDK packages.
-15. `sdk/swift/**`
+16. `sdk/swift/**`
    - Swift Package Manager client package over generated workflow bindings. Public app API lives in `Sources/GrainClient`, generated binding sources live in `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI`, the executable fixture runner lives in `Sources/GrainClientFixtureRunner`, and the iOS adapter pack lives in `Sources/GrainClientIOSAdapters` plus `Sources/GrainClientIOSAdaptersSmoke`. Store snapshot methods remain the Rust-owned persistence bridge; the iOS adapter pack persists only opaque snapshots.
-16. `sdk/kotlin/**`
+17. `sdk/kotlin/**`
    - Kotlin/JVM client package over generated workflow bindings. Public app API lives in `src/main/kotlin/dev/grain`, generated binding source lives in `src/main/kotlin/uniffi/grain_client_core`, the executable fixture runner lives in `src/test/kotlin/dev/grain/fixture`, and the Android adapter pack lives in `src/main/kotlin/dev/grain/android` plus `src/test/kotlin/dev/grain/android`. Store snapshot methods remain the Rust-owned persistence bridge; the Android adapter pack persists only opaque snapshots.
-17. `core/rust/grain-client-wasm/**`
+18. `core/rust/grain-client-wasm/**`
    - WASM client workflow export over `grain-client-core`. This is distinct from `grain-core-wasm`, which remains the protocol/vector portability lane.
-18. `sdk/wasm/**`
+19. `sdk/wasm/**`
    - WASM/mobile-web client package over workflow bindings. Public app API lives in `src/index.mjs`, the browser/mobile-web adapter pack lives in `src/browser-storage.mjs`, the Node/WASI smoke loader lives in `src/node.mjs`, the fixture runner lives in `tests/run-workflow-fixtures.mjs`, and the browser adapter smoke lives in `tests/run-browser-adapters-smoke.mjs`. Store snapshot methods remain the Rust-owned persistence bridge; the WASM/mobile-web adapter pack persists only opaque snapshots.
-19. `docs/human/sdk/impossible-misuse.md`
+20. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
-20. `docs/human/sdk/errors.md`
+21. `docs/human/sdk/errors.md`
    - Human-readable error contract.
-21. `core/ts/grain-sdk/src/*`
+22. `core/ts/grain-sdk/src/*`
    - Core SDK implementation modules.
-22. `core/ts/grain-sdk-ai/src/*`
+23. `core/ts/grain-sdk-ai/src/*`
    - Optional AI sidecar implementation modules.
 
 ## Source-of-truth hierarchy for SDK decisions

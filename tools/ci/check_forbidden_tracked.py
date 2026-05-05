@@ -10,15 +10,31 @@ import sys
 
 FORBIDDEN_FILE_PATTERNS = (
     ".DS_Store",
+    ".coverage",
     "*.pyc",
     "*.log",
     "*.tmp",
     "*.swp",
+    "*.tar.gz",
+    "*.tgz",
+    "*.zip",
+    "*.wasm",
+    "*.pem",
+    "*.key",
+    "*.p12",
+    "*.pfx",
 )
 
 FORBIDDEN_DIR_NAMES = (
+    ".build",
+    ".gradle",
+    ".kotlin",
     "__pycache__",
+    "artifacts",
+    "build",
+    "dist",
     "node_modules",
+    "pkg",
     "target",
 )
 

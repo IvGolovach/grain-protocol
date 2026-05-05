@@ -33,6 +33,8 @@ Start with:
    - `python3 tools/ci/check_capid_csprng.py`
    - `cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release`
    - `npm --prefix runner/typescript run run:wasm-subset`
+   - `scripts/sdk/package_client_sdks.sh`
+   - `python3 tools/ci/check_sdk_release_package.py --out-dir artifacts/sdk-release/$(git rev-parse HEAD) --expected-commit "$(git rev-parse HEAD)" --require-strict --require-clean`
 3. Pick the tag type and version:
    - protocol release tag: `protocol-vX.Y.Z`
    - repo release tag: `repo-vX.Y.Z`
@@ -48,6 +50,8 @@ Start with:
    - `release-evidence` completed and produced `evidence-<sha>.zip`
    - `interop-certify` completed and produced `interop-evidence-<sha>.zip`
    - `golden-images` published digests for `grain-runner` and `grain-certify`
+   - `ci` or the release machine produced an SDK release package with
+     `manifest.json`, `SHA256SUMS`, and `sbom.spdx.json` for the same commit
    - for `repo-*` tags, image alias `stable` is updated
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only and must not overwrite `stable`
 8. Verify the matching GitHub release entry exists and attached assets are present.

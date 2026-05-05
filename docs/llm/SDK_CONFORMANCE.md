@@ -169,6 +169,27 @@ Expected contract:
 
 Local note: environments without a locally installed `wasm32-wasip1` Rust standard library cannot complete the full WASM build. Required CI `wasm-smoke` installs the target and runs this check on PR and main SHAs.
 
+## Release Certification Composition
+
+SDK release certification is composed from multiple proofs:
+
+```bash
+scripts/sdk/verify_all_sdks.sh --strict
+scripts/sdk/package_client_sdks.sh
+python3 tools/ci/check_sdk_release_package.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --require-strict \
+  --require-clean
+```
+
+`verify_all_sdks.sh --strict` proves platform SDK workflow behavior.
+`package_client_sdks.sh` produces same-SHA source artifacts, manifest,
+checksums, and SBOM. `check_sdk_release_package.py` proves the metadata matches
+the files and version matrix. Repository release evidence still comes from
+`./scripts/verify`, `./scripts/certify`, and mandatory GitHub CI; do not treat a
+package smoke by itself as full release authority.
+
 ## Diagnostics contract
 
 - Core diagnostics are preserved and not renamed.
