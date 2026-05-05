@@ -1,0 +1,20 @@
+{
+  "fixture_id": "SDK-WF-SCAN-ACCEPT-0003",
+  "workflow": "scan_accept",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64",
+    "accept_attempts": 2
+  },
+  "expect": {
+    "status": "AlreadyAccepted",
+    "diag": [],
+    "cose_b64": "present",
+    "store_mutation": "accepted_scan_inserted",
+    "accepted_record_count": 1
+  },
+  "meta": {
+    "desc": "Repeating the same accepted scan is idempotent: the second call returns AlreadyAccepted and the store still holds one record."
+  }
+}

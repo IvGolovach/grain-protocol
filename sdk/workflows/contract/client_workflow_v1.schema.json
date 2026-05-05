@@ -12,7 +12,7 @@
     },
     "workflow": {
       "type": "string",
-      "enum": ["scan_preview"]
+      "enum": ["scan_preview", "scan_accept"]
     },
     "strict": {
       "const": true
@@ -30,6 +30,10 @@
         },
         "trust_pub_b64": {
           "type": "string"
+        },
+        "accept_attempts": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "not": {
@@ -51,7 +55,7 @@
       "properties": {
         "status": {
           "type": "string",
-          "enum": ["Verified", "Untrusted", "Rejected"]
+          "enum": ["Verified", "Untrusted", "Accepted", "AlreadyAccepted", "Rejected"]
         },
         "diag": {
           "type": "array",
@@ -70,9 +74,12 @@
           "enum": ["present", "absent"]
         },
         "store_mutation": {
-          "$comment": "v1 scan_preview fixtures allow only none; scan_accept will extend this enum in a follow-up contract update.",
           "type": "string",
-          "enum": ["none"]
+          "enum": ["none", "accepted_scan_inserted"]
+        },
+        "accepted_record_count": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },

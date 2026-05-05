@@ -10,12 +10,27 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-FIXTURE_DIR = ROOT / "sdk" / "workflows" / "fixtures" / "scan-preview"
+FIXTURE_ROOT = ROOT / "sdk" / "workflows" / "fixtures"
 REF_RE = re.compile(r"^conformance/vectors/[A-Za-z0-9_/-]+\.json#/[A-Za-z0-9_~./-]+$")
-ALLOWED_STATUS = {"Verified", "Untrusted", "Rejected"}
+ALLOWED_WORKFLOW = {"scan_preview", "scan_accept"}
+ALLOWED_STATUS = {"Verified", "Untrusted", "Accepted", "AlreadyAccepted", "Rejected"}
+SCAN_PREVIEW_STATUS = {"Verified", "Untrusted", "Rejected"}
+SCAN_ACCEPT_STATUS = {"Accepted", "AlreadyAccepted", "Rejected"}
 ALLOWED_TOP_LEVEL = {"fixture_id", "workflow", "strict", "input", "expect", "meta"}
-ALLOWED_INPUT = {"qr_string_ref", "trust_pub_b64_ref", "trust_pub_b64"}
-ALLOWED_EXPECT = {"status", "diag", "diag_contains", "cose_b64", "store_mutation"}
+ALLOWED_INPUT = {
+    "qr_string_ref",
+    "trust_pub_b64_ref",
+    "trust_pub_b64",
+    "accept_attempts",
+}
+ALLOWED_EXPECT = {
+    "status",
+    "diag",
+    "diag_contains",
+    "cose_b64",
+    "store_mutation",
+    "accepted_record_count",
+}
 REQUIRED_EXPECT = {"status", "cose_b64", "store_mutation"}
 
 
@@ -95,7 +110,8 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
     seen_ids.add(fixture_id)
     require(path.stem == fixture_id, f"{path}: filename must match fixture_id")
 
-    require(data["workflow"] == "scan_preview", f"{path}: workflow must be scan_preview")
+    workflow = data["workflow"]
+    require(workflow in ALLOWED_WORKFLOW, f"{path}: invalid workflow")
     require(data["strict"] is True, f"{path}: strict must be true")
 
     input_obj = data["input"]
@@ -110,7 +126,18 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
     if "trust_pub_b64_ref" in input_obj:
         resolve_ref(input_obj["trust_pub_b64_ref"], path)
     if "trust_pub_b64" in input_obj:
-        require(isinstance(input_obj["trust_pub_b64"], str), f"{path}: trust_pub_b64 must be a string")
+        require(
+            isinstance(input_obj["trust_pub_b64"], str),
+            f"{path}: trust_pub_b64 must be a string",
+        )
+    accept_attempts = input_obj.get("accept_attempts", 1)
+    if "accept_attempts" in input_obj:
+        require(
+            isinstance(accept_attempts, int)
+            and not isinstance(accept_attempts, bool)
+            and accept_attempts >= 1,
+            f"{path}: accept_attempts must be a positive integer",
+        )
 
     expect = data["expect"]
     require(isinstance(expect, dict), f"{path}: expect must be an object")
@@ -124,9 +151,62 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         not extra_expect,
         f"{path}: unexpected expect keys: {sorted(extra_expect)}",
     )
-    require(expect.get("status") in ALLOWED_STATUS, f"{path}: invalid status")
+    status = expect.get("status")
+    require(status in ALLOWED_STATUS, f"{path}: invalid status")
+    if workflow == "scan_preview":
+        require(status in SCAN_PREVIEW_STATUS, f"{path}: invalid scan_preview status")
+    if workflow == "scan_accept":
+        require(status in SCAN_ACCEPT_STATUS, f"{path}: invalid scan_accept status")
     require(expect.get("cose_b64") in {"present", "absent"}, f"{path}: invalid cose_b64")
-    require(expect.get("store_mutation") == "none", f"{path}: store_mutation must be none")
+    store_mutation = expect.get("store_mutation")
+    require(
+        store_mutation in {"none", "accepted_scan_inserted"},
+        f"{path}: invalid store_mutation",
+    )
+    if workflow == "scan_preview":
+        require(
+            "accept_attempts" not in input_obj,
+            f"{path}: scan_preview must not set accept_attempts",
+        )
+        require(store_mutation == "none", f"{path}: scan_preview store_mutation must be none")
+        require(
+            "accepted_record_count" not in expect,
+            f"{path}: scan_preview must not assert accepted_record_count",
+        )
+    if workflow == "scan_accept":
+        require(
+            "accepted_record_count" in expect,
+            f"{path}: scan_accept must assert accepted_record_count",
+        )
+        require(
+            isinstance(expect["accepted_record_count"], int)
+            and expect["accepted_record_count"] >= 0,
+            f"{path}: accepted_record_count must be a non-negative integer",
+        )
+        if status == "Accepted":
+            require(
+                accept_attempts == 1,
+                f"{path}: Accepted fixture must use exactly one accept attempt",
+            )
+            require(
+                store_mutation == "accepted_scan_inserted",
+                f"{path}: accepted scan must insert a record",
+            )
+        if status == "AlreadyAccepted":
+            require(
+                accept_attempts >= 2,
+                f"{path}: AlreadyAccepted fixture must repeat scan_accept",
+            )
+            require(
+                store_mutation == "accepted_scan_inserted"
+                and expect["accepted_record_count"] == 1,
+                f"{path}: AlreadyAccepted fixture must leave exactly one inserted record",
+            )
+        if status == "Rejected":
+            require(
+                store_mutation == "none" and expect["accepted_record_count"] == 0,
+                f"{path}: rejected scan_accept must not persist records",
+            )
 
     diag_keys = {"diag", "diag_contains"} & set(expect)
     require(len(diag_keys) == 1, f"{path}: expected exactly one diagnostic expectation")
@@ -146,8 +226,8 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
 
 
 def main() -> int:
-    paths = sorted(FIXTURE_DIR.glob("*.json"))
-    require(paths, "expected at least one scan-preview fixture")
+    paths = sorted(FIXTURE_ROOT.glob("*/*.json"))
+    require(paths, "expected at least one client workflow fixture")
 
     seen_ids: set[str] = set()
     for path in paths:

@@ -66,6 +66,8 @@ pub struct ScanAcceptRequest {
 pub enum ScanAcceptStatus {
     /// Verified and normalized into a persistence-ready record.
     Accepted,
+    /// The same verified scan was already present in client storage.
+    AlreadyAccepted,
     /// Rejected before any persistence-ready record exists.
     Rejected,
 }
@@ -76,6 +78,34 @@ pub struct AcceptedScan {
     pub scan_id: String,
     pub cose_b64: String,
     pub trust_pub_b64: String,
+}
+
+/// Persisted accepted scan record.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AcceptedScanRecord {
+    pub scan_id: String,
+    pub cose_b64: String,
+    pub trust_pub_b64: String,
+}
+
+impl From<AcceptedScan> for AcceptedScanRecord {
+    fn from(accepted: AcceptedScan) -> Self {
+        Self {
+            scan_id: accepted.scan_id,
+            cose_b64: accepted.cose_b64,
+            trust_pub_b64: accepted.trust_pub_b64,
+        }
+    }
+}
+
+impl From<AcceptedScanRecord> for AcceptedScan {
+    fn from(record: AcceptedScanRecord) -> Self {
+        Self {
+            scan_id: record.scan_id,
+            cose_b64: record.cose_b64,
+            trust_pub_b64: record.trust_pub_b64,
+        }
+    }
 }
 
 /// Pure scan-accept preparation output.
@@ -90,6 +120,14 @@ impl ScanAccept {
     pub(crate) fn accepted(accepted: AcceptedScan) -> Self {
         Self {
             status: ScanAcceptStatus::Accepted,
+            diag: Vec::new(),
+            accepted: Some(accepted),
+        }
+    }
+
+    pub(crate) fn already_accepted(accepted: AcceptedScan) -> Self {
+        Self {
+            status: ScanAcceptStatus::AlreadyAccepted,
             diag: Vec::new(),
             accepted: Some(accepted),
         }

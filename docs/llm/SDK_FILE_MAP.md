@@ -25,7 +25,7 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 10. `docs/human/sdk/portable-client-sdk.md`
    - Camera-first SDK direction for iOS, Android, glasses, robots, and generated bindings.
 11. `core/rust/grain-client-core/src/*`
-   - Portable Rust workflow layer for generated platform SDKs: `scan.rs` owns workflows, `types.rs` owns binding-friendly DTOs, `trust.rs` owns explicit trust decoding, and `diag.rs` owns SDK-only diagnostics.
+   - Portable Rust workflow layer for generated platform SDKs: `scan.rs` owns workflows, `types.rs` owns binding-friendly DTOs, `trust.rs` owns explicit trust decoding, `store.rs` owns the atomic storage contract, `memory_store.rs` owns the reference store, and `diag.rs` owns SDK-only diagnostics.
 12. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
 13. `docs/human/sdk/errors.md`

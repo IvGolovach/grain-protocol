@@ -20,6 +20,13 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - prepared records use deterministic `scan-sha256:<hex>` IDs derived from verified COSE bytes
     - missing trust, malformed trust, malformed scan, and signature failure reject without a prepared record
     - preparation performs no local storage mutation
+  - added atomic `scan_accept(store, qr_string, trust_pub_b64)` workflow:
+    - valid scan + explicit valid trust -> persisted accepted scan record
+    - duplicate accepted scans are idempotent
+    - rejected scans write no records
+    - failed atomic mutations roll back to the pre-call state
+  - added `ClientStore` and `MemoryClientStore` with nested-atomic and outside-atomic mutation guards.
+  - added scan-accept workflow fixtures, including duplicate-scan idempotency, and extended the Rust/Python fixture runners.
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

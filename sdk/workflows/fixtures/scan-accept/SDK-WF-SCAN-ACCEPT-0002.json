@@ -1,0 +1,19 @@
+{
+  "fixture_id": "SDK-WF-SCAN-ACCEPT-0002",
+  "workflow": "scan_accept",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/NEG-QR-002.json#/input/qr_string",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64"
+  },
+  "expect": {
+    "status": "Rejected",
+    "diag_contains": ["GRAIN_ERR_SCHEMA"],
+    "cose_b64": "absent",
+    "store_mutation": "none",
+    "accepted_record_count": 0
+  },
+  "meta": {
+    "desc": "Rejected scan preserves the core QR diagnostic and persists no accepted scan record."
+  }
+}
