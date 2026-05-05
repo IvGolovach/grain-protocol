@@ -30,11 +30,11 @@ wrappers over generated workflow APIs.
 | 4 | Add iOS adapter pack: Keychain/file persistence boundary, trust provider, injected scanner flow, and scanner smoke hardening. | Merged | `codex/sdk-ios-adapter-pack` / [#44](https://github.com/IvGolovach/grain-protocol/pull/44) | Local strict SDK proof passed; Greptile feedback fixed; GitHub CI passed on final SHA `f8f9dcfaf2495378aa8337928bc40bde052e8eff`; merged as `dced9bc2eff3f7e76f068a096a06d66c9724aaa9` |
 | 5 | Add Android adapter pack: Keystore-backed persistence boundary, trust provider, injected CameraX-style analyzer flow, and scanner smoke hardening. | Merged | `codex/sdk-android-adapter-pack` / [#45](https://github.com/IvGolovach/grain-protocol/pull/45) | Local strict SDK proof passed; GitHub CI passed on final SHA `c62efa6c3072b479cb016cfec321e85e679209dd`; merged as `fc16a305e6b6ad5869fcfc3e0a028ec42f8cbbf1` |
 | 6 | Add WASM/mobile-web adapter pack: IndexedDB persistence, browser scanner persistence wiring, and npm package smoke proof. | Merged | `codex/sdk-wasm-adapter-pack` / [#46](https://github.com/IvGolovach/grain-protocol/pull/46) | Local strict SDK proof passed; GitHub CI passed on final SHA `743e6e40e77c103b85ea220108f1071c00d54049`; merged as `97fdaf9204494169677ad8ca0bdfbd8e086934f0` |
-| 7 | Harden release packaging: version matrix, SDK artifacts, checksums, SBOM/manifest consistency, and final certification. | In progress | `codex/sdk-release-certification` | Local package/certification proof in progress |
+| 7 | Harden release packaging: version matrix, SDK artifacts, checksums, SBOM/manifest consistency, and final certification. | Merged | `codex/sdk-release-certification` / [#47](https://github.com/IvGolovach/grain-protocol/pull/47) | Local clean strict SDK package proof passed; GitHub CI passed on final SHA `2d40dbf891d46922bd8b2b1b69f4c3aa174b5e0c`; merged as `16645ca12e090624b377b71b7d3c543896e77ee3` |
 
-## Current Step 7 Definition
+## Roadmap Completion State
 
-Step 7 is complete when:
+All seven roadmap steps are complete on `main`.
 
 - `scripts/sdk/package_client_sdks.sh` emits release metadata that is
   independently checkable: `manifest.json`, `SHA256SUMS`, and SPDX JSON SBOM.
@@ -47,5 +47,5 @@ Step 7 is complete when:
   lane and re-checks the package metadata before building final evidence.
 - Human and LLM docs describe exactly what is certified and avoid claiming
   production App Store, Play Store, PWA, or future-device packaging.
-- The strict SDK gate, package checker, ledger checks, and required GitHub CI
-  pass before merge.
+- The strict SDK gate, package checker, ledger checks, required GitHub CI, and
+  PR merge gates passed before merge.
