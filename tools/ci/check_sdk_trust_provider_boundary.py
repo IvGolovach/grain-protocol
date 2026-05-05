@@ -12,6 +12,7 @@ SDK_ROOTS = [
     ROOT / "sdk" / "kotlin" / "src" / "main" / "kotlin" / "dev" / "grain",
     ROOT / "sdk" / "wasm" / "src",
     ROOT / "examples" / "ios-scanner" / "Sources" / "GrainIOSScanner",
+    ROOT / "examples" / "android-scanner" / "src" / "main" / "kotlin",
 ]
 
 SOURCE_SUFFIXES = {".swift", ".kt", ".mjs", ".js", ".ts"}
@@ -19,7 +20,16 @@ FORBIDDEN_PATTERNS = [
     "URLSession",
     "OkHttp",
     "HttpURLConnection",
+    "HttpsURLConnection",
     "java.net",
+    "Retrofit",
+    "Ktor",
+    "HttpClient",
+    "Socket",
+    "SSLSocket",
+    "X509TrustManager",
+    "TrustManagerFactory",
+    "AndroidCAStore",
     "fetch(",
     "XMLHttpRequest",
     "WebSocket",

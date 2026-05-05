@@ -44,6 +44,21 @@ else
   fi
 fi
 
+has_secret_logging() {
+  local pattern='(println|print|Log\.[a-z]+|Timber\.[a-z]+|Logger\.[a-z]+)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" sdk/kotlin/src/main/kotlin/dev/grain >/dev/null
+}
+
+if has_secret_logging; then
+  echo "SDK_KOTLIN_ERR_SECRET_LOGGING: Kotlin SDK must not log snapshot, bundle, or trust material" >&2
+  exit 1
+else
+  SECRET_LOGGING_STATUS=$?
+  if [[ "$SECRET_LOGGING_STATUS" -ne 1 ]]; then
+    exit "$SECRET_LOGGING_STATUS"
+  fi
+fi
+
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
 
 GRADLE_ARGS=()

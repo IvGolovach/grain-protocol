@@ -92,6 +92,10 @@ GrainClient().use { client ->
 - `exportSyncBundle` exports identity, accepted scans, and lifecycle events as a
   portable evidence/state bundle. Treat `bundleB64` as secret portable state and
   never log the raw value.
-- Production Android apps should place the same workflow surface behind
-  platform-backed storage such as Keystore; the current package proves the
-  generated SDK API shape and workflow conformance.
+- `dev.grain.android` adds an Android adapter persistence boundary for opaque
+  `snapshotB64` state. File persistence is deterministic for JVM smoke tests;
+  `GrainKeystoreSnapshotPersistence` keeps Android Keystore encryption behind an
+  injected cipher/store boundary so app code does not parse protocol state.
+- Do not log `snapshotB64`, identity bundles, sync bundles, or trust material.
+  Persist them through app-owned protected storage and expose only statuses,
+  counts, or diagnostics to UI/logs.

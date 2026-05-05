@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0027` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0028` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -138,6 +138,9 @@ Expected contract:
 - `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core` builds the native library loaded by JNA
 - Gradle/Kotlin compiles the public `GrainClient` wrapper and fixture runner
 - the executable fixture runner executes scan, lifecycle, pairing, and sync fixtures through the public Kotlin `GrainClient` API
+- `runAndroidAdaptersSmoke` proves Android adapter snapshot persistence, the
+  coordinator invariant for missing exported snapshots, and the Keystore-ready
+  encrypted persistence boundary without instrumented device state
 - the package exposes workflow methods and typed Kotlin statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
 - fixture references are constrained to `conformance/vectors/**`
 - the check leaves git status unchanged except for pre-existing unrelated local work
@@ -195,5 +198,15 @@ Expected iOS adapter contract:
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
 - preview and rejected accept paths do not write accepted records
 - static guards reject raw protocol API calls, hidden trust lookup, network trust discovery, TOFU, and fallback trust patterns
+
+Expected Android adapter contract:
+- `examples/android-scanner` accepts injected or CameraX-decoded QR payloads as
+  GR1 strings and sends them through public Kotlin workflow APIs
+- production preview/accept paths use `trustAnchorId` plus `GrainTrustProvider`
+- the shell persists only opaque `snapshotB64` through `dev.grain.android`
+- blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
+- preview and rejected accept paths do not write accepted records or snapshots
+- static guards reject raw protocol API calls, hidden trust lookup, network
+  trust discovery, TOFU, fallback trust, and secret snapshot/trust logging
 
 If this mapping drifts, report a blocking issue before proposing any semantic change.

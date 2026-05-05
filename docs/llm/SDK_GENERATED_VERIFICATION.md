@@ -104,6 +104,10 @@ scripts/sdk/package_client_sdks.sh
 - Swift iOS adapters must keep storage app-owned and opaque. File persistence
   is allowed for deterministic smoke; Keychain persistence stays behind the same
   `GrainSnapshotPersistence` contract and must not parse or log snapshots.
+- Kotlin Android adapters must keep storage app-owned and opaque. File
+  persistence is allowed for deterministic smoke; Keystore-backed encryption
+  stays behind the same `GrainSnapshotPersistence` contract through an injected
+  cipher/store boundary and must not parse or log snapshots.
 
 ## Packaging Rules
 
