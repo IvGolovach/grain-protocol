@@ -1,0 +1,14 @@
+{
+  "name": "@grain/example-wasm-scanner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paste-first Grain scanner shell for browser and mobile-web SDK clients",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node --check src/scanner-shell.mjs && node --check src/browser.mjs && node --check tests/scanner-shell-smoke.mjs",
+    "test:smoke": "node tests/scanner-shell-smoke.mjs"
+  }
+}

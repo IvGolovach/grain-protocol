@@ -11,7 +11,9 @@ If you are building an app on Grain, start here. Keep the first version small an
 4. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
 5. If you are building a camera-first iOS, Android, glasses, or robot client,
    read [Portable client SDK](./portable-client-sdk.md).
-6. If you build manually, use the SDK build. It will build the shared
+6. For scanner-shell reference code, start with `examples/ios-scanner`,
+   `examples/android-scanner`, or `examples/wasm-scanner`.
+7. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash
@@ -61,3 +63,4 @@ If you are also changing the strict TS runner itself, then install `runner/types
 - `docs/human/sdk/cross-lang-bridge.md`
 - `docs/human/sdk/ai-boundary.md`
 - `docs/human/sdk/ai-ingestion.md`
+- `examples/README.md`

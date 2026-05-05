@@ -1,0 +1,29 @@
+.grain-scanner {
+  display: grid;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.grain-scanner textarea,
+.grain-scanner input,
+.grain-scanner button,
+.grain-scanner output {
+  font: inherit;
+}
+
+.grain-scanner textarea,
+.grain-scanner input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+}
+
+.grain-scanner button {
+  width: fit-content;
+  padding: 8px 12px;
+}
+
+.grain-scanner output,
+.grain-scanner li {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

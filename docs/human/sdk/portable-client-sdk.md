@@ -76,6 +76,17 @@ The mobile-web package slice is now the WASM client package:
 
 This proves the mobile-web package shape. It is not a camera scanner app yet and it does not introduce browser camera capture, IndexedDB persistence, service workers, or production npm release packaging.
 
+The reference scanner-shell slice is now present:
+
+- `examples/ios-scanner` provides a SwiftUI paste-first scanner shell over `sdk/swift`
+- `examples/android-scanner` provides a Kotlin paste-first scanner shell over `sdk/kotlin`, shaped for Android state management and unit testing
+- `examples/wasm-scanner` provides a browser/mobile-web paste-first scanner shell over `sdk/wasm`
+- `scripts/sdk/check_scanner_examples.sh` builds and tests the shell examples and rejects raw protocol API exposure in example code
+
+These shells prove that app code can stay thin: a camera adapter, paste box, robot sensor, or glasses frame reader produces a GR1 string, then the SDK owns preview, diagnostics, accept, and accepted-scan listing.
+
+They are not camera integrations yet. AVFoundation, CameraX, browser camera capture, QR decoder dependency choice, platform-backed storage, and production app packaging are intentionally kept as the next adapter slice.
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -98,6 +109,7 @@ The second fixture set covers `scan_accept`:
 
 ## Next additive slices
 
+- Camera adapters for the reference scanner shells: iOS capture, Android CameraX, and browser camera capture should produce GR1 strings and then call the same SDK workflows.
 - Client scenario fixtures that every generated SDK must pass.
 
 ## Rule of thumb

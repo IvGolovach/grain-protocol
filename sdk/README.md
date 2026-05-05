@@ -20,3 +20,7 @@ Portable client SDK lanes:
 - `sdk/swift`: Swift Package Manager wrapper over generated client workflow bindings
 - `sdk/kotlin`: Kotlin/JVM wrapper over generated client workflow bindings
 - `sdk/wasm`: WASM/mobile-web wrapper over generated client workflow bindings
+
+Reference scanner shells live under `examples/`. They show paste-first iOS,
+Android/Kotlin, and browser/mobile-web clients that call the public workflow
+SDKs and keep camera or sensor adapters outside protocol-critical logic.
