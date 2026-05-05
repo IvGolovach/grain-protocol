@@ -69,6 +69,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - expanded generated Swift/Kotlin/WASM wrappers and shared client workflow fixtures for lifecycle, pairing, and sync parity.
   - added rationale: `docs/human/rationale/TOR-PAIRING-A01.md`.
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
+  - added generated SDK release/DX layer:
+    - version matrix for protocol, Rust client-core, Swift, Kotlin, WASM, and workflow-contract compatibility
+    - one-command SDK verification script covering generated bindings, Rust workflows, platform packages, scanner examples, docs/spec checks, and no-network policy
+    - release packaging script for SDK source artifacts, generated binding snapshots, workflow contract/docs, and SHA-256 manifest output under ignored `artifacts/`
+    - copy-paste Swift/Kotlin/WASM workflow examples for trust setup, preview, accept, saved scans, and sync/evidence export
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`

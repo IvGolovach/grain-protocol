@@ -11,6 +11,10 @@
 /sdk/wasm/dist/
 /sdk/wasm/node_modules/
 /sdk/wasm/pkg/
+/core/ts/*/dist/
+/core/ts/*/node_modules/
+/runner/typescript/dist/
+/runner/typescript/node_modules/
 /artifacts/
 *.log
 __pycache__/
