@@ -12,6 +12,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0008: invalid bundle JSON bytes -> `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
 - SDK-NEG-0009: `verifyGR1()` without explicit trust material or with malformed `trust.pub_b64` -> `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED` / `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`
 - SDK-NEG-0010: portable `scan_preview()` malformed scan/trust/signature -> `Rejected` with deterministic core or `SDK_ERR_*` diagnostic; valid scan without trust -> `Untrusted`, not `Verified`
+- SDK-NEG-0011: portable `scan_accept_prepare()` missing trust/malformed trust/malformed scan/signature -> `Rejected` with deterministic core or `SDK_ERR_*` diagnostic and no prepared record
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
@@ -28,6 +29,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 These checks are asserted in:
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`
 - `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`
+- `core/rust/grain-client-core/tests/scan_accept_prepare.rs`
 - `core/rust/grain-client-core/tests/scan_preview.rs`
 - `sdk/workflows/fixtures/scan-preview/*.json`
 - `tools/ci/check_client_workflow_fixtures.py`

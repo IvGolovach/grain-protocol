@@ -74,3 +74,12 @@ fn scan_preview_rejects_malformed_trust_before_verify() {
     assert_eq!(preview.diag, vec!["SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID"]);
     assert!(preview.cose_b64.is_some());
 }
+
+#[test]
+fn scan_preview_rejects_empty_trust_before_verify() {
+    let preview = scan_preview(&qr_string(), Some(""));
+
+    assert_eq!(preview.status, ScanPreviewStatus::Rejected);
+    assert_eq!(preview.diag, vec!["SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID"]);
+    assert!(preview.cose_b64.is_some());
+}

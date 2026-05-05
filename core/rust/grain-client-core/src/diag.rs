@@ -1,0 +1,4 @@
+//! SDK-level diagnostics emitted by client workflow code.
+
+pub const SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID: &str = "SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID";
+pub const SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED: &str = "SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED";
