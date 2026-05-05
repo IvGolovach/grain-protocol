@@ -560,6 +560,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "grain-client-wasm"
+version = "0.1.0"
+dependencies = [
+ "grain-client-core",
+ "serde_json",
+]
+
+[[package]]
 name = "grain-core"
 version = "0.2.0"
 dependencies = [

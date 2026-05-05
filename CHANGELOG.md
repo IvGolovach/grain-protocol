@@ -46,6 +46,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - thin `GrainClient` wrapper with typed preview/accept statuses
     - executable fixture runner that exercises `sdk/workflows` scan-preview and scan-accept fixtures through the public Kotlin API
     - deterministic sync/check scripts that rebuild Rust client-core, run the Kotlin fixture lane, and fail on generated drift
+  - added WASM/mobile-web client workflow package:
+    - `grain-client-wasm` exports scan preview, scan accept, and accepted-scan listing over `grain-client-core`
+    - `sdk/wasm` hides the pointer ABI behind a small `GrainClient` web API with typed preview/accept statuses
+    - Node fixture runner exercises `sdk/workflows` scan-preview and scan-accept fixtures through the public web API
+    - `scripts/sdk/check_wasm_package.sh` builds/loads the WASM binding, runs fixtures, and fails on raw protocol API exposure or dirty output
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

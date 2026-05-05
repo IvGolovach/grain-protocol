@@ -16,4 +16,5 @@ scripts/sdk/check_generated_bindings.sh
 ```
 
 Platform packages should wrap the generated workflow API instead of exposing raw
-protocol runner operations to app developers.
+protocol runner operations to app developers. The WASM/mobile-web lane uses a
+separate `grain-client-wasm` workflow export over the same Rust client core.

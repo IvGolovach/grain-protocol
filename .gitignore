@@ -8,6 +8,9 @@
 /sdk/kotlin/.gradle/
 /sdk/kotlin/.kotlin/
 /sdk/kotlin/build/
+/sdk/wasm/dist/
+/sdk/wasm/node_modules/
+/sdk/wasm/pkg/
 /artifacts/
 *.log
 __pycache__/

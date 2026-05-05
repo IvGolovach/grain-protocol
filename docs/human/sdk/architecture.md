@@ -26,7 +26,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
    - workflow-shaped Rust APIs for generated platform SDKs
    - scan preview/accept style APIs for camera-first clients
    - no rule rewrites
-6. Generated platform packages (`sdk/swift`, `sdk/kotlin`, later `sdk/wasm`)
+6. Generated platform packages (`sdk/swift`, `sdk/kotlin`, `sdk/wasm`)
    - small app-facing wrappers over generated client workflow bindings
    - shared fixture execution through public package APIs
    - no raw QR/COSE/DAG-CBOR/protocol-runner APIs as the app surface
@@ -69,6 +69,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `platform/storage.rs` and `platform/trust.rs` define adapter contracts without importing platform-specific storage or network trust APIs
   - `ffi_types.rs` flattens workflow values into owned binding-safe DTOs
   - `binding_api.rs`, `grain_client_core.udl`, and `build.rs` define the UniFFI-safe generated-binding facade
+  - `core/rust/grain-client-wasm` exposes the same client workflow surface to WASM without using the protocol runner ABI or target-side UniFFI runtime
   - `core/rust/uniffi-bindgen` and `scripts/sdk/*generated_bindings.sh` generate/check Swift and Kotlin bindings without committing generated output
   - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
 - `sdk/swift/*`: Swift Package Manager client package over generated workflow bindings
@@ -81,6 +82,11 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `src/main/kotlin/uniffi/grain_client_core` is the synchronized generated binding source
   - `src/test/kotlin/dev/grain/fixture` executes `sdk/workflows` fixtures through the public Kotlin API
   - `scripts/sdk/sync_kotlin_bindings.sh` and `scripts/sdk/check_kotlin_package.sh` keep generated sources reproducible
+- `sdk/wasm/*`: WASM/mobile-web client package over client workflow bindings
+  - `src/index.mjs` is the browser-like public wrapper surface
+  - `src/node.mjs` is the first smoke-tested Node/WASI loader
+  - `tests/run-workflow-fixtures.mjs` executes `sdk/workflows` fixtures through the public web API
+  - `scripts/sdk/check_wasm_package.sh` keeps the WASM package and fixture lane reproducible
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle
 - `src/primitives.ts`: typed wrappers and set-array builder

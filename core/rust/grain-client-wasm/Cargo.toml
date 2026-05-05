@@ -1,0 +1,12 @@
+[package]
+name = "grain-client-wasm"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+grain-client-core = { path = "../grain-client-core", default-features = false }
+serde_json = { workspace = true }

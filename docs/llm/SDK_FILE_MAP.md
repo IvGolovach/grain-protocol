@@ -32,13 +32,17 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - Swift Package Manager client package over generated workflow bindings. Public app API lives in `Sources/GrainClient`, generated binding sources live in `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI`, and the executable fixture runner lives in `Sources/GrainClientFixtureRunner`.
 14. `sdk/kotlin/**`
    - Kotlin/JVM client package over generated workflow bindings. Public app API lives in `src/main/kotlin/dev/grain`, generated binding source lives in `src/main/kotlin/uniffi/grain_client_core`, and the executable fixture runner lives in `src/test/kotlin/dev/grain/fixture`.
-15. `docs/human/sdk/impossible-misuse.md`
+15. `core/rust/grain-client-wasm/**`
+   - WASM client workflow export over `grain-client-core`. This is distinct from `grain-core-wasm`, which remains the protocol/vector portability lane.
+16. `sdk/wasm/**`
+   - WASM/mobile-web client package over workflow bindings. Public app API lives in `src/index.mjs`, the Node/WASI smoke loader lives in `src/node.mjs`, and the fixture runner lives in `tests/run-workflow-fixtures.mjs`.
+17. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
-16. `docs/human/sdk/errors.md`
+18. `docs/human/sdk/errors.md`
    - Human-readable error contract.
-17. `core/ts/grain-sdk/src/*`
+19. `core/ts/grain-sdk/src/*`
    - Core SDK implementation modules.
-18. `core/ts/grain-sdk-ai/src/*`
+20. `core/ts/grain-sdk-ai/src/*`
    - Optional AI sidecar implementation modules.
 
 ## Source-of-truth hierarchy for SDK decisions
@@ -52,9 +56,11 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 7. `core/rust/grain-client-core/src/*` (portable client workflows over Rust core)
 8. `sdk/swift/**` (generated Swift client package wrapper and fixture runner)
 9. `sdk/kotlin/**` (generated Kotlin client package wrapper and fixture runner)
-10. `core/ts/grain-sdk/src/*` (orchestration only)
-11. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
-12. `docs/llm/*` (maintainer maps, sync rules, and indexes)
-13. `docs/human/sdk/*` (explanatory, not normative)
+10. `core/rust/grain-client-wasm/**` (WASM workflow export over Rust client core)
+11. `sdk/wasm/**` (generated WASM/mobile-web client package wrapper and fixture runner)
+12. `core/ts/grain-sdk/src/*` (orchestration only)
+13. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
+14. `docs/llm/*` (maintainer maps, sync rules, and indexes)
+15. `docs/human/sdk/*` (explanatory, not normative)
 
 If SDK behavior diverges from protocol vectors, treat it as a bug in SDK and update the matching docs and tests in the same change.

@@ -55,8 +55,8 @@
 | 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Merged | `codex/platform-adapter-contracts` | #31 | `3a06ff93cf55e8bf1f72ed3d335edb9077fcda67` | Initial: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; diff/ledger checks. Final correction: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/ci/check_client_workflow_fixtures.py`; diff/ledger checks | PR CI passed on final SHA `a1a7e3b41945ff92f917aa0eac7fc49e9f6df4e0`; CodeRabbit empty-anchor finding fixed and thread resolved; CodeRabbit final status SUCCESS/review skipped on amended SHA; Greptile manually requested and did not return a review before merge readiness; post-merge `main` CI run `25368105295` passed |
 | 5 | UniFFI/generation harness over stable client-core facade | Merged | `codex/uniffi-binding-harness` | #32 | `0d1817e6c26690f0ba2ba16029abe32c15241b67` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p uniffi-bindgen --check`; `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo build --manifest-path core/rust/Cargo.toml -p uniffi-bindgen`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `5430a975e310e63b3575e8406202b2859749de51`; CodeRabbit status SUCCESS but generated review was rate-limited/skipped; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25369151339` passed |
 | 6 | Swift package over generated client workflow API | Merged | `codex/swift-generated-client-sdk` | #33 | `ef01e4cc22cca169bf5cdf921cdfe1f3a390e15e` | `scripts/sdk/check_swift_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | Required PR checks passed on final SHA `b14feb81272b541f94660cbeb1b60758b70ee07a`; observed non-required `ts-c01`, `ts-full`, and `wasm-smoke` passed; CodeRabbit stayed pending/non-required with no review threads; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25370425567` passed |
-| 7 | Kotlin package over generated client workflow API | In progress | `codex/kotlin-generated-client-sdk` |  |  | `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH" SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | Pending — PR not opened yet |
-| 8 | WASM/mobile-web client workflow binding | Pending |  |  |  |  |  |
+| 7 | Kotlin package over generated client workflow API | Merged | `codex/kotlin-generated-client-sdk` | #34 | `eb1bed9615006c82f179ed46b8ee1400a0673275` | `JAVA_HOME`/`PATH` set to an arm64 JDK with `SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25372064355` passed on final SHA `07f93c3449b6d9675df1ffa2af3bdbe8f193649c`; CodeRabbit context SUCCESS but generated review was rate-limited; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25372380102` passed |
+| 8 | WASM/mobile-web client workflow binding | In review | `codex/wasm-client-workflow-sdk` | #35 |  | Initial local proof plus CI correction: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p grain-client-wasm --check`; `cargo check --manifest-path core/rust/Cargo.toml -p grain-client-core --no-default-features`; `cargo check --manifest-path core/rust/Cargo.toml -p grain-client-wasm`; `cargo tree --manifest-path core/rust/Cargo.toml -p grain-client-wasm --target wasm32-wasip1 -e normal`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main`. Full `scripts/sdk/check_wasm_package.sh` requires `wasm32-wasip1` and is wired to required remote `wasm-smoke`. | PR #35 opened. Initial `wasm-smoke` failed because `grain-client-wasm` pulled target-side UniFFI runtime through `grain-client-core`; correction disables `grain-client-core` default features for WASM and keeps UniFFI behind the default `bindings` feature. Final CI/review pending. |
 | 9 | Reference scanner shells, then camera adapters | Pending |  |  |  |  |  |
 | 10 | Pairing, identity, sync, and device lifecycle | Pending |  |  |  |  |  |
 | 11 | Developer experience, version matrix, release packaging, final certification | Pending |  |  |  |  |  |
@@ -98,6 +98,10 @@
 | #32 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
 | #33 | CodeRabbit | GitHub status stayed pending/non-required with no review threads; local CLI review could not run because the API key was invalid or expired. | No code change. | Relied on local proof, required CI, and manual Greptile request before merge. |
 | #33 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
+| #34 | CodeRabbit | Status context succeeded, but generated review comment reported rate limiting. | No code change. | No actionable review threads were present; required CI and post-merge main CI passed. |
+| #34 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
+| #35 | GitHub CI | Initial `wasm-smoke` failed because `grain-client-wasm` compiled `grain-client-core` with the target-side UniFFI runtime, and `uniffi_core` failed under `wasm32-wasip1`. | Fix in PR #35. | Added a default `bindings` feature to `grain-client-core`, gated UniFFI modules/scaffolding behind it, and made `grain-client-wasm` depend on `grain-client-core` with default features disabled. |
+| #35 | CodeRabbit | WASM store handles used raw heap pointers, raw-API grep missed snake_case names, response parsing was too permissive, Node loader destructured before validation, and JSON Pointer array indices used permissive `parseInt`. | Fix in PR #35. | Added opaque generated store handles, expanded the raw API guard, made WASM response parsing strict, made `createNodeGrainClient()` validate omitted options, and required strict array-index tokens. |
 
 ## Split Log
 
@@ -622,7 +626,7 @@ Kotlin tests must call generated workflow APIs and pass the same `sdk/workflows`
 
 Example must show preview and accept, not protocol internals.
 
-- [ ] **Step 3: Validate and PR**
+- [x] **Step 3: Validate and PR**
 
 Run:
 
@@ -649,26 +653,59 @@ If Gradle tooling is introduced, make the wrapper reproducible and avoid committ
 ## PR 8: WASM / Mobile-Web Client Workflow Binding
 
 **Files:**
+- Modify: `.github/workflows/ci.yml`
+- Modify: `.gitignore`
+- Modify: `core/rust/Cargo.toml`
+- Modify: `core/rust/Cargo.lock`
+- Create: `core/rust/grain-client-wasm/Cargo.toml`
+- Create: `core/rust/grain-client-wasm/README.md`
+- Create: `core/rust/grain-client-wasm/src/lib.rs`
+- Create: `scripts/sdk/check_wasm_package.sh`
 - Create: `sdk/wasm/`
 - Create: `sdk/wasm/README.md`
 - Create: `sdk/wasm/tests/`
-- Modify: `scripts/sdk/check_generated_bindings.sh`
+- Modify: `sdk/README.md`
+- Modify: `core/rust/README.md`
+- Modify: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`
+- Modify: `docs/human/sdk/architecture.md`
+- Modify: `docs/human/sdk/cross-lang-bridge.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_EDGE_CASES.md`
+- Modify: `docs/llm/SDK_FILE_MAP.md`
+- Modify: `docs/llm/SDK_INVARIANTS.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 7 evidence
 
-- [ ] **Step 1: Add client-workflow WASM binding**
+- [x] **Step 1: Add client-workflow WASM binding**
 
 Do not reuse `grain-core-wasm` as the product SDK without a clear workflow wrapper. `grain-core-wasm` is a protocol/vector portability lane; this PR needs a client workflow lane.
 
-- [ ] **Step 2: Add Node or browser-like smoke test**
+- [x] **Step 2: Add Node or browser-like smoke test**
 
 Test preview and accept against the shared workflow fixtures.
 
 - [ ] **Step 3: Validate and PR**
 
-Run WASM smoke, Rust client-core tests, docs checks, ledger checks, and `git diff --check`.
+Run:
+
+```bash
+scripts/sdk/check_wasm_package.sh
+cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core
+scripts/sdk/check_generated_bindings.sh
+python3 tools/ci/check_client_workflow_fixtures.py
+python3 tools/check_llm_docs.py
+python3 tools/check_spec_drift.py
+python3 tools/ci/check_docs_links.py
+python3 tools/ci/check_docs_flow.py
+python3 tools/ci/check_codeowners_coverage.py
+python3 tools/ci/check_sdk_no_network.py
+git diff --check
+scripts/ledger/check
+scripts/ledger/check --history --base origin/main
+```
+
+If the local machine lacks `wasm32-wasip1` target installation, run the strongest local source/native checks and rely on mandatory remote `wasm-smoke` for the full WASM build and fixture proof on the final SHA.
 
 ---
 
@@ -800,7 +837,7 @@ The initiative is complete only when:
 - [x] PR 4 is merged and post-merge `main` CI passes.
 - [x] PR 5 is merged and post-merge `main` CI passes.
 - [x] PR 6 is merged and post-merge `main` CI passes.
-- [ ] PR 7 is merged and post-merge `main` CI passes.
+- [x] PR 7 is merged and post-merge `main` CI passes.
 - [ ] PR 8 is merged and post-merge `main` CI passes.
 - [ ] PR 9 is merged and post-merge `main` CI passes.
 - [ ] PR 10 is merged and post-merge `main` CI passes.

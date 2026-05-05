@@ -37,10 +37,15 @@ If every platform owns those details separately, the protocol stays correct in t
    - Public app code calls `GrainClient.scanPreview`, `scanAccept`, and `listAcceptedScans`.
    - Shared `sdk/workflows` fixtures run through the public Kotlin API.
    - Platform-specific CameraX, Keystore, sync, and trust-store adapters remain later slices.
+8. The WASM/mobile-web package follows the same workflow-wrapper model:
+   - WASM builds against `grain-client-core`, not the protocol runner crate.
+   - Public web app code calls `GrainClient.scanPreview`, `scanAccept`, and `listAcceptedScans`.
+   - Shared `sdk/workflows` fixtures run through the public web API.
+   - Browser camera capture, IndexedDB persistence, service workers, and npm release packaging remain later slices.
 
 ## Consequences
 
-- The first platform SDK slices can be tested once in Rust, generated through UniFFI, and checked again through Swift and Kotlin packages.
+- The first platform SDK slices can be tested once in Rust, generated through UniFFI/WASM workflow exports, and checked again through Swift, Kotlin, and mobile-web packages.
 - Future iOS/Android SDK work has a stable place to bind from.
 - `scan_accept` and persistent client storage use SDK atomic-mutation rules before platform packages expose saved scans.
 - The protocol conformance vectors remain the trust anchor for bytes and diagnostics.
@@ -54,3 +59,4 @@ If every platform owns those details separately, the protocol stays correct in t
 - `SDK-INV-0019` (generated binding harness)
 - `SDK-INV-0020` (Swift client package fixture parity)
 - `SDK-INV-0021` (Kotlin client package fixture parity)
+- `SDK-INV-0022` (WASM/mobile-web client package fixture parity)

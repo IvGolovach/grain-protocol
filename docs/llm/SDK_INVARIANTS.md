@@ -86,6 +86,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/sync_kotlin_bindings.sh`, `sdk/kotlin/src/test/kotlin/dev/grain/fixture/GrainClientFixtureRunner.kt`
   Modules: `sdk/kotlin/settings.gradle.kts`, `sdk/kotlin/build.gradle.kts`, `sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt`, `sdk/kotlin/src/main/kotlin/uniffi/grain_client_core/grain_client_core.kt`
 
+- SDK-INV-0022: WASM/mobile-web client package MUST wrap client workflow bindings with a small app-facing API, expose typed preview/accept statuses, execute shared workflow fixtures through `GrainClient`, constrain fixture references to protocol vectors, and fail checks on WASM build/load drift or raw protocol API exposure.
+  Tests: `scripts/sdk/check_wasm_package.sh`, `sdk/wasm/tests/run-workflow-fixtures.mjs`
+  Modules: `core/rust/grain-client-wasm/src/lib.rs`, `sdk/wasm/src/index.mjs`, `sdk/wasm/src/node.mjs`, `sdk/wasm/package.json`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`
