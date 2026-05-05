@@ -13,6 +13,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - malformed scan/trust/signature -> `Rejected` with deterministic diagnostics
   - added focused Rust tests for trusted, untrusted, malformed scan, malformed trust, and wrong trust-key paths.
   - added client workflow conformance contract and scan-preview fixtures under `sdk/workflows/`.
+  - added Rust and Python checks that execute/lint the client workflow fixtures against `grain-client-core`.
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

@@ -27,6 +27,8 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 
 These checks are asserted in:
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`
+- `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`
 - `core/rust/grain-client-core/tests/scan_preview.rs`
 - `sdk/workflows/fixtures/scan-preview/*.json`
+- `tools/ci/check_client_workflow_fixtures.py`
 - `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`

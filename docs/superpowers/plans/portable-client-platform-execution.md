@@ -48,8 +48,8 @@
 | Order | PR Scope | Status | Branch | PR | Merge SHA | Local Validation | Remote CI / Review |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0 | Persistent execution tracker | Merged | `codex/portable-client-platform-plan` | #26 | `e010d9a1349498a70a2ae02e2519d0b0e502e28a` | `python3 tools/check_llm_docs.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `437890e5b792098fbe770d22c57a5680f577936f`; Greptile safe to merge; CodeRabbit PASS; post-merge `main` CI run `25360950306` passed |
-| 1 | Client workflow contract and scan-preview fixtures | In progress | `codex/client-workflow-contract-fixtures` |  |  |  |  |
-| 2 | Rust client workflow fixture runner | Pending |  |  |  |  |  |
+| 1 | Client workflow contract and scan-preview fixtures | Merged | `codex/client-workflow-contract-fixtures` | #27 | `f3d68bcd872ac8468b303ffcdf57544f0b80e61e` | `workflow fixture refs`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `58ab443674548abe0f6ca3a8341825a140107e69`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25362169893` passed |
+| 2 | Rust client workflow fixture runner | In progress | `codex/client-workflow-fixture-runner` |  |  |  |  |
 | 3a | `scan_accept_prepare`, deterministic ID, module boundaries | Pending |  |  |  |  |  |
 | 3b | `scan_accept`, atomic store abstraction, memory store | Pending |  |  |  |  |  |
 | 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Pending |  |  |  |  |  |
@@ -81,6 +81,10 @@
 | #26 | Greptile | PR 10 file list used prose instead of structured file entries. | Fix in PR #26. | Replaced PR 10 prose with explicit `Create` / `Modify` entries. |
 | #26 | Greptile | Split Log missed the PR 3a / PR 3b split and PR 10 dependency on PR 9 was understated. | Fix in PR #26. | Added Split Log row and made PR 10's PR 9 dependency explicit. |
 | #26 | Greptile | Split Log insertion point should be PR 3a rather than PR 2. | Fix in PR #26. | Corrected the Split Log row before merge. |
+| #27 | Greptile | Workflow `ref` pattern and runner guidance allowed path traversal risk. | Fix in PR #27. | Restricted refs to `conformance/vectors/**` and documented canonicalization / bound-checking. |
+| #27 | Greptile | Malformed QR fixture used exact `diag` while source protocol vector uses `diag_contains`. | Fix in PR #27. | Added `diag_contains` workflow expectation and updated fixture `SDK-WF-SCAN-PREVIEW-0003`. |
+| #27 | Greptile | `store_mutation` enum needed a planned-extension note. | Fix in PR #27. | Added schema `$comment` explaining the v1 `scan_preview` single-value enum. |
+| #27 | Greptile | `cose_b64: present` semantics were unclear for rejected scans. | Fix in PR #27. | Clarified that `present` means QR COSE decode succeeded, not trust verification. |
 
 ## Split Log
 
@@ -138,7 +142,7 @@ Open a PR for the tracker, wait for required CI and review feedback, fix actiona
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 0 evidence
 
-- [ ] **Step 1: Define the fixture schema**
+- [x] **Step 1: Define the fixture schema**
 
 The schema must distinguish client workflow conformance from protocol conformance. Protocol conformance answers whether bytes and diagnostics obey Grain protocol. Client workflow conformance answers whether generated SDKs expose the same safe app workflow.
 
@@ -164,7 +168,7 @@ Example fixture:
 }
 ```
 
-- [ ] **Step 2: Add five scan-preview fixtures**
+- [x] **Step 2: Add five scan-preview fixtures**
 
 Fixtures:
 
@@ -174,11 +178,11 @@ Fixtures:
 - `SDK-WF-SCAN-PREVIEW-0004`: valid QR + malformed trust -> `Rejected`, `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`, no store mutation.
 - `SDK-WF-SCAN-PREVIEW-0005`: valid QR + wrong trust key -> `Rejected`, `GRAIN_ERR_COSE_PROFILE`, no store mutation.
 
-- [ ] **Step 3: Update docs**
+- [x] **Step 3: Update docs**
 
 Update SDK conformance docs to state that `sdk/workflows/**` is client workflow conformance, not protocol conformance. Do not call Swift/Kotlin protocol-conformant merely because they bind Rust.
 
-- [ ] **Step 4: Validate and PR**
+- [x] **Step 4: Validate and PR**
 
 Run:
 
@@ -200,16 +204,18 @@ scripts/ledger/check --history --base origin/main
 **Files:**
 - Create: `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`
 - Create: `core/rust/grain-client-core/tests/support/workflow_fixture.rs`
-- Modify: `core/rust/grain-client-core/Cargo.toml`
+- No change needed: `core/rust/grain-client-core/Cargo.toml` already exposes the required `serde` / `serde_json` dev-dependencies
 - Create: `tools/ci/check_client_workflow_fixtures.py`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_EDGE_CASES.md`
+- Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 1 evidence
 
-- [ ] **Step 1: Write failing Rust fixture-runner test**
+- [x] **Step 1: Write failing Rust fixture-runner test**
 
 Add a test that loads every `sdk/workflows/fixtures/scan-preview/*.json` file and compares expected status and diagnostics with `grain_client_core::scan_preview()`.
 
-- [ ] **Step 2: Implement fixture reference resolver**
+- [x] **Step 2: Implement fixture reference resolver**
 
 Support local JSON pointer references such as:
 
@@ -218,11 +224,11 @@ conformance/vectors/qr/POS-QR-001.json#/input/qr_string
 conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64
 ```
 
-- [ ] **Step 3: Add Python fixture lint**
+- [x] **Step 3: Add Python fixture lint**
 
 Add `tools/ci/check_client_workflow_fixtures.py` to validate IDs, workflow names, status names, references, and no accidental protocol-runner top-level shape.
 
-- [ ] **Step 4: Validate and PR**
+- [x] **Step 4: Validate and PR**
 
 Run:
 
