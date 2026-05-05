@@ -6,6 +6,7 @@ try runScanAcceptFixtures()
 try runDeviceLifecycleFixtures()
 try runPairingFixtures()
 try runSyncBundleFixtures()
+try runStoreSnapshotFixtures()
 print("Swift client workflow fixtures: PASS")
 
 private struct WorkflowFixture: Decodable {
@@ -60,6 +61,7 @@ private struct FixtureExpectation: Decodable {
     let pairingID: String?
     let envelopeB64: String?
     let bundleB64: String?
+    let snapshotB64: String?
 
     enum CodingKeys: String, CodingKey {
         case status
@@ -77,6 +79,7 @@ private struct FixtureExpectation: Decodable {
         case pairingID = "pairing_id"
         case envelopeB64 = "envelope_b64"
         case bundleB64 = "bundle_b64"
+        case snapshotB64 = "snapshot_b64"
     }
 }
 
@@ -283,6 +286,74 @@ private func runSyncBundleFixtures() throws {
         try requireCount(result.deviceCount, fixture.expect.deviceCount, "device_count", fixture.fixtureID)
         try requireCount(
             result.lifecycleEventCount,
+            fixture.expect.lifecycleEventCount,
+            "lifecycle_event_count",
+            fixture.fixtureID
+        )
+    }
+}
+
+private func runStoreSnapshotFixtures() throws {
+    let empty = GrainClient()
+    let emptySnapshot = empty.exportStoreSnapshot()
+    try require(emptySnapshot.status == "Empty", "store snapshot empty status mismatch")
+    try require(emptySnapshot.snapshotB64 == nil, "empty store snapshot must not produce payload")
+
+    for fixture in try loadFixtures(kind: "store-snapshot") {
+        try require(fixture.workflow == "store_snapshot", "\(fixture.fixtureID) workflow mismatch")
+        try require(fixture.strict, "\(fixture.fixtureID) must be strict")
+
+        let source = GrainClient()
+        let target = GrainClient()
+        try require(
+            source.createRootIdentity(label: fixture.input.rootLabel ?? "root").status == "Created",
+            "\(fixture.fixtureID) root create mismatch"
+        )
+        try require(
+            source.addDeviceKey(label: fixture.input.deviceLabel ?? "device").status == "Added",
+            "\(fixture.fixtureID) device add mismatch"
+        )
+        guard let trustPubB64 = try resolveTrustInput(fixture.input) else {
+            throw FixtureError.invalidReference("\(fixture.fixtureID) missing trust material")
+        }
+        let accepted = source.scanAccept(qrString: try fixtureQRString(fixture), trustPubB64: trustPubB64)
+        try require(accepted.status.rawValue == "Accepted", "\(fixture.fixtureID) scan accept mismatch")
+
+        let exported = source.exportStoreSnapshot()
+        try require(exported.status == "Exported", "\(fixture.fixtureID) snapshot export mismatch")
+        try requirePresence(exported.snapshotB64, fixture.expect.snapshotB64, "snapshot_b64", fixture.fixtureID)
+
+        guard let snapshotB64 = exported.snapshotB64 else {
+            throw FixtureError.assertion("\(fixture.fixtureID) missing snapshot_b64")
+        }
+        let restored = target.restoreStoreSnapshot(snapshotB64: snapshotB64)
+        try require(restored.status == fixture.expect.status, "\(fixture.fixtureID) snapshot restore mismatch")
+        try requireDiagnostics(restored.diag, fixture.expect, fixture.fixtureID)
+        try requireCount(
+            restored.acceptedRecordCount,
+            fixture.expect.acceptedRecordCount.map(UInt64.init),
+            "accepted_record_count",
+            fixture.fixtureID
+        )
+        try requireCount(restored.deviceCount, fixture.expect.deviceCount, "device_count", fixture.fixtureID)
+        try requireCount(
+            restored.lifecycleEventCount,
+            fixture.expect.lifecycleEventCount,
+            "lifecycle_event_count",
+            fixture.fixtureID
+        )
+
+        let lifecycle = target.clientLifecycle()
+        try require(lifecycle.status == "Ready", "\(fixture.fixtureID) lifecycle status mismatch")
+        try requireCount(
+            lifecycle.acceptedRecordCount,
+            fixture.expect.acceptedRecordCount.map(UInt64.init),
+            "accepted_record_count",
+            fixture.fixtureID
+        )
+        try requireCount(lifecycle.deviceCount, fixture.expect.deviceCount, "device_count", fixture.fixtureID)
+        try requireCount(
+            lifecycle.lifecycleEventCount,
             fixture.expect.lifecycleEventCount,
             "lifecycle_event_count",
             fixture.fixtureID

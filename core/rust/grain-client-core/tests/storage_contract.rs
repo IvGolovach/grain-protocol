@@ -1,5 +1,10 @@
+use base64::engine::general_purpose::STANDARD;
+use base64::Engine;
 use grain_client_core::platform::storage::{list_accepted_scans, put_accepted_scan_atomically};
-use grain_client_core::{AcceptedScanRecord, ClientStore, MemoryClientStore, StorePutResult};
+use grain_client_core::{
+    client_lifecycle, device_add_key, identity_create_root, AcceptedScanRecord, ClientStore,
+    MemoryClientStore, StorePutResult, StoreSnapshotStatus,
+};
 
 fn record(scan_id: &str) -> AcceptedScanRecord {
     AcceptedScanRecord {
@@ -57,4 +62,97 @@ fn storage_contract_rolls_back_at_repository_boundary() {
 
     assert_eq!(err, "SDK_ERR_STORE_INJECTED_FAILURE");
     assert!(list_accepted_scans(&store).is_empty());
+}
+
+#[test]
+fn storage_snapshot_export_empty_store_is_explicitly_empty() {
+    let store = MemoryClientStore::new();
+
+    let snapshot = store.export_store_snapshot();
+
+    assert_eq!(snapshot.status, StoreSnapshotStatus::Empty);
+    assert!(snapshot.diag.is_empty());
+    assert!(snapshot.snapshot_b64.is_none());
+    assert_eq!(snapshot.accepted_record_count, 0);
+    assert_eq!(snapshot.device_count, 0);
+    assert_eq!(snapshot.lifecycle_event_count, 0);
+}
+
+#[test]
+fn storage_snapshot_round_trips_identity_lifecycle_and_scans() {
+    let mut source = MemoryClientStore::new();
+    assert!(identity_create_root(&mut source, "phone").diag.is_empty());
+    assert!(device_add_key(&mut source, "glasses").diag.is_empty());
+    let accepted = record("scan-sha256:aaa");
+    assert_eq!(
+        put_accepted_scan_atomically(&mut source, accepted.clone()),
+        Ok(StorePutResult::Inserted)
+    );
+
+    let snapshot = source.export_store_snapshot();
+    assert_eq!(snapshot.status, StoreSnapshotStatus::Exported);
+    assert_eq!(snapshot.accepted_record_count, 1);
+    assert_eq!(snapshot.device_count, 2);
+    assert_eq!(snapshot.lifecycle_event_count, 1);
+    let snapshot_b64 = snapshot.snapshot_b64.expect("snapshot payload");
+
+    let mut target = MemoryClientStore::new();
+    assert_eq!(
+        put_accepted_scan_atomically(&mut target, record("scan-sha256:stale")),
+        Ok(StorePutResult::Inserted)
+    );
+    let restored = target.restore_store_snapshot(&snapshot_b64);
+
+    assert_eq!(restored.status, StoreSnapshotStatus::Restored);
+    assert!(restored.diag.is_empty());
+    assert_eq!(restored.accepted_record_count, 1);
+    assert_eq!(restored.device_count, 2);
+    assert_eq!(restored.lifecycle_event_count, 1);
+    assert_eq!(list_accepted_scans(&target), vec![accepted]);
+    let lifecycle = client_lifecycle(&target);
+    assert_eq!(lifecycle.device_count, 2);
+    assert_eq!(lifecycle.accepted_record_count, 1);
+    assert_eq!(lifecycle.lifecycle_event_count, 1);
+}
+
+#[test]
+fn storage_snapshot_rejects_invalid_payload_without_mutation() {
+    let mut store = MemoryClientStore::new();
+    let accepted = record("scan-sha256:aaa");
+    assert_eq!(
+        put_accepted_scan_atomically(&mut store, accepted.clone()),
+        Ok(StorePutResult::Inserted)
+    );
+
+    let rejected = store.restore_store_snapshot("not base64");
+
+    assert_eq!(rejected.status, StoreSnapshotStatus::Rejected);
+    assert_eq!(list_accepted_scans(&store), vec![accepted]);
+}
+
+#[test]
+fn storage_snapshot_rejects_unsupported_version_without_mutation() {
+    let mut source = MemoryClientStore::new();
+    assert!(identity_create_root(&mut source, "phone").diag.is_empty());
+    let snapshot_b64 = source
+        .export_store_snapshot()
+        .snapshot_b64
+        .expect("non-empty snapshot");
+    let mut snapshot: serde_json::Value =
+        serde_json::from_slice(&STANDARD.decode(snapshot_b64).expect("valid base64"))
+            .expect("valid snapshot JSON");
+    snapshot["snapshot_v"] = serde_json::json!(2);
+    let unsupported = STANDARD.encode(serde_json::to_vec(&snapshot).expect("snapshot JSON bytes"));
+
+    let mut target = MemoryClientStore::new();
+    let accepted = record("scan-sha256:aaa");
+    assert_eq!(
+        put_accepted_scan_atomically(&mut target, accepted.clone()),
+        Ok(StorePutResult::Inserted)
+    );
+    let rejected = target.restore_store_snapshot(&unsupported);
+
+    assert_eq!(rejected.status, StoreSnapshotStatus::Rejected);
+    assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_SNAPSHOT_VERSION"]);
+    assert_eq!(list_accepted_scans(&target), vec![accepted]);
 }

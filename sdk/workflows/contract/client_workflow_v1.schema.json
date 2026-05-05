@@ -12,7 +12,7 @@
     },
     "workflow": {
       "type": "string",
-      "enum": ["scan_preview", "scan_accept", "device_lifecycle", "pairing", "sync_bundle"]
+      "enum": ["scan_preview", "scan_accept", "device_lifecycle", "pairing", "sync_bundle", "store_snapshot"]
     },
     "strict": {
       "const": true
@@ -76,6 +76,7 @@
             "Ready",
             "Uninitialized",
             "Exported",
+            "Restored",
             "Empty",
             "Imported",
             "AlreadyImported",
@@ -133,6 +134,9 @@
           "$ref": "#/$defs/presence"
         },
         "bundle_b64": {
+          "$ref": "#/$defs/presence"
+        },
+        "snapshot_b64": {
           "$ref": "#/$defs/presence"
         }
       }

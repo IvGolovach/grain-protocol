@@ -137,6 +137,15 @@ public struct GrainSyncResult: Equatable, Sendable {
     public let lifecycleEventCount: UInt64
 }
 
+public struct GrainStoreSnapshotResult: Equatable, Sendable {
+    public let status: String
+    public let diag: [String]
+    public let snapshotB64: String?
+    public let acceptedRecordCount: UInt64
+    public let deviceCount: UInt64
+    public let lifecycleEventCount: UInt64
+}
+
 public final class GrainClient {
     private let store: GrainClientMemoryStore
 
@@ -227,6 +236,14 @@ public final class GrainClient {
                 request: FfiSyncBundleRequest(bundleB64: bundleB64)
             )
         )
+    }
+
+    public func exportStoreSnapshot() -> GrainStoreSnapshotResult {
+        GrainStoreSnapshotResult(store.exportStoreSnapshot())
+    }
+
+    public func restoreStoreSnapshot(snapshotB64: String) -> GrainStoreSnapshotResult {
+        GrainStoreSnapshotResult(store.restoreStoreSnapshot(snapshotB64: snapshotB64))
     }
 }
 
@@ -326,6 +343,19 @@ private extension GrainSyncResult {
             status: result.status,
             diag: result.diag,
             bundleB64: result.bundleB64,
+            acceptedRecordCount: result.acceptedRecordCount,
+            deviceCount: result.deviceCount,
+            lifecycleEventCount: result.lifecycleEventCount
+        )
+    }
+}
+
+private extension GrainStoreSnapshotResult {
+    init(_ result: FfiStoreSnapshotResult) {
+        self.init(
+            status: result.status,
+            diag: result.diag,
+            snapshotB64: result.snapshotB64,
             acceptedRecordCount: result.acceptedRecordCount,
             deviceCount: result.deviceCount,
             lifecycleEventCount: result.lifecycleEventCount

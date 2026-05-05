@@ -651,6 +651,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_identity_bundle(
     ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_store_snapshot(
+    ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_sync_bundle(
     ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_identity_bundle(
@@ -658,6 +660,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_import_sync_bundle(
     ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_list_accepted_scans(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_restore_store_snapshot(
     ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_revoke_device_key(
     ): Short
@@ -703,6 +707,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_identity_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_store_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_identity_bundle(`ptr`: Long,`bundleB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
@@ -710,6 +716,8 @@ internal object UniffiLib {
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_sync_bundle(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_restore_store_snapshot(`ptr`: Long,`snapshotB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
     external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_revoke_device_key(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
@@ -869,6 +877,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_identity_bundle() != 55887.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_store_snapshot() != 3115.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_sync_bundle() != 32552.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -879,6 +890,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_list_accepted_scans() != 25163.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_restore_store_snapshot() != 56740.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_revoke_device_key() != 6663.toShort()) {
@@ -1240,6 +1254,8 @@ public interface GrainClientMemoryStoreInterface {
 
     fun `exportIdentityBundle`(): FfiIdentityResult
 
+    fun `exportStoreSnapshot`(): FfiStoreSnapshotResult
+
     fun `exportSyncBundle`(): FfiSyncResult
 
     fun `importIdentityBundle`(`bundleB64`: kotlin.String): FfiIdentityResult
@@ -1247,6 +1263,8 @@ public interface GrainClientMemoryStoreInterface {
     fun `importSyncBundle`(`request`: FfiSyncBundleRequest): FfiSyncResult
 
     fun `listAcceptedScans`(): List<FfiAcceptedScan>
+
+    fun `restoreStoreSnapshot`(`snapshotB64`: kotlin.String): FfiStoreSnapshotResult
 
     fun `revokeDeviceKey`(`ak`: kotlin.String): FfiDeviceResult
 
@@ -1439,6 +1457,19 @@ open class GrainClientMemoryStore: Disposable, AutoCloseable, GrainClientMemoryS
     }
 
 
+    override fun `exportStoreSnapshot`(): FfiStoreSnapshotResult {
+            return FfiConverterTypeFfiStoreSnapshotResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_export_store_snapshot(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
     override fun `exportSyncBundle`(): FfiSyncResult {
             return FfiConverterTypeFfiSyncResult.lift(
     callWithHandle {
@@ -1485,6 +1516,19 @@ open class GrainClientMemoryStore: Disposable, AutoCloseable, GrainClientMemoryS
     UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(
         it,
         _status)
+}
+    }
+    )
+    }
+
+
+    override fun `restoreStoreSnapshot`(`snapshotB64`: kotlin.String): FfiStoreSnapshotResult {
+            return FfiConverterTypeFfiStoreSnapshotResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainclientmemorystore_restore_store_snapshot(
+        it,
+        FfiConverterString.lower(`snapshotB64`),_status)
 }
     }
     )
@@ -2075,6 +2119,64 @@ public object FfiConverterTypeFfiScanPreviewRequest: FfiConverterRustBuffer<FfiS
     override fun write(value: FfiScanPreviewRequest, buf: ByteBuffer) {
             FfiConverterString.write(value.`qrString`, buf)
             FfiConverterOptionalString.write(value.`trustPubB64`, buf)
+    }
+}
+
+
+
+data class FfiStoreSnapshotResult (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `snapshotB64`: kotlin.String?
+    ,
+    var `acceptedRecordCount`: kotlin.ULong
+    ,
+    var `deviceCount`: kotlin.ULong
+    ,
+    var `lifecycleEventCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiStoreSnapshotResult: FfiConverterRustBuffer<FfiStoreSnapshotResult> {
+    override fun read(buf: ByteBuffer): FfiStoreSnapshotResult {
+        return FfiStoreSnapshotResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiStoreSnapshotResult) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`snapshotB64`) +
+            FfiConverterULong.allocationSize(value.`acceptedRecordCount`) +
+            FfiConverterULong.allocationSize(value.`deviceCount`) +
+            FfiConverterULong.allocationSize(value.`lifecycleEventCount`)
+    )
+
+    override fun write(value: FfiStoreSnapshotResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`snapshotB64`, buf)
+            FfiConverterULong.write(value.`acceptedRecordCount`, buf)
+            FfiConverterULong.write(value.`deviceCount`, buf)
+            FfiConverterULong.write(value.`lifecycleEventCount`, buf)
     }
 }
 

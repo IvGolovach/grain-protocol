@@ -3,7 +3,8 @@ use std::sync::Mutex;
 use crate::ffi_types::{
     FfiAcceptedScan, FfiClientLifecycle, FfiDeviceResult, FfiIdentityResult,
     FfiPairingEnvelopeRequest, FfiPairingResult, FfiScanAccept, FfiScanAcceptRequest,
-    FfiScanPreview, FfiScanPreviewRequest, FfiSyncBundleRequest, FfiSyncResult,
+    FfiScanPreview, FfiScanPreviewRequest, FfiStoreSnapshotResult, FfiSyncBundleRequest,
+    FfiSyncResult,
 };
 use crate::identity::client_lifecycle;
 use crate::memory_store::MemoryClientStore;
@@ -131,5 +132,15 @@ impl GrainClientMemoryStore {
     pub fn import_sync_bundle(&self, request: FfiSyncBundleRequest) -> FfiSyncResult {
         let mut store = self.store.lock().expect("memory store lock poisoned");
         FfiSyncResult::from(sync_import_bundle(&mut *store, &request.bundle_b64))
+    }
+
+    pub fn export_store_snapshot(&self) -> FfiStoreSnapshotResult {
+        let store = self.store.lock().expect("memory store lock poisoned");
+        FfiStoreSnapshotResult::from(store.export_store_snapshot())
+    }
+
+    pub fn restore_store_snapshot(&self, snapshot_b64: String) -> FfiStoreSnapshotResult {
+        let mut store = self.store.lock().expect("memory store lock poisoned");
+        FfiStoreSnapshotResult::from(store.restore_store_snapshot(&snapshot_b64))
     }
 }

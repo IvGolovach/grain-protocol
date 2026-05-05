@@ -32,12 +32,15 @@ for expected in \
   createPairingEnvelope \
   acceptPairingEnvelope \
   importSyncBundle \
+  exportStoreSnapshot \
+  restoreStoreSnapshot \
   FfiScanPreviewRequest \
   FfiScanAcceptRequest \
   FfiIdentityResult \
   FfiDeviceResult \
   FfiPairingEnvelopeRequest \
-  FfiSyncBundleRequest; do
+  FfiSyncBundleRequest \
+  FfiStoreSnapshotResult; do
   if ! grep -R "$expected" "$OUT_DIR" >/dev/null 2>&1; then
     echo "SDK_BINDGEN_ERR_PUBLIC_SYMBOL_MISSING: expected generated symbol $expected" >&2
     exit 1

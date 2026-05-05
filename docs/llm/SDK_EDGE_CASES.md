@@ -22,7 +22,8 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0018: portable identity lifecycle duplicate root creation, malformed bundle import, unsupported bundle version, missing identity, CSPRNG failure, unauthorized active device, unknown device revoke, or root revoke -> explicit `SDK_ERR_*` rejection without partial mutation
 - SDK-NEG-0019: portable pairing malformed envelope, invalid envelope version/transfer/id, malformed embedded identity bundle, replay into the same identity, or conflicting existing identity -> `Rejected` or `AlreadyPaired` with atomic store semantics
 - SDK-NEG-0020: portable sync bundle malformed payload/version, malformed embedded identity, malformed accepted scan/event rows, identity root conflict, or repeated import -> `Rejected` or `AlreadyImported` with atomic store semantics
-- SDK-NEG-0021: expanded generated SDK surface missing identity/device/pairing/sync symbols or exposing lifecycle workflows only in one platform wrapper -> generated binding or platform package check failure
+- SDK-NEG-0021: expanded generated SDK surface missing identity/device/pairing/sync/snapshot symbols or exposing lifecycle workflows only in one platform wrapper -> generated binding or platform package check failure
+- SDK-NEG-0022: portable store snapshot restore receives malformed base64/JSON, unsupported snapshot version, invalid identity, malformed accepted scan/event rows, or lifecycle events without identity -> `Rejected` with no existing-store mutation
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`

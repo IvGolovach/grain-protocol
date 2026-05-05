@@ -7,6 +7,9 @@ export type {
   GrainScanPreview,
   GrainScanPreviewInput,
   GrainScanPreviewStatus,
+  GrainStoreSnapshotInput,
+  GrainStoreSnapshotResult,
+  GrainStoreSnapshotStatus,
 } from "./index.mjs";
 
 export function createNodeGrainClient(options: { wasmPath: string }): Promise<GrainClient>;

@@ -19,6 +19,8 @@ interface GrainClientMemoryStore {
     FfiPairingResult accept_pairing_envelope(FfiPairingEnvelopeRequest request);
     FfiSyncResult export_sync_bundle();
     FfiSyncResult import_sync_bundle(FfiSyncBundleRequest request);
+    FfiStoreSnapshotResult export_store_snapshot();
+    FfiStoreSnapshotResult restore_store_snapshot(string snapshot_b64);
 };
 
 dictionary FfiScanPreviewRequest {
@@ -105,6 +107,15 @@ dictionary FfiSyncResult {
     string status;
     sequence<string> diag;
     string? bundle_b64;
+    u64 accepted_record_count;
+    u64 device_count;
+    u64 lifecycle_event_count;
+};
+
+dictionary FfiStoreSnapshotResult {
+    string status;
+    sequence<string> diag;
+    string? snapshot_b64;
     u64 accepted_record_count;
     u64 device_count;
     u64 lifecycle_event_count;

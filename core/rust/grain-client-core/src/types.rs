@@ -149,6 +149,40 @@ pub struct LifecycleEventRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum StoreSnapshotStatus {
+    Exported,
+    Restored,
+    Empty,
+    Rejected,
+}
+
+#[derive(Clone, PartialEq, Eq)]
+pub struct StoreSnapshotResult {
+    pub status: StoreSnapshotStatus,
+    pub diag: Vec<String>,
+    pub snapshot_b64: Option<String>,
+    pub accepted_record_count: u64,
+    pub device_count: u64,
+    pub lifecycle_event_count: u64,
+}
+
+impl fmt::Debug for StoreSnapshotResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("StoreSnapshotResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field(
+                "snapshot_b64",
+                &self.snapshot_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("accepted_record_count", &self.accepted_record_count)
+            .field("device_count", &self.device_count)
+            .field("lifecycle_event_count", &self.lifecycle_event_count)
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IdentityStatus {
     Created,
     Exported,

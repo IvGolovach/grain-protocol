@@ -11,6 +11,7 @@ export type GrainDeviceStatus = "Added" | "Revoked" | "Active" | "Rejected";
 export type GrainClientLifecycleStatus = "Ready" | "Uninitialized";
 export type GrainPairingStatus = "Created" | "Valid" | "Paired" | "AlreadyPaired" | "Rejected";
 export type GrainSyncStatus = "Exported" | "Empty" | "Imported" | "AlreadyImported" | "Rejected";
+export type GrainStoreSnapshotStatus = "Exported" | "Restored" | "Empty" | "Rejected";
 
 export interface GrainScanPreviewInput {
   qrString: string;
@@ -40,6 +41,10 @@ export interface GrainPairingEnvelopeInput {
 
 export interface GrainSyncBundleInput {
   bundleB64: string;
+}
+
+export interface GrainStoreSnapshotInput {
+  snapshotB64: string;
 }
 
 export interface GrainScanPreview {
@@ -113,6 +118,15 @@ export interface GrainSyncResult {
   lifecycleEventCount: number;
 }
 
+export interface GrainStoreSnapshotResult {
+  status: GrainStoreSnapshotStatus;
+  diag: string[];
+  snapshotB64: string | null;
+  acceptedRecordCount: number;
+  deviceCount: number;
+  lifecycleEventCount: number;
+}
+
 export class GrainClient {
   constructor(wasmExports: WebAssembly.Exports);
   scanPreview(input: GrainScanPreviewInput): GrainScanPreview;
@@ -130,6 +144,8 @@ export class GrainClient {
   acceptPairingEnvelope(input: GrainPairingEnvelopeInput): GrainPairingResult;
   exportSyncBundle(): GrainSyncResult;
   importSyncBundle(input: GrainSyncBundleInput): GrainSyncResult;
+  exportStoreSnapshot(): GrainStoreSnapshotResult;
+  restoreStoreSnapshot(input: GrainStoreSnapshotInput): GrainStoreSnapshotResult;
   close(): void;
 }
 

@@ -39,6 +39,9 @@ Every SDK error exposes:
   - append attempted with revoked/non-authorized key
 - `SDK_ERR_CSPRNG_UNAVAILABLE` (`CRYPTO`)
   - cap_id generation failed, so the operation stopped
+- `SDK_ERR_STORE_SNAPSHOT_INVALID` / `SDK_ERR_STORE_SNAPSHOT_VERSION` (`CONTRACT`)
+  - a platform persistence snapshot was malformed or not supported, so restore
+    stopped before mutating the client store
 - `GRAIN_ERR_NONCANONICAL` (`CANONICAL`, layer=`core`)
   - strict validation rejected non-canonical bytes
 
