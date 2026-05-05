@@ -27,12 +27,17 @@ If every platform owns those details separately, the protocol stays correct in t
    - no diagnostic renaming for core failures
    - SDK-only failures stay in the `SDK_ERR_*` namespace
 5. Treat Swift, Kotlin, WASM, and future device SDKs as generated surfaces over this Rust client core. Those generated packages should expose workflow APIs such as scan preview and scan accept, not raw COSE/QR internals.
+6. The Swift package starts as a thin generated-binding wrapper:
+   - SwiftPM builds against the Rust client-core native library.
+   - Public app code calls `GrainClient.scanPreview`, `scanAccept`, and `listAcceptedScans`.
+   - Shared `sdk/workflows` fixtures run through the public Swift API.
+   - Platform-specific camera, Keychain, sync, and trust-store adapters remain later slices.
 
 ## Consequences
 
-- The first platform SDK slice can be tested once in Rust and exposed many times.
+- The first platform SDK slice can be tested once in Rust, generated through UniFFI, and checked again through the Swift package.
 - Future iOS/Android SDK work has a stable place to bind from.
-- `scan_accept` and persistent client storage remain future additive work; they must use SDK atomic-mutation rules when introduced.
+- `scan_accept` and persistent client storage use SDK atomic-mutation rules before platform packages expose saved scans.
 - The protocol conformance vectors remain the trust anchor for bytes and diagnostics.
 
 ## Invariants touched
@@ -40,3 +45,6 @@ If every platform owns those details separately, the protocol stays correct in t
 - `SDK-INV-0010` (transport decode/verify separation and explicit trust)
 - `SDK-INV-0014` (strict base64 validation on trust material)
 - `SDK-INV-0015` (portable client scan preview contract)
+- `SDK-INV-0017` (portable client scan accept and atomic storage)
+- `SDK-INV-0019` (generated binding harness)
+- `SDK-INV-0020` (Swift client package fixture parity)

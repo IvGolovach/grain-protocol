@@ -9,6 +9,7 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 3. SDK-only guards use `SDK_ERR_*` and must not shadow core codes.
 4. Generated platform SDKs bind client workflow DTOs, not raw QR/COSE runner internals.
 5. Platform storage/trust adapters must pass Rust contract tests before being treated as conformant.
+6. Platform packages must pass `sdk/workflows` through their public wrapper APIs, not just through generated FFI symbols.
 
 ## Comparison surfaces
 
@@ -19,6 +20,7 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - client workflow fixture status/diagnostics/storage mutation
 - storage adapter behavior: deterministic order, idempotent re-put, rollback boundary
 - trust adapter behavior: no anchor, missing anchor, malformed anchor, valid anchor
+- Swift package wrapper behavior: typed workflow statuses, no raw QR/COSE runner APIs, and public scan fixtures passing through `GrainClient`
 
 ## Required checks
 
@@ -27,8 +29,9 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`
 - `cargo build --manifest-path core/rust/Cargo.toml -p uniffi-bindgen`
 - `scripts/sdk/check_generated_bindings.sh`
+- `scripts/sdk/check_swift_package.sh`
 - `python3 tools/ci/check_client_workflow_fixtures.py`
-- CI `ts-full` context includes both checks.
+- CI `ts-full` keeps the TypeScript SDK and client workflow checks wired into the required repository lane; platform package checks may be added as their own lane as the generated SDKs become release artifacts.
 
 ## Drift response
 
@@ -41,3 +44,5 @@ If SDK output diverges from core vectors:
 If generated platform SDK output diverges from `grain-client-core` workflow fixtures or adapter contract tests, treat it as platform SDK drift first. Passing protocol vectors alone does not make Swift, Kotlin, WASM, or future device bindings client-workflow conformant.
 
 If UniFFI generation or expected public symbols drift, treat that as a generated-binding harness failure first, not a protocol issue.
+
+If the Swift wrapper drifts from generated binding output, treat it as a Swift package failure first. Regenerate with `scripts/sdk/sync_swift_bindings.sh`, then run `scripts/sdk/check_swift_package.sh`; do not patch checked-in generated Swift by hand.

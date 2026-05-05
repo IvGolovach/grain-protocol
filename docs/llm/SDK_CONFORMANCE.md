@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0019` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0020` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -92,6 +92,25 @@ Expected contract:
 - generated output contains the expected workflow symbols: preview, accept preparation, accept, listing, and binding-safe request DTOs
 - generated output and UDL do not expose raw QR/COSE/DAG-CBOR/protocol-runner operations as app APIs
 - the check leaves git status unchanged except for pre-existing unrelated local work
+
+## Swift client package
+
+Swift package check:
+
+```bash
+scripts/sdk/check_swift_package.sh
+```
+
+Expected contract:
+- `scripts/sdk/sync_swift_bindings.sh` regenerates Swift binding sources from the checked-in UniFFI harness and updates only the tracked Swift binding files
+- `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core` builds the native library linked by SwiftPM
+- `swift build --package-path sdk/swift` builds the `GrainClient` package
+- `swift run --package-path sdk/swift GrainClientFixtureRunner` executes scan-preview and scan-accept fixtures through the public Swift `GrainClient` API
+- the package exposes workflow methods and typed Swift statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
+- fixture references are constrained to `conformance/vectors/**`
+- the check leaves git status unchanged except for pre-existing unrelated local work
+
+Local note: some environments do not ship `XCTest` or Swift Testing modules. This repository uses an executable fixture runner for the Swift package lane so the same deterministic workflow proof works in that toolchain shape.
 
 ## Diagnostics contract
 
