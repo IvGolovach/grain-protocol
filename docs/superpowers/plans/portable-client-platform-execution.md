@@ -50,8 +50,8 @@
 | 0 | Persistent execution tracker | Merged | `codex/portable-client-platform-plan` | #26 | `e010d9a1349498a70a2ae02e2519d0b0e502e28a` | `python3 tools/check_llm_docs.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `437890e5b792098fbe770d22c57a5680f577936f`; Greptile safe to merge; CodeRabbit PASS; post-merge `main` CI run `25360950306` passed |
 | 1 | Client workflow contract and scan-preview fixtures | Merged | `codex/client-workflow-contract-fixtures` | #27 | `f3d68bcd872ac8468b303ffcdf57544f0b80e61e` | `workflow fixture refs`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `58ab443674548abe0f6ca3a8341825a140107e69`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25362169893` passed |
 | 2 | Rust client workflow fixture runner | Merged | `codex/client-workflow-fixture-runner` | #28 | `71d9b3197bb048ff089bc69cbb2f43fc2411d43f` | `python3 tools/ci/check_client_workflow_fixtures.py`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `6ab18cd6e90004563f39ad5e8ae3405c6b0d9ce3`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25364160258` passed |
-| 3a | `scan_accept_prepare`, deterministic ID, module boundaries | In progress | `codex/scan-accept-prepare` |  |  |  |  |
-| 3b | `scan_accept`, atomic store abstraction, memory store | Pending |  |  |  |  |  |
+| 3a | `scan_accept_prepare`, deterministic ID, module boundaries | Merged | `codex/scan-accept-prepare` | #29 | `1f7c6debca15daea89d40b47ac5977a221cc8081` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `aecb4b68012322ccc1edf867170aa31273035940`; Greptile P2 findings fixed and threads resolved, rerun skipped by org usage limit; CodeRabbit PASS; post-merge `main` CI run `25365199685` passed |
+| 3b | `scan_accept`, atomic store abstraction, memory store | In progress | `codex/scan-accept-store` |  |  |  |  |
 | 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Pending |  |  |  |  |  |
 | 5 | UniFFI/generation harness over stable client-core facade | Pending |  |  |  |  |  |
 | 6 | Swift package over generated client workflow API | Pending |  |  |  |  |  |
@@ -326,7 +326,7 @@ pub struct ScanAccept {
 
 `ScanAcceptRequest.trust_pub_b64` is intentionally non-optional for generated DTOs. The function-level `scan_accept_prepare(_, Option<&str>)` remains optional so non-DTO callers can receive the deterministic `SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED` rejection path described in the #29 Review Log entry and implemented in `core/rust/grain-client-core/src/types.rs`.
 
-- [ ] **Step 4: Validate and PR**
+- [x] **Step 4: Validate and PR**
 
 Run:
 
@@ -346,23 +346,32 @@ Run `cargo test --manifest-path core/rust/Cargo.toml --workspace` if the module 
 ## PR 3b: `scan_accept`, Atomic Store Abstraction, Memory Store
 
 **Files:**
+- Modify: `core/rust/grain-client-core/src/diag.rs`
 - Modify: `core/rust/grain-client-core/src/lib.rs`
 - Modify: `core/rust/grain-client-core/src/scan.rs`
 - Modify: `core/rust/grain-client-core/src/types.rs`
 - Create: `core/rust/grain-client-core/src/store.rs`
 - Create: `core/rust/grain-client-core/src/memory_store.rs`
+- Modify: `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`
+- Modify: `core/rust/grain-client-core/tests/support/workflow_fixture.rs`
 - Create: `core/rust/grain-client-core/tests/scan_accept.rs`
 - Create: `core/rust/grain-client-core/tests/store_atomic.rs`
+- Modify: `sdk/workflows/README.md`
+- Modify: `sdk/workflows/contract/client_workflow_v1.md`
+- Modify: `sdk/workflows/contract/client_workflow_v1.schema.json`
 - Create: `sdk/workflows/fixtures/scan-accept/SDK-WF-SCAN-ACCEPT-0001.json`
 - Create: `sdk/workflows/fixtures/scan-accept/SDK-WF-SCAN-ACCEPT-0002.json`
+- Modify: `tools/ci/check_client_workflow_fixtures.py`
 - Modify: `docs/llm/SDK_INVARIANTS.md`
 - Modify: `docs/llm/SDK_EDGE_CASES.md`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_FILE_MAP.md`
+- Modify: `docs/human/sdk/architecture.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 3a evidence
 
-- [ ] **Step 1: Write failing atomic-store tests**
+- [x] **Step 1: Write failing atomic-store tests**
 
 Required behavior:
 
@@ -372,11 +381,11 @@ Required behavior:
 - injected mid-mutation failure rolls back all writes.
 - nested atomic calls are rejected or explicitly prevented.
 
-- [ ] **Step 2: Implement store and `scan_accept`**
+- [x] **Step 2: Implement store and `scan_accept`**
 
 Add `ClientStore`, `MemoryClientStore`, `AcceptedScanRecord`, and store diagnostics under `SDK_ERR_STORE_*`. Mutate only inside `store.atomic(...)`.
 
-- [ ] **Step 3: Add scan-accept workflow fixtures**
+- [x] **Step 3: Add scan-accept workflow fixtures**
 
 Fixtures:
 

@@ -11,4 +11,12 @@ The first workflow is `scan_preview`:
 - return `Verified`, `Untrusted`, or `Rejected`;
 - never mutate local client storage.
 
+The second workflow is `scan_accept`:
+
+- decode and verify a GR1 scan string against explicit trust material;
+- atomically persist a verified accepted scan record;
+- return `Accepted`, `AlreadyAccepted`, or `Rejected`;
+- prove duplicate-scan idempotency by repeating the public accept workflow in fixtures;
+- never persist rejected scans.
+
 Fixtures live under `sdk/workflows/fixtures/<workflow>/`. They may reference protocol vectors with JSON pointers, but they are not protocol vectors themselves and must not be consumed by the protocol runner.

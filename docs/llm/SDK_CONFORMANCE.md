@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0016` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0017` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -44,12 +44,17 @@ Expected contract:
 - scan accept preparation requires explicit verified trust
 - accepted scan preparation returns a deterministic `scan-sha256:<hex>` ID derived from verified COSE bytes
 - scan accept preparation is pure and performs no storage mutation
+- scan accept persists verified records inside an atomic store boundary
+- rejected scan accept writes no records
+- duplicate scan accept is idempotent
+- failed or nested store mutations reject or roll back deterministically
 
 ## Client workflow fixtures
 
 Workflow fixtures:
 - `sdk/workflows/contract/client_workflow_v1.md`
 - `sdk/workflows/contract/client_workflow_v1.schema.json`
+- `sdk/workflows/fixtures/scan-accept/*.json`
 - `sdk/workflows/fixtures/scan-preview/*.json`
 
 Fixture validation:
@@ -65,8 +70,10 @@ Expected contract:
 - generated Swift, Kotlin, WASM, and future device SDKs are client-workflow conformant only after they pass these fixtures through their public workflow APIs
 - `scan_preview` fixtures currently cover verified, untrusted, malformed QR, malformed trust, and wrong trust-key paths
 - every `scan_preview` fixture expects `store_mutation: "none"`
+- `scan_accept` fixtures currently cover accepted persistence, duplicate-scan idempotency, and rejected no-write behavior
+- every `scan_accept` fixture asserts `store_mutation` and `accepted_record_count`
 
-Rust fixture execution must load these fixtures and compare them against the public `grain_client_core::scan_preview()` API.
+Rust fixture execution must load these fixtures and compare them against the public `grain_client_core::scan_preview()` and `grain_client_core::scan_accept()` APIs.
 
 ## Diagnostics contract
 

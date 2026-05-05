@@ -28,6 +28,13 @@ The next implemented workflow is scan accept preparation:
 - missing trust, malformed trust, malformed scan, or failed verification -> `Rejected`
 - no local storage mutation occurs in preparation
 
+The durable workflow is scan accept:
+
+- valid scan with explicit valid trust -> `Accepted` and exactly one persisted accepted scan record
+- repeated same scan -> `AlreadyAccepted` and no duplicate record
+- rejected scans -> no persisted record
+- failed store mutation -> rollback to the pre-call state
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.
@@ -42,9 +49,15 @@ The first fixture set covers `scan_preview`:
 
 Every scan-preview fixture expects no local storage mutation. `scan_accept_prepare` also performs no local storage mutation; durable writes start with the later `scan_accept` workflow.
 
+The second fixture set covers `scan_accept`:
+
+- valid scan plus valid trust -> `Accepted`, `accepted_scan_inserted`, one accepted record
+- repeated valid scan -> `AlreadyAccepted`, no duplicate accepted record
+- malformed scan -> `Rejected`, no store mutation, zero accepted records
+
 ## Next additive slices
 
-- `scan_accept`: verified scan plus atomic local persistence.
+- Platform storage adapters over the `ClientStore` contract.
 - Generated Swift package over the Rust client core.
 - Generated Kotlin package over the same Rust client core.
 - WASM/mobile-web binding over the same contract.

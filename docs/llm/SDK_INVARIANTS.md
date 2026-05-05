@@ -66,6 +66,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/rust/grain-client-core/tests/scan_accept_prepare.rs`
   Modules: `core/rust/grain-client-core/src/scan.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/trust.rs`, `core/rust/grain-client-core/src/diag.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-core/src/cose.rs`
 
+- SDK-INV-0017: portable client scan accept MUST persist verified scans only inside an atomic client-store boundary; rejected scans MUST write nothing, duplicate scans MUST be idempotent, failed atomic mutations MUST roll back, and nested atomic mutations MUST reject.
+  Tests: `core/rust/grain-client-core/tests/scan_accept.rs`, `core/rust/grain-client-core/tests/store_atomic.rs`, `core/rust/grain-client-core/tests/client_workflow_fixtures.rs`
+  Modules: `core/rust/grain-client-core/src/scan.rs`, `core/rust/grain-client-core/src/store.rs`, `core/rust/grain-client-core/src/memory_store.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/diag.rs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

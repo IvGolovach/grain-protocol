@@ -1,4 +1,4 @@
-use grain_client_core::ScanPreviewStatus;
+use grain_client_core::{ScanAcceptStatus, ScanPreviewStatus};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -18,6 +18,7 @@ pub struct WorkflowFixture {
 #[serde(rename_all = "snake_case")]
 pub enum WorkflowName {
     ScanPreview,
+    ScanAccept,
 }
 
 #[derive(Debug, Deserialize)]
@@ -26,6 +27,7 @@ pub struct WorkflowInput {
     pub qr_string_ref: String,
     pub trust_pub_b64_ref: Option<String>,
     pub trust_pub_b64: Option<String>,
+    pub accept_attempts: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +38,7 @@ pub struct WorkflowExpect {
     pub diag_contains: Option<Vec<String>>,
     pub cose_b64: CosePresence,
     pub store_mutation: StoreMutation,
+    pub accepted_record_count: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,15 +51,31 @@ pub struct WorkflowMeta {
 pub enum ExpectedStatus {
     Verified,
     Untrusted,
+    Accepted,
+    AlreadyAccepted,
     Rejected,
 }
 
 impl ExpectedStatus {
-    pub fn as_status(&self) -> ScanPreviewStatus {
+    pub fn as_preview_status(&self) -> ScanPreviewStatus {
         match self {
             Self::Verified => ScanPreviewStatus::Verified,
             Self::Untrusted => ScanPreviewStatus::Untrusted,
             Self::Rejected => ScanPreviewStatus::Rejected,
+            Self::Accepted | Self::AlreadyAccepted => {
+                panic!("scan_accept status used for scan_preview")
+            }
+        }
+    }
+
+    pub fn as_accept_status(&self) -> ScanAcceptStatus {
+        match self {
+            Self::Accepted => ScanAcceptStatus::Accepted,
+            Self::AlreadyAccepted => ScanAcceptStatus::AlreadyAccepted,
+            Self::Rejected => ScanAcceptStatus::Rejected,
+            Self::Verified | Self::Untrusted => {
+                panic!("scan_preview status used for scan_accept")
+            }
         }
     }
 }
@@ -69,13 +88,24 @@ pub enum CosePresence {
 }
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum StoreMutation {
     None,
+    AcceptedScanInserted,
 }
 
 pub fn load_scan_preview_fixtures() -> Result<Vec<WorkflowFixture>, String> {
-    let fixture_dir = repo_root().join("sdk/workflows/fixtures/scan-preview");
+    load_workflow_fixtures("scan-preview")
+}
+
+pub fn load_scan_accept_fixtures() -> Result<Vec<WorkflowFixture>, String> {
+    load_workflow_fixtures("scan-accept")
+}
+
+fn load_workflow_fixtures(workflow_dir: &str) -> Result<Vec<WorkflowFixture>, String> {
+    let fixture_dir = repo_root()
+        .join("sdk/workflows/fixtures")
+        .join(workflow_dir);
     let mut paths = fs::read_dir(&fixture_dir)
         .map_err(|err| format!("read {}: {err}", fixture_dir.display()))?
         .map(|entry| {

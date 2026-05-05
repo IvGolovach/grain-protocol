@@ -13,7 +13,7 @@ Workflow fixtures can reference protocol vectors as input material. A generated 
 Each fixture is a JSON object with:
 
 - `fixture_id`: stable `SDK-WF-*` identifier.
-- `workflow`: workflow name, currently `scan_preview`.
+- `workflow`: workflow name, currently `scan_preview` or `scan_accept`.
 - `strict`: must be `true`.
 - `input`: workflow input references or inline values.
 - `expect`: expected workflow status, diagnostics, COSE output presence, and storage mutation result.
@@ -50,4 +50,26 @@ Expected fields:
 
 `cose_b64: present` means the COSE envelope was successfully decoded from the QR input. It does not imply that trust verification passed.
 
-`scan_preview` must not persist data. Persistence starts in a later `scan_accept` workflow.
+`scan_preview` must not persist data. Persistence starts in the `scan_accept` workflow.
+
+## `scan_accept`
+
+Input fields:
+
+- `qr_string_ref`: required reference to a QR string.
+- `trust_pub_b64_ref`: required reference to trust material for positive fixtures.
+- `trust_pub_b64`: optional inline trust material for malformed or synthetic trust cases.
+- `accept_attempts`: optional positive integer; defaults to `1`. Fixtures use `2` to assert duplicate-scan idempotency through the public workflow API.
+
+`trust_pub_b64_ref` and `trust_pub_b64` are mutually exclusive. If both are absent, the scan is intentionally accepted without trust and must reject with `SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED`.
+
+Expected fields:
+
+- `status`: one of `Accepted`, `AlreadyAccepted`, `Rejected`.
+- `diag`: exact ordered diagnostic strings.
+- `diag_contains`: diagnostic strings that must be present when the underlying protocol vector promises containment instead of exact equality.
+- `cose_b64`: `present` when the accepted result carries COSE bytes, otherwise `absent`.
+- `store_mutation`: `accepted_scan_inserted` or `none`.
+- `accepted_record_count`: number of persisted accepted-scan records after the workflow call.
+
+`scan_accept` must mutate storage only inside the client store atomic boundary. Rejected scans must leave `accepted_record_count` unchanged at `0`. `AlreadyAccepted` fixtures must repeat the same accept operation and still end with exactly one persisted accepted-scan record.

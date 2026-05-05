@@ -60,6 +60,8 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
 - `core/rust/grain-client-core/src/*`: portable scan workflow core for generated platform SDKs
   - `scan.rs` keeps `scan_preview()` decode-only preview separate from verified preview
   - `scan_accept_prepare()` requires explicit verified trust and returns deterministic, persistence-ready records without writing storage
+  - `scan_accept()` persists verified records through an atomic store boundary and leaves rejected scans unwritten
+  - `store.rs` and `memory_store.rs` define the platform-neutral storage contract and reference rollback/idempotency behavior
   - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle

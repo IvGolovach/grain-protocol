@@ -7,8 +7,9 @@ use grain_core::qr::decode_gr1_to_cose;
 use sha2::{Digest, Sha256};
 
 use crate::diag::SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED;
+use crate::store::{ClientStore, StorePutResult};
 use crate::trust::decode_trust_pub_b64;
-use crate::types::{AcceptedScan, ScanAccept, ScanPreview};
+use crate::types::{AcceptedScan, AcceptedScanRecord, ScanAccept, ScanPreview};
 
 /// Decode a GR1 scan and optionally verify it against explicit trust material.
 ///
@@ -66,6 +67,28 @@ pub fn scan_accept_prepare(qr_string: &str, trust_pub_b64: Option<&str>) -> Scan
         cose_b64: STANDARD.encode(&cose),
         trust_pub_b64: trust_pub_b64.to_string(),
     })
+}
+
+/// Verify and atomically persist an accepted scan record.
+///
+/// Rejected scans never enter the store transaction. Duplicate verified scans
+/// are idempotent and report `AlreadyAccepted` without adding another record.
+pub fn scan_accept<S: ClientStore>(
+    store: &mut S,
+    qr_string: &str,
+    trust_pub_b64: Option<&str>,
+) -> ScanAccept {
+    let prepared = scan_accept_prepare(qr_string, trust_pub_b64);
+    let Some(accepted) = prepared.accepted.clone() else {
+        return prepared;
+    };
+
+    let record = AcceptedScanRecord::from(accepted.clone());
+    match store.atomic(|tx| tx.put_accepted_scan(record.clone())) {
+        Ok(StorePutResult::Inserted) => prepared,
+        Ok(StorePutResult::AlreadyExists) => ScanAccept::already_accepted(accepted),
+        Err(diag) => ScanAccept::rejected(diag),
+    }
 }
 
 fn scan_id_for_cose(cose: &[u8]) -> String {
