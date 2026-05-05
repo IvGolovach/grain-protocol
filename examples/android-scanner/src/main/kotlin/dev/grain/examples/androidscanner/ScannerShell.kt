@@ -9,14 +9,27 @@ import dev.grain.GrainScanAccept
 import dev.grain.GrainScanAcceptStatus
 import dev.grain.GrainScanPreview
 import dev.grain.GrainScanPreviewStatus
+import dev.grain.GrainStoreSnapshotResult
+import dev.grain.GrainTrustProvider
+import dev.grain.android.GrainSnapshotClient
+import dev.grain.android.GrainSnapshotCoordinator
+import dev.grain.android.GrainSnapshotPersistence
 
 const val SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG =
     "SDK_ERR_EXAMPLE_ACCEPT_REQUIRES_VERIFIED_PREVIEW"
-const val SCANNER_ACCEPT_REQUIRES_TRUST_DIAG = "SDK_ERR_EXAMPLE_ACCEPT_REQUIRES_TRUST"
+const val SCANNER_SNAPSHOT_PERSISTENCE_DIAG = "SDK_ERR_EXAMPLE_SNAPSHOT_PERSISTENCE"
 
-interface ScannerWorkflowClient {
-    fun scanPreview(qrString: String, trustPubB64: String? = null): GrainScanPreview
-    fun scanAccept(qrString: String, trustPubB64: String): GrainScanAccept
+interface ScannerWorkflowClient : GrainSnapshotClient {
+    fun scanPreview(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanPreview
+    fun scanAccept(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanAccept
     fun listAcceptedScans(): List<GrainAcceptedScan>
     fun createRootIdentity(label: String = "root"): GrainIdentityResult
     fun addDeviceKey(label: String = "device"): GrainDeviceResult
@@ -26,11 +39,27 @@ interface ScannerWorkflowClient {
 class GrainScannerWorkflowClient(
     private val client: GrainClient = GrainClient(),
 ) : ScannerWorkflowClient, AutoCloseable {
-    override fun scanPreview(qrString: String, trustPubB64: String?): GrainScanPreview =
-        client.scanPreview(qrString = qrString, trustPubB64 = trustPubB64)
+    override fun scanPreview(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanPreview =
+        client.scanPreview(
+            qrString = qrString,
+            trustAnchorId = trustAnchorId,
+            trustProvider = trustProvider,
+        )
 
-    override fun scanAccept(qrString: String, trustPubB64: String): GrainScanAccept =
-        client.scanAccept(qrString = qrString, trustPubB64 = trustPubB64)
+    override fun scanAccept(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanAccept =
+        client.scanAccept(
+            qrString = qrString,
+            trustAnchorId = trustAnchorId,
+            trustProvider = trustProvider,
+        )
 
     override fun listAcceptedScans(): List<GrainAcceptedScan> =
         client.listAcceptedScans()
@@ -44,6 +73,12 @@ class GrainScannerWorkflowClient(
     override fun clientLifecycle(): GrainClientLifecycle =
         client.clientLifecycle()
 
+    override fun exportStoreSnapshot(): GrainStoreSnapshotResult =
+        client.exportStoreSnapshot()
+
+    override fun restoreStoreSnapshot(snapshotB64: String): GrainStoreSnapshotResult =
+        client.restoreStoreSnapshot(snapshotB64 = snapshotB64)
+
     override fun close() {
         client.close()
     }
@@ -51,7 +86,7 @@ class GrainScannerWorkflowClient(
 
 data class ScannerUiState(
     val qrString: String = "",
-    val trustPubB64: String = "",
+    val trustAnchorId: String = "",
     val previewStatus: GrainScanPreviewStatus? = null,
     val acceptStatus: GrainScanAcceptStatus? = null,
     val diagnostics: List<String> = emptyList(),
@@ -61,11 +96,15 @@ data class ScannerUiState(
     val lifecycleStatus: String? = null,
     val deviceCount: ULong = 0UL,
     val lifecycleEventCount: ULong = 0UL,
+    val snapshotStatus: String? = null,
 )
 
 class ScannerController(
     private val client: ScannerWorkflowClient,
+    private val trustProvider: GrainTrustProvider,
+    snapshotPersistence: GrainSnapshotPersistence? = null,
 ) {
+    private val snapshotCoordinator = snapshotPersistence?.let(::GrainSnapshotCoordinator)
     var state: ScannerUiState = ScannerUiState()
         private set
 
@@ -73,8 +112,8 @@ class ScannerController(
         state = state.copy(qrString = value).withoutDecision()
     }
 
-    fun updateTrustPubB64(value: String) {
-        state = state.copy(trustPubB64 = value).withoutDecision()
+    fun updateTrustAnchorId(value: String) {
+        state = state.copy(trustAnchorId = value).withoutDecision()
     }
 
     fun receiveCameraPayload(payload: CameraScanPayload) {
@@ -99,12 +138,14 @@ class ScannerController(
         state = state
             .copy(diagnostics = device.diag)
             .withLifecycle(client.clientLifecycle())
+        persistSnapshot()
     }
 
     fun preview() {
         val preview = client.scanPreview(
             qrString = state.qrString,
-            trustPubB64 = normalizedTrustInput(),
+            trustAnchorId = normalizedTrustAnchorId(),
+            trustProvider = trustProvider,
         )
 
         state = state.copy(
@@ -119,27 +160,28 @@ class ScannerController(
 
     fun accept() {
         if (state.previewStatus != GrainScanPreviewStatus.Verified || !state.canAccept) {
+            val diagnostics = if (
+                state.previewStatus == GrainScanPreviewStatus.Rejected &&
+                state.diagnostics.isNotEmpty()
+            ) {
+                state.diagnostics
+            } else {
+                listOf(SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG)
+            }
             state = state.copy(
                 acceptStatus = null,
-                diagnostics = listOf(SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG),
+                diagnostics = diagnostics,
                 canAccept = false,
                 acceptedScanId = null,
             )
             return
         }
 
-        val trustPubB64 = normalizedTrustInput()
-        if (trustPubB64 == null) {
-            state = state.copy(
-                acceptStatus = null,
-                diagnostics = listOf(SCANNER_ACCEPT_REQUIRES_TRUST_DIAG),
-                canAccept = false,
-                acceptedScanId = null,
-            )
-            return
-        }
-
-        val accepted = client.scanAccept(qrString = state.qrString, trustPubB64 = trustPubB64)
+        val accepted = client.scanAccept(
+            qrString = state.qrString,
+            trustAnchorId = normalizedTrustAnchorId(),
+            trustProvider = trustProvider,
+        )
         state = state.copy(
             acceptStatus = accepted.status,
             diagnostics = accepted.diag,
@@ -147,10 +189,60 @@ class ScannerController(
             acceptedScanId = accepted.scanId,
             canAccept = state.previewStatus == GrainScanPreviewStatus.Verified,
         )
+        if (
+            accepted.status == GrainScanAcceptStatus.Accepted ||
+            accepted.status == GrainScanAcceptStatus.AlreadyAccepted
+        ) {
+            persistSnapshot()
+        }
     }
 
-    private fun normalizedTrustInput(): String? =
-        state.trustPubB64.trim().ifEmpty { null }
+    fun restorePersistedSnapshot() {
+        val coordinator = snapshotCoordinator ?: return
+        try {
+            val restored = coordinator.restore(client = client)
+            if (restored == null) {
+                state = state.copy(snapshotStatus = "Empty")
+                refreshLifecycle()
+                state = state.copy(acceptedCount = client.listAcceptedScans().size)
+                return
+            }
+            state = state.copy(
+                snapshotStatus = restored.status,
+                diagnostics = restored.diag,
+                acceptedCount = restored.acceptedRecordCount.toInt(),
+            )
+            refreshLifecycle()
+        } catch (_: RuntimeException) {
+            state = state.copy(
+                snapshotStatus = "PersistenceError",
+                diagnostics = listOf(SCANNER_SNAPSHOT_PERSISTENCE_DIAG),
+            )
+        }
+    }
+
+    private fun normalizedTrustAnchorId(): String =
+        state.trustAnchorId.trim()
+
+    private fun persistSnapshot() {
+        val coordinator = snapshotCoordinator ?: return
+        try {
+            val exported = coordinator.persist(client = client)
+            state = state.copy(
+                snapshotStatus = exported.status,
+                diagnostics = if (exported.diag.isEmpty()) state.diagnostics else exported.diag,
+            )
+        } catch (_: RuntimeException) {
+            state = state.copy(
+                snapshotStatus = "PersistenceError",
+                diagnostics = listOf(SCANNER_SNAPSHOT_PERSISTENCE_DIAG),
+            )
+        }
+    }
+
+    private fun refreshLifecycle() {
+        state = state.withLifecycle(client.clientLifecycle())
+    }
 
     private fun ScannerUiState.withoutDecision(): ScannerUiState =
         copy(

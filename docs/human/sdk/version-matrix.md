@@ -16,6 +16,7 @@ and Rust crates that were not reviewed together.
 | Swift client package | `sdk/swift` | repo-SHA versioned | Use with the matching `grain-client-core` native library and checked-in generated Swift sources. |
 | Swift iOS adapter pack | `sdk/swift/Sources/GrainClientIOSAdapters`, `examples/ios-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence and explicit trust-anchor wiring, not App Store packaging. |
 | Kotlin client package | `sdk/kotlin` | `0.1.0` | Use with the matching `grain-client-core` native library and checked-in generated Kotlin source. |
+| Kotlin Android adapter pack | `sdk/kotlin/src/main/kotlin/dev/grain/android`, `examples/android-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence, Keystore-ready encryption boundaries, and explicit trust-anchor wiring, not Play Store packaging. |
 | WASM client crate | `core/rust/grain-client-wasm` | `0.1.0` | Builds against `grain-client-core` with default features disabled for `wasm32-wasip1`. |
 | WASM/mobile-web package | `sdk/wasm` | `0.1.0` | Use with the matching `grain-client-wasm.wasm` artifact and JavaScript wrapper. |
 
@@ -74,9 +75,8 @@ not have every platform target installed.
   callers should use the explicit `trustAnchorID` + trust-provider APIs so
   unknown anchors fail closed with `SDK_ERR_TRUST_ANCHOR_*`; the SDK does not
   discover trust over the network or use fallback trust.
-- Platform persistence can later move to Keychain, Keystore, IndexedDB, robot
-  secure elements, or device-management storage. The iOS adapter pack now
-  provides the first native Swift persistence boundary: apps persist the opaque
-  `snapshotB64` returned by `exportStoreSnapshot` and restore it with
-  `restoreStoreSnapshot`, preserving the Rust-owned `ClientStore`
-  atomic/idempotent semantics.
+- Platform persistence can move to Keychain, Keystore, IndexedDB, robot secure
+  elements, or device-management storage. The iOS and Android adapter packs now
+  provide native persistence boundaries: apps persist the opaque `snapshotB64`
+  returned by `exportStoreSnapshot` and restore it with `restoreStoreSnapshot`,
+  preserving the Rust-owned `ClientStore` atomic/idempotent semantics.

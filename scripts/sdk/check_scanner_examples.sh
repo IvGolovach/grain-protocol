@@ -34,12 +34,12 @@ else
 fi
 
 has_hidden_trust_lookup() {
-  local pattern='URLSession\b|OkHttp\b|HttpURLConnection\b|java\.net|fetch\(|XMLHttpRequest|WebSocket|node:http|node:https|axios|undici|defaultTrust|fallbackTrust|autoDiscover|wellKnown|TOFU|allowAnyIssuer|allowAllIssuers|SecTrustEvaluate'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner >/dev/null
+  local pattern='URLSession\b|OkHttp\b|HttpURLConnection\b|HttpsURLConnection\b|java\.net|Retrofit\b|Ktor\b|HttpClient\b|Socket\b|SSLSocket\b|X509TrustManager\b|TrustManagerFactory\b|AndroidCAStore|fetch\(|XMLHttpRequest|WebSocket|node:http|node:https|axios|undici|defaultTrust|fallbackTrust|autoDiscover|wellKnown|TOFU|allowAnyIssuer|allowAllIssuers|SecTrustEvaluate'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner examples/android-scanner >/dev/null
 }
 
 if has_hidden_trust_lookup; then
-  echo "SDK_SCANNER_ERR_HIDDEN_TRUST_LOOKUP: iOS scanner must use injected trust providers without fallback or network discovery" >&2
+  echo "SDK_SCANNER_ERR_HIDDEN_TRUST_LOOKUP: scanner examples must use injected trust providers without fallback or network discovery" >&2
   exit 1
 else
   TRUST_LOOKUP_STATUS=$?
@@ -49,12 +49,12 @@ else
 fi
 
 has_secret_logging() {
-  local pattern='(print|debugPrint|NSLog|os_log|Logger)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner sdk/swift/Sources/GrainClientIOSAdapters sdk/swift/README.md >/dev/null
+  local pattern='(print|println|debugPrint|NSLog|os_log|Log\.[a-z]+|Timber\.[a-z]+|Logger\.[a-z]+)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner examples/android-scanner sdk/swift/Sources/GrainClientIOSAdapters sdk/kotlin/src/main/kotlin/dev/grain/android sdk/swift/README.md sdk/kotlin/README.md >/dev/null
 }
 
 if has_secret_logging; then
-  echo "SDK_SCANNER_ERR_SECRET_LOGGING: scanner/iOS adapter examples must not log snapshot, bundle, or trust material" >&2
+  echo "SDK_SCANNER_ERR_SECRET_LOGGING: scanner/platform adapter examples must not log snapshot, bundle, or trust material" >&2
   exit 1
 else
   SECRET_LOGGING_STATUS=$?

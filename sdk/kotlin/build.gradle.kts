@@ -48,6 +48,15 @@ tasks.register<JavaExec>("runFixtureRunner") {
     dependsOn("testClasses")
 }
 
+tasks.register<JavaExec>("runAndroidAdaptersSmoke") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Run Android adapter snapshot persistence smoke tests."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("dev.grain.android.GrainAndroidAdaptersSmokeKt")
+    dependsOn("testClasses")
+}
+
 tasks.named("check") {
     dependsOn("runFixtureRunner")
+    dependsOn("runAndroidAdaptersSmoke")
 }

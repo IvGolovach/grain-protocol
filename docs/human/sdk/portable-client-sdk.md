@@ -71,14 +71,24 @@ The iOS adapter pack is now present in the Swift package:
 This is still an adapter pack and reference shell, not App Store packaging or
 live AVFoundation session automation.
 
-The next platform package slice is the Kotlin/JVM client package:
+The Android adapter pack is now present in the Kotlin package:
 
 - `sdk/kotlin` builds with Gradle/Kotlin JVM tooling
-- `GrainClient` exposes `scanPreview`, `scanAccept`, and `listAcceptedScans`
-- Kotlin app code sees typed workflow statuses instead of raw QR/COSE internals
+- `dev.grain.android` provides `GrainSnapshotPersistence`,
+  `GrainSnapshotCoordinator`, deterministic file-backed persistence, and a
+  Keystore-ready encrypted persistence boundary behind the same opaque
+  `snapshotB64` contract
+- `examples/android-scanner` wires camera/injected GR1 payloads through
+  `trustAnchorId` plus `GrainTrustProvider`, never raw trust input in the
+  production preview/accept path
+- the Android smoke proves preview, accept, duplicate accept,
+  restore-after-restart, and blank/unknown trust-anchor rejection through public
+  SDK APIs
 - `scripts/sdk/check_kotlin_package.sh` regenerates the Kotlin binding, rebuilds Rust client-core, runs the shared workflow fixtures through Kotlin, and fails if generated sources drift
 
-This proves the Android-facing package shape. It is not an Android scanner app yet and it does not introduce Keystore storage, CameraX capture, or platform trust lookup.
+This proves the Android-facing package shape. It is not a Play Store Android app
+yet and it does not introduce a device-bound Keystore cipher, live CameraX
+session automation, or platform trust lookup.
 
 The mobile-web package slice is now the WASM client package:
 
