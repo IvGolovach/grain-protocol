@@ -12,6 +12,10 @@ struct GrainIOSScannerSmoke {
 private func acceptsOnlyAfterVerifiedPreview() async throws {
     let qrString = try fixtureString("conformance/vectors/qr/POS-QR-001.json#/input/qr_string")
     let trustPubB64 = try fixtureString("conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64")
+    let camera = InjectedCameraScanAdapter(qrStrings: [qrString])
+    guard let cameraPayload = try await camera.nextScanPayload() else {
+        throw FixtureError.assertion("camera payload missing")
+    }
 
     try await MainActor.run {
         let guarded = ScannerShellModel()
@@ -24,8 +28,8 @@ private func acceptsOnlyAfterVerifiedPreview() async throws {
         )
 
         let model = ScannerShellModel()
-        model.updateQrString(qrString)
         model.updateTrustPubB64(trustPubB64)
+        model.receiveCameraPayload(cameraPayload)
         model.preview()
 
         try require(model.state.previewStatus == .verified, "preview status mismatch")

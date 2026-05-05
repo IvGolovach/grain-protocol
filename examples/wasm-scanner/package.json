@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "check": "node --check src/scanner-shell.mjs && node --check src/browser.mjs && node --check tests/scanner-shell-smoke.mjs",
+    "check": "node --check src/scanner-shell.mjs && node --check src/camera-adapter.mjs && node --check src/browser.mjs && node --check tests/scanner-shell-smoke.mjs",
     "test:smoke": "node tests/scanner-shell-smoke.mjs"
   }
 }

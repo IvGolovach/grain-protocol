@@ -2,13 +2,14 @@
 
 Browser/mobile-web reference shell over the portable `sdk/wasm` client package.
 
-It accepts a pasted GR1/QR payload string and explicit trust public key, calls
-`client.scanPreview`, enables accept only after a verified preview, then calls
-`client.scanAccept`.
+It accepts a pasted or camera-adapter-provided GR1/QR payload string and
+explicit trust public key, calls `client.scanPreview`, enables accept only after
+a verified preview, then calls `client.scanAccept`.
 
-Camera capture, QR decoding, IndexedDB persistence, service workers, and npm
-release packaging are intentionally outside this shell. Add them as adapters
-that produce a GR1 string and pass it into the same workflow.
+`createBrowserCameraAdapter` uses `getUserMedia` and an injected QR decoder. It
+returns a GR1 string payload and passes that payload into the same scanner
+workflow. IndexedDB persistence, service workers, and npm release packaging stay
+outside this shell.
 
 ## Check
 

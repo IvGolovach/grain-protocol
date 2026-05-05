@@ -31,8 +31,10 @@ private fun verifiedPreviewEnablesAcceptAndPersistsOnce() {
 
     GrainScannerWorkflowClient().use { client ->
         val controller = ScannerController(client)
-        controller.updateQrString(qrString)
         controller.updateTrustPubB64(trustPubB64)
+        val cameraAdapter = CameraXFrameScanAdapter<String> { frame -> frame }
+        val cameraPayload = cameraAdapter.decode(qrString) ?: error("camera payload missing")
+        controller.receiveCameraPayload(cameraPayload)
 
         controller.preview()
 

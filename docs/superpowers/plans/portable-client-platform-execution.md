@@ -57,8 +57,8 @@
 | 6 | Swift package over generated client workflow API | Merged | `codex/swift-generated-client-sdk` | #33 | `ef01e4cc22cca169bf5cdf921cdfe1f3a390e15e` | `scripts/sdk/check_swift_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | Required PR checks passed on final SHA `b14feb81272b541f94660cbeb1b60758b70ee07a`; observed non-required `ts-c01`, `ts-full`, and `wasm-smoke` passed; CodeRabbit stayed pending/non-required with no review threads; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25370425567` passed |
 | 7 | Kotlin package over generated client workflow API | Merged | `codex/kotlin-generated-client-sdk` | #34 | `eb1bed9615006c82f179ed46b8ee1400a0673275` | `JAVA_HOME`/`PATH` set to an arm64 JDK with `SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25372064355` passed on final SHA `07f93c3449b6d9675df1ffa2af3bdbe8f193649c`; CodeRabbit context SUCCESS but generated review was rate-limited; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25372380102` passed |
 | 8 | WASM/mobile-web client workflow binding | Merged | `codex/wasm-client-workflow-sdk` | #35 | `1507e25869a6e9911fda4925696478c028c94892` | Initial local proof plus CI correction: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p grain-client-wasm --check`; `cargo check --manifest-path core/rust/Cargo.toml -p grain-client-core --no-default-features`; `cargo check --manifest-path core/rust/Cargo.toml -p grain-client-wasm`; `cargo tree --manifest-path core/rust/Cargo.toml -p grain-client-wasm --target wasm32-wasip1 -e normal`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main`. Full `scripts/sdk/check_wasm_package.sh` requires `wasm32-wasip1` locally and was proven by required remote `wasm-smoke`. | PR CI run `25374354540` passed on final SHA `3022577dccc24c78586fd4df570314376dec868c`; CodeRabbit findings fixed and threads resolved/outdated; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25374545310` passed |
-| 9a | Reference scanner shells | In review | `codex/reference-scanner-shells` | #36 |  | `scripts/sdk/check_scanner_examples.sh`; `scripts/sdk/check_swift_package.sh`; `scripts/sdk/check_kotlin_package.sh`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR #36 opened; remote CI and review pending |
-| 9b | Camera adapters for scanner shells | Pending |  |  |  |  |  |
+| 9a | Reference scanner shells | Merged | `codex/reference-scanner-shells` | #36 | `f45bd494652e9fc65da69d455ed43865f5b3bfac` | `scripts/sdk/check_scanner_examples.sh`; `scripts/sdk/check_swift_package.sh`; `scripts/sdk/check_kotlin_package.sh`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25375665431` passed on final SHA `cca5fd1b0608f2a6e3ec562c2b163288559f1975`; CodeRabbit status SUCCESS but generated review was rate-limited with no actionable threads; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25375922032` passed |
+| 9b | Camera adapters for scanner shells | In review | `codex/scanner-camera-adapters` | #37 |  | `scripts/sdk/check_scanner_examples.sh` with arm64 JDK and `SDK_KOTLIN_GRADLE_OFFLINE=1`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR #37 opened; remote CI and review pending |
 | 10 | Pairing, identity, sync, and device lifecycle | Pending |  |  |  |  |  |
 | 11 | Developer experience, version matrix, release packaging, final certification | Pending |  |  |  |  |  |
 
@@ -104,13 +104,15 @@
 | #34 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
 | #35 | GitHub CI | Initial `wasm-smoke` failed because `grain-client-wasm` compiled `grain-client-core` with the target-side UniFFI runtime, and `uniffi_core` failed under `wasm32-wasip1`. | Fix in PR #35. | Added a default `bindings` feature to `grain-client-core`, gated UniFFI modules/scaffolding behind it, and made `grain-client-wasm` depend on `grain-client-core` with default features disabled. |
 | #35 | CodeRabbit | WASM store handles used raw heap pointers, raw-API grep missed snake_case names, response parsing was too permissive, Node loader destructured before validation, and JSON Pointer array indices used permissive `parseInt`. | Fix in PR #35. | Added opaque generated store handles, expanded the raw API guard, made WASM response parsing strict, made `createNodeGrainClient()` validate omitted options, and required strict array-index tokens. |
+| #36 | CodeRabbit | Generated review comment was rate-limited although the status context succeeded. | No code change. | No actionable review threads were present; required CI and post-merge `main` CI passed. |
+| #36 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
 
 ## Split Log
 
 | Inserted After | Extra PR Scope | Reason | Dependency | Status |
 | --- | --- | --- | --- | --- |
 | PR 3a | PR 3b: `scan_accept`, atomic store abstraction, memory store | PR 3 mixed scan-workflow logic with store infrastructure in the original plan. | PR 3b depends on PR 3a. | Merged in PR #30 (`952df09380851508c93f0ca9194885bb688af44a`) |
-| PR 9a | PR 9b: camera adapters for scanner shells | Camera capture brings AVFoundation, CameraX, browser permissions, QR decoder dependency choice, and device/browser test concerns that should not obscure shell parity review. | PR 9b depends on PR 9a. | Pending |
+| PR 9a | PR 9b: camera adapters for scanner shells | Camera capture brings AVFoundation, CameraX, browser permissions, QR decoder dependency choice, and device/browser test concerns that should not obscure shell parity review. | PR 9b depends on PR 9a. | PR 9a merged in PR #36 (`f45bd494652e9fc65da69d455ed43865f5b3bfac`); PR 9b in progress |
 
 ---
 
@@ -767,15 +769,15 @@ scripts/ledger/check --history --base origin/main
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 9a evidence
 
-- [ ] **Step 1: Add camera adapter boundaries**
+- [x] **Step 1: Add camera adapter boundaries**
 
 Add adapters that produce GR1 strings and feed the existing scanner-shell workflows. Do not move QR, COSE, DAG-CBOR, trust, or persistence semantics into the app layer.
 
-- [ ] **Step 2: Add platform-specific capture adapters**
+- [x] **Step 2: Add platform-specific capture adapters**
 
 Add iOS capture, Android CameraX, and browser camera capture as thin adapters with deterministic non-camera tests where device/browser automation is unavailable.
 
-- [ ] **Step 3: Validate and PR**
+- [x] **Step 3: Validate and PR**
 
 Run available platform app checks, scanner example checks, SDK tests, docs checks, ledger checks, and `git diff --check`.
 
@@ -885,7 +887,7 @@ The initiative is complete only when:
 - [x] PR 6 is merged and post-merge `main` CI passes.
 - [x] PR 7 is merged and post-merge `main` CI passes.
 - [x] PR 8 is merged and post-merge `main` CI passes.
-- [ ] PR 9a is merged and post-merge `main` CI passes.
+- [x] PR 9a is merged and post-merge `main` CI passes.
 - [ ] PR 9b is merged and post-merge `main` CI passes.
 - [ ] PR 10 is merged and post-merge `main` CI passes.
 - [ ] PR 11 is merged and post-merge `main` CI passes.
