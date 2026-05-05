@@ -31,6 +31,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - storage adapters must preserve deterministic listing, idempotent re-put, and rollback-at-boundary semantics
     - trust adapters return explicit material or none; Rust core does not perform hidden fallback or network trust lookup
     - FFI-facing DTOs use owned strings, vectors, and optional strings instead of Rust generics or borrowed lifetimes
+  - added UniFFI/generated-binding harness over `grain-client-core`:
+    - checked-in UDL and build scaffolding for the stable workflow facade
+    - repo-local `uniffi-bindgen` helper crate, avoiding a global bindgen dependency
+    - deterministic generation/check scripts for Swift and Kotlin bindings into ignored or temporary output directories
+    - generated surface exposes workflow APIs and a reference memory-store object, not raw QR/COSE/DAG-CBOR/protocol-runner operations
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

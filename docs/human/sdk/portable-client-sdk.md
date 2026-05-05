@@ -41,6 +41,14 @@ The platform contract slice is now defined:
 - trust adapters return explicit public-key material or no material; Rust core does not perform hidden fallback or network trust lookup
 - generated bindings use owned DTO values: strings, vectors, optional strings, and no borrowed Rust lifetimes
 
+The generated-binding harness is now present:
+
+- `grain-client-core` has UniFFI scaffolding over the stable workflow facade
+- repo-local scripts generate Swift and Kotlin bindings into ignored or temporary directories
+- the generation check verifies expected workflow symbols and rejects raw protocol/runner API exposure
+
+This proves the shared facade can be generated reproducibly. It is not yet the Swift, Kotlin, or WASM SDK package.
+
 ## Client workflow conformance
 
 Client workflow fixtures live under `sdk/workflows/**`. They are not protocol vectors. They define the app-facing workflow contract that generated SDKs must expose through public APIs.

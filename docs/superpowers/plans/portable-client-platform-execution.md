@@ -52,8 +52,8 @@
 | 2 | Rust client workflow fixture runner | Merged | `codex/client-workflow-fixture-runner` | #28 | `71d9b3197bb048ff089bc69cbb2f43fc2411d43f` | `python3 tools/ci/check_client_workflow_fixtures.py`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `6ab18cd6e90004563f39ad5e8ae3405c6b0d9ce3`; Greptile final review safe to merge; CodeRabbit SUCCESS; post-merge `main` CI run `25364160258` passed |
 | 3a | `scan_accept_prepare`, deterministic ID, module boundaries | Merged | `codex/scan-accept-prepare` | #29 | `1f7c6debca15daea89d40b47ac5977a221cc8081` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `aecb4b68012322ccc1edf867170aa31273035940`; Greptile P2 findings fixed and threads resolved, rerun skipped by org usage limit; CodeRabbit PASS; post-merge `main` CI run `25365199685` passed |
 | 3b | `scan_accept`, atomic store abstraction, memory store | Merged | `codex/scan-accept-store` | #30 | `952df09380851508c93f0ca9194885bb688af44a` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `1e2a029bc6fffe4555405a20d6e906cd44e480e1`; CodeRabbit status SUCCESS but generated review was rate-limited/skipped; Greptile was manually requested and did not return a review; post-merge `main` CI run `25366301749` passed |
-| 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | In progress | `codex/platform-adapter-contracts` |  |  |  |  |
-| 5 | UniFFI/generation harness over stable client-core facade | Pending |  |  |  |  |  |
+| 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Merged | `codex/platform-adapter-contracts` | #31 | `3a06ff93cf55e8bf1f72ed3d335edb9077fcda67` | Initial: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; diff/ledger checks. Final correction: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/ci/check_client_workflow_fixtures.py`; diff/ledger checks | PR CI passed on final SHA `a1a7e3b41945ff92f917aa0eac7fc49e9f6df4e0`; CodeRabbit empty-anchor finding fixed and thread resolved; CodeRabbit final status SUCCESS/review skipped on amended SHA; Greptile manually requested and did not return a review before merge readiness; post-merge `main` CI run `25368105295` passed |
+| 5 | UniFFI/generation harness over stable client-core facade | In progress | `codex/uniffi-binding-harness` |  |  | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p uniffi-bindgen --check`; `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo build --manifest-path core/rust/Cargo.toml -p uniffi-bindgen`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core` (39 tests); `cargo test --manifest-path core/rust/Cargo.toml --workspace` (68 tests); `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py` (8 fixtures); docs/spec/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | Pending — PR not opened yet |
 | 6 | Swift package over generated client workflow API | Pending |  |  |  |  |  |
 | 7 | Kotlin package over generated client workflow API | Pending |  |  |  |  |  |
 | 8 | WASM/mobile-web client workflow binding | Pending |  |  |  |  |  |
@@ -92,6 +92,8 @@
 | #29 | Greptile | `ScanAcceptRequest.trust_pub_b64` was optional even though accept preparation requires trust. | Fix in PR #29. | Made the request DTO field non-optional while preserving `scan_accept_prepare(..., Option<&str>)` reject behavior for callers that do not use the DTO. |
 | #29 | Greptile | `ScanAcceptStatus::AlreadyAccepted` was public before any producing store path existed. | Fix in PR #29. | Deferred `AlreadyAccepted` until PR 3b adds `scan_accept` and store idempotency. |
 | #29 | CodeRabbit | Empty trust strings decoded to empty bytes before COSE verification. | Fix in PR #29. | Rejected empty trust input in `decode_trust_pub_b64` and added preview / accept-prepare tests. |
+| #31 | CodeRabbit | Empty trust-anchor input needed explicit adapter coverage. | Fix in PR #31. | Added an empty-anchor contract test and resolved the review thread. |
+| #31 | CodeRabbit | Fixture paths and preview DTO intent could be clearer. | Low-risk cleanup in PR #31. | Switched tests to manifest-rooted fixture paths and documented `FfiScanPreviewRequest` intent. |
 
 ## Split Log
 
@@ -454,7 +456,7 @@ Test deterministic ordering, idempotent re-put, rollback at repository boundary,
 
 Keep binding-facing values boring: strings, vectors of strings, optional strings, and no Rust generics or borrowed lifetimes in DTOs.
 
-- [ ] **Step 4: Validate and PR**
+- [x] **Step 4: Validate and PR**
 
 Run focused Rust tests, docs checks, ledger checks, and `git diff --check`.
 
@@ -472,27 +474,41 @@ Run focused Rust tests, docs checks, ledger checks, and `git diff --check`.
 - Create: `scripts/sdk/generate_client_bindings.sh`
 - Create: `scripts/sdk/check_generated_bindings.sh`
 - Create: `sdk/generated/README.md`
+- Modify: `core/rust/grain-client-core/src/lib.rs`
+- Create: `core/rust/grain-client-core/src/binding_api.rs`
+- Create: `core/rust/grain-client-core/tests/binding_api.rs`
+- Modify: `core/rust/Cargo.lock`
+- Modify: `core/rust/README.md`
+- Modify: `core/rust/grain-client-core/README.md`
+- Modify: `sdk/README.md`
+- Modify: `docs/human/sdk/cross-lang-bridge.md`
+- Modify: `docs/human/sdk/architecture.md`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_INVARIANTS.md`
+- Modify: `docs/llm/SDK_EDGE_CASES.md`
+- Modify: `docs/llm/SDK_FILE_MAP.md`
+- Modify: `docs/llm/CHANGE_POLICY.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 4 evidence
 
-- [ ] **Step 1: Add failing FFI-shape test**
+- [x] **Step 1: Add FFI-shape and wrapper tests**
 
-Test binding-safe scan preview and scan accept DTO conversion before implementing the wrapper.
+Test binding-safe scan preview, scan accept preparation, rejected record shape, and reference memory-store idempotency through the wrapper surface.
 
-- [ ] **Step 2: Add UniFFI-compatible wrapper**
+- [x] **Step 2: Add UniFFI-compatible wrapper**
 
 Expose workflow APIs only:
 
-- `scan_preview`
-- `scan_accept_prepare`
-- `scan_accept`
-- later `list_accepted_scans`, `export_bundle`
+- top-level `scan_preview`
+- top-level `scan_accept_prepare`
+- reference memory-store `scan_accept`
+- reference memory-store `list_accepted_scans`
+- later `export_bundle`
 
 Do not expose raw `qr_decode_gr1`, `cose_verify`, `dagcbor_validate`, or protocol runner operations as app APIs.
 
-- [ ] **Step 3: Add deterministic generation scripts**
+- [x] **Step 3: Add deterministic generation scripts**
 
 Generation must be reproducible and must not leave untracked generated junk after checks.
 
@@ -733,11 +749,11 @@ Use `./scripts/certify` or mandatory CI evidence-bundle proof before calling the
 
 The initiative is complete only when:
 
-- [ ] PR 1 is merged and post-merge `main` CI passes.
-- [ ] PR 2 is merged and post-merge `main` CI passes.
-- [ ] PR 3a is merged and post-merge `main` CI passes.
-- [ ] PR 3b is merged and post-merge `main` CI passes.
-- [ ] PR 4 is merged and post-merge `main` CI passes.
+- [x] PR 1 is merged and post-merge `main` CI passes.
+- [x] PR 2 is merged and post-merge `main` CI passes.
+- [x] PR 3a is merged and post-merge `main` CI passes.
+- [x] PR 3b is merged and post-merge `main` CI passes.
+- [x] PR 4 is merged and post-merge `main` CI passes.
 - [ ] PR 5 is merged and post-merge `main` CI passes.
 - [ ] PR 6 is merged and post-merge `main` CI passes.
 - [ ] PR 7 is merged and post-merge `main` CI passes.

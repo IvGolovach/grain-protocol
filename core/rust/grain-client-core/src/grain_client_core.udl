@@ -1,0 +1,40 @@
+namespace grain_client_core {
+    FfiScanPreview grain_scan_preview(FfiScanPreviewRequest request);
+    FfiScanAccept grain_scan_accept_prepare(FfiScanAcceptRequest request);
+};
+
+interface GrainClientMemoryStore {
+    constructor();
+    FfiScanAccept scan_accept(FfiScanAcceptRequest request);
+    sequence<FfiAcceptedScan> list_accepted_scans();
+};
+
+dictionary FfiScanPreviewRequest {
+    string qr_string;
+    string? trust_pub_b64;
+};
+
+dictionary FfiScanPreview {
+    string status;
+    sequence<string> diag;
+    string? cose_b64;
+};
+
+dictionary FfiScanAcceptRequest {
+    string qr_string;
+    string trust_pub_b64;
+};
+
+dictionary FfiAcceptedScan {
+    string scan_id;
+    string cose_b64;
+    string trust_pub_b64;
+};
+
+dictionary FfiScanAccept {
+    string status;
+    sequence<string> diag;
+    string? scan_id;
+    string? cose_b64;
+    string? trust_pub_b64;
+};

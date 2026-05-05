@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0017` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0019` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -76,6 +76,22 @@ Expected contract:
 - FFI DTO contract tests keep binding-facing values owned and flat: strings, vectors, optional strings, no borrowed Rust lifetimes
 
 Rust fixture execution must load these fixtures and compare them against the public `grain_client_core::scan_preview()` and `grain_client_core::scan_accept()` APIs.
+
+## Generated binding harness
+
+Generation check:
+
+```bash
+scripts/sdk/check_generated_bindings.sh
+```
+
+Expected contract:
+- `grain-client-core` builds UniFFI scaffolding from `core/rust/grain-client-core/src/grain_client_core.udl`
+- `core/rust/uniffi-bindgen` is the repo-local binding generator entrypoint
+- Swift and Kotlin bindings can be generated into ignored or temporary output directories
+- generated output contains the expected workflow symbols: preview, accept preparation, accept, listing, and binding-safe request DTOs
+- generated output and UDL do not expose raw QR/COSE/DAG-CBOR/protocol-runner operations as app APIs
+- the check leaves git status unchanged except for pre-existing unrelated local work
 
 ## Diagnostics contract
 
