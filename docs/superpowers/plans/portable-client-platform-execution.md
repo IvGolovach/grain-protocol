@@ -54,8 +54,8 @@
 | 3b | `scan_accept`, atomic store abstraction, memory store | Merged | `codex/scan-accept-store` | #30 | `952df09380851508c93f0ca9194885bb688af44a` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `1e2a029bc6fffe4555405a20d6e906cd44e480e1`; CodeRabbit status SUCCESS but generated review was rate-limited/skipped; Greptile was manually requested and did not return a review; post-merge `main` CI run `25366301749` passed |
 | 4 | Storage/trust adapter contracts and FFI-safe DTO boundaries | Merged | `codex/platform-adapter-contracts` | #31 | `3a06ff93cf55e8bf1f72ed3d335edb9077fcda67` | Initial: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; diff/ledger checks. Final correction: `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `python3 tools/ci/check_client_workflow_fixtures.py`; diff/ledger checks | PR CI passed on final SHA `a1a7e3b41945ff92f917aa0eac7fc49e9f6df4e0`; CodeRabbit empty-anchor finding fixed and thread resolved; CodeRabbit final status SUCCESS/review skipped on amended SHA; Greptile manually requested and did not return a review before merge readiness; post-merge `main` CI run `25368105295` passed |
 | 5 | UniFFI/generation harness over stable client-core facade | Merged | `codex/uniffi-binding-harness` | #32 | `0d1817e6c26690f0ba2ba16029abe32c15241b67` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p uniffi-bindgen --check`; `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo build --manifest-path core/rust/Cargo.toml -p uniffi-bindgen`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `5430a975e310e63b3575e8406202b2859749de51`; CodeRabbit status SUCCESS but generated review was rate-limited/skipped; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25369151339` passed |
-| 6 | Swift package over generated client workflow API | In progress | `codex/swift-generated-client-sdk` |  |  | Pending — local validation not final yet | Pending — PR not opened yet |
-| 7 | Kotlin package over generated client workflow API | Pending |  |  |  |  |  |
+| 6 | Swift package over generated client workflow API | Merged | `codex/swift-generated-client-sdk` | #33 | `ef01e4cc22cca169bf5cdf921cdfe1f3a390e15e` | `scripts/sdk/check_swift_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | Required PR checks passed on final SHA `b14feb81272b541f94660cbeb1b60758b70ee07a`; observed non-required `ts-c01`, `ts-full`, and `wasm-smoke` passed; CodeRabbit stayed pending/non-required with no review threads; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25370425567` passed |
+| 7 | Kotlin package over generated client workflow API | In progress | `codex/kotlin-generated-client-sdk` |  |  | `JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH" SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; `python3 tools/ci/check_client_workflow_fixtures.py`; docs/spec/codeowners/no-network checks; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | Pending — PR not opened yet |
 | 8 | WASM/mobile-web client workflow binding | Pending |  |  |  |  |  |
 | 9 | Reference scanner shells, then camera adapters | Pending |  |  |  |  |  |
 | 10 | Pairing, identity, sync, and device lifecycle | Pending |  |  |  |  |  |
@@ -96,6 +96,8 @@
 | #31 | CodeRabbit | Fixture paths and preview DTO intent could be clearer. | Low-risk cleanup in PR #31. | Switched tests to manifest-rooted fixture paths and documented `FfiScanPreviewRequest` intent. |
 | #32 | CodeRabbit | Generated review was rate-limited/skipped although status completed successfully. | No code change. | Relied on local proof, required CI, and manual Greptile request before merge. |
 | #32 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
+| #33 | CodeRabbit | GitHub status stayed pending/non-required with no review threads; local CLI review could not run because the API key was invalid or expired. | No code change. | Relied on local proof, required CI, and manual Greptile request before merge. |
+| #33 | Greptile | Manual review request did not return a review/comment before merge readiness. | No code change. | Required CI passed on final SHA; post-merge `main` CI passed. |
 
 ## Split Log
 
@@ -563,7 +565,7 @@ Swift package verification must call generated workflow APIs and pass the same `
 
 Example must show preview and accept, not QR/COSE internals.
 
-- [ ] **Step 3: Validate and PR**
+- [x] **Step 3: Validate and PR**
 
 Run:
 
@@ -592,18 +594,31 @@ If SwiftPM is unavailable locally, add and run the strongest deterministic sourc
 **Files:**
 - Create: `sdk/kotlin/settings.gradle.kts`
 - Create: `sdk/kotlin/build.gradle.kts`
-- Create: `sdk/kotlin/src/main/kotlin/`
-- Create: `sdk/kotlin/src/test/kotlin/ScanWorkflowTest.kt`
-- Modify: `scripts/sdk/check_generated_bindings.sh`
+- Create: `scripts/sdk/sync_kotlin_bindings.sh`
+- Create: `scripts/sdk/check_kotlin_package.sh`
+- Create: `sdk/kotlin/gradlew`
+- Create: `sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt`
+- Create: `sdk/kotlin/src/main/kotlin/uniffi/grain_client_core/grain_client_core.kt`
+- Create: `sdk/kotlin/src/test/kotlin/dev/grain/fixture/GrainClientFixtureRunner.kt`
+- Create: `sdk/kotlin/README.md`
+- Modify: `.gitignore`
+- Modify: `sdk/README.md`
+- Modify: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`
+- Modify: `docs/human/sdk/architecture.md`
+- Modify: `docs/human/sdk/cross-lang-bridge.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
+- Modify: `docs/llm/SDK_CONFORMANCE.md`
+- Modify: `docs/llm/SDK_EDGE_CASES.md`
+- Modify: `docs/llm/SDK_FILE_MAP.md`
+- Modify: `docs/llm/SDK_INVARIANTS.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 6 evidence
 
-- [ ] **Step 1: Add Kotlin/JVM smoke tests against client workflow fixtures**
+- [x] **Step 1: Add Kotlin/JVM smoke tests against client workflow fixtures**
 
 Kotlin tests must call generated workflow APIs and pass the same `sdk/workflows` fixtures as Rust and Swift.
 
-- [ ] **Step 2: Add copy-paste Kotlin example**
+- [x] **Step 2: Add copy-paste Kotlin example**
 
 Example must show preview and accept, not protocol internals.
 
@@ -612,9 +627,16 @@ Example must show preview and accept, not protocol internals.
 Run:
 
 ```bash
-./gradlew -p sdk/kotlin test
+scripts/sdk/check_kotlin_package.sh
 cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core
 scripts/sdk/check_generated_bindings.sh
+python3 tools/ci/check_client_workflow_fixtures.py
+python3 tools/check_llm_docs.py
+python3 tools/check_spec_drift.py
+python3 tools/ci/check_docs_links.py
+python3 tools/ci/check_docs_flow.py
+python3 tools/ci/check_codeowners_coverage.py
+python3 tools/ci/check_sdk_no_network.py
 git diff --check
 scripts/ledger/check
 scripts/ledger/check --history --base origin/main
@@ -777,7 +799,7 @@ The initiative is complete only when:
 - [x] PR 3b is merged and post-merge `main` CI passes.
 - [x] PR 4 is merged and post-merge `main` CI passes.
 - [x] PR 5 is merged and post-merge `main` CI passes.
-- [ ] PR 6 is merged and post-merge `main` CI passes.
+- [x] PR 6 is merged and post-merge `main` CI passes.
 - [ ] PR 7 is merged and post-merge `main` CI passes.
 - [ ] PR 8 is merged and post-merge `main` CI passes.
 - [ ] PR 9 is merged and post-merge `main` CI passes.

@@ -41,6 +41,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - thin `GrainClient` wrapper with typed preview/accept statuses
     - executable fixture runner that exercises `sdk/workflows` scan-preview and scan-accept fixtures through the public Swift API
     - deterministic sync/check scripts that rebuild Rust client-core, build SwiftPM, run fixtures, and fail on generated drift
+  - added Kotlin/JVM client package over the generated workflow API:
+    - checked-in sanitized Kotlin binding source generated from the UniFFI harness
+    - thin `GrainClient` wrapper with typed preview/accept statuses
+    - executable fixture runner that exercises `sdk/workflows` scan-preview and scan-accept fixtures through the public Kotlin API
+    - deterministic sync/check scripts that rebuild Rust client-core, run the Kotlin fixture lane, and fail on generated drift
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):

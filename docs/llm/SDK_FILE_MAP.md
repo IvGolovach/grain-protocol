@@ -30,13 +30,15 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - Binding generation harness and docs. These are not published platform SDK packages.
 13. `sdk/swift/**`
    - Swift Package Manager client package over generated workflow bindings. Public app API lives in `Sources/GrainClient`, generated binding sources live in `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI`, and the executable fixture runner lives in `Sources/GrainClientFixtureRunner`.
-14. `docs/human/sdk/impossible-misuse.md`
+14. `sdk/kotlin/**`
+   - Kotlin/JVM client package over generated workflow bindings. Public app API lives in `src/main/kotlin/dev/grain`, generated binding source lives in `src/main/kotlin/uniffi/grain_client_core`, and the executable fixture runner lives in `src/test/kotlin/dev/grain/fixture`.
+15. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
-15. `docs/human/sdk/errors.md`
+16. `docs/human/sdk/errors.md`
    - Human-readable error contract.
-16. `core/ts/grain-sdk/src/*`
+17. `core/ts/grain-sdk/src/*`
    - Core SDK implementation modules.
-17. `core/ts/grain-sdk-ai/src/*`
+18. `core/ts/grain-sdk-ai/src/*`
    - Optional AI sidecar implementation modules.
 
 ## Source-of-truth hierarchy for SDK decisions
@@ -49,9 +51,10 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 6. `runner/typescript/src/*` (runner harness and compatibility surface)
 7. `core/rust/grain-client-core/src/*` (portable client workflows over Rust core)
 8. `sdk/swift/**` (generated Swift client package wrapper and fixture runner)
-9. `core/ts/grain-sdk/src/*` (orchestration only)
-10. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
-11. `docs/llm/*` (maintainer maps, sync rules, and indexes)
-12. `docs/human/sdk/*` (explanatory, not normative)
+9. `sdk/kotlin/**` (generated Kotlin client package wrapper and fixture runner)
+10. `core/ts/grain-sdk/src/*` (orchestration only)
+11. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
+12. `docs/llm/*` (maintainer maps, sync rules, and indexes)
+13. `docs/human/sdk/*` (explanatory, not normative)
 
 If SDK behavior diverges from protocol vectors, treat it as a bug in SDK and update the matching docs and tests in the same change.
