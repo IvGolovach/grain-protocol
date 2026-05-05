@@ -12,13 +12,18 @@
       "types": "./src/index.d.ts",
       "default": "./src/index.mjs"
     },
+    "./browser-storage": {
+      "types": "./src/browser-storage.d.ts",
+      "default": "./src/browser-storage.mjs"
+    },
     "./node": {
       "types": "./src/node.d.ts",
       "default": "./src/node.mjs"
     }
   },
   "scripts": {
-    "check": "node --check src/index.mjs && node --check src/node.mjs && node --check tests/run-workflow-fixtures.mjs",
+    "check": "node --check src/index.mjs && node --check src/node.mjs && node --check src/browser-storage.mjs && node --check tests/run-workflow-fixtures.mjs && node --check tests/run-browser-adapters-smoke.mjs",
+    "test:browser-adapters": "node tests/run-browser-adapters-smoke.mjs",
     "test:fixtures": "node tests/run-workflow-fixtures.mjs"
   }
 }

@@ -18,6 +18,9 @@ The generated SDK stack is:
      surface.
    - `sdk/swift/Sources/GrainClientIOSAdapters` is the first native adapter
      pack; it persists opaque snapshots without changing workflow semantics.
+   - `sdk/kotlin/src/main/kotlin/dev/grain/android` and
+     `sdk/wasm/src/browser-storage.mjs` provide the Android and
+     WASM/mobile-web adapter packs behind the same opaque snapshot contract.
 5. `sdk/workflows/**`
    - executable client workflow contract for every generated SDK.
 
@@ -108,6 +111,10 @@ scripts/sdk/package_client_sdks.sh
   persistence is allowed for deterministic smoke; Keystore-backed encryption
   stays behind the same `GrainSnapshotPersistence` contract through an injected
   cipher/store boundary and must not parse or log snapshots.
+- WASM/mobile-web adapters must keep storage app-owned and opaque. IndexedDB
+  persistence is allowed for deterministic browser/mobile-web smoke; adapters
+  must not parse or log `snapshotB64`, sync bundles, pairing envelopes, or trust
+  material.
 
 ## Packaging Rules
 

@@ -13,6 +13,7 @@ SDK_ROOTS = [
     ROOT / "sdk" / "wasm" / "src",
     ROOT / "examples" / "ios-scanner" / "Sources" / "GrainIOSScanner",
     ROOT / "examples" / "android-scanner" / "src" / "main" / "kotlin",
+    ROOT / "examples" / "wasm-scanner" / "src",
 ]
 
 SOURCE_SUFFIXES = {".swift", ".kt", ".mjs", ".js", ".ts"}
@@ -48,7 +49,9 @@ FORBIDDEN_PATTERNS = [
     "allowAllIssuers",
 ]
 
-ALLOWLIST_FILES: set[str] = set()
+ALLOWLIST_FILES: set[str] = {
+    "examples/wasm-scanner/src/browser.mjs",
+}
 
 
 def should_scan(path: Path) -> bool:

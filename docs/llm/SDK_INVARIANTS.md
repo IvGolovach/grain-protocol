@@ -122,6 +122,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `scripts/sdk/check_kotlin_package.sh`, `scripts/sdk/check_scanner_examples.sh`, `examples/android-scanner/src/test/kotlin/dev/grain/examples/androidscanner/ScannerShellTest.kt`
   Modules: `sdk/kotlin/src/main/kotlin/dev/grain/android/GrainSnapshotPersistence.kt`, `sdk/kotlin/src/test/kotlin/dev/grain/android/GrainAndroidAdaptersSmoke.kt`, `examples/android-scanner/src/main/kotlin/dev/grain/examples/androidscanner/ScannerShell.kt`, `examples/android-scanner/src/main/kotlin/dev/grain/examples/androidscanner/CameraScanAdapter.kt`, `examples/android-scanner/src/test/kotlin/dev/grain/examples/androidscanner/ScannerShellTest.kt`
 
+- SDK-INV-0029: WASM/mobile-web adapter pack MUST keep app code workflow-shaped: scanner preview/accept use explicit `trustAnchorId` plus `GrainTrustProvider`, durable state is persisted only as opaque `snapshotB64` through browser/mobile-web persistence adapters, injected/browser camera payloads become GR1 strings, and scanner code MUST NOT perform raw protocol operations, hidden trust lookup, network trust discovery, TOFU, fallback trust, or secret snapshot/trust logging.
+  Tests: `scripts/sdk/check_wasm_package.sh`, `scripts/sdk/check_scanner_examples.sh`, `sdk/wasm/tests/run-browser-adapters-smoke.mjs`, `examples/wasm-scanner/tests/scanner-shell-smoke.mjs`
+  Modules: `sdk/wasm/src/index.mjs`, `sdk/wasm/src/browser-storage.mjs`, `sdk/wasm/tests/run-browser-adapters-smoke.mjs`, `examples/wasm-scanner/src/scanner-shell.mjs`, `examples/wasm-scanner/src/camera-adapter.mjs`, `examples/wasm-scanner/tests/scanner-shell-smoke.mjs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

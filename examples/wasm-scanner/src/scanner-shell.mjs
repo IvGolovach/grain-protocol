@@ -1,13 +1,17 @@
+import { GrainSnapshotCoordinator } from "../../../sdk/wasm/src/browser-storage.mjs";
+
 export const SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG =
   "SDK_ERR_EXAMPLE_ACCEPT_REQUIRES_VERIFIED_PREVIEW";
-export const SCANNER_ACCEPT_REQUIRES_TRUST_DIAG = "SDK_ERR_EXAMPLE_ACCEPT_REQUIRES_TRUST";
+export const SCANNER_SNAPSHOT_PERSISTENCE_DIAG = "SDK_ERR_EXAMPLE_SNAPSHOT_PERSISTENCE";
 
-export function createScannerShell(client) {
+export function createScannerShell(client, { trustProvider, snapshotPersistence = null } = {}) {
   requireClient(client);
+  requireTrustProvider(trustProvider);
+  const snapshotCoordinator = snapshotPersistence === null ? null : new GrainSnapshotCoordinator(snapshotPersistence);
 
   const state = {
     qrString: "",
-    trustPubB64: "",
+    trustAnchorId: "",
     previewStatus: null,
     acceptStatus: null,
     diagnostics: [],
@@ -17,6 +21,7 @@ export function createScannerShell(client) {
     lifecycleStatus: null,
     deviceCount: 0,
     lifecycleEventCount: 0,
+    snapshotStatus: null,
   };
 
   return {
@@ -29,8 +34,8 @@ export function createScannerShell(client) {
       resetDecisionState(state);
     },
 
-    setTrustPubB64(value) {
-      state.trustPubB64 = String(value);
+    setTrustAnchorId(value) {
+      state.trustAnchorId = String(value);
       resetDecisionState(state);
     },
 
@@ -39,7 +44,7 @@ export function createScannerShell(client) {
       resetDecisionState(state);
     },
 
-    prepareLocalIdentity({ rootLabel = "phone", deviceLabel = "scanner" } = {}) {
+    async prepareLocalIdentity({ rootLabel = "phone", deviceLabel = "scanner" } = {}) {
       const lifecycle = client.clientLifecycle();
       if (lifecycle.status === "Ready") {
         state.diagnostics = lifecycle.diag;
@@ -58,13 +63,15 @@ export function createScannerShell(client) {
       const device = client.addDeviceKey({ label: deviceLabel });
       state.diagnostics = device.diag;
       refreshLifecycle(state, client);
+      await persistSnapshot(state, client, snapshotCoordinator);
       return this.state;
     },
 
     preview() {
-      const preview = client.scanPreview({
+      const preview = client.scanPreviewWithTrustProvider({
         qrString: state.qrString,
-        trustPubB64: normalizedTrustInput(state),
+        trustAnchorId: normalizedTrustAnchorId(state),
+        trustProvider,
       });
 
       state.previewStatus = preview.status;
@@ -76,27 +83,22 @@ export function createScannerShell(client) {
       return this.state;
     },
 
-    accept() {
+    async accept() {
       if (state.previewStatus !== "Verified" || !state.canAccept) {
+        const diagnostics = state.previewStatus === "Rejected" && state.diagnostics.length > 0
+          ? state.diagnostics
+          : [SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG];
         state.acceptStatus = null;
-        state.diagnostics = [SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG];
+        state.diagnostics = diagnostics;
         state.canAccept = false;
         state.acceptedScanId = null;
         return this.state;
       }
 
-      const trustPubB64 = normalizedTrustInput(state);
-      if (trustPubB64 === null) {
-        state.acceptStatus = null;
-        state.diagnostics = [SCANNER_ACCEPT_REQUIRES_TRUST_DIAG];
-        state.canAccept = false;
-        state.acceptedScanId = null;
-        return this.state;
-      }
-
-      const accepted = client.scanAccept({
+      const accepted = client.scanAcceptWithTrustProvider({
         qrString: state.qrString,
-        trustPubB64,
+        trustAnchorId: normalizedTrustAnchorId(state),
+        trustProvider,
       });
 
       state.acceptStatus = accepted.status;
@@ -104,13 +106,43 @@ export function createScannerShell(client) {
       state.diagnostics = accepted.diag;
       state.acceptedCount = client.listAcceptedScans().length;
       state.canAccept = state.previewStatus === "Verified";
+      if (accepted.status === "Accepted" || accepted.status === "AlreadyAccepted") {
+        await persistSnapshot(state, client, snapshotCoordinator);
+      }
+      return this.state;
+    },
+
+    async restorePersistedSnapshot() {
+      if (snapshotCoordinator === null) {
+        return this.state;
+      }
+      try {
+        const restored = await snapshotCoordinator.restore(client);
+        if (restored === null) {
+          state.snapshotStatus = "Empty";
+          refreshLifecycle(state, client);
+          state.acceptedCount = client.listAcceptedScans().length;
+          return this.state;
+        }
+        state.snapshotStatus = restored.status;
+        state.diagnostics = restored.diag;
+        state.acceptedCount = restored.acceptedRecordCount;
+        refreshLifecycle(state, client);
+      } catch (_) {
+        state.snapshotStatus = "PersistenceError";
+        state.diagnostics = [SCANNER_SNAPSHOT_PERSISTENCE_DIAG];
+      }
       return this.state;
     },
   };
 }
 
-export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
-  const shell = createScannerShell(client);
+export function mountScannerShell(root, client, {
+  cameraAdapter = null,
+  trustProvider,
+  snapshotPersistence = null,
+} = {}) {
+  const shell = createScannerShell(client, { trustProvider, snapshotPersistence });
   root.replaceChildren();
   root.classList.add("grain-scanner");
 
@@ -119,7 +151,7 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
   scanInput.rows = 6;
 
   const trustInput = document.createElement("input");
-  trustInput.placeholder = "Trust public key";
+  trustInput.placeholder = "Trust anchor ID";
   trustInput.autocapitalize = "off";
   trustInput.autocomplete = "off";
   trustInput.spellcheck = false;
@@ -142,6 +174,11 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
   cameraButton.textContent = "Camera";
   cameraButton.hidden = cameraAdapter === null;
 
+  const restoreButton = document.createElement("button");
+  restoreButton.type = "button";
+  restoreButton.textContent = "Restore";
+  restoreButton.hidden = snapshotPersistence === null;
+
   const video = document.createElement("video");
   video.playsInline = true;
   video.muted = true;
@@ -158,6 +195,7 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
       current.acceptStatus ? `Accept: ${current.acceptStatus}` : null,
       current.lifecycleStatus ? `Lifecycle: ${current.lifecycleStatus}` : null,
       current.lifecycleStatus ? `Devices: ${current.deviceCount}` : null,
+      current.snapshotStatus ? `Snapshot: ${current.snapshotStatus}` : null,
       `Saved: ${current.acceptedCount}`,
     ].filter(Boolean).join(" | ");
     diagnostics.replaceChildren(...current.diagnostics.map((diagnostic) => {
@@ -172,19 +210,23 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
     render();
   });
   trustInput.addEventListener("input", () => {
-    shell.setTrustPubB64(trustInput.value);
+    shell.setTrustAnchorId(trustInput.value);
     render();
   });
   previewButton.addEventListener("click", () => {
     shell.preview();
     render();
   });
-  prepareButton.addEventListener("click", () => {
-    shell.prepareLocalIdentity();
+  prepareButton.addEventListener("click", async () => {
+    await shell.prepareLocalIdentity();
     render();
   });
-  acceptButton.addEventListener("click", () => {
-    shell.accept();
+  acceptButton.addEventListener("click", async () => {
+    await shell.accept();
+    render();
+  });
+  restoreButton.addEventListener("click", async () => {
+    await shell.restorePersistedSnapshot();
     render();
   });
   cameraButton.addEventListener("click", async () => {
@@ -197,15 +239,26 @@ export function mountScannerShell(root, client, { cameraAdapter = null } = {}) {
     render();
   });
 
-  root.append(scanInput, trustInput, prepareButton, previewButton, acceptButton, cameraButton, video, status, diagnostics);
+  root.append(
+    scanInput,
+    trustInput,
+    prepareButton,
+    restoreButton,
+    previewButton,
+    acceptButton,
+    cameraButton,
+    video,
+    status,
+    diagnostics,
+  );
   render();
   return shell;
 }
 
 function requireClient(client) {
   for (const method of [
-    "scanPreview",
-    "scanAccept",
+    "scanPreviewWithTrustProvider",
+    "scanAcceptWithTrustProvider",
     "listAcceptedScans",
     "createRootIdentity",
     "addDeviceKey",
@@ -214,6 +267,12 @@ function requireClient(client) {
     if (!client || typeof client[method] !== "function") {
       throw new TypeError(`SDK_ERR_EXAMPLE_CLIENT_METHOD_MISSING:${method}`);
     }
+  }
+}
+
+function requireTrustProvider(trustProvider) {
+  if (!trustProvider || typeof trustProvider.trustPubB64 !== "function") {
+    throw new TypeError("SDK_ERR_EXAMPLE_TRUST_PROVIDER_MISSING");
   }
 }
 
@@ -228,9 +287,24 @@ function applyLifecycle(state, lifecycle) {
   state.lifecycleEventCount = lifecycle.lifecycleEventCount;
 }
 
-function normalizedTrustInput(state) {
-  const trimmed = state.trustPubB64.trim();
-  return trimmed.length === 0 ? null : trimmed;
+function normalizedTrustAnchorId(state) {
+  return state.trustAnchorId.trim();
+}
+
+async function persistSnapshot(state, client, snapshotCoordinator) {
+  if (snapshotCoordinator === null) {
+    return;
+  }
+  try {
+    const exported = await snapshotCoordinator.persist(client);
+    state.snapshotStatus = exported.status;
+    if (exported.diag.length > 0) {
+      state.diagnostics = exported.diag;
+    }
+  } catch (_) {
+    state.snapshotStatus = "PersistenceError";
+    state.diagnostics = [SCANNER_SNAPSHOT_PERSISTENCE_DIAG];
+  }
 }
 
 function requireCameraPayload(payload) {

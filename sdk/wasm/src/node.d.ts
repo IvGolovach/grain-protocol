@@ -1,4 +1,10 @@
 export { GrainClient, GrainStaticTrustProvider } from "./index.mjs";
+export {
+  GrainIndexedDBSnapshotPersistence,
+  GrainMemorySnapshotPersistence,
+  GrainSnapshotCoordinator,
+  GrainSnapshotPersistenceError,
+} from "./browser-storage.mjs";
 export type {
   AcceptedScan,
   GrainAcceptedScan,

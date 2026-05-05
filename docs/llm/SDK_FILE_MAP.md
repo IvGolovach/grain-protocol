@@ -39,7 +39,7 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 17. `core/rust/grain-client-wasm/**`
    - WASM client workflow export over `grain-client-core`. This is distinct from `grain-core-wasm`, which remains the protocol/vector portability lane.
 18. `sdk/wasm/**`
-   - WASM/mobile-web client package over workflow bindings. Public app API lives in `src/index.mjs`, the Node/WASI smoke loader lives in `src/node.mjs`, and the fixture runner lives in `tests/run-workflow-fixtures.mjs`. Store snapshot methods are the persistence bridge for IndexedDB/browser adapters in later slices.
+   - WASM/mobile-web client package over workflow bindings. Public app API lives in `src/index.mjs`, the browser/mobile-web adapter pack lives in `src/browser-storage.mjs`, the Node/WASI smoke loader lives in `src/node.mjs`, the fixture runner lives in `tests/run-workflow-fixtures.mjs`, and the browser adapter smoke lives in `tests/run-browser-adapters-smoke.mjs`. Store snapshot methods remain the Rust-owned persistence bridge; the WASM/mobile-web adapter pack persists only opaque snapshots.
 19. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
 20. `docs/human/sdk/errors.md`
