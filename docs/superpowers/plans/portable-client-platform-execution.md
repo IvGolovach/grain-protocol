@@ -60,7 +60,7 @@
 | 9a | Reference scanner shells | Merged | `codex/reference-scanner-shells` | #36 | `f45bd494652e9fc65da69d455ed43865f5b3bfac` | `scripts/sdk/check_scanner_examples.sh`; `scripts/sdk/check_swift_package.sh`; `scripts/sdk/check_kotlin_package.sh`; `npm --prefix sdk/wasm run check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `scripts/sdk/check_generated_bindings.sh`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25375665431` passed on final SHA `cca5fd1b0608f2a6e3ec562c2b163288559f1975`; CodeRabbit status SUCCESS but generated review was rate-limited with no actionable threads; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25375922032` passed |
 | 9b | Camera adapters for scanner shells | Merged | `codex/scanner-camera-adapters` | #37 | `465e0a3fcca54a3fd6a691f2b1c2cb95b674ef54` | `scripts/sdk/check_scanner_examples.sh` with arm64 JDK and `SDK_KOTLIN_GRADLE_OFFLINE=1`; fixture/docs/spec/workflow/codeowners/no-network checks; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25376799674` passed on final SHA `4f727b225a607cec2a74e0c6d76c50c547f073c0`; CodeRabbit final-SHA status SUCCESS after rate-limit/no actionable threads; Greptile was manually requested twice and did not return a review/comment before merge readiness; post-merge `main` CI run `25377111364` passed |
 | 10 | Pairing, identity, sync, and device lifecycle | Merged | `codex/pairing-sync-lifecycle` | #38 | `6bfbcee1f35487da229488e82a6838cf11d9fa15` | `cargo fmt --manifest-path core/rust/Cargo.toml -p grain-client-core -p grain-client-wasm --check`; `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`; `cargo test --manifest-path core/rust/Cargo.toml --workspace`; `python3 tools/ci/check_client_workflow_fixtures.py`; `python3 tools/check_llm_docs.py`; `python3 tools/check_spec_drift.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `python3 tools/ci/check_codeowners_coverage.py`; `python3 tools/ci/check_sdk_no_network.py`; `npm --prefix sdk/wasm run check`; `scripts/sdk/check_generated_bindings.sh`; `scripts/sdk/check_swift_package.sh`; `SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh`; `SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_scanner_examples.sh`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI run `25381757185` passed on final SHA `92f42c0c6538eb02b7b75d32367b49723fd31a34`; CodeRabbit actionable comments fixed, status SUCCESS, open review threads `0`; Greptile manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25382016564` passed |
-| 11 | Developer experience, version matrix, release packaging, final certification | In progress | `codex/sdk-dx-release-packaging` | #39 |  | `bash -n scripts/sdk/verify_all_sdks.sh && bash -n scripts/sdk/package_client_sdks.sh`; `scripts/sdk/package_client_sdks.sh --skip-verify --allow-dirty --out-dir artifacts/sdk-package-smoke-pr11-current`; `JAVA_HOME=<arm64-jdk> PATH=<arm64-jdk-bin>:$PATH SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/verify_all_sdks.sh --out-dir artifacts/sdk-verify-all-pr11-final`; `./scripts/verify --out-dir artifacts/dev-verify-portable-client-platform-final`; cleanup check for generated build/cache dirs | PR #39 opened; initial PR CI run `25383456414` passed on SHA `551a4b8b686591aa63304369da4336847ce0f11f`; CodeRabbit correction in progress; Greptile requested |
+| 11 | Developer experience, version matrix, release packaging, final certification | Merged | `codex/sdk-dx-release-packaging` | #39 | `c554445a7efadb397d1ec116058747983cbb5e82` | Initial: `bash -n scripts/sdk/verify_all_sdks.sh && bash -n scripts/sdk/package_client_sdks.sh`; `JAVA_HOME=<arm64-jdk> PATH=<arm64-jdk-bin>:$PATH SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/verify_all_sdks.sh --out-dir artifacts/sdk-verify-all-pr11-final`; `scripts/sdk/package_client_sdks.sh --skip-verify --out-dir artifacts/sdk-package-smoke-pr11-clean`; docs checks; `./scripts/verify --out-dir artifacts/dev-verify-portable-client-platform-final`; diff/ledger checks. Final review correction: shell syntax checks; out-dir rejection checks; package smoke; full `verify_all_sdks` with Kotlin offline mode; docs checks; diff/ledger checks; clean-tree and generated-junk checks. | PR CI run `25384110783` attempt 2 passed on final SHA `976934d6bbc4af71ca583ef0d6f0f3b2c54acf13`; CodeRabbit actionable findings fixed and all six review threads resolved/addressed, final status SUCCESS with post-fix text review rate-limited; Greptile was manually requested and did not return a review/comment before merge readiness; post-merge `main` CI run `25385135651` passed |
 
 ### PR Dependencies
 
@@ -112,6 +112,8 @@
 | #38 | CodeRabbit | Final-SHA status succeeded after rate limiting; unresolved review threads were manually verified as `0`. | No further code change. | Required PR CI passed on final SHA `92f42c0c6538eb02b7b75d32367b49723fd31a34`; post-merge `main` CI passed. |
 | #38 | Greptile | Manual review was requested and did not return a review/comment before merge readiness. | No code change. | Required CI, CodeRabbit status, and thread-aware review checks were clean before merge. |
 | #39 | CodeRabbit | Initial review found out-dir traversal hardening, pre-verify output dir creation, Kotlin offline consistency, safe bundle logging, and tracker status issues. | Fix in PR #39. | Follow-up correction tightens SDK script path validation, aligns Kotlin verification with documented offline mode, avoids logging raw sync bundles in Kotlin docs, and updates this tracker to PR #39. |
+| #39 | CodeRabbit | Final-SHA status succeeded after the correction and all six actionable review threads were resolved/addressed. | No further code change. | Required PR CI passed on final SHA `976934d6bbc4af71ca583ef0d6f0f3b2c54acf13`; post-merge `main` CI passed on merge SHA `c554445a7efadb397d1ec116058747983cbb5e82`. |
+| #39 | Greptile | Manual review was requested and did not return a review/comment before merge readiness. | No code change. | Required CI, CodeRabbit status, and thread-aware review checks were clean before merge. |
 
 ## Split Log
 
@@ -742,7 +744,7 @@ Start with paste/string scan input. Show status, diagnostics, and accept enabled
 
 Keep iOS camera, Android CameraX, and browser camera decoding as adapters in PR 9b. Grain receives a GR1 string and owns validation after that.
 
-- [ ] **Step 3: Validate and PR**
+- [x] **Step 3: Validate and PR**
 
 Run:
 
@@ -833,7 +835,7 @@ Add create root, export/import identity bundle, add device, revoke device, activ
 
 Add export/import sync bundle, list saved objects, export evidence. Treat server sync as dumb transport: no server truth and no hidden trust.
 
-- [ ] **Step 6: Validate and PR**
+- [x] **Step 6: Validate and PR**
 
 Run targeted client-core tests, generated binding checks, client workflow suites, docs checks, ledger checks, and broader repo verification.
 
@@ -898,8 +900,10 @@ The initiative is complete only when:
 - [x] PR 9a is merged and post-merge `main` CI passes.
 - [x] PR 9b is merged and post-merge `main` CI passes.
 - [x] PR 10 is merged and post-merge `main` CI passes.
-- [ ] PR 11 is merged and post-merge `main` CI passes.
-- [ ] This tracker records every PR number, merge SHA, validation result, remote CI result, review result, and split decision.
+- [x] PR 11 is merged and post-merge `main` CI passes.
+- [x] This tracker records every product-roadmap PR number, merge SHA, validation result, remote CI result, review result, and split decision.
+
+This closeout update records the final PR 11 evidence after PR #39, as required by the tracker rule to return here after every product-roadmap PR merge.
 
 ## Stop Conditions
 
