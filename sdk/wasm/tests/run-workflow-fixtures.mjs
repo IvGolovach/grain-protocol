@@ -19,6 +19,7 @@ await runScanAcceptFixtures();
 await runDeviceLifecycleFixtures();
 await runPairingFixtures();
 await runSyncBundleFixtures();
+await runStoreSnapshotFixtures();
 console.log("WASM client workflow fixtures: PASS");
 
 async function runScanPreviewFixtures() {
@@ -217,6 +218,79 @@ async function runSyncBundleFixtures() {
       requireCount(imported.deviceCount, fixture.expect.device_count, "device_count", fixture.fixture_id);
       requireCount(
         imported.lifecycleEventCount,
+        fixture.expect.lifecycle_event_count,
+        "lifecycle_event_count",
+        fixture.fixture_id,
+      );
+    } finally {
+      source.close();
+      target.close();
+    }
+  }
+}
+
+async function runStoreSnapshotFixtures() {
+  const empty = await createNodeGrainClient({ wasmPath });
+  try {
+    const snapshot = empty.exportStoreSnapshot();
+    requireFixture(snapshot.status === "Empty", "store snapshot empty status mismatch");
+    requireFixture(snapshot.snapshotB64 === null, "empty store snapshot must not produce payload");
+  } finally {
+    empty.close();
+  }
+
+  for (const fixture of loadFixtures("store-snapshot")) {
+    requireFixture(fixture.workflow === "store_snapshot", `${fixture.fixture_id} workflow mismatch`);
+    requireFixture(fixture.strict === true, `${fixture.fixture_id} must be strict`);
+
+    const source = await createNodeGrainClient({ wasmPath });
+    const target = await createNodeGrainClient({ wasmPath });
+    try {
+      requireFixture(
+        source.createRootIdentity({ label: fixture.input.root_label ?? "root" }).status === "Created",
+        `${fixture.fixture_id} root create mismatch`,
+      );
+      requireFixture(
+        source.addDeviceKey({ label: fixture.input.device_label ?? "device" }).status === "Added",
+        `${fixture.fixture_id} device add mismatch`,
+      );
+      const trustPubB64 = resolveTrustInput(fixture.input);
+      requireFixture(typeof trustPubB64 === "string", `${fixture.fixture_id} missing trust material`);
+      const accepted = source.scanAccept({ qrString: fixtureQrString(fixture), trustPubB64 });
+      requireFixture(accepted.status === "Accepted", `${fixture.fixture_id} scan accept mismatch`);
+
+      const exported = source.exportStoreSnapshot();
+      requireFixture(exported.status === "Exported", `${fixture.fixture_id} snapshot export mismatch`);
+      requirePresence(exported.snapshotB64, fixture.expect.snapshot_b64, "snapshot_b64", fixture.fixture_id);
+
+      const restored = target.restoreStoreSnapshot({ snapshotB64: exported.snapshotB64 });
+      requireFixture(restored.status === fixture.expect.status, `${fixture.fixture_id} snapshot restore mismatch`);
+      requireDiagnostics(restored.diag, fixture.expect, fixture.fixture_id);
+      requireCount(
+        restored.acceptedRecordCount,
+        fixture.expect.accepted_record_count,
+        "accepted_record_count",
+        fixture.fixture_id,
+      );
+      requireCount(restored.deviceCount, fixture.expect.device_count, "device_count", fixture.fixture_id);
+      requireCount(
+        restored.lifecycleEventCount,
+        fixture.expect.lifecycle_event_count,
+        "lifecycle_event_count",
+        fixture.fixture_id,
+      );
+
+      const lifecycle = target.clientLifecycle();
+      requireFixture(lifecycle.status === "Ready", `${fixture.fixture_id} lifecycle status mismatch`);
+      requireCount(
+        lifecycle.acceptedRecordCount,
+        fixture.expect.accepted_record_count,
+        "accepted_record_count",
+        fixture.fixture_id,
+      );
+      requireCount(lifecycle.deviceCount, fixture.expect.device_count, "device_count", fixture.fixture_id);
+      requireCount(
+        lifecycle.lifecycleEventCount,
         fixture.expect.lifecycle_event_count,
         "lifecycle_event_count",
         fixture.fixture_id,

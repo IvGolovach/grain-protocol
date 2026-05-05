@@ -487,6 +487,8 @@ public protocol GrainClientMemoryStoreProtocol: AnyObject, Sendable {
 
     func exportIdentityBundle()  -> FfiIdentityResult
 
+    func exportStoreSnapshot()  -> FfiStoreSnapshotResult
+
     func exportSyncBundle()  -> FfiSyncResult
 
     func importIdentityBundle(bundleB64: String)  -> FfiIdentityResult
@@ -494,6 +496,8 @@ public protocol GrainClientMemoryStoreProtocol: AnyObject, Sendable {
     func importSyncBundle(request: FfiSyncBundleRequest)  -> FfiSyncResult
 
     func listAcceptedScans()  -> [FfiAcceptedScan]
+
+    func restoreStoreSnapshot(snapshotB64: String)  -> FfiStoreSnapshotResult
 
     func revokeDeviceKey(ak: String)  -> FfiDeviceResult
 
@@ -613,6 +617,14 @@ open func exportIdentityBundle() -> FfiIdentityResult  {
 })
 }
 
+open func exportStoreSnapshot() -> FfiStoreSnapshotResult  {
+    return try!  FfiConverterTypeFfiStoreSnapshotResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_export_store_snapshot(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
 open func exportSyncBundle() -> FfiSyncResult  {
     return try!  FfiConverterTypeFfiSyncResult_lift(try! rustCall() {
     uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(
@@ -643,6 +655,15 @@ open func listAcceptedScans() -> [FfiAcceptedScan]  {
     return try!  FfiConverterSequenceTypeFfiAcceptedScan.lift(try! rustCall() {
     uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(
             self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func restoreStoreSnapshot(snapshotB64: String) -> FfiStoreSnapshotResult  {
+    return try!  FfiConverterTypeFfiStoreSnapshotResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainclientmemorystore_restore_store_snapshot(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(snapshotB64),$0
     )
 })
 }
@@ -1366,6 +1387,76 @@ public func FfiConverterTypeFfiScanPreviewRequest_lower(_ value: FfiScanPreviewR
 }
 
 
+public struct FfiStoreSnapshotResult: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var snapshotB64: String?
+    public var acceptedRecordCount: UInt64
+    public var deviceCount: UInt64
+    public var lifecycleEventCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], snapshotB64: String?, acceptedRecordCount: UInt64, deviceCount: UInt64, lifecycleEventCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.snapshotB64 = snapshotB64
+        self.acceptedRecordCount = acceptedRecordCount
+        self.deviceCount = deviceCount
+        self.lifecycleEventCount = lifecycleEventCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiStoreSnapshotResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiStoreSnapshotResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiStoreSnapshotResult {
+        return
+            try FfiStoreSnapshotResult(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                snapshotB64: FfiConverterOptionString.read(from: &buf),
+                acceptedRecordCount: FfiConverterUInt64.read(from: &buf),
+                deviceCount: FfiConverterUInt64.read(from: &buf),
+                lifecycleEventCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiStoreSnapshotResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.snapshotB64, into: &buf)
+        FfiConverterUInt64.write(value.acceptedRecordCount, into: &buf)
+        FfiConverterUInt64.write(value.deviceCount, into: &buf)
+        FfiConverterUInt64.write(value.lifecycleEventCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiStoreSnapshotResult_lift(_ buf: RustBuffer) throws -> FfiStoreSnapshotResult {
+    return try FfiConverterTypeFfiStoreSnapshotResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiStoreSnapshotResult_lower(_ value: FfiStoreSnapshotResult) -> RustBuffer {
+    return FfiConverterTypeFfiStoreSnapshotResult.lower(value)
+}
+
+
 public struct FfiSyncBundleRequest: Equatable, Hashable {
     public var bundleB64: String
 
@@ -1622,6 +1713,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_identity_bundle() != 55887) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_store_snapshot() != 3115) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_export_sync_bundle() != 32552) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1632,6 +1726,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_list_accepted_scans() != 25163) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_restore_store_snapshot() != 56740) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_revoke_device_key() != 6663) {

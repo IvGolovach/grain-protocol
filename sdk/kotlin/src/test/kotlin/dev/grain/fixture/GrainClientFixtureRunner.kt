@@ -17,6 +17,7 @@ fun main() {
     runDeviceLifecycleFixtures()
     runPairingFixtures()
     runSyncBundleFixtures()
+    runStoreSnapshotFixtures()
     println("Kotlin client workflow fixtures: PASS")
 }
 
@@ -55,6 +56,7 @@ private data class FixtureExpectation(
     @JsonProperty("pairing_id") val pairingId: String? = null,
     @JsonProperty("envelope_b64") val envelopeB64: String? = null,
     @JsonProperty("bundle_b64") val bundleB64: String? = null,
+    @JsonProperty("snapshot_b64") val snapshotB64: String? = null,
 )
 
 private val mapper = jacksonObjectMapper()
@@ -254,6 +256,78 @@ private fun runSyncBundleFixtures() {
                 requireCount(result.deviceCount, fixture.expect.deviceCount, "device_count", fixture.fixtureId)
                 requireCount(
                     result.lifecycleEventCount,
+                    fixture.expect.lifecycleEventCount,
+                    "lifecycle_event_count",
+                    fixture.fixtureId,
+                )
+            }
+        }
+    }
+}
+
+private fun runStoreSnapshotFixtures() {
+    GrainClient().use { empty ->
+        val snapshot = empty.exportStoreSnapshot()
+        requireFixture(snapshot.status == "Empty", "store snapshot empty status mismatch")
+        requireFixture(snapshot.snapshotB64 == null, "empty store snapshot must not produce payload")
+    }
+
+    loadFixtures("store-snapshot").forEach { fixture ->
+        requireFixture(fixture.workflow == "store_snapshot", "${fixture.fixtureId} workflow mismatch")
+        requireFixture(fixture.strict, "${fixture.fixtureId} must be strict")
+
+        GrainClient().use { source ->
+            GrainClient().use { target ->
+                requireFixture(
+                    source.createRootIdentity(label = fixture.input.rootLabel ?: "root").status == "Created",
+                    "${fixture.fixtureId} root create mismatch",
+                )
+                requireFixture(
+                    source.addDeviceKey(label = fixture.input.deviceLabel ?: "device").status == "Added",
+                    "${fixture.fixtureId} device add mismatch",
+                )
+                val trustPubB64 = resolveTrustInput(fixture.input)
+                    ?: throw FixtureException("${fixture.fixtureId} missing trust material")
+                val accepted = source.scanAccept(
+                    qrString = fixtureQrString(fixture),
+                    trustPubB64 = trustPubB64,
+                )
+                requireFixture(accepted.status.rawValue == "Accepted", "${fixture.fixtureId} scan accept mismatch")
+
+                val exported = source.exportStoreSnapshot()
+                requireFixture(exported.status == "Exported", "${fixture.fixtureId} snapshot export mismatch")
+                requirePresence(exported.snapshotB64, fixture.expect.snapshotB64, "snapshot_b64", fixture.fixtureId)
+
+                val snapshotB64 = exported.snapshotB64
+                    ?: throw FixtureException("${fixture.fixtureId} missing snapshot_b64")
+                val restored = target.restoreStoreSnapshot(snapshotB64 = snapshotB64)
+                requireFixture(restored.status == fixture.expect.status, "${fixture.fixtureId} snapshot restore mismatch")
+                requireDiagnostics(restored.diag, fixture.expect, fixture.fixtureId)
+                requireCount(
+                    restored.acceptedRecordCount,
+                    fixture.expect.acceptedRecordCount?.toLong(),
+                    "accepted_record_count",
+                    fixture.fixtureId,
+                )
+                requireCount(restored.deviceCount, fixture.expect.deviceCount, "device_count", fixture.fixtureId)
+                requireCount(
+                    restored.lifecycleEventCount,
+                    fixture.expect.lifecycleEventCount,
+                    "lifecycle_event_count",
+                    fixture.fixtureId,
+                )
+
+                val lifecycle = target.clientLifecycle()
+                requireFixture(lifecycle.status == "Ready", "${fixture.fixtureId} lifecycle status mismatch")
+                requireCount(
+                    lifecycle.acceptedRecordCount,
+                    fixture.expect.acceptedRecordCount?.toLong(),
+                    "accepted_record_count",
+                    fixture.fixtureId,
+                )
+                requireCount(lifecycle.deviceCount, fixture.expect.deviceCount, "device_count", fixture.fixtureId)
+                requireCount(
+                    lifecycle.lifecycleEventCount,
                     fixture.expect.lifecycleEventCount,
                     "lifecycle_event_count",
                     fixture.fixtureId,

@@ -2,7 +2,8 @@ use crate::store::StorePutResult;
 use crate::types::{
     AcceptedScan, AcceptedScanRecord, ClientLifecycle, ClientLifecycleStatus, DeviceResult,
     DeviceStatus, IdentityResult, IdentityStatus, PairingResult, PairingStatus, ScanAccept,
-    ScanAcceptRequest, ScanAcceptStatus, ScanPreview, ScanPreviewStatus, SyncResult, SyncStatus,
+    ScanAcceptRequest, ScanAcceptStatus, ScanPreview, ScanPreviewStatus, StoreSnapshotResult,
+    StoreSnapshotStatus, SyncResult, SyncStatus,
 };
 
 /// Binding-safe scan-preview request DTO.
@@ -133,6 +134,29 @@ impl From<StorePutResult> for FfiStorePutResult {
         };
         Self {
             status: status.to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FfiStoreSnapshotResult {
+    pub status: String,
+    pub diag: Vec<String>,
+    pub snapshot_b64: Option<String>,
+    pub accepted_record_count: u64,
+    pub device_count: u64,
+    pub lifecycle_event_count: u64,
+}
+
+impl From<StoreSnapshotResult> for FfiStoreSnapshotResult {
+    fn from(result: StoreSnapshotResult) -> Self {
+        Self {
+            status: store_snapshot_status_string(result.status),
+            diag: result.diag,
+            snapshot_b64: result.snapshot_b64,
+            accepted_record_count: result.accepted_record_count,
+            device_count: result.device_count,
+            lifecycle_event_count: result.lifecycle_event_count,
         }
     }
 }
@@ -288,6 +312,16 @@ fn accept_status_string(status: ScanAcceptStatus) -> String {
         ScanAcceptStatus::Accepted => "Accepted",
         ScanAcceptStatus::AlreadyAccepted => "AlreadyAccepted",
         ScanAcceptStatus::Rejected => "Rejected",
+    }
+    .to_string()
+}
+
+fn store_snapshot_status_string(status: StoreSnapshotStatus) -> String {
+    match status {
+        StoreSnapshotStatus::Exported => "Exported",
+        StoreSnapshotStatus::Restored => "Restored",
+        StoreSnapshotStatus::Empty => "Empty",
+        StoreSnapshotStatus::Rejected => "Rejected",
     }
     .to_string()
 }

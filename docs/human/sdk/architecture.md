@@ -66,7 +66,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `scan_accept_prepare()` requires explicit verified trust and returns deterministic, persistence-ready records without writing storage
   - `scan_accept()` persists verified records through an atomic store boundary and leaves rejected scans unwritten
   - `identity.rs`, `device.rs`, `pairing.rs`, and `sync.rs` keep portable lifecycle workflows in Rust core rather than platform apps
-  - `store.rs` and `memory_store.rs` define the platform-neutral storage contract and reference rollback/idempotency behavior
+  - `store.rs` and `memory_store.rs` define the platform-neutral storage contract, reference rollback/idempotency behavior, and versioned opaque store snapshots for generated platform wrappers
   - `platform/storage.rs` and `platform/trust.rs` define adapter contracts without importing platform-specific storage or network trust APIs
   - `ffi_types.rs` flattens workflow values into owned binding-safe DTOs
   - `binding_api.rs`, `grain_client_core.udl`, and `build.rs` define the UniFFI-safe generated-binding facade
@@ -77,16 +77,19 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `Sources/GrainClient` is the public wrapper surface
   - `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI` are synchronized generated binding sources
   - `Sources/GrainClientFixtureRunner` executes `sdk/workflows` fixtures through the public Swift API
+  - the public wrapper exposes `exportStoreSnapshot` / `restoreStoreSnapshot` for platform persistence adapters
   - `scripts/sdk/sync_swift_bindings.sh` and `scripts/sdk/check_swift_package.sh` keep generated sources reproducible
 - `sdk/kotlin/*`: Kotlin/JVM client package over generated workflow bindings
   - `src/main/kotlin/dev/grain` is the public wrapper surface
   - `src/main/kotlin/uniffi/grain_client_core` is the synchronized generated binding source
   - `src/test/kotlin/dev/grain/fixture` executes `sdk/workflows` fixtures through the public Kotlin API
+  - the public wrapper exposes `exportStoreSnapshot` / `restoreStoreSnapshot` for platform persistence adapters
   - `scripts/sdk/sync_kotlin_bindings.sh` and `scripts/sdk/check_kotlin_package.sh` keep generated sources reproducible
 - `sdk/wasm/*`: WASM/mobile-web client package over client workflow bindings
   - `src/index.mjs` is the browser-like public wrapper surface
   - `src/node.mjs` is the first smoke-tested Node/WASI loader
   - `tests/run-workflow-fixtures.mjs` executes `sdk/workflows` fixtures through the public web API
+  - `exportStoreSnapshot` / `restoreStoreSnapshot` expose the same opaque persistence bridge for browser/mobile-web adapters
   - `scripts/sdk/check_wasm_package.sh` keeps the WASM package and fixture lane reproducible
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle

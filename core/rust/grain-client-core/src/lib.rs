@@ -26,7 +26,8 @@ pub use device::{device_add_key, device_revoke_key, device_set_active};
 pub use ffi_types::{
     FfiAcceptedScan, FfiClientLifecycle, FfiDeviceResult, FfiIdentityResult,
     FfiPairingEnvelopeRequest, FfiPairingResult, FfiScanAccept, FfiScanAcceptRequest,
-    FfiScanPreview, FfiScanPreviewRequest, FfiStorePutResult, FfiSyncBundleRequest, FfiSyncResult,
+    FfiScanPreview, FfiScanPreviewRequest, FfiStorePutResult, FfiStoreSnapshotResult,
+    FfiSyncBundleRequest, FfiSyncResult,
 };
 pub use identity::{
     client_lifecycle, identity_create_root, identity_export_bundle, identity_import_bundle,
@@ -40,7 +41,8 @@ pub use types::{
     AcceptedScan, AcceptedScanRecord, ClientLifecycle, ClientLifecycleStatus, DeviceKey,
     DeviceResult, DeviceStatus, IdentityBundleV1, IdentityResult, IdentityStatus,
     LifecycleEventRecord, PairingResult, PairingStatus, ScanAccept, ScanAcceptRequest,
-    ScanAcceptStatus, ScanPreview, ScanPreviewStatus, SyncResult, SyncStatus,
+    ScanAcceptStatus, ScanPreview, ScanPreviewStatus, StoreSnapshotResult, StoreSnapshotStatus,
+    SyncResult, SyncStatus,
 };
 
 #[cfg(feature = "bindings")]

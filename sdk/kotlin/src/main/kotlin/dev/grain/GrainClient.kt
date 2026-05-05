@@ -10,6 +10,7 @@ import uniffi.grain_client_core.FfiScanAccept
 import uniffi.grain_client_core.FfiScanAcceptRequest
 import uniffi.grain_client_core.FfiScanPreview
 import uniffi.grain_client_core.FfiScanPreviewRequest
+import uniffi.grain_client_core.FfiStoreSnapshotResult
 import uniffi.grain_client_core.FfiSyncBundleRequest
 import uniffi.grain_client_core.FfiSyncResult
 import uniffi.grain_client_core.GrainClientMemoryStore
@@ -122,6 +123,15 @@ data class GrainSyncResult(
     val lifecycleEventCount: ULong,
 )
 
+data class GrainStoreSnapshotResult(
+    val status: String,
+    val diag: List<String>,
+    val snapshotB64: String?,
+    val acceptedRecordCount: ULong,
+    val deviceCount: ULong,
+    val lifecycleEventCount: ULong,
+)
+
 class GrainClient : AutoCloseable {
     private val store = GrainClientMemoryStore()
 
@@ -172,6 +182,12 @@ class GrainClient : AutoCloseable {
 
     fun importSyncBundle(bundleB64: String): GrainSyncResult =
         store.importSyncBundle(FfiSyncBundleRequest(bundleB64 = bundleB64)).toPublic()
+
+    fun exportStoreSnapshot(): GrainStoreSnapshotResult =
+        store.exportStoreSnapshot().toPublic()
+
+    fun restoreStoreSnapshot(snapshotB64: String): GrainStoreSnapshotResult =
+        store.restoreStoreSnapshot(snapshotB64 = snapshotB64).toPublic()
 
     override fun close() {
         store.close()
@@ -252,6 +268,16 @@ private fun FfiSyncResult.toPublic(): GrainSyncResult =
         status = status,
         diag = diag,
         bundleB64 = bundleB64,
+        acceptedRecordCount = acceptedRecordCount,
+        deviceCount = deviceCount,
+        lifecycleEventCount = lifecycleEventCount,
+    )
+
+private fun FfiStoreSnapshotResult.toPublic(): GrainStoreSnapshotResult =
+    GrainStoreSnapshotResult(
+        status = status,
+        diag = diag,
+        snapshotB64 = snapshotB64,
         acceptedRecordCount = acceptedRecordCount,
         deviceCount = deviceCount,
         lifecycleEventCount = lifecycleEventCount,

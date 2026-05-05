@@ -12,7 +12,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = ROOT / "sdk" / "workflows" / "fixtures"
 REF_RE = re.compile(r"^conformance/vectors/[A-Za-z0-9_/-]+\.json#/[A-Za-z0-9_~./-]+$")
-ALLOWED_WORKFLOW = {"scan_preview", "scan_accept", "device_lifecycle", "pairing", "sync_bundle"}
+ALLOWED_WORKFLOW = {
+    "scan_preview",
+    "scan_accept",
+    "device_lifecycle",
+    "pairing",
+    "sync_bundle",
+    "store_snapshot",
+}
 ALLOWED_STATUS = {
     "Verified",
     "Untrusted",
@@ -25,6 +32,7 @@ ALLOWED_STATUS = {
     "Ready",
     "Uninitialized",
     "Exported",
+    "Restored",
     "Empty",
     "Imported",
     "AlreadyImported",
@@ -35,6 +43,7 @@ SCAN_ACCEPT_STATUS = {"Accepted", "AlreadyAccepted", "Rejected"}
 DEVICE_LIFECYCLE_STATUS = {"Ready", "Uninitialized"}
 PAIRING_STATUS = {"Paired", "AlreadyPaired", "Rejected"}
 SYNC_BUNDLE_STATUS = {"Imported", "AlreadyImported", "Rejected"}
+STORE_SNAPSHOT_STATUS = {"Restored", "Rejected"}
 ALLOWED_TOP_LEVEL = {"fixture_id", "workflow", "strict", "input", "expect", "meta"}
 ALLOWED_INPUT = {
     "qr_string_ref",
@@ -61,9 +70,18 @@ ALLOWED_EXPECT = {
     "pairing_id",
     "envelope_b64",
     "bundle_b64",
+    "snapshot_b64",
 }
 REQUIRED_EXPECT = {"status"}
-PRESENCE_FIELDS = {"root_kid", "active_ak", "device_ak", "pairing_id", "envelope_b64", "bundle_b64"}
+PRESENCE_FIELDS = {
+    "root_kid",
+    "active_ak",
+    "device_ak",
+    "pairing_id",
+    "envelope_b64",
+    "bundle_b64",
+    "snapshot_b64",
+}
 COUNT_FIELDS = {"accepted_record_count", "device_count", "revoked_count", "lifecycle_event_count"}
 
 
@@ -154,7 +172,7 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         not ("trust_pub_b64_ref" in input_obj and "trust_pub_b64" in input_obj),
         f"{path}: trust_pub_b64_ref and trust_pub_b64 are mutually exclusive",
     )
-    if workflow in {"scan_preview", "scan_accept", "sync_bundle"}:
+    if workflow in {"scan_preview", "scan_accept", "sync_bundle", "store_snapshot"}:
         require("qr_string_ref" in input_obj, f"{path}: qr_string_ref is required")
     if "qr_string_ref" in input_obj:
         resolve_ref(input_obj["qr_string_ref"], path)
@@ -209,6 +227,8 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         require(status in PAIRING_STATUS, f"{path}: invalid pairing status")
     if workflow == "sync_bundle":
         require(status in SYNC_BUNDLE_STATUS, f"{path}: invalid sync_bundle status")
+    if workflow == "store_snapshot":
+        require(status in STORE_SNAPSHOT_STATUS, f"{path}: invalid store_snapshot status")
 
     if "cose_b64" in expect:
         require(expect.get("cose_b64") in {"present", "absent"}, f"{path}: invalid cose_b64")
@@ -308,6 +328,19 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         )
         if status == "AlreadyImported":
             require(import_attempts >= 2, f"{path}: AlreadyImported fixture must repeat import")
+    if workflow == "store_snapshot":
+        require(
+            "trust_pub_b64_ref" in input_obj or "trust_pub_b64" in input_obj,
+            f"{path}: store_snapshot requires trust material",
+        )
+        require(
+            {"snapshot_b64", "accepted_record_count", "device_count", "lifecycle_event_count"}.issubset(expect),
+            f"{path}: store_snapshot missing snapshot expectations",
+        )
+        require(
+            "cose_b64" not in expect and "store_mutation" not in expect,
+            f"{path}: store_snapshot must not set scan expectations",
+        )
 
     diag_keys = {"diag", "diag_contains"} & set(expect)
     require(len(diag_keys) == 1, f"{path}: expected exactly one diagnostic expectation")

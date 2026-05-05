@@ -4,7 +4,8 @@ use grain_client_core::{
     pairing_create_envelope, pairing_preview_envelope, scan_accept, scan_preview,
     sync_export_bundle, sync_import_bundle, ClientLifecycle, ClientLifecycleStatus, ClientStore,
     DeviceResult, DeviceStatus, IdentityResult, IdentityStatus, MemoryClientStore, PairingResult,
-    PairingStatus, ScanAccept, ScanPreview, SyncResult, SyncStatus,
+    PairingStatus, ScanAccept, ScanPreview, StoreSnapshotResult, StoreSnapshotStatus, SyncResult,
+    SyncStatus,
 };
 use serde_json::{json, Value};
 use std::cell::RefCell;
@@ -366,12 +367,62 @@ pub extern "C" fn grain_client_import_sync_bundle(
     encode_response(&response)
 }
 
+#[no_mangle]
+pub extern "C" fn grain_client_export_store_snapshot(store_ptr: u32) -> u64 {
+    let Some(response) = with_store(store_ptr, |store| {
+        store_snapshot_response(store.export_store_snapshot())
+    }) else {
+        return encode_response(&store_snapshot_response(store_snapshot_rejected(
+            SDK_ERR_WASM_STORE_INVALID,
+        )));
+    };
+    encode_response(&response)
+}
+
+#[no_mangle]
+pub extern "C" fn grain_client_restore_store_snapshot(
+    store_ptr: u32,
+    input_ptr: u32,
+    input_len: u32,
+) -> u64 {
+    let Some(request) = decode_request(input_ptr, input_len) else {
+        return encode_response(&store_snapshot_response(store_snapshot_rejected(
+            GRAIN_ERR_SCHEMA,
+        )));
+    };
+    let Some(snapshot_b64) = request.get("snapshot_b64").and_then(Value::as_str) else {
+        return encode_response(&store_snapshot_response(store_snapshot_rejected(
+            GRAIN_ERR_SCHEMA,
+        )));
+    };
+    let Some(response) = with_store_mut(store_ptr, |store| {
+        store_snapshot_response(store.restore_store_snapshot(snapshot_b64))
+    }) else {
+        return encode_response(&store_snapshot_response(store_snapshot_rejected(
+            SDK_ERR_WASM_STORE_INVALID,
+        )));
+    };
+    encode_response(&response)
+}
+
 fn decode_request(input_ptr: u32, input_len: u32) -> Option<Value> {
     if input_ptr == 0 || input_len == 0 {
         return None;
     }
     let raw = unsafe { std::slice::from_raw_parts(input_ptr as *const u8, input_len as usize) };
     serde_json::from_slice(raw).ok()
+}
+
+fn with_store<R>(store_handle: u32, f: impl FnOnce(&MemoryClientStore) -> R) -> Option<R> {
+    STORE_TABLE.with(|table| {
+        let table = table.borrow();
+        let (index, generation) = decode_store_handle(store_handle)?;
+        let slot = table.get(index)?;
+        if slot.generation != generation {
+            return None;
+        }
+        slot.store.as_ref().map(f)
+    })
 }
 
 fn with_store_mut<R>(store_handle: u32, f: impl FnOnce(&mut MemoryClientStore) -> R) -> Option<R> {
@@ -574,6 +625,28 @@ fn sync_rejected(diag: &str) -> SyncResult {
     }
 }
 
+fn store_snapshot_response(result: StoreSnapshotResult) -> Value {
+    json!({
+        "status": result.status.status_string(),
+        "diag": result.diag,
+        "snapshot_b64": result.snapshot_b64,
+        "accepted_record_count": result.accepted_record_count,
+        "device_count": result.device_count,
+        "lifecycle_event_count": result.lifecycle_event_count
+    })
+}
+
+fn store_snapshot_rejected(diag: &str) -> StoreSnapshotResult {
+    StoreSnapshotResult {
+        status: StoreSnapshotStatus::Rejected,
+        diag: vec![diag.to_string()],
+        snapshot_b64: None,
+        accepted_record_count: 0,
+        device_count: 0,
+        lifecycle_event_count: 0,
+    }
+}
+
 trait WasmStatus {
     fn status_string(&self) -> &'static str;
 }
@@ -651,6 +724,17 @@ impl WasmStatus for SyncStatus {
             SyncStatus::Imported => "Imported",
             SyncStatus::AlreadyImported => "AlreadyImported",
             SyncStatus::Rejected => "Rejected",
+        }
+    }
+}
+
+impl WasmStatus for StoreSnapshotStatus {
+    fn status_string(&self) -> &'static str {
+        match self {
+            StoreSnapshotStatus::Exported => "Exported",
+            StoreSnapshotStatus::Restored => "Restored",
+            StoreSnapshotStatus::Empty => "Empty",
+            StoreSnapshotStatus::Rejected => "Rejected",
         }
     }
 }

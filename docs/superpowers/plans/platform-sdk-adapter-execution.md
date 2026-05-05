@@ -24,23 +24,26 @@ wrappers over generated workflow APIs.
 
 | Step | Scope | Status | Branch / PR | Validation / Review |
 | --- | --- | --- | --- | --- |
-| 1 | Wire strict generated platform SDK verification into CI and document toolchain boundaries. | In progress | `codex/sdk-platform-ci` | Pending PR |
-| 2 | Add a storage snapshot bridge so Swift, Kotlin, and WASM wrappers can persist durable SDK state without exposing raw store mutation APIs. | Planned | TBD | TBD |
+| 1 | Wire strict generated platform SDK verification into CI and document toolchain boundaries. | Merged | `codex/sdk-platform-ci` / [#41](https://github.com/IvGolovach/grain-protocol/pull/41) | Local targeted checks passed; GitHub CI passed on final SHA `ea8b242cab9244c509e43c166e231c0a39bb75ce`; merged as `6f7a57f5551cfb4765bf922a59c11952e753fcf3` |
+| 2 | Add a storage snapshot bridge so Swift, Kotlin, and WASM wrappers can persist durable SDK state without exposing raw store mutation APIs. | In progress | `codex/sdk-storage-snapshot` | Local implementation and tests in progress |
 | 3 | Add production trust-provider surfaces across SDKs with explicit anchor IDs and no fallback trust. | Planned | TBD | TBD |
 | 4 | Add iOS adapter pack: Keychain/file or SQLite persistence boundary, trust provider, injected scanner flow, and scanner smoke hardening. | Planned | TBD | TBD |
 | 5 | Add Android adapter pack: Keystore-backed persistence boundary, trust provider, injected CameraX-style analyzer flow, and scanner smoke hardening. | Planned | TBD | TBD |
 | 6 | Add WASM/mobile-web adapter pack: IndexedDB persistence, browser scanner persistence wiring, and npm package smoke proof. | Planned | TBD | TBD |
 | 7 | Harden release packaging: version matrix, SDK artifacts, checksums, SBOM/manifest consistency, and final certification. | Planned | TBD | TBD |
 
-## Current Step 1 Definition
+## Current Step 2 Definition
 
-Step 1 is complete when:
+Step 2 is complete when:
 
-- CI has a stable `sdk-platform` job for generated Swift, Kotlin, WASM, and
-  scanner-example SDK proof.
-- `scripts/sdk/verify_all_sdks.sh --strict` works on clean CI runners without
-  relying on pre-warmed Gradle caches.
-- WASM target readiness checks verify the active `rustc`, not only `rustup`
-  metadata.
-- Local docs explain when `SDK_KOTLIN_GRADLE_OFFLINE=1` is appropriate.
-- PR CI and required review gates pass on the final SHA before merge.
+- Rust owns a versioned, opaque store snapshot format for the reference
+  `MemoryClientStore`.
+- Generated Swift and Kotlin bindings expose snapshot export/restore through
+  workflow-shaped DTOs, not raw mutation methods.
+- WASM exposes the same snapshot export/restore surface and validates response
+  shape.
+- Platform wrappers can persist one `snapshotB64` string and restore a fresh
+  client store after app restart.
+- Snapshot restore is all-or-nothing and rejects malformed/version-mismatched
+  payloads without mutating existing store state.
+- The strict SDK gate and targeted tests pass locally and in PR CI before merge.

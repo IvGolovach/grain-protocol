@@ -13,7 +13,7 @@ Workflow fixtures can reference protocol vectors as input material. A generated 
 Each fixture is a JSON object with:
 
 - `fixture_id`: stable `SDK-WF-*` identifier.
-- `workflow`: workflow name: `scan_preview`, `scan_accept`, `device_lifecycle`, `pairing`, or `sync_bundle`.
+- `workflow`: workflow name: `scan_preview`, `scan_accept`, `device_lifecycle`, `pairing`, `sync_bundle`, or `store_snapshot`.
 - `strict`: must be `true`.
 - `input`: workflow input references or inline values.
 - `expect`: expected workflow status, diagnostics, output presence, counts, and storage mutation result where applicable.
@@ -125,3 +125,21 @@ Expected fields:
 - `accepted_record_count`, `device_count`, `lifecycle_event_count`: final imported counters.
 
 Sync import must be atomic. Identity conflicts reject without importing accepted scans or lifecycle events.
+
+## `store_snapshot`
+
+The store snapshot bridge is the persistence boundary for generated platform
+wrappers before native Keychain, Keystore, IndexedDB, or device-specific stores
+exist.
+
+Expected public API behavior:
+
+- empty stores export status `Empty` and no `snapshot_b64` payload;
+- non-empty stores export status `Exported`, a `snapshot_b64` payload, and
+  accepted-scan/device/lifecycle counters;
+- restore into a fresh client returns `Restored` and reproduces those counters;
+- malformed or unsupported snapshot payloads return `Rejected` without mutating
+  existing client state.
+
+The snapshot payload is opaque SDK state. Apps persist the returned string; they
+must not parse it or use it as a raw mutation surface.

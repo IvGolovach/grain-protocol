@@ -25,4 +25,8 @@ The lifecycle workflows are:
 - `pairing`: create an app-transferred pairing envelope, preview it, accept it, and prove replay idempotency;
 - `sync_bundle`: export identity, accepted scans, and lifecycle events, import them into another client, and prove repeated import idempotency.
 
+The platform persistence bridge is `store_snapshot`: export an opaque
+`snapshotB64` string from one client, persist it in platform storage, and
+restore it into a fresh client without exposing raw store mutation APIs.
+
 Fixtures live under `sdk/workflows/fixtures/<workflow>/`. They may reference protocol vectors with JSON pointers, but they are not protocol vectors themselves and must not be consumed by the protocol runner.

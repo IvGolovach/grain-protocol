@@ -7,6 +7,7 @@ const DEVICE_STATUSES = new Set(["Added", "Revoked", "Active", "Rejected"]);
 const LIFECYCLE_STATUSES = new Set(["Ready", "Uninitialized"]);
 const PAIRING_STATUSES = new Set(["Created", "Valid", "Paired", "AlreadyPaired", "Rejected"]);
 const SYNC_STATUSES = new Set(["Exported", "Empty", "Imported", "AlreadyImported", "Rejected"]);
+const STORE_SNAPSHOT_STATUSES = new Set(["Exported", "Restored", "Empty", "Rejected"]);
 
 export class GrainClient {
   #exports;
@@ -158,6 +159,23 @@ export class GrainClient {
     ));
   }
 
+  exportStoreSnapshot() {
+    this.#assertOpen();
+    return toStoreSnapshot(callNoInputJson(
+      this.#exports,
+      () => this.#exports.grain_client_export_store_snapshot(this.#storePtr),
+    ));
+  }
+
+  restoreStoreSnapshot(input) {
+    this.#assertOpen();
+    return toStoreSnapshot(callJson(
+      this.#exports,
+      (ptr, len) => this.#exports.grain_client_restore_store_snapshot(this.#storePtr, ptr, len),
+      toB64Payload(input, "snapshotB64", "snapshot_b64", "restoreStoreSnapshot"),
+    ));
+  }
+
   close() {
     if (!this.#closed) {
       this.#exports.grain_client_store_free(this.#storePtr);
@@ -199,6 +217,8 @@ function requireExports(wasmExports) {
     "grain_client_accept_pairing_envelope",
     "grain_client_export_sync_bundle",
     "grain_client_import_sync_bundle",
+    "grain_client_export_store_snapshot",
+    "grain_client_restore_store_snapshot",
   ];
   for (const name of required) {
     if (!(name in wasmExports)) {
@@ -380,6 +400,18 @@ function toSync(raw) {
     status,
     diag: diagList(raw),
     bundleB64: optionalString(raw.bundle_b64, "bundle_b64"),
+    acceptedRecordCount: requireNonNegativeInteger(raw.accepted_record_count, "accepted_record_count"),
+    deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
+    lifecycleEventCount: requireNonNegativeInteger(raw.lifecycle_event_count, "lifecycle_event_count"),
+  };
+}
+
+function toStoreSnapshot(raw) {
+  const status = requireEnum(raw.status, STORE_SNAPSHOT_STATUSES, "status");
+  return {
+    status,
+    diag: diagList(raw),
+    snapshotB64: optionalString(raw.snapshot_b64, "snapshot_b64"),
     acceptedRecordCount: requireNonNegativeInteger(raw.accepted_record_count, "accepted_record_count"),
     deviceCount: requireNonNegativeInteger(raw.device_count, "device_count"),
     lifecycleEventCount: requireNonNegativeInteger(raw.lifecycle_event_count, "lifecycle_event_count"),

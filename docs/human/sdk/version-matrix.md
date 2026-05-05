@@ -65,12 +65,14 @@ not have every platform target installed.
 ## App Compatibility Guidance
 
 - Treat `scanPreview`, `scanAccept`, `listAcceptedScans`, identity, pairing,
-  and sync methods as the portable app contract.
+  sync, and store snapshot methods as the portable app contract.
 - Treat QR decoding, COSE verification, DAG-CBOR details, protocol runner
   operations, and raw pointer/WASM ABI details as internal implementation
   details.
 - Trust material is supplied by the app or platform trust adapter as
   `trustPubB64`; the SDK does not discover trust over the network.
 - Platform persistence can later move to Keychain, Keystore, IndexedDB, robot
-  secure elements, or device-management storage, but it must preserve the
-  `ClientStore` atomic/idempotent semantics.
+  secure elements, or device-management storage. Until native adapters exist,
+  platform wrappers persist the opaque `snapshotB64` returned by
+  `exportStoreSnapshot` and restore it with `restoreStoreSnapshot`, preserving
+  the Rust-owned `ClientStore` atomic/idempotent semantics.

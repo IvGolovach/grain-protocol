@@ -80,9 +80,17 @@ Every platform wrapper exposes the same product-level operations:
 - export portable evidence/state with `exportSyncBundle`
 - pair/sync clients with `createPairingEnvelope`, `acceptPairingEnvelope`, and
   `importSyncBundle`
+- persist client runtime state with `exportStoreSnapshot` and
+  `restoreStoreSnapshot`
 
 Trust setup is intentionally outside the protocol core. Apps resolve a trusted
 publisher key from their own trust anchor, QR enrollment flow, MDM policy,
 device management channel, or test fixture, then pass that public key as
 `trustPubB64`. Rust core does not perform hidden trust lookup or network trust
 fallback.
+
+Store snapshots are opaque SDK state, not a raw mutation API. Apps should save
+the returned `snapshotB64` string in their platform storage layer and restore it
+into a fresh client on launch. Snapshot payloads can include identity material,
+so production adapters should place them behind the platform security boundary
+appropriate for the device.

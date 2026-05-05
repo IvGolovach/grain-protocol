@@ -1,0 +1,22 @@
+{
+  "fixture_id": "SDK-WF-STORE-SNAPSHOT-0001",
+  "workflow": "store_snapshot",
+  "strict": true,
+  "input": {
+    "root_label": "phone",
+    "device_label": "glasses",
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64"
+  },
+  "expect": {
+    "status": "Restored",
+    "diag": [],
+    "snapshot_b64": "present",
+    "accepted_record_count": 1,
+    "device_count": 2,
+    "lifecycle_event_count": 1
+  },
+  "meta": {
+    "desc": "A non-empty client store exports an opaque snapshot and restores identity, lifecycle events, and accepted scans into a fresh client."
+  }
+}
