@@ -28,4 +28,5 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 These checks are asserted in:
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`
 - `core/rust/grain-client-core/tests/scan_preview.rs`
+- `sdk/workflows/fixtures/scan-preview/*.json`
 - `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`

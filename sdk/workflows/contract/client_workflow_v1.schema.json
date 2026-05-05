@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grain.local/sdk/workflows/contract/client_workflow_v1.schema.json",
+  "title": "Grain SDK Client Workflow Fixture v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fixture_id", "workflow", "strict", "input", "expect", "meta"],
+  "properties": {
+    "fixture_id": {
+      "type": "string",
+      "pattern": "^SDK-WF-[A-Z0-9-]+$"
+    },
+    "workflow": {
+      "type": "string",
+      "enum": ["scan_preview"]
+    },
+    "strict": {
+      "const": true
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qr_string_ref"],
+      "properties": {
+        "qr_string_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "trust_pub_b64_ref": {
+          "$ref": "#/$defs/ref"
+        },
+        "trust_pub_b64": {
+          "type": "string"
+        }
+      },
+      "not": {
+        "required": ["trust_pub_b64_ref", "trust_pub_b64"]
+      }
+    },
+    "expect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "cose_b64", "store_mutation"],
+      "oneOf": [
+        {
+          "required": ["diag"]
+        },
+        {
+          "required": ["diag_contains"]
+        }
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["Verified", "Untrusted", "Rejected"]
+        },
+        "diag": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "diag_contains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cose_b64": {
+          "type": "string",
+          "enum": ["present", "absent"]
+        },
+        "store_mutation": {
+          "$comment": "v1 scan_preview fixtures allow only none; scan_accept will extend this enum in a follow-up contract update.",
+          "type": "string",
+          "enum": ["none"]
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["desc"],
+      "properties": {
+        "desc": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "ref": {
+      "type": "string",
+      "pattern": "^conformance/vectors/[A-Za-z0-9_/-]+\\.json#/[A-Za-z0-9_~./-]+$"
+    }
+  }
+}

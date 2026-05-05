@@ -47,8 +47,8 @@
 
 | Order | PR Scope | Status | Branch | PR | Merge SHA | Local Validation | Remote CI / Review |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0 | Persistent execution tracker | In progress | `codex/portable-client-platform-plan` | #26 |  | `python3 tools/check_llm_docs.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `git diff --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | CI passed before Greptile fix; rerun pending |
-| 1 | Client workflow contract and scan-preview fixtures | Pending |  |  |  |  |  |
+| 0 | Persistent execution tracker | Merged | `codex/portable-client-platform-plan` | #26 | `e010d9a1349498a70a2ae02e2519d0b0e502e28a` | `python3 tools/check_llm_docs.py`; `python3 tools/ci/check_docs_links.py`; `python3 tools/ci/check_docs_flow.py`; `git diff --check`; `git diff --cached --check`; `scripts/ledger/check`; `scripts/ledger/check --history --base origin/main` | PR CI passed on final SHA `437890e5b792098fbe770d22c57a5680f577936f`; Greptile safe to merge; CodeRabbit PASS; post-merge `main` CI run `25360950306` passed |
+| 1 | Client workflow contract and scan-preview fixtures | In progress | `codex/client-workflow-contract-fixtures` |  |  |  |  |
 | 2 | Rust client workflow fixture runner | Pending |  |  |  |  |  |
 | 3a | `scan_accept_prepare`, deterministic ID, module boundaries | Pending |  |  |  |  |  |
 | 3b | `scan_accept`, atomic store abstraction, memory store | Pending |  |  |  |  |  |
@@ -79,6 +79,8 @@
 | #26 | Greptile | Kotlin PR 7 and WASM PR 8 were missing from the Seven Product Phases mapping. | Fix in PR #26. | Added PR 7 and PR 8 to Phase 1 and Phase 2 mapping. |
 | #26 | CodeRabbit | PR dependencies were implicit and PR 3 mixed scan workflow logic with store infrastructure. | Fix in PR #26. | Added PR dependency section and split PR 3 into PR 3a and PR 3b. |
 | #26 | Greptile | PR 10 file list used prose instead of structured file entries. | Fix in PR #26. | Replaced PR 10 prose with explicit `Create` / `Modify` entries. |
+| #26 | Greptile | Split Log missed the PR 3a / PR 3b split and PR 10 dependency on PR 9 was understated. | Fix in PR #26. | Added Split Log row and made PR 10's PR 9 dependency explicit. |
+| #26 | Greptile | Split Log insertion point should be PR 3a rather than PR 2. | Fix in PR #26. | Corrected the Split Log row before merge. |
 
 ## Split Log
 
@@ -112,7 +114,7 @@ scripts/ledger/check --history --base origin/main
 
 Expected: all commands pass.
 
-- [ ] **Step 3: Open, review, merge**
+- [x] **Step 3: Open, review, merge**
 
 Open a PR for the tracker, wait for required CI and review feedback, fix actionable comments, merge, fetch `origin/main`, then start PR 1 from current `origin/main`.
 
@@ -131,6 +133,7 @@ Open a PR for the tracker, wait for required CI and review feedback, fix actiona
 - Create: `sdk/workflows/fixtures/scan-preview/SDK-WF-SCAN-PREVIEW-0005.json`
 - Modify: `docs/llm/SDK_CONFORMANCE.md`
 - Modify: `docs/llm/SDK_EDGE_CASES.md`
+- Modify: `docs/llm/SDK_FILE_MAP.md`
 - Modify: `docs/human/sdk/portable-client-sdk.md`
 - Modify: `CHANGELOG.md`
 - Modify: this tracker file with PR 0 evidence
