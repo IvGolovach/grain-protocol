@@ -25,6 +25,8 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - `core/ts/grain-sdk/scripts/run-protocol-suite.ts`
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`
 - `cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core`
+- `cargo build --manifest-path core/rust/Cargo.toml -p uniffi-bindgen`
+- `scripts/sdk/check_generated_bindings.sh`
 - `python3 tools/ci/check_client_workflow_fixtures.py`
 - CI `ts-full` context includes both checks.
 
@@ -37,3 +39,5 @@ If SDK output diverges from core vectors:
 3. only escalate to protocol/conformance change with ADR when vector contract is truly ambiguous.
 
 If generated platform SDK output diverges from `grain-client-core` workflow fixtures or adapter contract tests, treat it as platform SDK drift first. Passing protocol vectors alone does not make Swift, Kotlin, WASM, or future device bindings client-workflow conformant.
+
+If UniFFI generation or expected public symbols drift, treat that as a generated-binding harness failure first, not a protocol issue.

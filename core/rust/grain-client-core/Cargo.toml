@@ -4,10 +4,17 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 
+[lib]
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+uniffi_build = { workspace = true }
+
 [dependencies]
 base64 = { workspace = true }
 grain-core = { path = "../grain-core" }
 sha2 = { workspace = true }
+uniffi = { workspace = true }
 
 [dev-dependencies]
 serde = { workspace = true }

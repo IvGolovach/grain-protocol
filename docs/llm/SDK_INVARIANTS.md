@@ -74,6 +74,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/rust/grain-client-core/tests/storage_contract.rs`, `core/rust/grain-client-core/tests/trust_adapter_contract.rs`, `core/rust/grain-client-core/tests/platform_scan_accept.rs`
   Modules: `core/rust/grain-client-core/src/platform/storage.rs`, `core/rust/grain-client-core/src/platform/trust.rs`, `core/rust/grain-client-core/src/ffi_types.rs`, `core/rust/grain-client-core/src/store.rs`, `core/rust/grain-client-core/src/diag.rs`
 
+- SDK-INV-0019: generated binding harness MUST expose workflow APIs over binding-safe DTOs, generate Swift/Kotlin bindings reproducibly from checked-in UDL/scripts, leave no generated repository junk during checks, and avoid raw QR/COSE/DAG-CBOR/protocol-runner operations as app APIs.
+  Tests: `core/rust/grain-client-core/tests/binding_api.rs`, `scripts/sdk/check_generated_bindings.sh`
+  Modules: `core/rust/grain-client-core/src/binding_api.rs`, `core/rust/grain-client-core/src/grain_client_core.udl`, `core/rust/grain-client-core/build.rs`, `core/rust/uniffi-bindgen/src/main.rs`, `scripts/sdk/generate_client_bindings.sh`, `scripts/sdk/check_generated_bindings.sh`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

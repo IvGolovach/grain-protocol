@@ -64,6 +64,8 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `store.rs` and `memory_store.rs` define the platform-neutral storage contract and reference rollback/idempotency behavior
   - `platform/storage.rs` and `platform/trust.rs` define adapter contracts without importing platform-specific storage or network trust APIs
   - `ffi_types.rs` flattens workflow values into owned binding-safe DTOs
+  - `binding_api.rs`, `grain_client_core.udl`, and `build.rs` define the UniFFI-safe generated-binding facade
+  - `core/rust/uniffi-bindgen` and `scripts/sdk/*generated_bindings.sh` generate/check Swift and Kotlin bindings without committing generated output
   - `types.rs`, `trust.rs`, and `diag.rs` keep DTOs, trust decoding, and SDK diagnostics separated for generated bindings
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle

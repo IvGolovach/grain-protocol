@@ -19,6 +19,9 @@ It sits above `grain-core` and below generated Swift, Kotlin, WASM, or future de
   - keeps Keychain, Keystore, SQLite, IndexedDB, and network trust lookup outside Rust core
 - `ffi_types::*`
   - flattens workflow results into owned strings, vectors, and optional strings for generated bindings
+- `binding_api::*` plus `grain_client_core.udl`
+  - exposes the UniFFI-safe workflow facade for generated Swift, Kotlin, and future platform bindings
+  - includes a reference in-memory store object for binding conformance tests, not production platform persistence
 
 ## Boundary rules
 
@@ -33,4 +36,5 @@ It sits above `grain-core` and below generated Swift, Kotlin, WASM, or future de
 
 ```bash
 cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core
+scripts/sdk/check_generated_bindings.sh
 ```
