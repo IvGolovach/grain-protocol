@@ -74,6 +74,10 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - one-command SDK verification script covering generated bindings, Rust workflows, platform packages, scanner examples, docs/spec checks, and no-network policy
     - release packaging script for SDK source artifacts, generated binding snapshots, workflow contract/docs, and SHA-256 manifest output under ignored `artifacts/`
     - copy-paste Swift/Kotlin/WASM workflow examples for trust setup, preview, accept, saved scans, and sync/evidence export
+  - added the Swift iOS adapter pack:
+    - `GrainClientIOSAdapters` persists opaque client snapshots through deterministic file storage or Keychain-backed storage without parsing protocol state
+    - `examples/ios-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
+    - iOS scanner smoke proves injected camera handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`

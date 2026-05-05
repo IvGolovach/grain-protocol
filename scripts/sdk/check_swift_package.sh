@@ -23,6 +23,7 @@ fi
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
 swift build --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH"
+swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainClientIOSAdaptersSmoke
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainClientFixtureRunner
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"

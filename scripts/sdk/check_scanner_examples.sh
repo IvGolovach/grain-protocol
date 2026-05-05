@@ -33,6 +33,36 @@ else
   fi
 fi
 
+has_hidden_trust_lookup() {
+  local pattern='URLSession\b|OkHttp\b|HttpURLConnection\b|java\.net|fetch\(|XMLHttpRequest|WebSocket|node:http|node:https|axios|undici|defaultTrust|fallbackTrust|autoDiscover|wellKnown|TOFU|allowAnyIssuer|allowAllIssuers|SecTrustEvaluate'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner >/dev/null
+}
+
+if has_hidden_trust_lookup; then
+  echo "SDK_SCANNER_ERR_HIDDEN_TRUST_LOOKUP: iOS scanner must use injected trust providers without fallback or network discovery" >&2
+  exit 1
+else
+  TRUST_LOOKUP_STATUS=$?
+  if [[ "$TRUST_LOOKUP_STATUS" -ne 1 ]]; then
+    exit "$TRUST_LOOKUP_STATUS"
+  fi
+fi
+
+has_secret_logging() {
+  local pattern='(print|debugPrint|NSLog|os_log|Logger)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" examples/ios-scanner sdk/swift/Sources/GrainClientIOSAdapters sdk/swift/README.md >/dev/null
+}
+
+if has_secret_logging; then
+  echo "SDK_SCANNER_ERR_SECRET_LOGGING: scanner/iOS adapter examples must not log snapshot, bundle, or trust material" >&2
+  exit 1
+else
+  SECRET_LOGGING_STATUS=$?
+  if [[ "$SECRET_LOGGING_STATUS" -ne 1 ]]; then
+    exit "$SECRET_LOGGING_STATUS"
+  fi
+fi
+
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
 swift run --package-path examples/ios-scanner --scratch-path "$TMP_DIR/swift" GrainIOSScannerSmoke
 

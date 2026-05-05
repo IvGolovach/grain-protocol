@@ -15,7 +15,9 @@ let package = Package(
     ],
     products: [
         .library(name: "GrainClient", targets: ["GrainClient"]),
+        .library(name: "GrainClientIOSAdapters", targets: ["GrainClientIOSAdapters"]),
         .executable(name: "GrainClientFixtureRunner", targets: ["GrainClientFixtureRunner"]),
+        .executable(name: "GrainClientIOSAdaptersSmoke", targets: ["GrainClientIOSAdaptersSmoke"]),
     ],
     targets: [
         .target(
@@ -41,10 +43,23 @@ let package = Package(
             dependencies: ["GrainClientFFI"],
             path: "Sources/GrainClient"
         ),
+        .target(
+            name: "GrainClientIOSAdapters",
+            dependencies: ["GrainClient"],
+            path: "Sources/GrainClientIOSAdapters",
+            linkerSettings: [
+                .linkedFramework("Security", .when(platforms: [.iOS, .macOS])),
+            ]
+        ),
         .executableTarget(
             name: "GrainClientFixtureRunner",
             dependencies: ["GrainClient"],
             path: "Sources/GrainClientFixtureRunner"
+        ),
+        .executableTarget(
+            name: "GrainClientIOSAdaptersSmoke",
+            dependencies: ["GrainClient", "GrainClientIOSAdapters"],
+            path: "Sources/GrainClientIOSAdaptersSmoke"
         ),
     ]
 )

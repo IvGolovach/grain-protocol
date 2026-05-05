@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0026` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0027` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -117,6 +117,7 @@ Expected contract:
 - `scripts/sdk/sync_swift_bindings.sh` regenerates Swift binding sources from the checked-in UniFFI harness and updates only the tracked Swift binding files
 - `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core` builds the native library linked by SwiftPM
 - `swift build --package-path sdk/swift` builds the `GrainClient` package
+- `swift run --package-path sdk/swift GrainClientIOSAdaptersSmoke` proves iOS adapter snapshot persistence without XCTest or device-only state
 - `swift run --package-path sdk/swift GrainClientFixtureRunner` executes scan, lifecycle, pairing, and sync fixtures through the public Swift `GrainClient` API
 - the package exposes workflow methods and typed Swift statuses, not raw QR/COSE/DAG-CBOR/protocol-runner APIs
 - fixture references are constrained to `conformance/vectors/**`
@@ -178,5 +179,21 @@ python3 tools/ci/check_sdk_no_network.py
 ```
 
 This is a hard gate. SDK core and the AI sidecar must stay vendor/network agnostic.
+
+## Scanner adapter examples
+
+Scanner example check:
+
+```bash
+scripts/sdk/check_scanner_examples.sh
+```
+
+Expected iOS adapter contract:
+- `examples/ios-scanner` accepts injected or AVFoundation-derived QR payloads as GR1 strings and sends them through public Swift workflow APIs
+- production preview/accept paths use `trustAnchorID` plus `GrainTrustProvider`
+- the shell persists only opaque `snapshotB64` through `GrainClientIOSAdapters`
+- blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
+- preview and rejected accept paths do not write accepted records
+- static guards reject raw protocol API calls, hidden trust lookup, network trust discovery, TOFU, and fallback trust patterns
 
 If this mapping drifts, report a blocking issue before proposing any semantic change.

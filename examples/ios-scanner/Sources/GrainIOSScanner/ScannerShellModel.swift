@@ -1,12 +1,21 @@
 import Combine
 import GrainClient
+import GrainClientIOSAdapters
 
 public let scannerAcceptRequiresVerifiedPreviewDiag = "SDK_ERR_EXAMPLE_ACCEPT_REQUIRES_VERIFIED_PREVIEW"
-public let scannerAcceptRequiresTrustDiag = "SDK_ERR_EXAMPLE_ACCEPT_REQUIRES_TRUST"
+public let scannerSnapshotPersistenceDiag = "SDK_ERR_EXAMPLE_SNAPSHOT_PERSISTENCE"
 
-public protocol ScannerWorkflowClient {
-    func scanPreview(qrString: String, trustPubB64: String?) -> GrainScanPreview
-    func scanAccept(qrString: String, trustPubB64: String) -> GrainScanAccept
+public protocol ScannerWorkflowClient: GrainSnapshotClient {
+    func scanPreview(
+        qrString: String,
+        trustAnchorID: String,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanPreview
+    func scanAccept(
+        qrString: String,
+        trustAnchorID: String,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanAccept
     func listAcceptedScans() -> [GrainAcceptedScan]
     func createRootIdentity(label: String) -> GrainIdentityResult
     func addDeviceKey(label: String) -> GrainDeviceResult
@@ -17,7 +26,7 @@ extension GrainClient: ScannerWorkflowClient {}
 
 public struct ScannerShellState: Equatable, Sendable {
     public var qrString: String
-    public var trustPubB64: String
+    public var trustAnchorID: String
     public var previewStatus: GrainScanPreviewStatus?
     public var acceptStatus: GrainScanAcceptStatus?
     public var diagnostics: [String]
@@ -27,10 +36,11 @@ public struct ScannerShellState: Equatable, Sendable {
     public var lifecycleStatus: String?
     public var deviceCount: UInt64
     public var lifecycleEventCount: UInt64
+    public var snapshotStatus: String?
 
     public init(
         qrString: String = "",
-        trustPubB64: String = "",
+        trustAnchorID: String = "",
         previewStatus: GrainScanPreviewStatus? = nil,
         acceptStatus: GrainScanAcceptStatus? = nil,
         diagnostics: [String] = [],
@@ -39,10 +49,11 @@ public struct ScannerShellState: Equatable, Sendable {
         acceptedScanID: String? = nil,
         lifecycleStatus: String? = nil,
         deviceCount: UInt64 = 0,
-        lifecycleEventCount: UInt64 = 0
+        lifecycleEventCount: UInt64 = 0,
+        snapshotStatus: String? = nil
     ) {
         self.qrString = qrString
-        self.trustPubB64 = trustPubB64
+        self.trustAnchorID = trustAnchorID
         self.previewStatus = previewStatus
         self.acceptStatus = acceptStatus
         self.diagnostics = diagnostics
@@ -52,6 +63,7 @@ public struct ScannerShellState: Equatable, Sendable {
         self.lifecycleStatus = lifecycleStatus
         self.deviceCount = deviceCount
         self.lifecycleEventCount = lifecycleEventCount
+        self.snapshotStatus = snapshotStatus
     }
 }
 
@@ -60,9 +72,21 @@ public final class ScannerShellModel: ObservableObject {
     @Published public private(set) var state: ScannerShellState
 
     private let client: ScannerWorkflowClient
+    private let trustProvider: any GrainTrustProvider
+    private let snapshotCoordinator: GrainSnapshotCoordinator?
 
-    public init(client: ScannerWorkflowClient = GrainClient()) {
+    public init(
+        client: ScannerWorkflowClient = GrainClient(),
+        trustProvider: any GrainTrustProvider = GrainStaticTrustProvider(anchors: [:]),
+        snapshotPersistence: (any GrainSnapshotPersistence)? = nil
+    ) {
         self.client = client
+        self.trustProvider = trustProvider
+        if let snapshotPersistence {
+            self.snapshotCoordinator = GrainSnapshotCoordinator(persistence: snapshotPersistence)
+        } else {
+            self.snapshotCoordinator = nil
+        }
         self.state = ScannerShellState()
     }
 
@@ -71,8 +95,8 @@ public final class ScannerShellModel: ObservableObject {
         resetDecisionState()
     }
 
-    public func updateTrustPubB64(_ value: String) {
-        state.trustPubB64 = value
+    public func updateTrustAnchorID(_ value: String) {
+        state.trustAnchorID = value
         resetDecisionState()
     }
 
@@ -100,12 +124,16 @@ public final class ScannerShellModel: ObservableObject {
         let device = client.addDeviceKey(label: deviceLabel)
         state.diagnostics = device.diag
         refreshLifecycle()
+        if device.diag.isEmpty {
+            persistSnapshot()
+        }
     }
 
     public func preview() {
         let preview = client.scanPreview(
             qrString: state.qrString,
-            trustPubB64: normalizedTrustInput()
+            trustAnchorID: normalizedTrustAnchorID(),
+            trustProvider: trustProvider
         )
 
         state.previewStatus = preview.status
@@ -118,32 +146,69 @@ public final class ScannerShellModel: ObservableObject {
 
     public func accept() {
         guard state.previewStatus == .verified, state.canAccept else {
-            state.diagnostics = [scannerAcceptRequiresVerifiedPreviewDiag]
+            if state.previewStatus != .rejected || state.diagnostics.isEmpty {
+                state.diagnostics = [scannerAcceptRequiresVerifiedPreviewDiag]
+            }
             state.acceptStatus = nil
             state.acceptedScanID = nil
             state.canAccept = false
             return
         }
 
-        guard let trustPubB64 = normalizedTrustInput() else {
-            state.diagnostics = [scannerAcceptRequiresTrustDiag]
-            state.acceptStatus = nil
-            state.acceptedScanID = nil
-            state.canAccept = false
-            return
-        }
-
-        let accepted = client.scanAccept(qrString: state.qrString, trustPubB64: trustPubB64)
+        let accepted = client.scanAccept(
+            qrString: state.qrString,
+            trustAnchorID: normalizedTrustAnchorID(),
+            trustProvider: trustProvider
+        )
         state.acceptStatus = accepted.status
         state.acceptedScanID = accepted.scanID
         state.diagnostics = accepted.diag
         state.acceptedCount = client.listAcceptedScans().count
         state.canAccept = state.previewStatus == .verified
+        if accepted.status == .accepted || accepted.status == .alreadyAccepted {
+            persistSnapshot()
+        }
     }
 
-    private func normalizedTrustInput() -> String? {
-        let trimmed = state.trustPubB64.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+    public func restorePersistedSnapshot() {
+        guard let snapshotCoordinator else {
+            return
+        }
+        do {
+            guard let restored = try snapshotCoordinator.restore(into: client) else {
+                state.snapshotStatus = "Empty"
+                refreshLifecycle()
+                state.acceptedCount = client.listAcceptedScans().count
+                return
+            }
+            state.snapshotStatus = restored.status
+            state.diagnostics = restored.diag
+            state.acceptedCount = Int(restored.acceptedRecordCount)
+            refreshLifecycle()
+        } catch {
+            state.snapshotStatus = "PersistenceError"
+            state.diagnostics = [scannerSnapshotPersistenceDiag]
+        }
+    }
+
+    private func normalizedTrustAnchorID() -> String {
+        state.trustAnchorID.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func persistSnapshot() {
+        guard let snapshotCoordinator else {
+            return
+        }
+        do {
+            let exported = try snapshotCoordinator.persist(from: client)
+            state.snapshotStatus = exported.status
+            if !exported.diag.isEmpty {
+                state.diagnostics = exported.diag
+            }
+        } catch {
+            state.snapshotStatus = "PersistenceError"
+            state.diagnostics = [scannerSnapshotPersistenceDiag]
+        }
     }
 
     private func refreshLifecycle() {

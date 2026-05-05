@@ -11,6 +11,10 @@ REQUIRED_PATTERNS = (
     "/spec/**",
     "/conformance/**",
     "/core/**",
+    "/sdk/**",
+    "/examples/**",
+    "/docs/human/**",
+    "/docs/superpowers/**",
     "/.github/CODEOWNERS",
     "/tools/**",
 )
