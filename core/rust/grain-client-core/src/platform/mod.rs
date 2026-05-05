@@ -9,5 +9,7 @@ pub mod trust;
 
 pub use storage::{list_accepted_scans, put_accepted_scan_atomically};
 pub use trust::{
-    resolve_trust_pub_b64, scan_accept_with_trust_provider, StaticTrustProvider, TrustProvider,
+    resolve_trust_pub_b64, scan_accept_prepare_with_trust_provider,
+    scan_accept_with_trust_provider, scan_preview_with_trust_provider, StaticTrustProvider,
+    TrustProvider,
 };

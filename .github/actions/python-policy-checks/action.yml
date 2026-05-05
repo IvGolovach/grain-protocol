@@ -101,6 +101,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_sdk_no_network.py
 
+    - name: Check SDK trust-provider boundary guard
+      shell: bash
+      run: python3 tools/ci/check_sdk_trust_provider_boundary.py
+
     - name: Check SDK AI boundary guard
       shell: bash
       run: python3 tools/ci/check_sdk_ai_boundary.py

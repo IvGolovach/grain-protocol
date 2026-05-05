@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 
 use crate::diag::{SDK_ERR_TRUST_ANCHOR_NOT_FOUND, SDK_ERR_TRUST_ANCHOR_REQUIRED};
-use crate::scan::scan_accept;
+use crate::scan::{scan_accept, scan_accept_prepare, scan_preview};
 use crate::store::ClientStore;
 use crate::trust::decode_trust_pub_b64;
-use crate::types::ScanAccept;
+use crate::types::{ScanAccept, ScanPreview};
 
 /// Platform-neutral trust lookup contract.
 ///
@@ -60,6 +60,30 @@ pub fn resolve_trust_pub_b64<P: TrustProvider>(
     decode_trust_pub_b64(&trust_pub_b64)?;
 
     Ok(trust_pub_b64)
+}
+
+/// Resolve trust from a platform provider, then run the pure scan-preview flow.
+pub fn scan_preview_with_trust_provider<P: TrustProvider>(
+    qr_string: &str,
+    trust_anchor_id: Option<&str>,
+    trust_provider: &P,
+) -> ScanPreview {
+    match resolve_trust_pub_b64(trust_provider, trust_anchor_id) {
+        Ok(trust_pub_b64) => scan_preview(qr_string, Some(&trust_pub_b64)),
+        Err(diag) => ScanPreview::rejected(diag, None),
+    }
+}
+
+/// Resolve trust from a platform provider, then run pure scan-accept preparation.
+pub fn scan_accept_prepare_with_trust_provider<P: TrustProvider>(
+    qr_string: &str,
+    trust_anchor_id: Option<&str>,
+    trust_provider: &P,
+) -> ScanAccept {
+    match resolve_trust_pub_b64(trust_provider, trust_anchor_id) {
+        Ok(trust_pub_b64) => scan_accept_prepare(qr_string, Some(&trust_pub_b64)),
+        Err(diag) => ScanAccept::rejected(diag),
+    }
 }
 
 /// Resolve trust from a platform provider, then run the core scan-accept flow.

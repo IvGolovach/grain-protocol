@@ -24,16 +24,22 @@ scripts/sdk/check_wasm_package.sh
 ## Example
 
 ```js
-import { createNodeGrainClient } from "@grain/client-wasm/node";
+import {
+  GrainStaticTrustProvider,
+  createNodeGrainClient,
+} from "@grain/client-wasm/node";
 
 const client = await createNodeGrainClient({
   wasmPath: "core/rust/target/wasm32-wasip1/release/grain_client_wasm.wasm",
 });
 
 try {
-  // Trust setup stays in app/platform code. This value can come from an
-  // enrolled publisher key, device-management policy, or a test fixture.
-  const trustedIssuerPublicKeyB64 = "<trusted publisher public key base64>";
+  // Trust setup stays in app/platform code. This provider can resolve enrolled
+  // publisher keys, device-management policy, or test fixtures by stable ID.
+  const trustAnchorId = "publisher:primary";
+  const trustProvider = new GrainStaticTrustProvider({
+    [trustAnchorId]: "<trusted publisher public key base64>",
+  });
   const scannedQRCode = "<GR1...>";
 
   if (client.clientLifecycle().status !== "Ready") {
@@ -46,15 +52,17 @@ try {
     }
   }
 
-  const preview = client.scanPreview({
+  const preview = client.scanPreviewWithTrustProvider({
     qrString: scannedQRCode,
-    trustPubB64: trustedIssuerPublicKeyB64,
+    trustAnchorId,
+    trustProvider,
   });
 
   if (preview.status === "Verified") {
-    const accepted = client.scanAccept({
+    const accepted = client.scanAcceptWithTrustProvider({
       qrString: scannedQRCode,
-      trustPubB64: trustedIssuerPublicKeyB64,
+      trustAnchorId,
+      trustProvider,
     });
 
     if (accepted.status === "Accepted" || accepted.status === "AlreadyAccepted") {
@@ -80,8 +88,9 @@ should instantiate the same WASM exports and pass the instance to
 ## Workflow notes
 
 - `scanPreview` never writes local storage.
-- `scanAccept` requires explicit `trustPubB64` and persists at most one accepted
-  record for the same verified scan.
+- `scanAccept` should use an explicit `trustAnchorId` plus `GrainTrustProvider`
+  in production and persists at most one accepted record for the same verified
+  scan.
 - `listAcceptedScans` returns deterministic accepted records from the local
   store.
 - `exportIdentityBundle` exports portable identity material for app-controlled

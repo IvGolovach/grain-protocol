@@ -95,8 +95,10 @@ scripts/sdk/package_client_sdks.sh
 - Platform wrappers may expose workflow names and typed statuses; they must not
   expose raw QR decode, COSE verify, DAG-CBOR validation, or protocol runner
   operations as app APIs.
-- Trust remains explicit. Apps pass `trustPubB64`; SDK core does not perform
-  hidden lookup, network discovery, or vendor fallback.
+- Trust remains explicit. Production wrappers expose `trustAnchorID` plus a
+  platform trust provider; unknown anchors fail closed with
+  `SDK_ERR_TRUST_ANCHOR_*`. SDK core does not perform hidden lookup, network
+  discovery, or vendor fallback.
 
 ## Packaging Rules
 

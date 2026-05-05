@@ -18,6 +18,9 @@ import uniffi.grain_client_core.grainPairingPreviewEnvelope
 import uniffi.grain_client_core.grainScanAcceptPrepare
 import uniffi.grain_client_core.grainScanPreview
 
+private const val SDK_ERR_TRUST_ANCHOR_REQUIRED = "SDK_ERR_TRUST_ANCHOR_REQUIRED"
+private const val SDK_ERR_TRUST_ANCHOR_NOT_FOUND = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND"
+
 sealed class GrainScanPreviewStatus(open val rawValue: String) {
     object Verified : GrainScanPreviewStatus("Verified")
     object Untrusted : GrainScanPreviewStatus("Untrusted")
@@ -132,17 +135,60 @@ data class GrainStoreSnapshotResult(
     val lifecycleEventCount: ULong,
 )
 
+fun interface GrainTrustProvider {
+    fun trustPubB64(anchorId: String): String?
+}
+
+class GrainStaticTrustProvider(
+    private val anchors: Map<String, String>,
+) : GrainTrustProvider {
+    constructor(anchorId: String, trustPubB64: String) : this(mapOf(anchorId to trustPubB64))
+
+    override fun trustPubB64(anchorId: String): String? =
+        anchors[anchorId]
+}
+
 class GrainClient : AutoCloseable {
     private val store = GrainClientMemoryStore()
 
     fun scanPreview(qrString: String, trustPubB64: String? = null): GrainScanPreview =
         grainScanPreview(FfiScanPreviewRequest(qrString = qrString, trustPubB64 = trustPubB64)).toPublic()
 
+    fun scanPreview(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanPreview =
+        when (val resolution = resolveTrustPubB64(trustAnchorId, trustProvider)) {
+            is TrustResolution.Resolved -> scanPreview(qrString = qrString, trustPubB64 = resolution.trustPubB64)
+            is TrustResolution.Rejected -> grainScanPreviewRejected(resolution.diag)
+        }
+
     fun scanAcceptPrepare(qrString: String, trustPubB64: String): GrainScanAccept =
         grainScanAcceptPrepare(FfiScanAcceptRequest(qrString = qrString, trustPubB64 = trustPubB64)).toPublic()
 
+    fun scanAcceptPrepare(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanAccept =
+        when (val resolution = resolveTrustPubB64(trustAnchorId, trustProvider)) {
+            is TrustResolution.Resolved -> scanAcceptPrepare(qrString = qrString, trustPubB64 = resolution.trustPubB64)
+            is TrustResolution.Rejected -> grainScanAcceptRejected(resolution.diag)
+        }
+
     fun scanAccept(qrString: String, trustPubB64: String): GrainScanAccept =
         store.scanAccept(FfiScanAcceptRequest(qrString = qrString, trustPubB64 = trustPubB64)).toPublic()
+
+    fun scanAccept(
+        qrString: String,
+        trustAnchorId: String,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanAccept =
+        when (val resolution = resolveTrustPubB64(trustAnchorId, trustProvider)) {
+            is TrustResolution.Resolved -> scanAccept(qrString = qrString, trustPubB64 = resolution.trustPubB64)
+            is TrustResolution.Rejected -> grainScanAcceptRejected(resolution.diag)
+        }
 
     fun listAcceptedScans(): List<GrainAcceptedScan> =
         store.listAcceptedScans().map { it.toPublic() }
@@ -193,6 +239,34 @@ class GrainClient : AutoCloseable {
         store.close()
     }
 }
+
+private sealed class TrustResolution {
+    data class Resolved(val trustPubB64: String) : TrustResolution()
+    data class Rejected(val diag: String) : TrustResolution()
+}
+
+private fun resolveTrustPubB64(anchorId: String, trustProvider: GrainTrustProvider): TrustResolution =
+    when {
+        anchorId.trim().isEmpty() -> TrustResolution.Rejected(SDK_ERR_TRUST_ANCHOR_REQUIRED)
+        else -> trustProvider.trustPubB64(anchorId)?.let(TrustResolution::Resolved)
+            ?: TrustResolution.Rejected(SDK_ERR_TRUST_ANCHOR_NOT_FOUND)
+    }
+
+private fun grainScanPreviewRejected(diag: String): GrainScanPreview =
+    GrainScanPreview(
+        status = GrainScanPreviewStatus.Rejected,
+        diag = listOf(diag),
+        coseB64 = null,
+    )
+
+private fun grainScanAcceptRejected(diag: String): GrainScanAccept =
+    GrainScanAccept(
+        status = GrainScanAcceptStatus.Rejected,
+        diag = listOf(diag),
+        scanId = null,
+        coseB64 = null,
+        trustPubB64 = null,
+    )
 
 private fun FfiScanPreview.toPublic(): GrainScanPreview =
     GrainScanPreview(

@@ -49,6 +49,7 @@ ALLOWED_INPUT = {
     "qr_string_ref",
     "trust_pub_b64_ref",
     "trust_pub_b64",
+    "trust_anchor_id",
     "accept_attempts",
     "import_attempts",
     "root_label",
@@ -183,6 +184,11 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
             isinstance(input_obj["trust_pub_b64"], str),
             f"{path}: trust_pub_b64 must be a string",
         )
+    if "trust_anchor_id" in input_obj:
+        require(
+            isinstance(input_obj["trust_anchor_id"], str),
+            f"{path}: trust_anchor_id must be a string",
+        )
     accept_attempts = input_obj.get("accept_attempts", 1)
     if "accept_attempts" in input_obj:
         require(
@@ -291,7 +297,10 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
             )
     if workflow == "device_lifecycle":
         require(
-            "qr_string_ref" not in input_obj and "trust_pub_b64_ref" not in input_obj and "trust_pub_b64" not in input_obj,
+            "qr_string_ref" not in input_obj
+            and "trust_pub_b64_ref" not in input_obj
+            and "trust_pub_b64" not in input_obj
+            and "trust_anchor_id" not in input_obj,
             f"{path}: device_lifecycle must not set scan input",
         )
         require(
@@ -304,7 +313,10 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         )
     if workflow == "pairing":
         require(
-            "qr_string_ref" not in input_obj and "trust_pub_b64_ref" not in input_obj and "trust_pub_b64" not in input_obj,
+            "qr_string_ref" not in input_obj
+            and "trust_pub_b64_ref" not in input_obj
+            and "trust_pub_b64" not in input_obj
+            and "trust_anchor_id" not in input_obj,
             f"{path}: pairing must not set scan input",
         )
         require(

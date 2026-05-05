@@ -19,7 +19,8 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - deterministic helper outputs (for example evidence hash)
 - client workflow fixture status/diagnostics/storage mutation
 - storage adapter behavior: deterministic order, idempotent re-put, rollback boundary
-- trust adapter behavior: no anchor, missing anchor, malformed anchor, valid anchor
+- trust adapter behavior: no anchor, missing/blank anchor, unknown anchor,
+  malformed anchor material, valid anchor, and no default/network fallback
 - Swift package wrapper behavior: typed workflow statuses, no raw QR/COSE runner APIs, and public scan fixtures passing through `GrainClient`
 - Kotlin package wrapper behavior: typed workflow statuses, no raw QR/COSE runner APIs, and public scan fixtures passing through `GrainClient`
 - WASM/mobile-web wrapper behavior: typed workflow statuses, no raw QR/COSE runner APIs, and public scan fixtures passing through `GrainClient`
@@ -34,6 +35,7 @@ Goal: keep SDK deterministic against core outputs and prevent drift between lang
 - `scripts/sdk/check_swift_package.sh`
 - `scripts/sdk/check_kotlin_package.sh`
 - `scripts/sdk/check_wasm_package.sh`
+- `python3 tools/ci/check_sdk_trust_provider_boundary.py`
 - `python3 tools/ci/check_client_workflow_fixtures.py`
 - CI `ts-full` keeps the TypeScript SDK and client workflow checks wired into the required repository lane; platform package checks may be added as their own lane as the generated SDKs become release artifacts.
 

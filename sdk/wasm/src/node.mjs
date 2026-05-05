@@ -15,4 +15,4 @@ export async function createNodeGrainClient({ wasmPath } = {}) {
   return new GrainClient(wasm.instance.exports);
 }
 
-export { GrainClient } from "./index.mjs";
+export { GrainClient, GrainStaticTrustProvider } from "./index.mjs";

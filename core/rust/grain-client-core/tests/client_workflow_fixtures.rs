@@ -3,8 +3,11 @@ mod workflow_fixture;
 
 use grain_client_core::{
     client_lifecycle, device_add_key, device_revoke_key, device_set_active, identity_create_root,
-    pairing_accept_envelope, pairing_create_envelope, pairing_preview_envelope, scan_accept,
-    scan_preview, sync_export_bundle, sync_import_bundle, ClientStore, DeviceStatus,
+    pairing_accept_envelope, pairing_create_envelope, pairing_preview_envelope,
+    platform::{
+        scan_accept_with_trust_provider, scan_preview_with_trust_provider, StaticTrustProvider,
+    },
+    scan_accept, scan_preview, sync_export_bundle, sync_import_bundle, ClientStore, DeviceStatus,
     IdentityStatus, MemoryClientStore, PairingStatus, ScanAcceptStatus, SyncStatus,
 };
 use workflow_fixture::{
@@ -39,9 +42,13 @@ fn scan_preview_matches_client_workflow_fixtures() -> Result<(), String> {
         require_exactly_one_diag_expectation(&fixture.expect, &fixture.fixture_id)?;
 
         let qr_string = fixture_qr_string(&fixture.input, &fixture.fixture_id)?;
-        let trust_pub_b64 = fixture_trust(&fixture.input, &fixture.fixture_id)?;
-
-        let preview = scan_preview(&qr_string, trust_pub_b64.as_deref());
+        let preview = if let Some(trust_anchor_id) = fixture.input.trust_anchor_id.as_deref() {
+            let provider = fixture_trust_provider(&fixture.input, &fixture.fixture_id)?;
+            scan_preview_with_trust_provider(&qr_string, Some(trust_anchor_id), &provider)
+        } else {
+            let trust_pub_b64 = fixture_trust(&fixture.input, &fixture.fixture_id)?;
+            scan_preview(&qr_string, trust_pub_b64.as_deref())
+        };
         assert_eq!(
             preview.status,
             fixture.expect.status.as_preview_status(),
@@ -93,7 +100,16 @@ fn scan_accept_matches_client_workflow_fixtures() -> Result<(), String> {
         require_exactly_one_diag_expectation(&fixture.expect, &fixture.fixture_id)?;
 
         let qr_string = fixture_qr_string(&fixture.input, &fixture.fixture_id)?;
-        let trust_pub_b64 = fixture_trust(&fixture.input, &fixture.fixture_id)?;
+        let provider = if fixture.input.trust_anchor_id.is_some() {
+            Some(fixture_trust_provider(&fixture.input, &fixture.fixture_id)?)
+        } else {
+            None
+        };
+        let trust_pub_b64 = if fixture.input.trust_anchor_id.is_some() {
+            None
+        } else {
+            fixture_trust(&fixture.input, &fixture.fixture_id)?
+        };
 
         let accept_attempts = fixture.input.accept_attempts.unwrap_or(1);
         assert!(
@@ -105,11 +121,20 @@ fn scan_accept_matches_client_workflow_fixtures() -> Result<(), String> {
         let mut store = MemoryClientStore::new();
         let mut accepted = None;
         for _ in 0..accept_attempts {
-            accepted = Some(scan_accept(
-                &mut store,
-                &qr_string,
-                trust_pub_b64.as_deref(),
-            ));
+            accepted = Some(
+                if let (Some(trust_anchor_id), Some(provider)) =
+                    (fixture.input.trust_anchor_id.as_deref(), provider.as_ref())
+                {
+                    scan_accept_with_trust_provider(
+                        &mut store,
+                        &qr_string,
+                        Some(trust_anchor_id),
+                        provider,
+                    )
+                } else {
+                    scan_accept(&mut store, &qr_string, trust_pub_b64.as_deref())
+                },
+            );
         }
         let accepted = accepted.expect("accept_attempts is validated above");
         assert_eq!(
@@ -472,6 +497,21 @@ fn fixture_trust(input: &WorkflowInput, fixture_id: &str) -> Result<Option<Strin
         (None, Some(inline)) => Ok(Some(inline.to_owned())),
         (None, None) => Ok(None),
     }
+}
+
+fn fixture_trust_provider(
+    input: &WorkflowInput,
+    fixture_id: &str,
+) -> Result<StaticTrustProvider, String> {
+    let Some(trust_anchor_id) = input.trust_anchor_id.as_deref() else {
+        return Err(format!("{fixture_id} trust_anchor_id is required"));
+    };
+    let provider = if let Some(trust_pub_b64) = fixture_trust(input, fixture_id)? {
+        StaticTrustProvider::new().with_anchor(trust_anchor_id, trust_pub_b64)
+    } else {
+        StaticTrustProvider::new()
+    };
+    Ok(provider)
 }
 
 fn require_exactly_one_diag_expectation(

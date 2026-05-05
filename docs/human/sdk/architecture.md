@@ -78,18 +78,21 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `Sources/GrainClientFFI` and `Sources/grain_client_coreFFI` are synchronized generated binding sources
   - `Sources/GrainClientFixtureRunner` executes `sdk/workflows` fixtures through the public Swift API
   - the public wrapper exposes `exportStoreSnapshot` / `restoreStoreSnapshot` for platform persistence adapters
+  - the public wrapper exposes `GrainTrustProvider` / `GrainStaticTrustProvider` so apps can resolve explicit trust anchor IDs without fallback trust
   - `scripts/sdk/sync_swift_bindings.sh` and `scripts/sdk/check_swift_package.sh` keep generated sources reproducible
 - `sdk/kotlin/*`: Kotlin/JVM client package over generated workflow bindings
   - `src/main/kotlin/dev/grain` is the public wrapper surface
   - `src/main/kotlin/uniffi/grain_client_core` is the synchronized generated binding source
   - `src/test/kotlin/dev/grain/fixture` executes `sdk/workflows` fixtures through the public Kotlin API
   - the public wrapper exposes `exportStoreSnapshot` / `restoreStoreSnapshot` for platform persistence adapters
+  - the public wrapper exposes `GrainTrustProvider` / `GrainStaticTrustProvider` so apps can resolve explicit trust anchor IDs without fallback trust
   - `scripts/sdk/sync_kotlin_bindings.sh` and `scripts/sdk/check_kotlin_package.sh` keep generated sources reproducible
 - `sdk/wasm/*`: WASM/mobile-web client package over client workflow bindings
   - `src/index.mjs` is the browser-like public wrapper surface
   - `src/node.mjs` is the first smoke-tested Node/WASI loader
   - `tests/run-workflow-fixtures.mjs` executes `sdk/workflows` fixtures through the public web API
   - `exportStoreSnapshot` / `restoreStoreSnapshot` expose the same opaque persistence bridge for browser/mobile-web adapters
+  - `GrainStaticTrustProvider` and provider-backed scan methods prove explicit trust anchor resolution for browser/mobile-web adapters
   - `scripts/sdk/check_wasm_package.sh` keeps the WASM package and fixture lane reproducible
 - `src/codec.ts`: strict validation and diagnostics explanation
 - `src/evidence.ts`: deterministic SDK evidence bundle

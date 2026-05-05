@@ -19,6 +19,10 @@ The second workflow is `scan_accept`:
 - prove duplicate-scan idempotency by repeating the public accept workflow in fixtures;
 - never persist rejected scans.
 
+Trust-provider fixtures add `trust_anchor_id` to prove that platform wrappers
+can resolve app trust through explicit anchor IDs and fail closed when no anchor
+material exists. They must not use hidden fallback trust or network lookup.
+
 The lifecycle workflows are:
 
 - `device_lifecycle`: create a portable identity, add a device key, activate it, revoke it, and report lifecycle counts;

@@ -23,6 +23,16 @@ export interface GrainScanAcceptInput {
   trustPubB64: string;
 }
 
+export interface GrainTrustProvider {
+  trustPubB64(anchorId: string): string | null | undefined;
+}
+
+export interface GrainTrustProviderInput {
+  qrString: string;
+  trustAnchorId: string;
+  trustProvider: GrainTrustProvider;
+}
+
 export interface GrainLabelInput {
   label?: string;
 }
@@ -66,6 +76,8 @@ export interface GrainAcceptedScan {
   coseB64: string;
   trustPubB64: string;
 }
+
+export type AcceptedScan = GrainAcceptedScan;
 
 export interface GrainIdentityResult {
   status: GrainIdentityStatus;
@@ -127,10 +139,17 @@ export interface GrainStoreSnapshotResult {
   lifecycleEventCount: number;
 }
 
+export class GrainStaticTrustProvider implements GrainTrustProvider {
+  constructor(anchors?: Record<string, string> | Map<string, string>);
+  trustPubB64(anchorId: string): string | null;
+}
+
 export class GrainClient {
   constructor(wasmExports: WebAssembly.Exports);
   scanPreview(input: GrainScanPreviewInput): GrainScanPreview;
+  scanPreviewWithTrustProvider(input: GrainTrustProviderInput): GrainScanPreview;
   scanAccept(input: GrainScanAcceptInput): GrainScanAccept;
+  scanAcceptWithTrustProvider(input: GrainTrustProviderInput): GrainScanAccept;
   listAcceptedScans(): GrainAcceptedScan[];
   createRootIdentity(input?: GrainLabelInput): GrainIdentityResult;
   exportIdentityBundle(): GrainIdentityResult;

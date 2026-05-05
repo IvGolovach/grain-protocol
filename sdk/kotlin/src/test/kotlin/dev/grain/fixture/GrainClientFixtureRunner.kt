@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.grain.GrainClient
+import dev.grain.GrainStaticTrustProvider
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.stream.Collectors
@@ -34,6 +35,7 @@ private data class FixtureInput(
     @JsonProperty("qr_string_ref") val qrStringRef: String? = null,
     @JsonProperty("trust_pub_b64_ref") val trustPubB64Ref: String? = null,
     @JsonProperty("trust_pub_b64") val trustPubB64: String? = null,
+    @JsonProperty("trust_anchor_id") val trustAnchorId: String? = null,
     @JsonProperty("accept_attempts") val acceptAttempts: Int? = null,
     @JsonProperty("import_attempts") val importAttempts: Int? = null,
     @JsonProperty("root_label") val rootLabel: String? = null,
@@ -67,10 +69,17 @@ private fun runScanPreviewFixtures() {
         requireFixture(fixture.strict, "${fixture.fixtureId} must be strict")
 
         val qrString = fixtureQrString(fixture)
-        val trustPubB64 = resolveTrustInput(fixture.input)
 
         GrainClient().use { client ->
-            val preview = client.scanPreview(qrString = qrString, trustPubB64 = trustPubB64)
+            val preview = if (fixture.input.trustAnchorId != null) {
+                client.scanPreview(
+                    qrString = qrString,
+                    trustAnchorId = fixture.input.trustAnchorId,
+                    trustProvider = fixtureTrustProvider(fixture.input),
+                )
+            } else {
+                client.scanPreview(qrString = qrString, trustPubB64 = resolveTrustInput(fixture.input))
+            }
             requireFixture(preview.status.rawValue == fixture.expect.status, "${fixture.fixtureId} status mismatch")
             requireDiagnostics(preview.diag, fixture.expect, fixture.fixtureId)
             requireCosePresence(
@@ -89,8 +98,6 @@ private fun runScanAcceptFixtures() {
         requireFixture(fixture.strict, "${fixture.fixtureId} must be strict")
 
         val qrString = fixtureQrString(fixture)
-        val trustPubB64 = resolveTrustInput(fixture.input)
-            ?: throw FixtureException("${fixture.fixtureId} missing trust material")
 
         val attempts = fixture.input.acceptAttempts ?: 1
         requireFixture(attempts > 0, "${fixture.fixtureId} accept_attempts must be positive")
@@ -101,7 +108,17 @@ private fun runScanAcceptFixtures() {
             var acceptedCoseB64: String? = null
 
             repeat(attempts) {
-                val accepted = client.scanAccept(qrString = qrString, trustPubB64 = trustPubB64)
+                val accepted = if (fixture.input.trustAnchorId != null) {
+                    client.scanAccept(
+                        qrString = qrString,
+                        trustAnchorId = fixture.input.trustAnchorId,
+                        trustProvider = fixtureTrustProvider(fixture.input),
+                    )
+                } else {
+                    val trustPubB64 = resolveTrustInput(fixture.input)
+                        ?: throw FixtureException("${fixture.fixtureId} missing trust material")
+                    client.scanAccept(qrString = qrString, trustPubB64 = trustPubB64)
+                }
                 acceptedStatus = accepted.status.rawValue
                 acceptedDiag = accepted.diag
                 acceptedCoseB64 = accepted.coseB64
@@ -356,6 +373,17 @@ private fun resolveTrustInput(input: FixtureInput): String? =
         input.trustPubB64Ref == null && input.trustPubB64 == null -> null
         else -> throw FixtureException("trust_pub_b64_ref and trust_pub_b64 are mutually exclusive")
     }
+
+private fun fixtureTrustProvider(input: FixtureInput): GrainStaticTrustProvider {
+    val trustAnchorId = input.trustAnchorId
+        ?: throw FixtureException("trust_anchor_id is required for provider fixtures")
+    val trustPubB64 = resolveTrustInput(input)
+    return if (trustPubB64 == null) {
+        GrainStaticTrustProvider(emptyMap())
+    } else {
+        GrainStaticTrustProvider(trustAnchorId, trustPubB64)
+    }
+}
 
 private fun fixtureQrString(fixture: WorkflowFixture): String =
     resolveStringRef(

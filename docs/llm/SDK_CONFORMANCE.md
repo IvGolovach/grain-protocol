@@ -75,14 +75,17 @@ Expected contract:
 - workflow fixtures may reference protocol vectors, but must not be consumed by the protocol runner
 - generated Swift, Kotlin, WASM, and future device SDKs are client-workflow conformant only after they pass these fixtures through their public workflow APIs
 - `scan_preview` fixtures currently cover verified, untrusted, malformed QR, malformed trust, and wrong trust-key paths
+- provider-backed `scan_preview` fixtures cover explicit trust-anchor success and unknown-anchor fail-closed behavior
 - every `scan_preview` fixture expects `store_mutation: "none"`
 - `scan_accept` fixtures currently cover accepted persistence, duplicate-scan idempotency, and rejected no-write behavior
+- provider-backed `scan_accept` fixtures cover explicit trust-anchor success and unknown-anchor rejection with no storage mutation
 - every `scan_accept` fixture asserts `store_mutation` and `accepted_record_count`
 - `device_lifecycle` fixtures cover root creation, device add/activate/revoke, and lifecycle counters
 - `pairing` fixtures cover create/preview/accept/replay behavior through public client APIs
 - `sync_bundle` fixtures cover export/import/replay of identity, accepted scans, and lifecycle events
 - platform adapter contract tests cover deterministic storage listing, idempotent re-put, rollback at the repository boundary, no anchor, missing anchor, malformed anchor, and valid anchor
 - FFI DTO contract tests keep binding-facing values owned and flat: strings, vectors, optional strings, no borrowed Rust lifetimes
+- `tools/ci/check_sdk_trust_provider_boundary.py` blocks hidden network trust lookup, TOFU/default issuer, and fallback trust patterns in generated platform SDK wrapper sources
 
 Rust fixture execution must load these fixtures and compare them against public `grain_client_core` workflow APIs.
 

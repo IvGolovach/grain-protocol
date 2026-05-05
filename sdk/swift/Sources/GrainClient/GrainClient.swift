@@ -1,4 +1,8 @@
+import Foundation
 import GrainClientFFI
+
+private let sdkErrTrustAnchorRequired = "SDK_ERR_TRUST_ANCHOR_REQUIRED"
+private let sdkErrTrustAnchorNotFound = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND"
 
 public enum GrainScanPreviewStatus: Equatable, Sendable {
     case verified
@@ -146,6 +150,26 @@ public struct GrainStoreSnapshotResult: Equatable, Sendable {
     public let lifecycleEventCount: UInt64
 }
 
+public protocol GrainTrustProvider: Sendable {
+    func trustPubB64(anchorID: String) -> String?
+}
+
+public struct GrainStaticTrustProvider: GrainTrustProvider, Sendable {
+    private let anchors: [String: String]
+
+    public init(anchors: [String: String]) {
+        self.anchors = anchors
+    }
+
+    public init(anchorID: String, trustPubB64: String) {
+        self.anchors = [anchorID: trustPubB64]
+    }
+
+    public func trustPubB64(anchorID: String) -> String? {
+        anchors[anchorID]
+    }
+}
+
 public final class GrainClient {
     private let store: GrainClientMemoryStore
 
@@ -160,6 +184,19 @@ public final class GrainClient {
         return GrainScanPreview(preview)
     }
 
+    public func scanPreview(
+        qrString: String,
+        trustAnchorID: String,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanPreview {
+        switch resolveTrustPubB64(anchorID: trustAnchorID, trustProvider: trustProvider) {
+        case let .resolved(trustPubB64):
+            return scanPreview(qrString: qrString, trustPubB64: trustPubB64)
+        case let .rejected(diag):
+            return GrainScanPreview.rejected(diag)
+        }
+    }
+
     public func scanAcceptPrepare(qrString: String, trustPubB64: String) -> GrainScanAccept {
         let accepted = grainScanAcceptPrepare(
             request: FfiScanAcceptRequest(qrString: qrString, trustPubB64: trustPubB64)
@@ -167,11 +204,37 @@ public final class GrainClient {
         return GrainScanAccept(accepted)
     }
 
+    public func scanAcceptPrepare(
+        qrString: String,
+        trustAnchorID: String,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanAccept {
+        switch resolveTrustPubB64(anchorID: trustAnchorID, trustProvider: trustProvider) {
+        case let .resolved(trustPubB64):
+            return scanAcceptPrepare(qrString: qrString, trustPubB64: trustPubB64)
+        case let .rejected(diag):
+            return GrainScanAccept.rejected(diag)
+        }
+    }
+
     public func scanAccept(qrString: String, trustPubB64: String) -> GrainScanAccept {
         let accepted = store.scanAccept(
             request: FfiScanAcceptRequest(qrString: qrString, trustPubB64: trustPubB64)
         )
         return GrainScanAccept(accepted)
+    }
+
+    public func scanAccept(
+        qrString: String,
+        trustAnchorID: String,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanAccept {
+        switch resolveTrustPubB64(anchorID: trustAnchorID, trustProvider: trustProvider) {
+        case let .resolved(trustPubB64):
+            return scanAccept(qrString: qrString, trustPubB64: trustPubB64)
+        case let .rejected(diag):
+            return GrainScanAccept.rejected(diag)
+        }
     }
 
     public func listAcceptedScans() -> [GrainAcceptedScan] {
@@ -247,6 +310,24 @@ public final class GrainClient {
     }
 }
 
+private enum GrainTrustResolution {
+    case resolved(String)
+    case rejected(String)
+}
+
+private func resolveTrustPubB64(
+    anchorID: String,
+    trustProvider: any GrainTrustProvider
+) -> GrainTrustResolution {
+    if anchorID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        return .rejected(sdkErrTrustAnchorRequired)
+    }
+    guard let trustPubB64 = trustProvider.trustPubB64(anchorID: anchorID) else {
+        return .rejected(sdkErrTrustAnchorNotFound)
+    }
+    return .resolved(trustPubB64)
+}
+
 private extension GrainScanPreview {
     init(_ preview: FfiScanPreview) {
         self.init(
@@ -254,6 +335,10 @@ private extension GrainScanPreview {
             diag: preview.diag,
             coseB64: preview.coseB64
         )
+    }
+
+    static func rejected(_ diag: String) -> Self {
+        self.init(status: .rejected, diag: [diag], coseB64: nil)
     }
 }
 
@@ -266,6 +351,10 @@ private extension GrainScanAccept {
             coseB64: accepted.coseB64,
             trustPubB64: accepted.trustPubB64
         )
+    }
+
+    static func rejected(_ diag: String) -> Self {
+        self.init(status: .rejected, diag: [diag], scanID: nil, coseB64: nil, trustPubB64: nil)
     }
 }
 

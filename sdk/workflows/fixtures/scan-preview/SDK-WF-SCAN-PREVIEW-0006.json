@@ -1,0 +1,19 @@
+{
+  "fixture_id": "SDK-WF-SCAN-PREVIEW-0006",
+  "workflow": "scan_preview",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_anchor_id": "fixture:primary",
+    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64"
+  },
+  "expect": {
+    "status": "Verified",
+    "diag": [],
+    "cose_b64": "present",
+    "store_mutation": "none"
+  },
+  "meta": {
+    "desc": "Valid scan verifies through an explicit trust anchor ID resolved by the platform trust provider."
+  }
+}

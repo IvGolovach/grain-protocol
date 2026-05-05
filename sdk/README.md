@@ -76,6 +76,8 @@ Every platform wrapper exposes the same product-level operations:
   `addDeviceKey`, `setActiveDevice`, `revokeDeviceKey`, and `clientLifecycle`
 - preview a scan with explicit app-supplied trust material using `scanPreview`
 - accept and save verified scans using `scanAccept`
+- preview or accept through explicit trust anchor IDs using the platform
+  trust-provider overloads
 - list saved accepted scans using `listAcceptedScans`
 - export portable evidence/state with `exportSyncBundle`
 - pair/sync clients with `createPairingEnvelope`, `acceptPairingEnvelope`, and
@@ -83,11 +85,12 @@ Every platform wrapper exposes the same product-level operations:
 - persist client runtime state with `exportStoreSnapshot` and
   `restoreStoreSnapshot`
 
-Trust setup is intentionally outside the protocol core. Apps resolve a trusted
-publisher key from their own trust anchor, QR enrollment flow, MDM policy,
-device management channel, or test fixture, then pass that public key as
-`trustPubB64`. Rust core does not perform hidden trust lookup or network trust
-fallback.
+Trust setup is intentionally outside the protocol core. Production apps should
+pass a `trustAnchorID` plus a platform `TrustProvider`; the wrapper resolves
+that anchor to `trustPubB64` and fails closed with `SDK_ERR_TRUST_ANCHOR_*`
+when the anchor is missing. Rust core and generated wrappers do not perform
+hidden trust lookup, network discovery, or fallback trust. Raw `trustPubB64`
+methods remain available for fixtures and already-resolved trust material.
 
 Store snapshots are opaque SDK state, not a raw mutation API. Apps should save
 the returned `snapshotB64` string in their platform storage layer and restore it

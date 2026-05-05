@@ -30,6 +30,9 @@
         "trust_pub_b64": {
           "type": "string"
         },
+        "trust_anchor_id": {
+          "type": "string"
+        },
         "accept_attempts": {
           "type": "integer",
           "minimum": 1
