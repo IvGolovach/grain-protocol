@@ -76,6 +76,7 @@ If a PR changes SDK strict orchestration behavior (`core/ts/grain-sdk/**`) in an
 - sequence allocation or store safety contracts
 - evidence bundle canonical or hash format
 - transport framing helpers
+- portable generated-client workflow surfaces such as scan preview or scan accept
 
 Then the PR MUST:
 - add or update an ADR under `adr/sdk/`

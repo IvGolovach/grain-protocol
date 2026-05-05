@@ -42,6 +42,7 @@ Update:
 
 - `core/ts/grain-sdk/src/*`
 - `core/ts/grain-sdk-ai/src/*`
+- `core/rust/grain-client-core/src/*`
 - SDK tests
 - `docs/llm/SDK_FILE_MAP.md`
 - `docs/llm/SDK_INVARIANTS.md`

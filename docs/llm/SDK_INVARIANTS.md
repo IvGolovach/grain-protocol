@@ -58,6 +58,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-NEG-0005 identity bundle base64 validation`, `SDK-NEG-0007 transport bundle base64 validation`, `SDK-NEG-0009 verifyGR1 rejects malformed trust bytes`)
   Modules: `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/transport.ts`, `core/ts/grain-sdk/src/utils.ts`
 
+- SDK-INV-0015: portable client scan preview MUST preserve explicit trust boundaries across generated platform SDKs.
+  Tests: `core/rust/grain-client-core/tests/scan_preview.rs`
+  Modules: `core/rust/grain-client-core/src/lib.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-core/src/cose.rs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

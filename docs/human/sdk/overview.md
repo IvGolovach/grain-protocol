@@ -29,6 +29,8 @@ This page is the capability map after that first run.
   - `decodeGR1()` is decode-only
   - `verifyGR1()` is verify-only, requires explicit `trust.pub_b64`, and rejects malformed trust bytes before verification runs
   - transport bundles reject malformed event/manifest rows and invalid base64 on imported binary fields instead of guessing
+- portable client core (`core/rust/grain-client-core`): Rust workflow layer for generated Swift/Kotlin/WASM/device SDKs
+  - `scan_preview()` returns `Verified`, `Untrusted`, or `Rejected` without exposing raw protocol runner operations
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
@@ -54,6 +56,7 @@ This page is the capability map after that first run.
 - error model: `docs/human/sdk/errors.md`
 - impossible misuse checklist: `docs/human/sdk/impossible-misuse.md`
 - cross-language bridge: `docs/human/sdk/cross-lang-bridge.md`
+- portable client SDK: `docs/human/sdk/portable-client-sdk.md`
 - AI boundary: `docs/human/sdk/ai-boundary.md`
 - AI ingestion contract: `docs/human/sdk/ai-ingestion.md`
 - AI explain contract: `docs/human/sdk/ai-error-explain.md`

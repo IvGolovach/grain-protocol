@@ -20,13 +20,17 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
    - Package-level overview with copyable commands.
 8. `core/ts/grain-sdk-ai/README.md`
    - Optional AI sidecar package map and commands.
-9. `docs/human/sdk/impossible-misuse.md`
+9. `docs/human/sdk/portable-client-sdk.md`
+   - Camera-first SDK direction for iOS, Android, glasses, robots, and generated bindings.
+10. `core/rust/grain-client-core/src/*`
+   - Portable Rust workflow layer for generated platform SDKs.
+11. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
-10. `docs/human/sdk/errors.md`
+12. `docs/human/sdk/errors.md`
    - Human-readable error contract.
-11. `core/ts/grain-sdk/src/*`
+13. `core/ts/grain-sdk/src/*`
    - Core SDK implementation modules.
-12. `core/ts/grain-sdk-ai/src/*`
+14. `core/ts/grain-sdk-ai/src/*`
    - Optional AI sidecar implementation modules.
 
 ## Source-of-truth hierarchy for SDK decisions
@@ -36,9 +40,10 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 3. `conformance/vectors/*`
 4. `core/ts/grain-ts-core/src/*` (shared TS protocol engine behavior)
 5. `runner/typescript/src/*` (runner harness and compatibility surface)
-6. `core/ts/grain-sdk/src/*` (orchestration only)
-7. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
-8. `docs/llm/*` (maintainer maps, sync rules, and indexes)
-9. `docs/human/sdk/*` (explanatory, not normative)
+6. `core/rust/grain-client-core/src/*` (portable client workflows over Rust core)
+7. `core/ts/grain-sdk/src/*` (orchestration only)
+8. `core/ts/grain-sdk-ai/src/*` (optional sidecar only)
+9. `docs/llm/*` (maintainer maps, sync rules, and indexes)
+10. `docs/human/sdk/*` (explanatory, not normative)
 
 If SDK behavior diverges from protocol vectors, treat it as a bug in SDK and update the matching docs and tests in the same change.
