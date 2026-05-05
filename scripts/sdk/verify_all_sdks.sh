@@ -21,6 +21,9 @@ Options:
 Default mode runs mandatory SDK checks and any platform smoke build whose
 local prerequisites are available. Strict mode is intended for release machines
 and CI lanes that have Swift, Java, Node/npm, Cargo, and wasm32-wasip1 ready.
+
+Set SDK_KOTLIN_GRADLE_OFFLINE=1 after warming Gradle caches to force the
+Kotlin and Android scanner checks to resolve dependencies offline.
 EOF
 }
 
@@ -100,8 +103,23 @@ skip_or_fail() {
   log "SKIP $code: $message"
 }
 
-wasm_target_installed() {
-  have_cmd rustup && rustup target list --installed 2>/dev/null | grep -qx 'wasm32-wasip1'
+ensure_wasm_target_ready() {
+  if have_cmd rustup; then
+    rustup target add wasm32-wasip1
+  fi
+
+  local libdir
+  libdir="$(rustc --print target-libdir --target wasm32-wasip1 2>/dev/null)" || {
+    echo "active rustc cannot resolve wasm32-wasip1 target libdir" >&2
+    return 1
+  }
+  if ! compgen -G "$libdir/libcore-*.rlib" >/dev/null; then
+    echo "active rustc cannot find wasm32-wasip1 libcore at $libdir" >&2
+    echo "rustc: $(command -v rustc)" >&2
+    echo "cargo: $(command -v cargo)" >&2
+    return 1
+  fi
+  echo "wasm32-wasip1 target libdir: $libdir"
 }
 
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
@@ -119,34 +137,32 @@ run_check "SDK spec drift check" \
 run_check "SDK no-network policy" \
   python3 tools/ci/check_sdk_no_network.py
 
+if have_cmd cargo && have_cmd rustc && have_cmd npm; then
+  if run_check "WASM target ready" ensure_wasm_target_ready; then
+    run_check "WASM client package" env SDK_WASM_TARGET_READY=1 scripts/sdk/check_wasm_package.sh
+  else
+    skip_or_fail "SDK_VERIFY_ERR_WASM_TARGET_MISSING" "active rustc cannot see wasm32-wasip1 libcore; ensure the pinned rustup cargo/rustc are first on PATH"
+  fi
+else
+  skip_or_fail "SDK_VERIFY_ERR_WASM_PREREQ_MISSING" "cargo, rustc, and npm are required for WASM package check"
+fi
+
 if have_cmd swift; then
   run_check "Swift client package" scripts/sdk/check_swift_package.sh
 else
   skip_or_fail "SDK_VERIFY_ERR_SWIFT_MISSING" "swift command not found"
 fi
 
-if have_cmd java; then
-  run_check "Kotlin client package" env SDK_KOTLIN_GRADLE_OFFLINE=1 scripts/sdk/check_kotlin_package.sh
+if have_cmd java && have_cmd cargo && have_cmd rustc; then
+  run_check "Kotlin client package" scripts/sdk/check_kotlin_package.sh
 else
-  skip_or_fail "SDK_VERIFY_ERR_JAVA_MISSING" "java command not found"
+  skip_or_fail "SDK_VERIFY_ERR_KOTLIN_PREREQ_MISSING" "java, cargo, and rustc are required for Kotlin package check"
 fi
 
-if have_cmd npm; then
-  run_check "WASM wrapper static check" npm --prefix sdk/wasm run check
-else
-  skip_or_fail "SDK_VERIFY_ERR_NPM_MISSING" "npm command not found"
-fi
-
-if wasm_target_installed; then
-  run_check "WASM client package" scripts/sdk/check_wasm_package.sh
-else
-  skip_or_fail "SDK_VERIFY_ERR_WASM_TARGET_MISSING" "rust target wasm32-wasip1 is not installed"
-fi
-
-if have_cmd swift && have_cmd java && have_cmd npm; then
+if have_cmd swift && have_cmd java && have_cmd npm && have_cmd cargo && have_cmd rustc; then
   run_check "reference scanner examples" scripts/sdk/check_scanner_examples.sh
 else
-  skip_or_fail "SDK_VERIFY_ERR_SCANNER_PREREQ_MISSING" "scanner example check requires swift, java, and npm"
+  skip_or_fail "SDK_VERIFY_ERR_SCANNER_PREREQ_MISSING" "scanner example check requires swift, java, npm, cargo, and rustc"
 fi
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
