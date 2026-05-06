@@ -8,13 +8,11 @@ public let scannerSnapshotPersistenceDiag = "SDK_ERR_EXAMPLE_SNAPSHOT_PERSISTENC
 
 public protocol ScannerWorkflowClient: GrainSnapshotClient {
     func scanPreview(
-        qrString: String,
-        trustAnchorID: String,
+        handoff: GrainScanHandoff,
         trustProvider: any GrainTrustProvider
     ) -> GrainScanPreview
     func scanAccept(
-        qrString: String,
-        trustAnchorID: String,
+        handoff: GrainScanHandoff,
         trustProvider: any GrainTrustProvider
     ) -> GrainScanAccept
     func listAcceptedScans() -> [GrainAcceptedScan]
@@ -200,8 +198,7 @@ public final class ScannerShellModel: ObservableObject {
 
     public func preview() {
         let preview = client.scanPreview(
-            qrString: state.qrString,
-            trustAnchorID: normalizedTrustAnchorID(),
+            handoff: currentScanHandoff(),
             trustProvider: trustProvider
         )
 
@@ -225,8 +222,7 @@ public final class ScannerShellModel: ObservableObject {
         }
 
         let accepted = client.scanAccept(
-            qrString: state.qrString,
-            trustAnchorID: normalizedTrustAnchorID(),
+            handoff: currentScanHandoff(),
             trustProvider: trustProvider
         )
         state.acceptStatus = accepted.status
@@ -279,6 +275,25 @@ public final class ScannerShellModel: ObservableObject {
 
     private func normalizedTrustAnchorID() -> String {
         state.trustAnchorID.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func currentScanHandoff() -> GrainScanHandoff {
+        GrainScanHandoff(
+            qrString: state.qrString,
+            trustAnchorID: normalizedTrustAnchorID(),
+            source: grainHandoffSource(from: state.scanSource)
+        )
+    }
+
+    private func grainHandoffSource(from source: CameraScanSource?) -> GrainScanHandoffSource {
+        switch source {
+        case .camera:
+            return .camera
+        case .injected:
+            return .injected
+        case nil:
+            return .manualEntry
+        }
     }
 
     private func persistSnapshot() {

@@ -90,6 +90,32 @@ data class GrainAcceptedScan(
         "GrainAcceptedScan(scanId=$scanId, coseB64=[REDACTED], trustPubB64=[REDACTED])"
 }
 
+enum class GrainScanHandoffSource(val rawValue: String) {
+    ManualEntry("manual_entry"),
+    Camera("camera"),
+    Injected("injected"),
+    ShareSheet("share_sheet"),
+    DeepLink("deep_link"),
+    Clipboard("clipboard"),
+    RobotVision("robot_vision"),
+    ExternalSensor("external_sensor"),
+    Unknown("unknown");
+
+    companion object {
+        fun fromRawValue(rawValue: String): GrainScanHandoffSource? =
+            values().firstOrNull { it.rawValue == rawValue }
+    }
+}
+
+data class GrainScanHandoff(
+    val qrString: String,
+    val trustAnchorId: String?,
+    val source: GrainScanHandoffSource = GrainScanHandoffSource.ManualEntry,
+) {
+    override fun toString(): String =
+        "GrainScanHandoff(qrString=[REDACTED], trustAnchorId=$trustAnchorId, source=${source.rawValue})"
+}
+
 data class GrainIdentityResult(
     val status: String,
     val diag: List<String>,
@@ -315,6 +341,16 @@ class GrainClient : AutoCloseable {
             is TrustResolution.Rejected -> grainScanPreviewRejected(resolution.diag)
         }
 
+    fun scanPreview(
+        handoff: GrainScanHandoff,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanPreview =
+        scanPreview(
+            qrString = handoff.qrString,
+            trustAnchorId = handoff.trustAnchorId ?: "",
+            trustProvider = trustProvider,
+        )
+
     fun scanAcceptPrepare(qrString: String, trustPubB64: String): GrainScanAccept =
         grainScanAcceptPrepare(FfiScanAcceptRequest(qrString = qrString, trustPubB64 = trustPubB64)).toPublic()
 
@@ -340,6 +376,16 @@ class GrainClient : AutoCloseable {
             is TrustResolution.Resolved -> scanAccept(qrString = qrString, trustPubB64 = resolution.trustPubB64)
             is TrustResolution.Rejected -> grainScanAcceptRejected(resolution.diag)
         }
+
+    fun scanAccept(
+        handoff: GrainScanHandoff,
+        trustProvider: GrainTrustProvider,
+    ): GrainScanAccept =
+        scanAccept(
+            qrString = handoff.qrString,
+            trustAnchorId = handoff.trustAnchorId ?: "",
+            trustProvider = trustProvider,
+        )
 
     fun listAcceptedScans(): List<GrainAcceptedScan> =
         store.listAcceptedScans().map { it.toPublic() }

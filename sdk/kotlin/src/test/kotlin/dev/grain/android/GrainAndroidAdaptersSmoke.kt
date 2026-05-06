@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec
 fun main() {
     fileSnapshotRoundTripAndClear()
     coordinatorPersistsRestoresAndClears()
+    localSnapshotStoreSavesRestoresAndClears()
     keystoreBoundaryRoundTrip()
     aesGcmSnapshotCipherRoundTripAndTamperRejects()
     missingExportedSnapshotThrows()
@@ -45,6 +46,23 @@ private fun coordinatorPersistsRestoresAndClears() {
     val empty = coordinator.persist(client = client)
     requireSmoke(empty.status == "Empty", "coordinator empty status mismatch")
     requireSmoke(persistence.savedSnapshotB64 == null, "coordinator did not clear empty snapshot")
+}
+
+private fun localSnapshotStoreSavesRestoresAndClears() {
+    val persistence = RecordingSnapshotPersistence()
+    val localStore = GrainLocalSnapshotStore(persistence)
+    val client = FakeSnapshotClient(exportResult = exportedSnapshot("snapshot-local-store"))
+
+    val saved = localStore.save(client = client)
+    requireSmoke(saved.status == "Exported", "local store save status mismatch")
+    requireSmoke(persistence.savedSnapshotB64 == "snapshot-local-store", "local store did not save snapshot")
+
+    val restored = localStore.restore(client = client)
+    requireSmoke(restored?.status == "Restored", "local store restore status mismatch")
+    requireSmoke(client.restoredSnapshotB64 == "snapshot-local-store", "local store restored wrong snapshot")
+
+    localStore.clear()
+    requireSmoke(persistence.savedSnapshotB64 == null, "local store did not clear snapshot")
 }
 
 private fun keystoreBoundaryRoundTrip() {

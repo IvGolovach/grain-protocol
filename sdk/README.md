@@ -57,9 +57,10 @@ The short path is:
 4. Wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle and pass a
    stable trust anchor ID to the scanner shell (`trustAnchorID` in Swift,
    `trustAnchorId` in Kotlin and WASM).
-5. Scan or paste the emitted `qr_string`, preview, accept, persist the opaque
-   `snapshotB64`, restore on launch, and export sync artifacts only through the
-   app's encrypted/authenticated transfer channel.
+5. Wrap each camera, paste, glasses, or robot-vision QR capture in a
+   `GrainScanHandoff`, preview, accept, persist the opaque `snapshotB64`,
+   restore on launch, and export sync artifacts only through the app's
+   encrypted/authenticated transfer channel.
 
 This path uses source SDK packages and examples. It does not claim registry
 publication, store distribution, production PWA packaging, or hardware custody
@@ -149,6 +150,8 @@ Every platform wrapper exposes the same product-level operations:
 - accept and save verified scans using `scanAccept`
 - preview or accept through explicit trust anchor IDs using the platform
   trust-provider overloads
+- pass QR input through `GrainScanHandoff` so camera, paste, glasses, robot, and
+  sensor adapters use one public SDK entrypoint
 - list saved accepted scans using `listAcceptedScans`
 - export portable evidence/state with `exportSyncBundle`
 - pair/sync clients with `createPairingEnvelope`, `acceptPairingEnvelope`, and

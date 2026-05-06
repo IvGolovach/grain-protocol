@@ -7,6 +7,8 @@ import dev.grain.GrainDeviceResult
 import dev.grain.GrainIdentityResult
 import dev.grain.GrainScanAccept
 import dev.grain.GrainScanAcceptStatus
+import dev.grain.GrainScanHandoff
+import dev.grain.GrainScanHandoffSource
 import dev.grain.GrainScanPreview
 import dev.grain.GrainScanPreviewStatus
 import dev.grain.GrainStoreSnapshotResult
@@ -22,13 +24,11 @@ const val SCANNER_SNAPSHOT_PERSISTENCE_DIAG = "SDK_ERR_EXAMPLE_SNAPSHOT_PERSISTE
 
 interface ScannerWorkflowClient : GrainSnapshotClient {
     fun scanPreview(
-        qrString: String,
-        trustAnchorId: String,
+        handoff: GrainScanHandoff,
         trustProvider: GrainTrustProvider,
     ): GrainScanPreview
     fun scanAccept(
-        qrString: String,
-        trustAnchorId: String,
+        handoff: GrainScanHandoff,
         trustProvider: GrainTrustProvider,
     ): GrainScanAccept
     fun listAcceptedScans(): List<GrainAcceptedScan>
@@ -42,24 +42,20 @@ class GrainScannerWorkflowClient(
     private val client: GrainClient = GrainClient(),
 ) : ScannerWorkflowClient, AutoCloseable {
     override fun scanPreview(
-        qrString: String,
-        trustAnchorId: String,
+        handoff: GrainScanHandoff,
         trustProvider: GrainTrustProvider,
     ): GrainScanPreview =
         client.scanPreview(
-            qrString = qrString,
-            trustAnchorId = trustAnchorId,
+            handoff = handoff,
             trustProvider = trustProvider,
         )
 
     override fun scanAccept(
-        qrString: String,
-        trustAnchorId: String,
+        handoff: GrainScanHandoff,
         trustProvider: GrainTrustProvider,
     ): GrainScanAccept =
         client.scanAccept(
-            qrString = qrString,
-            trustAnchorId = trustAnchorId,
+            handoff = handoff,
             trustProvider = trustProvider,
         )
 
@@ -165,8 +161,7 @@ class ScannerController(
 
     fun preview() {
         val preview = client.scanPreview(
-            qrString = state.qrString,
-            trustAnchorId = normalizedTrustAnchorId(),
+            handoff = currentScanHandoff(),
             trustProvider = trustProvider,
         )
 
@@ -199,8 +194,7 @@ class ScannerController(
         }
 
         val accepted = client.scanAccept(
-            qrString = state.qrString,
-            trustAnchorId = normalizedTrustAnchorId(),
+            handoff = currentScanHandoff(),
             trustProvider = trustProvider,
         )
         val acceptedScans = client.listAcceptedScans()
@@ -259,6 +253,20 @@ class ScannerController(
 
     private fun normalizedTrustAnchorId(): String =
         state.trustAnchorId.trim()
+
+    private fun currentScanHandoff(): GrainScanHandoff =
+        GrainScanHandoff(
+            qrString = state.qrString,
+            trustAnchorId = normalizedTrustAnchorId(),
+            source = state.scanSource.toHandoffSource(),
+        )
+
+    private fun CameraScanSource?.toHandoffSource(): GrainScanHandoffSource =
+        when (this) {
+            CameraScanSource.Camera -> GrainScanHandoffSource.Camera
+            CameraScanSource.Injected -> GrainScanHandoffSource.Injected
+            null -> GrainScanHandoffSource.ManualEntry
+        }
 
     private fun persistSnapshot() {
         val coordinator = snapshotCoordinator ?: return

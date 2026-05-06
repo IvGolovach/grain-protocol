@@ -1,0 +1,22 @@
+{
+  "fixture_id": "SDK-WF-SCAN-HANDOFF-0001",
+  "workflow": "scan_handoff",
+  "strict": true,
+  "input": {
+    "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
+    "trust_anchor_id": "fixture:primary",
+    "trust_anchor_bundle_ref": "sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json",
+    "handoff_source": "camera"
+  },
+  "expect": {
+    "status": "Accepted",
+    "diag": [],
+    "cose_b64": "present",
+    "store_mutation": "accepted_scan_inserted",
+    "accepted_record_count": 1,
+    "handoff_source": "camera"
+  },
+  "meta": {
+    "desc": "A platform QR handoff carries source, QR payload, and explicit trust anchor into the public SDK and persists one accepted record."
+  }
+}
