@@ -66,6 +66,9 @@ Update:
 - `docs/human/maintainer-start-here.md`
 - `docs/human/maintainer-writing.md`
 - `docs/human/sdk/minimal-app-example.md`
+- `docs/human/sdk/scan-quickstart.md`
+- `sdk/README.md`
+- `examples/README.md`
 - `core/ts/grain-sdk/README.md`
 - `core/ts/grain-sdk-ai/README.md`
 - `docs/human/future-vision.md` if the product direction claim changed

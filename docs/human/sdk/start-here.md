@@ -4,21 +4,25 @@ If you are building an app on Grain, start here. Keep the first version small an
 
 ## Your first pass
 
-1. Read [Minimal app example](./minimal-app-example.md).
-2. Run the ready-made demo if you want a quick confidence check.
-3. On a fresh checkout, install `core/ts/grain-ts-core`
+1. If you are building a camera-first iOS, Android, glasses, browser, or robot
+   scanner client, read [Scanner app quickstart](./scan-quickstart.md).
+2. If you only want the smallest ledger app, read
+   [Minimal app example](./minimal-app-example.md).
+3. Run the ready-made demo if you want a quick confidence check.
+4. On a fresh checkout, install `core/ts/grain-ts-core`
    and `core/ts/grain-sdk` before the first SDK build.
-4. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
-5. If you are building a camera-first iOS, Android, glasses, or robot client,
+5. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
+6. If you are building a camera-first iOS, Android, glasses, or robot client,
    read [Portable client SDK](./portable-client-sdk.md).
-6. For scanner-shell reference code, start with `examples/ios-scanner`,
+7. For scanner-shell reference code, start with `examples/ios-scanner`,
    `examples/android-scanner`, or `examples/wasm-scanner`.
-7. To create a real signed scanner input for local app development, run
+8. To create a real signed scanner input for local app development, run
    `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`
-   and pass the emitted `qr_string` plus `trust_pub_b64` to the scanner flow.
-8. For app-owned trust material, load a local `sdk/trust`-shaped bundle into
-   the platform static trust provider and pass a stable `trustAnchorID`.
-9. If you build manually, use the SDK build. It will build the shared
+   and wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle.
+9. For app-owned trust material, load that bundle into the platform static
+   trust provider and pass a stable trust anchor ID (`trustAnchorID` in Swift,
+   `trustAnchorId` in Kotlin and WASM).
+10. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash
@@ -62,6 +66,7 @@ If you are also changing the strict TS runner itself, then install `runner/types
 
 - `core/ts/grain-sdk/src`
 - `docs/human/sdk/architecture.md`
+- `docs/human/sdk/scan-quickstart.md`
 - `docs/human/sdk/portable-client-sdk.md`
 - `docs/human/sdk/errors.md`
 - `docs/human/sdk/impossible-misuse.md`

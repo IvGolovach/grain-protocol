@@ -15,6 +15,11 @@ These shells start with paste/string input and now include thin camera adapter
 boundaries. The adapter turns a camera frame into a GR1 string, then the same
 SDK workflow validates, previews, accepts, and lists saved scans.
 
+For a checkout-to-scan walkthrough, use
+`docs/human/sdk/scan-quickstart.md`. It shows how to generate a signed local
+issuer QR, wrap the emitted public trust key in a local trust anchor bundle, and
+feed a stable trust anchor ID into these shells.
+
 Production apps must still supply four app/device adapters around the shared
 SDK workflow: camera or sensor input, local trust provider, protected snapshot
 persistence, and encrypted/authenticated transfer or share channel for portable

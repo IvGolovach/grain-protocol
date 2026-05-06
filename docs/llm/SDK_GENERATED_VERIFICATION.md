@@ -33,6 +33,16 @@ SDK app surface.
 
 ## One-Command Check
 
+Lightweight SDK readiness, no platform builds:
+
+```bash
+scripts/sdk/doctor
+```
+
+This is the developer front door for docs, workflow-fixture shape, trust/no
+network policy, secret logging policy, and existing source package metadata. It
+does not replace full platform verification.
+
 ```bash
 scripts/sdk/verify_all_sdks.sh
 ```

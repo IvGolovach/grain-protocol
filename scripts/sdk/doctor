@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+cd "$ROOT"
+
+COMMIT_SHA="$(git rev-parse HEAD)"
+RELEASE_OUT_DIR="artifacts/sdk-release/$COMMIT_SHA"
+REQUIRE_RELEASE_PACKAGE=0
+WARNINGS=()
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/sdk/doctor [options]
+
+Lightweight developer-readiness check for the portable SDK path.
+It is read-only and does not build platform packages.
+
+Options:
+  --release-out-dir <path>      SDK release package directory to inspect
+  --require-release-package     Fail if the inspected package directory is missing
+  -h, --help                    Show this help
+
+For full platform proof, run scripts/sdk/verify_all_sdks.sh --strict.
+For source release artifacts, run scripts/sdk/package_client_sdks.sh.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --release-out-dir)
+      RELEASE_OUT_DIR="${2:-}"
+      if [[ -z "$RELEASE_OUT_DIR" ]]; then
+        echo "SDK_DOCTOR_ERR_ARG_MISSING: --release-out-dir requires a path" >&2
+        exit 2
+      fi
+      shift 2
+      ;;
+    --require-release-package)
+      REQUIRE_RELEASE_PACKAGE=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "SDK_DOCTOR_ERR_UNKNOWN_ARG: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+have_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+run_check() {
+  local name="$1"
+  shift
+  printf '\n== %s ==\n' "$name"
+  "$@"
+}
+
+tool_state() {
+  local tool="$1"
+  if have_cmd "$tool"; then
+    printf 'yes'
+  else
+    printf 'no'
+  fi
+}
+
+add_warning() {
+  WARNINGS+=("$1")
+}
+
+read_mise_tool_pin() {
+  local key="$1"
+  awk -F'"' -v key="$key" '$0 ~ "^[[:space:]]*" key " = " { print $2; exit }' "$ROOT/mise.toml"
+}
+
+check_required_tool() {
+  local tool="$1"
+  local state
+  state="$(tool_state "$tool")"
+  printf '%s: %s\n' "$tool" "$state"
+  if [[ "$state" == "no" ]]; then
+    add_warning "$tool is missing; install SDK build prerequisites before strict platform verification"
+  fi
+}
+
+check_node_version() {
+  local pinned_node
+  pinned_node="$(tr -d '\n' < .nvmrc 2>/dev/null || printf 'missing')"
+  if ! have_cmd node; then
+    add_warning "node is missing; install Node v${pinned_node} before SDK package verification"
+    return
+  fi
+
+  local node_version
+  node_version="$(node -v)"
+  if [[ "$pinned_node" != "missing" && "$node_version" != "v${pinned_node}" ]]; then
+    add_warning "node is ${node_version}; expected v${pinned_node}"
+  fi
+}
+
+check_python_version() {
+  local pinned_python
+  pinned_python="$(read_mise_tool_pin python)"
+  if [[ -z "$pinned_python" ]]; then
+    return
+  fi
+  if ! have_cmd python3; then
+    add_warning "python3 is missing; expected ${pinned_python}.x"
+    return
+  fi
+
+  local python_version
+  python_version="$(python3 --version 2>&1 | awk '{print $2}')"
+  if [[ "$python_version" != "${pinned_python}" && "$python_version" != "${pinned_python}".* ]]; then
+    add_warning "python3 is ${python_version}; expected ${pinned_python}.x"
+  fi
+}
+
+wasm_target_state() {
+  if ! have_cmd rustc; then
+    printf 'unknown (rustc missing)'
+    return
+  fi
+
+  local libdir
+  if ! libdir="$(rustc --print target-libdir --target wasm32-wasip1 2>/dev/null)"; then
+    printf 'missing'
+    return
+  fi
+  if compgen -G "$libdir/libcore-*.rlib" >/dev/null; then
+    printf 'yes'
+  else
+    printf 'missing'
+  fi
+}
+
+printf 'sdk repo: %s\n' "$ROOT"
+printf 'sdk commit: %s\n' "$COMMIT_SHA"
+check_required_tool swift
+check_required_tool java
+check_required_tool cargo
+check_required_tool rustc
+check_required_tool npm
+check_node_version
+check_python_version
+wasm_state="$(wasm_target_state)"
+printf 'wasm32-wasip1 target: %s\n' "$wasm_state"
+if [[ "$wasm_state" != "yes" ]]; then
+  add_warning "wasm32-wasip1 target is ${wasm_state}; run: rustup target add wasm32-wasip1"
+fi
+
+run_check "repo doctor" ./scripts/doctor
+run_check "LLM docs integrity" python3 tools/check_llm_docs.py
+run_check "docs flow" python3 tools/ci/check_docs_flow.py
+run_check "maintainer docs front door" python3 tools/ci/check_maintainer_docs.py
+run_check "docs links" python3 tools/ci/check_docs_links.py
+run_check "client workflow fixtures" python3 tools/ci/check_client_workflow_fixtures.py
+run_check "SDK no-network policy" python3 tools/ci/check_sdk_no_network.py
+run_check "SDK trust-provider boundary" python3 tools/ci/check_sdk_trust_provider_boundary.py
+run_check "SDK secret logging policy" python3 tools/ci/check_sdk_secret_logging.py
+run_check "SDK AI boundary" python3 tools/ci/check_sdk_ai_boundary.py
+
+printf '\n== SDK release package ==\n'
+if [[ -f "$RELEASE_OUT_DIR/manifest.json" ]]; then
+  python3 tools/ci/check_sdk_release_package.py \
+    --out-dir "$RELEASE_OUT_DIR" \
+    --expected-commit "$COMMIT_SHA" \
+    --require-strict \
+    --require-clean
+else
+  printf 'missing: %s\n' "$RELEASE_OUT_DIR"
+  printf 'next command: scripts/sdk/package_client_sdks.sh\n'
+  if [[ "$REQUIRE_RELEASE_PACKAGE" -eq 1 ]]; then
+    echo "SDK_DOCTOR_ERR_RELEASE_PACKAGE_MISSING: $RELEASE_OUT_DIR" >&2
+    exit 1
+  fi
+  add_warning "SDK source release package is missing for this commit; run scripts/sdk/package_client_sdks.sh when package proof is required"
+fi
+
+if [[ "${#WARNINGS[@]}" -gt 0 ]]; then
+  printf '\nsdk doctor: WARN (%s readiness issue(s))\n' "${#WARNINGS[@]}"
+  printf 'required policy checks: PASS\n'
+  printf 'readiness issues:\n'
+  for warning in "${WARNINGS[@]}"; do
+    printf '  - %s\n' "$warning"
+  done
+  printf 'next strict proof: scripts/sdk/verify_all_sdks.sh --strict\n'
+else
+  printf '\nsdk doctor: PASS\n'
+fi

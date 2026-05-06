@@ -37,6 +37,29 @@ or printing private signing keys.
 For app-side trust setup, `sdk/trust` defines the local JSON bundle shape that
 static trust providers can load without network discovery or fallback trust.
 
+## One scanner path
+
+For the fastest end-to-end scanner bring-up, use
+`docs/human/sdk/scan-quickstart.md`.
+
+The short path is:
+
+1. Use one repo SHA or release tag for Swift, Kotlin, WASM, generated bindings,
+   and `grain-client-core`.
+2. Run `scripts/sdk/doctor` for a lightweight SDK readiness check.
+3. Generate a local signed scanner input with
+   `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`.
+4. Wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle and pass a
+   stable trust anchor ID to the scanner shell (`trustAnchorID` in Swift,
+   `trustAnchorId` in Kotlin and WASM).
+5. Scan or paste the emitted `qr_string`, preview, accept, persist the opaque
+   `snapshotB64`, restore on launch, and export sync artifacts only through the
+   app's encrypted/authenticated transfer channel.
+
+This path uses source SDK packages and examples. It does not claim registry
+publication, store distribution, production PWA packaging, or hardware custody
+certification.
+
 ## Compatibility
 
 Use the matrix in `docs/human/sdk/version-matrix.md` before mixing generated
@@ -102,6 +125,15 @@ assets remain source-only and same-SHA: `manifest.json`, `SHA256SUMS`,
 `sbom.spdx.json`, and the SDK source archives are the release handoff, not a
 registry, app-store, or compiled-WASM publication.
 
+Lightweight SDK readiness, without platform builds:
+
+```bash
+scripts/sdk/doctor
+```
+
+If it prints `WARN`, required policy checks passed but local SDK readiness still
+needs the listed toolchain or package follow-up before strict platform proof.
+
 ## Workflow shape
 
 Every platform wrapper exposes the same product-level operations:
@@ -124,7 +156,8 @@ Production app checklist:
 - restore the last `snapshotB64` through a platform persistence adapter on
   launch before showing scanner state
 - load app-owned local trust anchors and resolve scans through
-  `trustAnchorID` plus `TrustProvider`
+  an explicit trust anchor ID plus `TrustProvider` (`trustAnchorID` in Swift,
+  `trustAnchorId` in Kotlin and WASM)
 - scan -> preview -> accept only through the public workflow API
 - persist a fresh snapshot after successful identity, device, accept, pairing,
   or sync-import mutations
@@ -134,8 +167,8 @@ Production app checklist:
   accepted-scan COSE payloads, or trust material
 
 Trust setup is intentionally outside the protocol core. Production apps should
-pass a `trustAnchorID` plus a platform `TrustProvider`; the wrapper resolves
-that anchor to `trustPubB64` and fails closed with `SDK_ERR_TRUST_ANCHOR_*`
+pass a stable trust anchor ID plus a platform `TrustProvider`; the wrapper
+resolves that anchor to `trustPubB64` and fails closed with `SDK_ERR_TRUST_ANCHOR_*`
 when the anchor is missing. Rust core and generated wrappers do not perform
 hidden trust lookup, network discovery, or fallback trust. Raw `trustPubB64`
 methods remain available for fixtures and already-resolved trust material.
