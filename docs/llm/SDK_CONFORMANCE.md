@@ -273,6 +273,8 @@ scripts/sdk/check_scanner_examples.sh
 
 Expected iOS adapter contract:
 - `examples/ios-scanner` accepts injected or AVFoundation-derived QR payloads as GR1 strings and sends them through public Swift workflow APIs
+- `examples/ios-reference-app` wraps that shell in a minimal SwiftUI app
+  entrypoint and is checked by `scripts/sdk/check_ios_reference_app.sh`
 - production preview/accept paths use `trustAnchorID` plus `GrainTrustProvider`
 - the production initializer loads app-managed trust bundle JSON and stores
   snapshots through `GrainKeychainSnapshotPersistence`

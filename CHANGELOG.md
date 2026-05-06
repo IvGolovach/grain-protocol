@@ -96,6 +96,9 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - iOS and Android adapters expose `GrainLocalSnapshotStore` for restore/save/clear over opaque `snapshotB64` persistence
     - `scan_handoff` workflow fixtures now cover trust-provider resolution, preview-before-mutation, accept, handoff source preservation, and accepted-record persistence through public Swift/Kotlin fixture runners
     - iOS and Android scanner examples now build preview/accept paths from `GrainScanHandoff` instead of bespoke QR/trust call sites
+  - added the minimal iOS reference app package:
+    - `examples/ios-reference-app` wraps the public iOS scanner shell in a SwiftUI `App` entrypoint with bundled local trust and Keychain/file snapshot persistence
+    - `scripts/sdk/check_ios_reference_app.sh` builds the app package, runs a boot/scan/accept/restore smoke, and rejects raw protocol/FFI calls, hidden trust discovery, and secret-like logging
   - hardened SDK release certification:
     - SDK packaging now emits `manifest.json`, `SHA256SUMS`, and SPDX JSON SBOM metadata for generated bindings, Swift, Kotlin, WASM/mobile-web, and workflow-contract artifacts
     - release package checking verifies same-SHA version-matrix hashes, SDK component versions, artifact byte counts, SHA-256 sums, archive cleanliness, and SBOM package checksums

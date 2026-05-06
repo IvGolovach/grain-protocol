@@ -38,6 +38,7 @@ has_hidden_trust_lookup() {
   python3 tools/ci/find_regex_match.py \
     --ignore-case "$pattern" \
     examples/ios-scanner \
+    examples/ios-reference-app \
     examples/android-scanner \
     examples/wasm-scanner/src/scanner-shell.mjs \
     examples/wasm-scanner/src/camera-adapter.mjs \
@@ -61,6 +62,7 @@ has_secret_logging() {
   python3 tools/ci/find_regex_match.py \
     --ignore-case "$pattern" \
     examples/ios-scanner \
+    examples/ios-reference-app \
     examples/android-scanner \
     examples/wasm-scanner/src/scanner-shell.mjs \
     examples/wasm-scanner/src/camera-adapter.mjs \
@@ -85,6 +87,7 @@ fi
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
 swift run --package-path examples/ios-scanner --scratch-path "$TMP_DIR/swift" GrainIOSScannerSmoke
+scripts/sdk/check_ios_reference_app.sh
 
 GRADLE_ARGS=()
 if [[ "${SDK_KOTLIN_GRADLE_OFFLINE:-0}" == "1" ]]; then

@@ -113,6 +113,7 @@ iOS/Swift:
 ```bash
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
 swift run --package-path examples/ios-scanner GrainIOSScannerSmoke
+swift run --package-path examples/ios-reference-app GrainIOSReferenceAppSmoke
 ```
 
 Android/Kotlin:
@@ -139,7 +140,8 @@ The commands above run deterministic fixture smokes. To try the QR and trust
 files generated in steps 2-3, load `local-trust-bundle.json` through the
 platform trust provider and feed `qr-string.txt` through the app paste, camera,
 glasses-frame, or robot-sensor adapter; the platform example READMEs show that
-handoff for iOS, Android, and browser shells.
+handoff for iOS, Android, and browser shells. The `examples/ios-reference-app`
+package adds a minimal SwiftUI `App` entrypoint over the same public iOS shell.
 
 Use `scripts/sdk/verify_all_sdks.sh --strict` on CI or release machines with
 Swift, Java, Node/npm, Cargo, and the WASM target installed.
