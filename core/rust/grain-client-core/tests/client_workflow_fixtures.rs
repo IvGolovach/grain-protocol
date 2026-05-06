@@ -10,6 +10,10 @@ use grain_client_core::{
     scan_accept, scan_preview, sync_export_bundle, sync_import_bundle, ClientStore, DeviceStatus,
     IdentityStatus, MemoryClientStore, PairingStatus, ScanAcceptStatus, SyncStatus,
 };
+use std::{
+    fs,
+    path::{Component, Path},
+};
 use workflow_fixture::{
     load_device_lifecycle_fixtures, load_pairing_fixtures, load_scan_accept_fixtures,
     load_scan_preview_fixtures, load_sync_bundle_fixtures, resolve_string_ref, CosePresence,
@@ -506,12 +510,65 @@ fn fixture_trust_provider(
     let Some(trust_anchor_id) = input.trust_anchor_id.as_deref() else {
         return Err(format!("{fixture_id} trust_anchor_id is required"));
     };
+    if let Some(bundle_ref) = input.trust_anchor_bundle_ref.as_deref() {
+        if input.trust_pub_b64_ref.is_some() || input.trust_pub_b64.is_some() {
+            return Err(format!(
+                "{fixture_id} cannot mix trust_anchor_bundle_ref with direct trust material"
+            ));
+        }
+        let bundle_json = resolve_trust_anchor_bundle_ref(bundle_ref)
+            .map_err(|err| format!("{fixture_id} trust_anchor_bundle_ref: {err}"))?;
+        return StaticTrustProvider::from_bundle_json(&bundle_json)
+            .map_err(|diag| format!("{fixture_id} trust_anchor_bundle_ref: {diag}"));
+    }
+
     let provider = if let Some(trust_pub_b64) = fixture_trust(input, fixture_id)? {
         StaticTrustProvider::new().with_anchor(trust_anchor_id, trust_pub_b64)
     } else {
         StaticTrustProvider::new()
     };
     Ok(provider)
+}
+
+fn resolve_trust_anchor_bundle_ref(reference: &str) -> Result<String, String> {
+    let relative = Path::new(reference);
+    if relative.is_absolute()
+        || relative
+            .components()
+            .any(|component| matches!(component, Component::CurDir | Component::ParentDir))
+    {
+        return Err(format!("reference escapes repository root: {reference}"));
+    }
+    if !reference.starts_with("sdk/trust/fixtures/") || !reference.ends_with(".json") {
+        return Err(format!(
+            "reference must stay under sdk/trust/fixtures: {reference}"
+        ));
+    }
+
+    let root = workflow_repo_root();
+    let bundle_root = root
+        .join("sdk/trust/fixtures")
+        .canonicalize()
+        .map_err(|err| format!("canonicalize sdk/trust/fixtures: {err}"))?;
+    let target = root
+        .join(relative)
+        .canonicalize()
+        .map_err(|err| format!("canonicalize {reference}: {err}"))?;
+
+    if !target.starts_with(&bundle_root) {
+        return Err(format!(
+            "reference must stay under sdk/trust/fixtures: {reference}"
+        ));
+    }
+
+    fs::read_to_string(&target).map_err(|err| format!("read {}: {err}", target.display()))
+}
+
+fn workflow_repo_root() -> std::path::PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .canonicalize()
+        .expect("repo root must canonicalize from grain-client-core")
 }
 
 fn require_exactly_one_diag_expectation(

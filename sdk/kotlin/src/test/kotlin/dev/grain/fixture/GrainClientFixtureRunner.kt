@@ -36,6 +36,7 @@ private data class FixtureInput(
     @JsonProperty("trust_pub_b64_ref") val trustPubB64Ref: String? = null,
     @JsonProperty("trust_pub_b64") val trustPubB64: String? = null,
     @JsonProperty("trust_anchor_id") val trustAnchorId: String? = null,
+    @JsonProperty("trust_anchor_bundle_ref") val trustAnchorBundleRef: String? = null,
     @JsonProperty("accept_attempts") val acceptAttempts: Int? = null,
     @JsonProperty("import_attempts") val importAttempts: Int? = null,
     @JsonProperty("root_label") val rootLabel: String? = null,
@@ -377,12 +378,39 @@ private fun resolveTrustInput(input: FixtureInput): String? =
 private fun fixtureTrustProvider(input: FixtureInput): GrainStaticTrustProvider {
     val trustAnchorId = input.trustAnchorId
         ?: throw FixtureException("trust_anchor_id is required for provider fixtures")
+    input.trustAnchorBundleRef?.let { bundleRef ->
+        if (input.trustPubB64Ref != null || input.trustPubB64 != null) {
+            throw FixtureException("trust_anchor_bundle_ref cannot be mixed with direct trust material")
+        }
+        return GrainStaticTrustProvider.fromBundleJson(resolveTrustAnchorBundleRef(bundleRef))
+    }
     val trustPubB64 = resolveTrustInput(input)
     return if (trustPubB64 == null) {
         GrainStaticTrustProvider(emptyMap())
     } else {
         GrainStaticTrustProvider(trustAnchorId, trustPubB64)
     }
+}
+
+private fun resolveTrustAnchorBundleRef(ref: String): String {
+    val components = ref.split("/")
+    if (
+        ref.isEmpty() ||
+        ref.startsWith("/") ||
+        !ref.startsWith("sdk/trust/fixtures/") ||
+        !ref.endsWith(".json") ||
+        components.any { it.isEmpty() || it == "." || it == ".." }
+    ) {
+        throw FixtureException("invalid trust_anchor_bundle_ref: $ref")
+    }
+
+    val root = repoRoot()
+    val bundleRoot = root.resolve("sdk/trust/fixtures").normalize()
+    val file = root.resolve(ref).normalize()
+    if (!file.startsWith(bundleRoot)) {
+        throw FixtureException("invalid trust_anchor_bundle_ref: $ref")
+    }
+    return Files.readString(file)
 }
 
 private fun fixtureQrString(fixture: WorkflowFixture): String =

@@ -5,7 +5,7 @@
   "input": {
     "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
     "trust_anchor_id": "fixture:primary",
-    "trust_pub_b64_ref": "conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64"
+    "trust_anchor_bundle_ref": "sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json"
   },
   "expect": {
     "status": "Accepted",

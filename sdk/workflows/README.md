@@ -21,7 +21,10 @@ The second workflow is `scan_accept`:
 
 Trust-provider fixtures add `trust_anchor_id` to prove that platform wrappers
 can resolve app trust through explicit anchor IDs and fail closed when no anchor
-material exists. They must not use hidden fallback trust or network lookup.
+material exists. Fixtures that model app-distributed trust use
+`trust_anchor_bundle_ref`, a local `sdk/trust/fixtures/*.json` bundle parsed into
+the same static provider surface. They must not use hidden fallback trust or
+network lookup.
 
 The lifecycle workflows are:
 

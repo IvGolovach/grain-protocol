@@ -68,3 +68,55 @@ fn trust_adapter_contract_returns_explicit_anchor_material() {
 
     assert_eq!(resolved, trust_pub_b64);
 }
+
+#[test]
+fn trust_anchor_bundle_builds_static_provider_without_fallback() {
+    let trust_pub_b64 = trusted_pub_b64();
+    let bundle = format!(
+        r#"{{
+            "bundle_v": 1,
+            "anchors": [
+                {{"id": "fixture:primary", "trust_pub_b64": "{trust_pub_b64}"}}
+            ]
+        }}"#
+    );
+
+    let provider = StaticTrustProvider::from_bundle_json(&bundle).expect("valid bundle must parse");
+
+    let resolved = resolve_trust_pub_b64(&provider, Some("fixture:primary"))
+        .expect("bundle anchor must resolve");
+    let unknown = resolve_trust_pub_b64(&provider, Some("fixture:missing"))
+        .expect_err("unknown bundle anchor must fail closed");
+
+    assert_eq!(resolved, trust_pub_b64);
+    assert_eq!(unknown, "SDK_ERR_TRUST_ANCHOR_NOT_FOUND");
+}
+
+#[test]
+fn trust_anchor_bundle_rejects_ambiguous_or_invalid_material() {
+    let trust_pub_b64 = trusted_pub_b64();
+    let duplicate_bundle = format!(
+        r#"{{
+            "bundle_v": 1,
+            "anchors": [
+                {{"id": "fixture:primary", "trust_pub_b64": "{trust_pub_b64}"}},
+                {{"id": "fixture:primary", "trust_pub_b64": "{trust_pub_b64}"}}
+            ]
+        }}"#
+    );
+    let malformed_bundle = r#"{
+        "bundle_v": 1,
+        "anchors": [
+            {"id": "fixture:primary", "trust_pub_b64": "not base64"}
+        ]
+    }"#;
+
+    assert_eq!(
+        StaticTrustProvider::from_bundle_json(&duplicate_bundle).expect_err("duplicates reject"),
+        "SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID"
+    );
+    assert_eq!(
+        StaticTrustProvider::from_bundle_json(malformed_bundle).expect_err("bad trust rejects"),
+        "SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID"
+    );
+}

@@ -37,6 +37,7 @@ let trustProvider = GrainStaticTrustProvider(
     anchorID: trustAnchorID,
     trustPubB64: "<trusted publisher public key base64>"
 )
+// Or: let trustProvider = try GrainStaticTrustProvider(bundleJSON: localTrustAnchorBundleJSON)
 let scannedQRCode = "<GR1...>"
 
 if client.clientLifecycle().status != "Ready" {

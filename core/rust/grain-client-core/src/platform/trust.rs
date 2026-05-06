@@ -1,10 +1,29 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
-use crate::diag::{SDK_ERR_TRUST_ANCHOR_NOT_FOUND, SDK_ERR_TRUST_ANCHOR_REQUIRED};
+use serde::Deserialize;
+
+use crate::diag::{
+    SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID, SDK_ERR_TRUST_ANCHOR_NOT_FOUND,
+    SDK_ERR_TRUST_ANCHOR_REQUIRED,
+};
 use crate::scan::{scan_accept, scan_accept_prepare, scan_preview};
 use crate::store::ClientStore;
 use crate::trust::decode_trust_pub_b64;
 use crate::types::{ScanAccept, ScanPreview};
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TrustAnchorBundleV1 {
+    bundle_v: u32,
+    anchors: Vec<TrustAnchorV1>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct TrustAnchorV1 {
+    id: String,
+    trust_pub_b64: String,
+}
 
 /// Platform-neutral trust lookup contract.
 ///
@@ -24,6 +43,29 @@ pub struct StaticTrustProvider {
 impl StaticTrustProvider {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn from_bundle_json(bundle_json: &str) -> Result<Self, &'static str> {
+        let bundle: TrustAnchorBundleV1 =
+            serde_json::from_str(bundle_json).map_err(|_| SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID)?;
+        if bundle.bundle_v != 1 || bundle.anchors.is_empty() {
+            return Err(SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID);
+        }
+
+        let mut seen = BTreeSet::new();
+        let mut provider = Self::new();
+        for anchor in bundle.anchors {
+            if anchor.id.is_empty()
+                || anchor.id.trim() != anchor.id
+                || !seen.insert(anchor.id.clone())
+                || decode_trust_pub_b64(&anchor.trust_pub_b64).is_err()
+            {
+                return Err(SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID);
+            }
+            provider = provider.with_anchor(anchor.id, anchor.trust_pub_b64);
+        }
+
+        Ok(provider)
     }
 
     pub fn with_anchor(

@@ -40,8 +40,12 @@ Input fields:
 - `trust_anchor_id`: optional platform trust-provider anchor ID. When present,
   runners must resolve trust through the public provider surface instead of
   passing raw trust material directly.
+- `trust_anchor_bundle_ref`: optional local trust-anchor bundle file under
+  `sdk/trust/fixtures/`. When present, runners must parse that bundle into the
+  public static trust-provider helper and resolve `trust_anchor_id` from it.
 
-`trust_pub_b64_ref` and `trust_pub_b64` are mutually exclusive. If both are absent, the scan is intentionally previewed without trust.
+`trust_pub_b64_ref`, `trust_pub_b64`, and `trust_anchor_bundle_ref` are mutually
+exclusive. If all are absent, the scan is intentionally previewed without trust.
 
 Expected fields:
 
@@ -65,9 +69,14 @@ Input fields:
 - `trust_anchor_id`: optional platform trust-provider anchor ID. When present,
   runners must call the provider-backed scan accept API and must fail closed
   when the anchor is unknown.
+- `trust_anchor_bundle_ref`: optional local trust-anchor bundle file under
+  `sdk/trust/fixtures/`. When present, runners must parse that bundle into the
+  public static trust-provider helper and resolve `trust_anchor_id` from it.
 - `accept_attempts`: optional positive integer; defaults to `1`. Fixtures use `2` to assert duplicate-scan idempotency through the public workflow API.
 
-`trust_pub_b64_ref` and `trust_pub_b64` are mutually exclusive. If both are absent, the scan is intentionally accepted without trust and must reject with `SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED`.
+`trust_pub_b64_ref`, `trust_pub_b64`, and `trust_anchor_bundle_ref` are mutually
+exclusive. If all are absent, the scan is intentionally accepted without trust
+and must reject with `SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED`.
 
 Expected fields:
 

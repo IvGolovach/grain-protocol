@@ -3,6 +3,11 @@ import GrainClientFFI
 
 private let sdkErrTrustAnchorRequired = "SDK_ERR_TRUST_ANCHOR_REQUIRED"
 private let sdkErrTrustAnchorNotFound = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND"
+private let sdkErrTrustAnchorBundleInvalid = "SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID"
+
+public enum GrainTrustAnchorBundleError: Error, Equatable, Sendable {
+    case invalid(String)
+}
 
 public enum GrainScanPreviewStatus: Equatable, Sendable {
     case verified
@@ -165,9 +170,54 @@ public struct GrainStaticTrustProvider: GrainTrustProvider, Sendable {
         self.anchors = [anchorID: trustPubB64]
     }
 
+    public init(bundleJSON: String) throws {
+        self.anchors = try parseTrustAnchorBundleJSON(bundleJSON)
+    }
+
     public func trustPubB64(anchorID: String) -> String? {
         anchors[anchorID]
     }
+}
+
+private func parseTrustAnchorBundleJSON(_ bundleJSON: String) throws -> [String: String] {
+    func invalid() throws -> Never {
+        throw GrainTrustAnchorBundleError.invalid(sdkErrTrustAnchorBundleInvalid)
+    }
+
+    let raw: Any
+    do {
+        raw = try JSONSerialization.jsonObject(with: Data(bundleJSON.utf8))
+    } catch {
+        try invalid()
+    }
+    guard let bundle = raw as? [String: Any],
+          Set(bundle.keys) == Set(["bundle_v", "anchors"]),
+          let bundleVersion = bundle["bundle_v"] as? Int,
+          bundleVersion == 1,
+          let rawAnchors = bundle["anchors"] as? [Any],
+          !rawAnchors.isEmpty
+    else {
+        try invalid()
+    }
+
+    var anchors: [String: String] = [:]
+    for rawAnchor in rawAnchors {
+        guard let anchor = rawAnchor as? [String: Any],
+              Set(anchor.keys) == Set(["id", "trust_pub_b64"]),
+              let anchorID = anchor["id"] as? String,
+              !anchorID.isEmpty,
+              anchorID.trimmingCharacters(in: .whitespacesAndNewlines) == anchorID,
+              anchors[anchorID] == nil,
+              let trustPubB64 = anchor["trust_pub_b64"] as? String,
+              let trustBytes = Data(base64Encoded: trustPubB64),
+              !trustBytes.isEmpty
+        else {
+            try invalid()
+        }
+        anchors[anchorID] = trustPubB64
+    }
+
+    return anchors
 }
 
 public final class GrainClient {

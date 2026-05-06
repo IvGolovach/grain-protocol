@@ -147,6 +147,7 @@ tar_gz "grain-wasm-client-$COMMIT_SHA.tar.gz" \
 tar_gz "grain-sdk-workflow-contract-$COMMIT_SHA.tar.gz" \
   -C "$ROOT" \
   sdk/workflows \
+  sdk/trust \
   sdk/generated \
   docs/human/sdk/version-matrix.md \
   docs/llm/SDK_GENERATED_VERIFICATION.md

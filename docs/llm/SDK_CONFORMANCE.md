@@ -76,9 +76,11 @@ Expected contract:
 - generated Swift, Kotlin, WASM, and future device SDKs are client-workflow conformant only after they pass these fixtures through their public workflow APIs
 - `scan_preview` fixtures currently cover verified, untrusted, malformed QR, malformed trust, and wrong trust-key paths
 - provider-backed `scan_preview` fixtures cover explicit trust-anchor success and unknown-anchor fail-closed behavior
+- trust bundle-backed `scan_preview` fixtures prove `sdk/trust` local bundle parsing through the same public static provider surface
 - every `scan_preview` fixture expects `store_mutation: "none"`
 - `scan_accept` fixtures currently cover accepted persistence, duplicate-scan idempotency, and rejected no-write behavior
 - provider-backed `scan_accept` fixtures cover explicit trust-anchor success and unknown-anchor rejection with no storage mutation
+- trust bundle-backed `scan_accept` fixtures prove accepted persistence and unknown-anchor rejection without direct trust material
 - every `scan_accept` fixture asserts `store_mutation` and `accepted_record_count`
 - `device_lifecycle` fixtures cover root creation, device add/activate/revoke, and lifecycle counters
 - `pairing` fixtures cover create/preview/accept/replay behavior through public client APIs
@@ -220,6 +222,8 @@ Expected iOS adapter contract:
 - production preview/accept paths use `trustAnchorID` plus `GrainTrustProvider`
 - the shell persists only opaque `snapshotB64` through `GrainClientIOSAdapters`
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
+- local trust anchor bundles load through `GrainStaticTrustProvider(bundleJSON:)`
+  and invalid bundles fail closed before scan preview/accept
 - preview and rejected accept paths do not write accepted records
 - static guards reject raw protocol API calls, hidden trust lookup, network trust discovery, TOFU, and fallback trust patterns
 
@@ -229,6 +233,8 @@ Expected Android adapter contract:
 - production preview/accept paths use `trustAnchorId` plus `GrainTrustProvider`
 - the shell persists only opaque `snapshotB64` through `dev.grain.android`
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
+- local trust anchor bundles load through `GrainStaticTrustProvider.fromBundleJson`
+  and invalid bundles fail closed before scan preview/accept
 - preview and rejected accept paths do not write accepted records or snapshots
 - static guards reject raw protocol API calls, hidden trust lookup, network
   trust discovery, TOFU, fallback trust, and secret snapshot/trust logging
@@ -240,6 +246,8 @@ Expected WASM/mobile-web adapter contract:
 - the shell persists only opaque `snapshotB64` through `sdk/wasm` browser
   storage adapters
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
+- local trust anchor bundles load through `GrainStaticTrustProvider.fromBundleJson`
+  and invalid bundles fail closed before scan preview/accept
 - preview and rejected accept paths do not write accepted records or snapshots
 - static guards reject raw protocol API calls, hidden trust lookup, network
   trust discovery, TOFU, fallback trust, and secret snapshot/trust logging

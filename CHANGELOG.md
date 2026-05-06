@@ -31,6 +31,10 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - storage adapters must preserve deterministic listing, idempotent re-put, and rollback-at-boundary semantics
     - trust adapters return explicit material or none; Rust core does not perform hidden fallback or network trust lookup
     - FFI-facing DTOs use owned strings, vectors, and optional strings instead of Rust generics or borrowed lifetimes
+  - added app-owned trust anchor bundles for generated SDK trust providers:
+    - versioned local JSON schema and fixture under `sdk/trust`
+    - Rust, Swift, Kotlin, and WASM static trust providers can load bundle JSON
+    - malformed, duplicate, blank, unknown, or unsupported anchors fail closed without network discovery or fallback trust
   - added UniFFI/generated-binding harness over `grain-client-core`:
     - checked-in UDL and build scaffolding for the stable workflow facade
     - repo-local `uniffi-bindgen` helper crate, avoiding a global bindgen dependency

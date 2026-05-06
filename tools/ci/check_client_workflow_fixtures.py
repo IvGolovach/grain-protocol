@@ -6,12 +6,15 @@ from __future__ import annotations
 import json
 import re
 import sys
+from base64 import b64decode
+from binascii import Error as Base64Error
 from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_ROOT = ROOT / "sdk" / "workflows" / "fixtures"
 REF_RE = re.compile(r"^conformance/vectors/[A-Za-z0-9_/-]+\.json#/[A-Za-z0-9_~./-]+$")
+TRUST_BUNDLE_REF_RE = re.compile(r"^sdk/trust/fixtures/[A-Za-z0-9_-]+\.json$")
 ALLOWED_WORKFLOW = {
     "scan_preview",
     "scan_accept",
@@ -50,6 +53,7 @@ ALLOWED_INPUT = {
     "trust_pub_b64_ref",
     "trust_pub_b64",
     "trust_anchor_id",
+    "trust_anchor_bundle_ref",
     "accept_attempts",
     "import_attempts",
     "root_label",
@@ -133,6 +137,66 @@ def resolve_ref(ref: Any, fixture_path: Path) -> str:
     return node
 
 
+def resolve_trust_anchor_bundle_ref(ref: Any, fixture_path: Path) -> dict[str, str]:
+    require(isinstance(ref, str), f"{fixture_path}: trust_anchor_bundle_ref must be a string")
+    require(
+        TRUST_BUNDLE_REF_RE.fullmatch(ref) is not None,
+        f"{fixture_path}: invalid trust_anchor_bundle_ref {ref!r}",
+    )
+    rel = Path(ref)
+    require(
+        not rel.is_absolute() and ".." not in rel.parts,
+        f"{fixture_path}: trust_anchor_bundle_ref escapes repository root: {ref!r}",
+    )
+
+    bundle_root = (ROOT / "sdk" / "trust" / "fixtures").resolve()
+    target = (ROOT / rel).resolve()
+    require(
+        target == bundle_root or bundle_root in target.parents,
+        f"{fixture_path}: trust_anchor_bundle_ref must stay under sdk/trust/fixtures: {ref!r}",
+    )
+
+    bundle = load_json(target)
+    require(isinstance(bundle, dict), f"{fixture_path}: trust anchor bundle must be an object")
+    require(
+        set(bundle) == {"bundle_v", "anchors"},
+        f"{fixture_path}: trust anchor bundle keys must be bundle_v and anchors",
+    )
+    require(bundle["bundle_v"] == 1, f"{fixture_path}: trust anchor bundle_v must be 1")
+    anchors = bundle["anchors"]
+    require(
+        isinstance(anchors, list) and anchors,
+        f"{fixture_path}: trust anchor bundle anchors must be a non-empty list",
+    )
+
+    seen: set[str] = set()
+    for anchor in anchors:
+        require(isinstance(anchor, dict), f"{fixture_path}: trust anchor must be an object")
+        require(
+            set(anchor) == {"id", "trust_pub_b64"},
+            f"{fixture_path}: trust anchor keys must be id and trust_pub_b64",
+        )
+        anchor_id = anchor["id"]
+        trust_pub_b64 = anchor["trust_pub_b64"]
+        require(
+            isinstance(anchor_id, str) and anchor_id and anchor_id.strip() == anchor_id,
+            f"{fixture_path}: trust anchor id must be non-blank without edge whitespace",
+        )
+        require(anchor_id not in seen, f"{fixture_path}: duplicate trust anchor id {anchor_id}")
+        seen.add(anchor_id)
+        require(
+            isinstance(trust_pub_b64, str) and trust_pub_b64,
+            f"{fixture_path}: trust_pub_b64 must be a non-empty string",
+        )
+        try:
+            decoded = b64decode(trust_pub_b64, validate=True)
+        except (Base64Error, ValueError):
+            fail(f"{fixture_path}: trust_pub_b64 must be standard base64")
+        require(decoded, f"{fixture_path}: trust_pub_b64 must decode to non-empty bytes")
+
+    return {anchor["id"]: anchor["trust_pub_b64"] for anchor in anchors}
+
+
 def require_string_list(value: Any, label: str, fixture_path: Path) -> None:
     require(isinstance(value, list), f"{fixture_path}: {label} must be a list")
     require(
@@ -173,6 +237,11 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         not ("trust_pub_b64_ref" in input_obj and "trust_pub_b64" in input_obj),
         f"{path}: trust_pub_b64_ref and trust_pub_b64 are mutually exclusive",
     )
+    for direct_trust_key in ("trust_pub_b64_ref", "trust_pub_b64"):
+        require(
+            not ("trust_anchor_bundle_ref" in input_obj and direct_trust_key in input_obj),
+            f"{path}: trust_anchor_bundle_ref and {direct_trust_key} are mutually exclusive",
+        )
     if workflow in {"scan_preview", "scan_accept", "sync_bundle", "store_snapshot"}:
         require("qr_string_ref" in input_obj, f"{path}: qr_string_ref is required")
     if "qr_string_ref" in input_obj:
@@ -189,6 +258,12 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
             isinstance(input_obj["trust_anchor_id"], str),
             f"{path}: trust_anchor_id must be a string",
         )
+    if "trust_anchor_bundle_ref" in input_obj:
+        require(
+            "trust_anchor_id" in input_obj,
+            f"{path}: trust_anchor_bundle_ref requires trust_anchor_id",
+        )
+        resolve_trust_anchor_bundle_ref(input_obj["trust_anchor_bundle_ref"], path)
     accept_attempts = input_obj.get("accept_attempts", 1)
     if "accept_attempts" in input_obj:
         require(
@@ -335,6 +410,10 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
             f"{path}: sync_bundle requires trust material",
         )
         require(
+            "trust_anchor_bundle_ref" not in input_obj,
+            f"{path}: sync_bundle must use direct trust material",
+        )
+        require(
             {"bundle_b64", "accepted_record_count", "device_count", "lifecycle_event_count"}.issubset(expect),
             f"{path}: sync_bundle missing sync expectations",
         )
@@ -344,6 +423,10 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         require(
             "trust_pub_b64_ref" in input_obj or "trust_pub_b64" in input_obj,
             f"{path}: store_snapshot requires trust material",
+        )
+        require(
+            "trust_anchor_bundle_ref" not in input_obj,
+            f"{path}: store_snapshot must use direct trust material",
         )
         require(
             {"snapshot_b64", "accepted_record_count", "device_count", "lifecycle_event_count"}.issubset(expect),

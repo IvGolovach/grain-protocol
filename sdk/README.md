@@ -16,6 +16,7 @@ Primary implementation:
 
 Portable client SDK lanes:
 - `sdk/workflows`: app-facing scan workflow contracts and fixtures
+- `sdk/trust`: local app-owned trust anchor bundle schema and fixtures
 - `sdk/generated`: documentation for generated Swift/Kotlin binding output and the WASM workflow export boundary
 - `sdk/swift`: Swift Package Manager wrapper over generated client workflow bindings
 - `sdk/kotlin`: Kotlin/JVM wrapper over generated client workflow bindings
@@ -27,6 +28,8 @@ SDKs and keep camera or sensor adapters outside protocol-critical logic.
 For local issuer-side scanner inputs, `core/rust/grain-issuer-kit` emits a
 signed `GR1:` QR string plus public `trust_pub_b64` material without persisting
 or printing private signing keys.
+For app-side trust setup, `sdk/trust` defines the local JSON bundle shape that
+static trust providers can load without network discovery or fallback trust.
 
 ## Compatibility
 

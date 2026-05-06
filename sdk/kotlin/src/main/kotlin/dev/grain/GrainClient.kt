@@ -1,5 +1,7 @@
 package dev.grain
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import uniffi.grain_client_core.FfiAcceptedScan
 import uniffi.grain_client_core.FfiClientLifecycle
 import uniffi.grain_client_core.FfiDeviceResult
@@ -18,8 +20,11 @@ import uniffi.grain_client_core.grainPairingPreviewEnvelope
 import uniffi.grain_client_core.grainScanAcceptPrepare
 import uniffi.grain_client_core.grainScanPreview
 
+import java.util.Base64
+
 private const val SDK_ERR_TRUST_ANCHOR_REQUIRED = "SDK_ERR_TRUST_ANCHOR_REQUIRED"
 private const val SDK_ERR_TRUST_ANCHOR_NOT_FOUND = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND"
+private const val SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID = "SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID"
 
 sealed class GrainScanPreviewStatus(open val rawValue: String) {
     object Verified : GrainScanPreviewStatus("Verified")
@@ -143,10 +148,73 @@ class GrainStaticTrustProvider(
     private val anchors: Map<String, String>,
 ) : GrainTrustProvider {
     constructor(anchorId: String, trustPubB64: String) : this(mapOf(anchorId to trustPubB64))
+    constructor(bundleJson: String) : this(parseTrustAnchorBundleJson(bundleJson))
 
     override fun trustPubB64(anchorId: String): String? =
         anchors[anchorId]
+
+    companion object {
+        fun fromBundleJson(bundleJson: String): GrainStaticTrustProvider =
+            GrainStaticTrustProvider(bundleJson)
+    }
 }
+
+class GrainTrustAnchorBundleException :
+    IllegalArgumentException(SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID)
+
+private val trustAnchorBundleMapper = jacksonObjectMapper()
+
+private fun parseTrustAnchorBundleJson(bundleJson: String): Map<String, String> {
+    fun invalid(): Nothing = throw GrainTrustAnchorBundleException()
+
+    val bundle = try {
+        trustAnchorBundleMapper.readTree(bundleJson)
+    } catch (_: Exception) {
+        invalid()
+    }
+    if (!bundle.isObject || bundle.fieldNames().asSequence().toSet() != setOf("bundle_v", "anchors")) {
+        invalid()
+    }
+    if (!bundle.get("bundle_v").isInt || bundle.get("bundle_v").asInt() != 1) {
+        invalid()
+    }
+    val anchorsNode = bundle.get("anchors")
+    if (!anchorsNode.isArray || anchorsNode.size() == 0) {
+        invalid()
+    }
+
+    val anchors = linkedMapOf<String, String>()
+    anchorsNode.forEach { anchor ->
+        if (!anchor.isObject || anchor.fieldNames().asSequence().toSet() != setOf("id", "trust_pub_b64")) {
+            invalid()
+        }
+        val idNode: JsonNode = anchor.get("id")
+        val trustNode: JsonNode = anchor.get("trust_pub_b64")
+        if (!idNode.isTextual || !trustNode.isTextual) {
+            invalid()
+        }
+        val anchorId = idNode.asText()
+        val trustPubB64 = trustNode.asText()
+        if (
+            anchorId.isEmpty() ||
+            anchorId.trim() != anchorId ||
+            anchors.containsKey(anchorId) ||
+            !isNonEmptyStandardBase64(trustPubB64)
+        ) {
+            invalid()
+        }
+        anchors[anchorId] = trustPubB64
+    }
+
+    return anchors
+}
+
+private fun isNonEmptyStandardBase64(value: String): Boolean =
+    try {
+        Base64.getDecoder().decode(value).isNotEmpty()
+    } catch (_: IllegalArgumentException) {
+        false
+    }
 
 class GrainClient : AutoCloseable {
     private val store = GrainClientMemoryStore()
