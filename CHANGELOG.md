@@ -85,7 +85,8 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - added the Kotlin Android adapter pack:
     - `dev.grain.android` persists opaque client snapshots through deterministic file storage or a Keystore-ready encrypted boundary without parsing protocol state
     - `examples/android-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
-    - Android scanner smoke proves injected CameraX-style handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
+    - Android scanner smoke proves local trust bundle loading, injected CameraX-style handoff, verified accept, accepted-scan listing, sync export status, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
+    - `GrainAesGcmSnapshotCipher` lets Android apps seal snapshots with a Keystore-backed `SecretKey` while keeping protocol state opaque
   - added the WASM/mobile-web adapter pack:
     - `sdk/wasm` persists opaque client snapshots through deterministic memory storage or IndexedDB-backed browser storage without parsing protocol state
     - `examples/wasm-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths

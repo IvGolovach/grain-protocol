@@ -2,6 +2,8 @@ package dev.grain.android
 
 import dev.grain.GrainClient
 import dev.grain.GrainStoreSnapshotResult
+import java.security.GeneralSecurityException
+import java.security.SecureRandom
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
@@ -13,6 +15,9 @@ import java.nio.file.StandardCopyOption.ATOMIC_MOVE
 import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 import java.nio.file.StandardOpenOption.TRUNCATE_EXISTING
 import java.nio.file.StandardOpenOption.WRITE
+import javax.crypto.Cipher
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 interface GrainSnapshotPersistence {
     fun loadSnapshotB64(): String?
@@ -60,6 +65,12 @@ class GrainSnapshotCoordinator(
 sealed class GrainSnapshotPersistenceException(message: String) : RuntimeException(message) {
     object MissingExportedSnapshot : GrainSnapshotPersistenceException(
         "exportStoreSnapshot returned Exported without snapshotB64",
+    )
+    object InvalidSealedSnapshot : GrainSnapshotPersistenceException(
+        "sealed snapshot payload is not a Grain snapshot ciphertext",
+    )
+    object CipherOpenFailed : GrainSnapshotPersistenceException(
+        "sealed snapshot payload could not be opened",
     )
 }
 
@@ -115,6 +126,56 @@ interface GrainSnapshotCipher {
     fun openSnapshotB64(sealedSnapshot: ByteArray): String
 }
 
+class GrainAesGcmSnapshotCipher(
+    private val secretKey: SecretKey,
+    associatedData: ByteArray = DEFAULT_ASSOCIATED_DATA,
+    private val secureRandom: SecureRandom = SecureRandom(),
+) : GrainSnapshotCipher {
+    private val associatedData = associatedData.copyOf()
+
+    override fun sealSnapshotB64(snapshotB64: String): ByteArray {
+        val nonce = ByteArray(NONCE_BYTE_COUNT)
+        secureRandom.nextBytes(nonce)
+        val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_BIT_COUNT, nonce))
+        cipher.updateAAD(associatedData)
+        val ciphertext = cipher.doFinal(snapshotB64.toByteArray(StandardCharsets.UTF_8))
+        return GRAIN_SNAPSHOT_CIPHERTEXT_MAGIC + nonce + ciphertext
+    }
+
+    override fun openSnapshotB64(sealedSnapshot: ByteArray): String {
+        if (
+            sealedSnapshot.size <= GRAIN_SNAPSHOT_CIPHERTEXT_MAGIC.size + NONCE_BYTE_COUNT ||
+            !sealedSnapshot.startsWith(GRAIN_SNAPSHOT_CIPHERTEXT_MAGIC)
+        ) {
+            throw GrainSnapshotPersistenceException.InvalidSealedSnapshot
+        }
+
+        val nonceStart = GRAIN_SNAPSHOT_CIPHERTEXT_MAGIC.size
+        val ciphertextStart = nonceStart + NONCE_BYTE_COUNT
+        val nonce = sealedSnapshot.copyOfRange(nonceStart, ciphertextStart)
+        val ciphertext = sealedSnapshot.copyOfRange(ciphertextStart, sealedSnapshot.size)
+
+        return try {
+            val cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, GCMParameterSpec(GCM_TAG_BIT_COUNT, nonce))
+            cipher.updateAAD(associatedData)
+            cipher.doFinal(ciphertext).decodeUtf8Strict()
+        } catch (_: GeneralSecurityException) {
+            throw GrainSnapshotPersistenceException.CipherOpenFailed
+        }
+    }
+
+    companion object {
+        private val DEFAULT_ASSOCIATED_DATA =
+            "dev.grain.android.snapshot.v1".toByteArray(StandardCharsets.UTF_8)
+        private val GRAIN_SNAPSHOT_CIPHERTEXT_MAGIC = byteArrayOf(0x47, 0x52, 0x53, 0x31)
+        private const val AES_GCM_TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val NONCE_BYTE_COUNT = 12
+        private const val GCM_TAG_BIT_COUNT = 128
+    }
+}
+
 class GrainKeystoreSnapshotPersistence(
     private val ciphertextPersistence: GrainByteSnapshotPersistence,
     private val cipher: GrainSnapshotCipher,
@@ -133,6 +194,9 @@ class GrainKeystoreSnapshotPersistence(
         ciphertextPersistence.clearSnapshot()
     }
 }
+
+private fun ByteArray.startsWith(prefix: ByteArray): Boolean =
+    size >= prefix.size && prefix.indices.all { this[it] == prefix[it] }
 
 private fun ByteArray.decodeUtf8Strict(): String {
     val decoder = StandardCharsets.UTF_8

@@ -96,7 +96,9 @@ GrainClient().use { client ->
 - `dev.grain.android` adds an Android adapter persistence boundary for opaque
   `snapshotB64` state. File persistence is deterministic for JVM smoke tests;
   `GrainKeystoreSnapshotPersistence` keeps Android Keystore encryption behind an
-  injected cipher/store boundary so app code does not parse protocol state.
+  injected cipher/store boundary, and `GrainAesGcmSnapshotCipher` can seal the
+  snapshot with an Android Keystore-backed `SecretKey` without parsing protocol
+  state.
 - Do not log `snapshotB64`, identity bundles, sync bundles, or trust material.
   Persist them through app-owned protected storage and expose only statuses,
   counts, or diagnostics to UI/logs.

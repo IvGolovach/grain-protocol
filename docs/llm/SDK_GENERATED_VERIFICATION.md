@@ -123,7 +123,9 @@ python3 tools/ci/check_sdk_release_package.py \
 - Kotlin Android adapters must keep storage app-owned and opaque. File
   persistence is allowed for deterministic smoke; Keystore-backed encryption
   stays behind the same `GrainSnapshotPersistence` contract through an injected
-  cipher/store boundary and must not parse or log snapshots.
+  cipher/store boundary. `GrainAesGcmSnapshotCipher` authenticates sealed
+  snapshots with an app-supplied `SecretKey`, and adapters must not parse or log
+  snapshots.
 - WASM/mobile-web adapters must keep storage app-owned and opaque. IndexedDB
   persistence is allowed for deterministic browser/mobile-web smoke; adapters
   must not parse or log `snapshotB64`, sync bundles, pairing envelopes, or trust

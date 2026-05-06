@@ -2,7 +2,7 @@ package dev.grain.examples.androidscanner
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import dev.grain.GrainStaticTrustProvider
+import dev.grain.GrainTrustAnchorBundleException
 import dev.grain.android.GrainFileSnapshotPersistence
 import dev.grain.android.GrainSnapshotPersistence
 import kotlin.io.path.Path
@@ -10,6 +10,7 @@ import java.nio.file.Files
 
 fun main() {
     acceptRequiresVerifiedPreview()
+    localTrustAnchorBundleLoadsAndInvalidBundleFailsClosed()
     verifiedPreviewEnablesAcceptAndPersistsSnapshot()
     blankTrustAnchorRejectsWithoutWrite()
     unknownTrustAnchorRejectsWithoutWrite()
@@ -21,7 +22,7 @@ private fun acceptRequiresVerifiedPreview() {
         val persistence = RecordingSnapshotPersistence()
         val controller = ScannerController(
             client = client,
-            trustProvider = GrainStaticTrustProvider(anchorId = trustAnchorId(), trustPubB64 = trustPubB64()),
+            trustProvider = scannerTrustProviderFromLocalBundlePath(trustAnchorBundlePath()),
             snapshotPersistence = persistence,
         )
 
@@ -35,6 +36,26 @@ private fun acceptRequiresVerifiedPreview() {
             controller.state.diagnostics == listOf(SCANNER_ACCEPT_REQUIRES_VERIFIED_PREVIEW_DIAG),
             "accept guard diagnostics mismatch",
         )
+    }
+}
+
+private fun localTrustAnchorBundleLoadsAndInvalidBundleFailsClosed() {
+    val trustProvider = scannerTrustProviderFromLocalBundlePath(trustAnchorBundlePath())
+    requireSmoke(trustProvider.trustPubB64(trustAnchorId()) == trustPubB64(), "local bundle trust mismatch")
+    requireSmoke(trustProvider.trustPubB64("publisher:unknown") == null, "local bundle resolved unknown trust")
+
+    try {
+        scannerTrustProviderFromBundleJson("""{"bundle_v":1,"anchors":[]}""")
+        error("invalid trust anchor bundle did not fail closed")
+    } catch (_: GrainTrustAnchorBundleException) {
+        // Expected.
+    }
+
+    try {
+        scannerTrustProviderFromLocalBundlePath(trustAnchorBundlePath().parent.resolve("missing.json"))
+        error("missing local trust anchor bundle did not fail closed")
+    } catch (_: ScannerTrustAnchorBundleLoadException) {
+        // Expected.
     }
 }
 
@@ -70,14 +91,30 @@ private fun verifiedPreviewEnablesAcceptAndPersistsSnapshot() {
 
             requireSmoke(controller.state.acceptStatus?.rawValue == "Accepted", "accept status mismatch")
             requireSmoke(controller.state.acceptedCount == 1, "accepted count mismatch")
+            requireSmoke(controller.state.acceptedScans.size == 1, "accepted scan list mismatch")
             requireSmoke(controller.state.acceptedScanId != null, "accepted scan id missing")
+            requireSmoke(
+                controller.state.acceptedScans.single().scanId == controller.state.acceptedScanId,
+                "accepted scan summary id mismatch",
+            )
             requireSmoke(controller.state.snapshotStatus == "Exported", "accept snapshot status mismatch")
             requireSmoke(snapshotPersistence.loadSnapshotB64() != null, "snapshot was not persisted")
+
+            controller.refreshAcceptedScans()
+            requireSmoke(controller.state.acceptedScans.size == 1, "refresh accepted scans mismatch")
+
+            val exported = controller.exportSyncBundleForShare()
+            requireSmoke(exported.status == "Exported", "sync export status mismatch")
+            requireSmoke(exported.bundleB64 != null, "sync export bundle missing")
+            requireSmoke(controller.state.exportStatus == "Exported", "sync export UI status mismatch")
+            requireSmoke(controller.state.exportAcceptedCount == 1UL, "sync export accepted count mismatch")
+            requireSmoke(controller.state.diagnostics.isEmpty(), "sync export diagnostics not empty")
 
             controller.accept()
 
             requireSmoke(controller.state.acceptStatus?.rawValue == "AlreadyAccepted", "repeat accept status mismatch")
             requireSmoke(controller.state.acceptedCount == 1, "repeat accept duplicated record")
+            requireSmoke(controller.state.acceptedScans.size == 1, "repeat accept duplicated scan summary")
         }
 
         GrainScannerWorkflowClient().use { restartedClient ->
@@ -85,6 +122,7 @@ private fun verifiedPreviewEnablesAcceptAndPersistsSnapshot() {
             restarted.restorePersistedSnapshot()
             requireSmoke(restarted.state.snapshotStatus == "Restored", "restore snapshot status mismatch")
             requireSmoke(restarted.state.acceptedCount == 1, "restore accepted count mismatch")
+            requireSmoke(restarted.state.acceptedScans.size == 1, "restore accepted scan list mismatch")
             requireSmoke(restarted.state.lifecycleStatus == "Ready", "restore lifecycle status mismatch")
         }
     } finally {
@@ -107,7 +145,7 @@ private fun rejectedTrustAnchorDoesNotWrite(trustAnchorId: String, expectedDiag:
         val persistence = RecordingSnapshotPersistence()
         val controller = ScannerController(
             client = client,
-            trustProvider = GrainStaticTrustProvider(anchorId = trustAnchorId(), trustPubB64 = trustPubB64()),
+            trustProvider = scannerTrustProviderFromLocalBundlePath(trustAnchorBundlePath()),
             snapshotPersistence = persistence,
         )
 
@@ -134,7 +172,7 @@ private fun scannerController(
 ): ScannerController =
     ScannerController(
         client = client,
-        trustProvider = GrainStaticTrustProvider(anchorId = trustAnchorId(), trustPubB64 = trustPubB64()),
+        trustProvider = scannerTrustProviderFromLocalBundlePath(trustAnchorBundlePath()),
         snapshotPersistence = snapshotPersistence,
     )
 
@@ -154,10 +192,13 @@ private class RecordingSnapshotPersistence : GrainSnapshotPersistence {
     }
 }
 
-private fun trustAnchorId(): String = "publisher:primary"
+private fun trustAnchorId(): String = "fixture:primary"
 
 private fun trustPubB64(): String =
-    fixtureString("conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64")
+    fixtureString("sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json#/anchors/0/trust_pub_b64")
+
+private fun trustAnchorBundlePath() =
+    repoRoot().resolve("sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json")
 
 private val mapper = jacksonObjectMapper()
 
@@ -165,16 +206,14 @@ private fun fixtureString(ref: String): String {
     val parts = ref.split("#", limit = 2)
     require(parts.size == 2 && parts[1].startsWith("/")) { "invalid ref: $ref" }
 
-    val root = Path(System.getProperty("grain.repoRoot")).toAbsolutePath().normalize()
-    var node: JsonNode = mapper.readTree(root.resolve(parts[0]).toFile())
-    parts[1].drop(1).split("/").forEach { rawToken ->
-        val token = rawToken.replace("~1", "/").replace("~0", "~")
-        node = node.get(token) ?: error("invalid ref: $ref")
-    }
+    val node: JsonNode = mapper.readTree(repoRoot().resolve(parts[0]).toFile()).at(parts[1])
 
-    require(node.isTextual) { "invalid ref: $ref" }
+    require(!node.isMissingNode && node.isTextual) { "invalid ref: $ref" }
     return node.asText()
 }
+
+private fun repoRoot() =
+    Path(System.getProperty("grain.repoRoot")).toAbsolutePath().normalize()
 
 private fun requireSmoke(condition: Boolean, message: String) {
     if (!condition) {
