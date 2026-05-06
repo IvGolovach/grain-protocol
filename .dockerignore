@@ -1,0 +1,8 @@
+.git
+.DS_Store
+artifacts
+**/.gradle
+**/build
+**/dist
+**/node_modules
+**/target
