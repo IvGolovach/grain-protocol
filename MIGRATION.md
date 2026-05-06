@@ -13,5 +13,7 @@ Provenance milestones:
 3. Rust reference core
 4. TypeScript C01 smoke runner
 5. GitHub hardening and CI evidence pipeline
+6. Generated SDK release packages attached to signed tag releases after
+   same-commit strict platform SDK verification
 
 This file exists so external audits can interpret repository history and release evidence consistently.

@@ -48,10 +48,12 @@ Start with:
    - `git push origin <tag-name>`
 7. Verify the tag workflows:
    - `release-evidence` completed and produced `evidence-<sha>.zip`
+     plus SDK release package assets for the same commit
    - `interop-certify` completed and produced `interop-evidence-<sha>.zip`
    - `golden-images` published digests for `grain-runner` and `grain-certify`
-   - `ci` or the release machine produced an SDK release package with
-     `manifest.json`, `SHA256SUMS`, and `sbom.spdx.json` for the same commit
+   - the SDK release package includes `manifest.json`, `SHA256SUMS`,
+     `sbom.spdx.json`, and source SDK archives verified by
+     `check_sdk_release_package.py --require-strict --require-clean`
    - for `repo-*` tags, image alias `stable` is updated
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only and must not overwrite `stable`
 8. Verify the matching GitHub release entry exists and attached assets are present.

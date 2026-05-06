@@ -97,6 +97,11 @@ Update:
 - `MIGRATION.md` if the repository provenance note changed
 - `docs/llm/CHANGE_POLICY.md`
 
+When release evidence starts publishing or omitting artifacts, keep the human
+release runbook and repository-settings evidence policy in sync with the actual
+workflow. SDK release packages are release evidence only after the same commit
+passes strict SDK verification and the package metadata checker.
+
 ## Merge check
 
 Before merge, confirm:

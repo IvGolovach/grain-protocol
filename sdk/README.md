@@ -84,6 +84,11 @@ python3 tools/ci/check_sdk_release_package.py \
 CI may use `--skip-verify --verified-by sdk-platform` only after the strict
 platform SDK gate has just passed on the same checkout. That package is marked
 as `strict-upstream`; plain skipped verification is not a release certificate.
+Release tags run the same strict SDK gate in `release-evidence` before
+attaching the source SDK package assets to the GitHub release. The published
+assets remain source-only and same-SHA: `manifest.json`, `SHA256SUMS`,
+`sbom.spdx.json`, and the SDK source archives are the release handoff, not a
+registry, app-store, or compiled-WASM publication.
 
 ## Workflow shape
 

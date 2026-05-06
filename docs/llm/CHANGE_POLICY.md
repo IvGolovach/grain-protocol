@@ -64,6 +64,7 @@ If a PR changes CI gates, evidence artifacts, branch protection policy, tag name
 - update `docs/human/repository-settings.md`
 - update `MIGRATION.md` when provenance statements change
 - keep required CI context names stable unless governance update is explicit
+- keep SDK release artifact claims tied to strict same-commit SDK verification and package metadata checks
 - update `docs/llm/DOC_SYNC.md`
 - update `CHANGELOG.md`
 - update `spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` when RC or claim process changes
