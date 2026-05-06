@@ -27,6 +27,12 @@ SDK roadmap:
   final full-platform proof.
 - Do not claim store/registry production release unless the tag and release
   assets actually exist.
+- Continue with the 2026-05-06 final-release execution request:
+  1. Remove the Node.js 20 GitHub Actions warning from the Java setup action.
+  2. Promote the verified RC to a signed final release.
+  3. Add the next mobile/devkit layer for QR scan handoff, local storage,
+     platform SDK examples, and conformance coverage.
+  4. Add a minimal iOS reference app that consumes the public SDK surface only.
 
 ## Work Slices
 
@@ -103,3 +109,14 @@ SDK roadmap:
   failed on GHCR `403 Forbidden` while pushing account-level image names for
   both `grain-runner` and `grain-certify`. The next slice moves golden image
   publication to a repo-scoped GHCR namespace before cutting another RC tag.
+- 2026-05-06: PR #60 moved golden image publication to repo-scoped GHCR package
+  paths, merged to `main` as `ddb739a7fd4b6f612c0d128cda229d28fb0e719d`, and
+  post-merge `main` CI run `25455236827` passed.
+- 2026-05-06: Signed RC tag `repo-rc-v0.4.0-rc5` was pushed for
+  `ddb739a7fd4b6f612c0d128cda229d28fb0e719d`. `release-evidence` passed on
+  run `25455609459`, `interop-certify` passed on run `25455609531`, and
+  `golden-images` passed on run `25455609663`. Downloaded release assets passed
+  `tools/ci/check_release_evidence_assets.py` for the expected commit and tag.
+- 2026-05-06: Started the final-release execution sequence with a narrow
+  workflow hygiene slice: update pinned `actions/setup-java` from v4.8.0 to
+  v5.2.0 so Java setup runs on Node.js 24 before final release promotion.
