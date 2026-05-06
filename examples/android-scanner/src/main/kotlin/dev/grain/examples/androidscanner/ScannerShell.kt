@@ -98,6 +98,7 @@ data class ScannerUiState(
     val trustAnchorId: String = "",
     val previewStatus: GrainScanPreviewStatus? = null,
     val acceptStatus: GrainScanAcceptStatus? = null,
+    val scanSource: CameraScanSource? = null,
     val diagnostics: List<String> = emptyList(),
     val canAccept: Boolean = false,
     val acceptedCount: Int = 0,
@@ -121,7 +122,7 @@ class ScannerController(
         private set
 
     fun updateQrString(value: String) {
-        state = state.copy(qrString = value).withoutDecision()
+        state = state.copy(qrString = value, scanSource = null).withoutDecision()
     }
 
     fun updateTrustAnchorId(value: String) {
@@ -129,7 +130,16 @@ class ScannerController(
     }
 
     fun receiveCameraPayload(payload: CameraScanPayload) {
-        state = state.copy(qrString = payload.qrString).withoutDecision()
+        state = state.copy(qrString = payload.qrString, scanSource = payload.source).withoutDecision()
+    }
+
+    fun <FrameT> scanCameraFrame(
+        frame: FrameT,
+        cameraScanAdapter: CameraScanAdapter<FrameT>,
+    ): Boolean {
+        val payload = cameraScanAdapter.decode(frame) ?: return false
+        receiveCameraPayload(payload)
+        return true
     }
 
     fun prepareLocalIdentity(rootLabel: String = "phone", deviceLabel: String = "scanner") {

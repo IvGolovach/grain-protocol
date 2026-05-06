@@ -22,6 +22,11 @@ jobs:
           run_main_ruleset_drift: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           gh_token: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
 
+      - name: Run SDK release guard tests
+        run: |
+          python3 -m unittest tools.ci.test_check_sdk_release_package
+          python3 -m unittest tools.ci.test_check_release_evidence_assets
+
   capid-csprng-audit:
     runs-on: ubuntu-latest
     steps:

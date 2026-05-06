@@ -6,23 +6,25 @@ If you are building an app on Grain, start here. Keep the first version small an
 
 1. If you are building a camera-first iOS, Android, glasses, browser, or robot
    scanner client, read [Scanner app quickstart](./scan-quickstart.md).
-2. If you only want the smallest ledger app, read
+2. If you are handing one SDK SHA to another developer, use
+   [Source SDK handoff](./source-sdk-handoff.md).
+3. If you only want the smallest ledger app, read
    [Minimal app example](./minimal-app-example.md).
-3. Run the ready-made demo if you want a quick confidence check.
-4. On a fresh checkout, install `core/ts/grain-ts-core`
+4. Run the ready-made demo if you want a quick confidence check.
+5. On a fresh checkout, install `core/ts/grain-ts-core`
    and `core/ts/grain-sdk` before the first SDK build.
-5. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
-6. If you are building a camera-first iOS, Android, glasses, or robot client,
+6. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
+7. If you are building a camera-first iOS, Android, glasses, or robot client,
    read [Portable client SDK](./portable-client-sdk.md).
-7. For scanner-shell reference code, start with `examples/ios-scanner`,
+8. For scanner-shell reference code, start with `examples/ios-scanner`,
    `examples/android-scanner`, or `examples/wasm-scanner`.
-8. To create a real signed scanner input for local app development, run
+9. To create a real signed scanner input for local app development, run
    `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`
    and wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle.
-9. For app-owned trust material, load that bundle into the platform static
+10. For app-owned trust material, load that bundle into the platform static
    trust provider and pass a stable trust anchor ID (`trustAnchorID` in Swift,
    `trustAnchorId` in Kotlin and WASM).
-10. If you build manually, use the SDK build. It will build the shared
+11. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash
@@ -66,6 +68,7 @@ If you are also changing the strict TS runner itself, then install `runner/types
 
 - `core/ts/grain-sdk/src`
 - `docs/human/sdk/architecture.md`
+- `docs/human/sdk/source-sdk-handoff.md`
 - `docs/human/sdk/scan-quickstart.md`
 - `docs/human/sdk/portable-client-sdk.md`
 - `docs/human/sdk/errors.md`

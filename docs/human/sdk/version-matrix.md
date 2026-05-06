@@ -65,7 +65,10 @@ job on a Swift 6-capable macOS runner, packages the SDK release artifacts after
 that strict gate, and re-checks the release manifest before final evidence
 build. The `release-evidence` tag workflow runs the same strict SDK gate before
 attaching SDK source package assets to the GitHub release, so tag consumers can
-audit the SDK package, evidence bundle, and manifest against one commit. Set
+audit the SDK package, evidence bundle, and manifest against one commit. After
+downloading release assets, use `tools/ci/check_release_evidence_assets.py` to
+verify the evidence zip and SDK source handoff together for the same tag and
+commit. Set
 `SDK_KOTLIN_GRADLE_OFFLINE=1` only on machines with warmed Gradle caches when
 you need the Kotlin package and Android scanner example checks to prove offline
 dependency resolution.

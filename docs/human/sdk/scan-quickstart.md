@@ -38,6 +38,11 @@ git checkout <release-tag-or-commit>
 scripts/sdk/doctor
 ```
 
+If you are preparing artifacts for another developer instead of working from a
+local checkout, follow [Source SDK handoff](./source-sdk-handoff.md) first. It
+names the same-SHA source archives, manifest, checksums, SBOM, and publication
+boundaries that must travel with the scanner path.
+
 If the doctor prints `WARN`, the required policy checks passed but local
 toolchain or package-readiness issues still need attention before strict platform
 verification.

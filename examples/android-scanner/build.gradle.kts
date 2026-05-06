@@ -59,6 +59,12 @@ tasks.register<JavaExec>("runScannerShellSmoke") {
     dependsOn("testClasses")
 }
 
+tasks.register("runAndroidParitySmoke") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Run the Android scanner parity smoke through the public Kotlin GrainClient API."
+    dependsOn("runScannerShellSmoke")
+}
+
 tasks.named("check") {
     dependsOn("runScannerShellSmoke")
 }

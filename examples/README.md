@@ -20,6 +20,11 @@ For a checkout-to-scan walkthrough, use
 issuer QR, wrap the emitted public trust key in a local trust anchor bundle, and
 feed a stable trust anchor ID into these shells.
 
+For source SDK artifacts handed to another developer, use
+`docs/human/sdk/source-sdk-handoff.md` before running the scanner shells. It
+keeps the Swift, Kotlin, WASM, generated binding snapshot, workflow contract,
+and trust schema tied to one commit and states what is not published.
+
 Production apps must still supply four app/device adapters around the shared
 SDK workflow: camera or sensor input, local trust provider, protected snapshot
 persistence, and encrypted/authenticated transfer or share channel for portable

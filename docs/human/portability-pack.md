@@ -58,6 +58,23 @@ Optional fuzz smoke:
 ./scripts/certify --fuzz-smoke
 ```
 
+Release asset handoff after a signed tag:
+
+```bash
+tag="<tag-name>"
+sha="$(git rev-list -n 1 "$tag")"
+gh release download "$tag" --dir "artifacts/release-assets/$tag"
+python3 tools/ci/check_release_evidence_assets.py \
+  --release-dir "artifacts/release-assets/$tag" \
+  --expected-commit "$sha" \
+  --expected-tag "$tag"
+```
+
+That verifier checks the downloaded `evidence-<sha>.zip`, confirms the
+`release-evidence` summary belongs to the same commit and tag, requires the SDK
+suite to be present and green, and reuses the SDK package checker for
+`manifest.json`, `SHA256SUMS`, `sbom.spdx.json`, and source archives.
+
 ## Golden images
 
 Build or publish script:

@@ -1,6 +1,7 @@
 package dev.grain.examples.androidscanner
 
 import dev.grain.GrainStaticTrustProvider
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -12,6 +13,11 @@ class ScannerTrustAnchorBundleLoadException :
 
 fun scannerTrustProviderFromBundleJson(bundleJson: String): GrainStaticTrustProvider =
     GrainStaticTrustProvider.fromBundleJson(bundleJson)
+
+fun scannerTrustProviderFromBundleStream(bundleStream: InputStream): GrainStaticTrustProvider {
+    val bundleJson = bundleStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+    return scannerTrustProviderFromBundleJson(bundleJson)
+}
 
 fun scannerTrustProviderFromLocalBundlePath(bundlePath: Path): GrainStaticTrustProvider {
     val localPath = bundlePath.toAbsolutePath().normalize()

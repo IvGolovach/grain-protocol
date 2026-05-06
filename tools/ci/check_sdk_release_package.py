@@ -47,7 +47,7 @@ EXPECTED_ARTIFACTS = {
 FORBIDDEN_ARCHIVE_RE = re.compile(
     r"(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|\.wasm$"
 )
-SECRET_ARCHIVE_RE = re.compile(r"(^|/)(\.env|secrets?)(/|$)|\.(pem|key|p12|pfx)$")
+SECRET_ARCHIVE_RE = re.compile(r"(^|/)(\.env(?:[._-][^/]*)?|secrets?)(/|$)|\.(pem|key|p12|pfx)$")
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 

@@ -43,6 +43,7 @@ public struct ScannerShellState: Equatable, Sendable {
     public var trustAnchorID: String
     public var previewStatus: GrainScanPreviewStatus?
     public var acceptStatus: GrainScanAcceptStatus?
+    public var scanSource: CameraScanSource?
     public var diagnostics: [String]
     public var canAccept: Bool
     public var acceptedCount: Int
@@ -62,6 +63,7 @@ public struct ScannerShellState: Equatable, Sendable {
         trustAnchorID: String = "",
         previewStatus: GrainScanPreviewStatus? = nil,
         acceptStatus: GrainScanAcceptStatus? = nil,
+        scanSource: CameraScanSource? = nil,
         diagnostics: [String] = [],
         canAccept: Bool = false,
         acceptedCount: Int = 0,
@@ -80,6 +82,7 @@ public struct ScannerShellState: Equatable, Sendable {
         self.trustAnchorID = trustAnchorID
         self.previewStatus = previewStatus
         self.acceptStatus = acceptStatus
+        self.scanSource = scanSource
         self.diagnostics = diagnostics
         self.canAccept = canAccept
         self.acceptedCount = acceptedCount
@@ -147,6 +150,7 @@ public final class ScannerShellModel: ObservableObject {
 
     public func updateQrString(_ value: String) {
         state.qrString = value
+        state.scanSource = nil
         resetDecisionState()
     }
 
@@ -157,7 +161,17 @@ public final class ScannerShellModel: ObservableObject {
 
     public func receiveCameraPayload(_ payload: CameraScanPayload) {
         state.qrString = payload.qrString
+        state.scanSource = payload.source
         resetDecisionState()
+    }
+
+    @discardableResult
+    public func captureNextCameraPayload(from adapter: any CameraScanAdapter) async throws -> CameraScanPayload? {
+        guard let payload = try await adapter.nextScanPayload() else {
+            return nil
+        }
+        receiveCameraPayload(payload)
+        return payload
     }
 
     public func prepareLocalIdentity(rootLabel: String = "phone", deviceLabel: String = "scanner") {

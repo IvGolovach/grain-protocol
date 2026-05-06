@@ -19,6 +19,7 @@ public struct CameraScanPayload: Equatable, Sendable {
     }
 }
 
+@MainActor
 public protocol CameraScanAdapter {
     func nextScanPayload() async throws -> CameraScanPayload?
 }

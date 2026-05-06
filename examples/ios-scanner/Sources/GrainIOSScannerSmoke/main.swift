@@ -9,6 +9,7 @@ struct GrainIOSScannerSmoke {
         try await MainActor.run {
             try rejectsNonFileTrustBundleURL()
         }
+        try await cameraAdapterHandoffUpdatesShellState()
         try await scannerFlowPersistsThroughSnapshot()
         try await rejectsUnknownTrustAnchorWithoutWritingSnapshot()
         print("iOS scanner shell smoke: PASS")
@@ -32,6 +33,38 @@ private func rejectsNonFileTrustBundleURL() throws {
     }
 }
 
+@MainActor
+private func cameraAdapterHandoffUpdatesShellState() async throws {
+    let pastedModel = ScannerShellModel()
+    pastedModel.receiveCameraPayload(CameraScanPayload(qrString: "gr1:camera", source: .camera))
+    pastedModel.updateQrString("gr1:pasted")
+    try require(pastedModel.state.scanSource == nil, "paste did not clear camera source")
+
+    let camera = InjectedCameraScanAdapter(qrStrings: ["gr1:test-payload"])
+    let model = ScannerShellModel()
+    let payload = try await model.captureNextCameraPayload(from: camera)
+    try require(
+        payload == CameraScanPayload(qrString: "gr1:test-payload", source: .injected),
+        "camera payload mismatch"
+    )
+    try require(model.state.qrString == "gr1:test-payload", "camera payload was not handed to shell state")
+    try require(model.state.scanSource == .injected, "camera source was not recorded")
+    try require(model.state.previewStatus == nil, "camera payload did not reset preview")
+    try require(model.state.acceptStatus == nil, "camera payload did not reset accept")
+    try require(model.state.acceptedScanID == nil, "camera payload did not reset accepted scan id")
+    try require(!model.state.canAccept, "camera payload left accept enabled")
+    try require(model.state.diagnostics.isEmpty, "camera payload did not clear diagnostics")
+
+    let emptyModel = ScannerShellModel()
+    emptyModel.receiveCameraPayload(CameraScanPayload(qrString: "gr1:existing", source: .camera))
+    let emptyCamera = InjectedCameraScanAdapter(qrStrings: [])
+    let emptyPayload = try await emptyModel.captureNextCameraPayload(from: emptyCamera)
+    try require(emptyPayload == nil, "empty camera adapter produced a payload")
+    try require(emptyModel.state.qrString == "gr1:existing", "empty camera adapter mutated qr state")
+    try require(emptyModel.state.scanSource == .camera, "empty camera adapter mutated source")
+}
+
+@MainActor
 private func scannerFlowPersistsThroughSnapshot() async throws {
     let qrString = try fixtureString("conformance/vectors/qr/POS-QR-001.json#/input/qr_string")
     let trustAnchorBundleURL = try fixtureFileURL("sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json")

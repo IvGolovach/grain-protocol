@@ -42,6 +42,11 @@ static trust providers can load without network discovery or fallback trust.
 For the fastest end-to-end scanner bring-up, use
 `docs/human/sdk/scan-quickstart.md`.
 
+For a release owner or app team handoff, use
+`docs/human/sdk/source-sdk-handoff.md`. It names the same-SHA source archives,
+generated binding snapshot, manifest, checksums, SBOM, issuer QR path, and the
+boundaries that are not published.
+
 The short path is:
 
 1. Use one repo SHA or release tag for Swift, Kotlin, WASM, generated bindings,
