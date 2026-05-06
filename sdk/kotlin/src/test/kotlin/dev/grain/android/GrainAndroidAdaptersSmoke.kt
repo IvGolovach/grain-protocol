@@ -3,11 +3,13 @@ package dev.grain.android
 import dev.grain.GrainStoreSnapshotResult
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import javax.crypto.spec.SecretKeySpec
 
 fun main() {
     fileSnapshotRoundTripAndClear()
     coordinatorPersistsRestoresAndClears()
     keystoreBoundaryRoundTrip()
+    aesGcmSnapshotCipherRoundTripAndTamperRejects()
     missingExportedSnapshotThrows()
     println("Kotlin Android adapters smoke: PASS")
 }
@@ -60,6 +62,30 @@ private fun keystoreBoundaryRoundTrip() {
     requireSmoke(persistence.loadSnapshotB64() == "snapshot-three", "keystore boundary round-trip mismatch")
     persistence.clearSnapshot()
     requireSmoke(persistence.loadSnapshotB64() == null, "keystore boundary did not clear snapshot")
+}
+
+private fun aesGcmSnapshotCipherRoundTripAndTamperRejects() {
+    val secretKey = SecretKeySpec(ByteArray(32) { index -> (index + 1).toByte() }, "AES")
+    val cipher = GrainAesGcmSnapshotCipher(secretKey = secretKey)
+    val snapshotB64 = "snapshot-four"
+
+    val sealed = cipher.sealSnapshotB64(snapshotB64)
+
+    requireSmoke(sealed.isNotEmpty(), "AES-GCM cipher returned empty ciphertext")
+    requireSmoke(
+        !sealed.contentEquals(snapshotB64.toByteArray(StandardCharsets.UTF_8)),
+        "AES-GCM cipher did not seal snapshot bytes",
+    )
+    requireSmoke(cipher.openSnapshotB64(sealed) == snapshotB64, "AES-GCM cipher round-trip mismatch")
+
+    val tampered = sealed.copyOf()
+    tampered[tampered.lastIndex] = (tampered.last().toInt() xor 0x01).toByte()
+    try {
+        cipher.openSnapshotB64(tampered)
+        error("tampered AES-GCM snapshot did not fail authentication")
+    } catch (_: GrainSnapshotPersistenceException.CipherOpenFailed) {
+        // Expected.
+    }
 }
 
 private fun missingExportedSnapshotThrows() {

@@ -10,6 +10,7 @@ import dev.grain.GrainScanAcceptStatus
 import dev.grain.GrainScanPreview
 import dev.grain.GrainScanPreviewStatus
 import dev.grain.GrainStoreSnapshotResult
+import dev.grain.GrainSyncResult
 import dev.grain.GrainTrustProvider
 import dev.grain.android.GrainSnapshotClient
 import dev.grain.android.GrainSnapshotCoordinator
@@ -31,6 +32,7 @@ interface ScannerWorkflowClient : GrainSnapshotClient {
         trustProvider: GrainTrustProvider,
     ): GrainScanAccept
     fun listAcceptedScans(): List<GrainAcceptedScan>
+    fun exportSyncBundle(): GrainSyncResult
     fun createRootIdentity(label: String = "root"): GrainIdentityResult
     fun addDeviceKey(label: String = "device"): GrainDeviceResult
     fun clientLifecycle(): GrainClientLifecycle
@@ -64,6 +66,9 @@ class GrainScannerWorkflowClient(
     override fun listAcceptedScans(): List<GrainAcceptedScan> =
         client.listAcceptedScans()
 
+    override fun exportSyncBundle(): GrainSyncResult =
+        client.exportSyncBundle()
+
     override fun createRootIdentity(label: String): GrainIdentityResult =
         client.createRootIdentity(label = label)
 
@@ -84,6 +89,10 @@ class GrainScannerWorkflowClient(
     }
 }
 
+data class ScannerAcceptedScanSummary(
+    val scanId: String,
+)
+
 data class ScannerUiState(
     val qrString: String = "",
     val trustAnchorId: String = "",
@@ -92,11 +101,14 @@ data class ScannerUiState(
     val diagnostics: List<String> = emptyList(),
     val canAccept: Boolean = false,
     val acceptedCount: Int = 0,
+    val acceptedScans: List<ScannerAcceptedScanSummary> = emptyList(),
     val acceptedScanId: String? = null,
     val lifecycleStatus: String? = null,
     val deviceCount: ULong = 0UL,
     val lifecycleEventCount: ULong = 0UL,
     val snapshotStatus: String? = null,
+    val exportStatus: String? = null,
+    val exportAcceptedCount: ULong = 0UL,
 )
 
 class ScannerController(
@@ -153,9 +165,8 @@ class ScannerController(
             acceptStatus = null,
             diagnostics = preview.diag,
             canAccept = preview.status == GrainScanPreviewStatus.Verified,
-            acceptedCount = client.listAcceptedScans().size,
             acceptedScanId = null,
-        )
+        ).withAcceptedScans(client.listAcceptedScans())
     }
 
     fun accept() {
@@ -182,19 +193,34 @@ class ScannerController(
             trustAnchorId = normalizedTrustAnchorId(),
             trustProvider = trustProvider,
         )
+        val acceptedScans = client.listAcceptedScans()
         state = state.copy(
             acceptStatus = accepted.status,
             diagnostics = accepted.diag,
-            acceptedCount = client.listAcceptedScans().size,
             acceptedScanId = accepted.scanId,
             canAccept = state.previewStatus == GrainScanPreviewStatus.Verified,
-        )
+        ).withAcceptedScans(acceptedScans)
         if (
             accepted.status == GrainScanAcceptStatus.Accepted ||
             accepted.status == GrainScanAcceptStatus.AlreadyAccepted
         ) {
             persistSnapshot()
         }
+    }
+
+    fun refreshAcceptedScans() {
+        state = state.withAcceptedScans(client.listAcceptedScans())
+    }
+
+    fun exportSyncBundleForShare(): GrainSyncResult {
+        val exported = client.exportSyncBundle()
+        state = state.copy(
+            exportStatus = exported.status,
+            exportAcceptedCount = exported.acceptedRecordCount,
+            acceptedCount = exported.acceptedRecordCount.toInt(),
+            diagnostics = if (exported.diag.isEmpty()) state.diagnostics else exported.diag,
+        )
+        return exported
     }
 
     fun restorePersistedSnapshot() {
@@ -204,15 +230,15 @@ class ScannerController(
             if (restored == null) {
                 state = state.copy(snapshotStatus = "Empty")
                 refreshLifecycle()
-                state = state.copy(acceptedCount = client.listAcceptedScans().size)
+                refreshAcceptedScans()
                 return
             }
             state = state.copy(
                 snapshotStatus = restored.status,
                 diagnostics = restored.diag,
-                acceptedCount = restored.acceptedRecordCount.toInt(),
             )
             refreshLifecycle()
+            refreshAcceptedScans()
         } catch (_: RuntimeException) {
             state = state.copy(
                 snapshotStatus = "PersistenceError",
@@ -244,6 +270,14 @@ class ScannerController(
         state = state.withLifecycle(client.clientLifecycle())
     }
 
+    private fun ScannerUiState.withAcceptedScans(
+        acceptedScans: List<GrainAcceptedScan>,
+    ): ScannerUiState =
+        copy(
+            acceptedCount = acceptedScans.size,
+            acceptedScans = acceptedScans.map { ScannerAcceptedScanSummary(scanId = it.scanId) },
+        )
+
     private fun ScannerUiState.withoutDecision(): ScannerUiState =
         copy(
             previewStatus = null,
@@ -251,6 +285,8 @@ class ScannerController(
             diagnostics = emptyList(),
             canAccept = false,
             acceptedScanId = null,
+            exportStatus = null,
+            exportAcceptedCount = 0UL,
         )
 
     private fun ScannerUiState.withLifecycle(lifecycle: GrainClientLifecycle): ScannerUiState =

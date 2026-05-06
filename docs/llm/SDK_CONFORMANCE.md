@@ -237,9 +237,13 @@ Expected Android adapter contract:
   GR1 strings and sends them through public Kotlin workflow APIs
 - production preview/accept paths use `trustAnchorId` plus `GrainTrustProvider`
 - the shell persists only opaque `snapshotB64` through `dev.grain.android`
+  and exposes accepted-scan list/export flow without displaying snapshot or
+  bundle payload material
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
 - local trust anchor bundles load through `GrainStaticTrustProvider.fromBundleJson`
   and invalid bundles fail closed before scan preview/accept
+- `GrainAesGcmSnapshotCipher` accepts an app-supplied Android Keystore
+  `SecretKey`-shaped key and authenticates sealed snapshots before restore
 - preview and rejected accept paths do not write accepted records or snapshots
 - static guards reject raw protocol API calls, hidden trust lookup, network
   trust discovery, TOFU, fallback trust, and secret snapshot/trust logging

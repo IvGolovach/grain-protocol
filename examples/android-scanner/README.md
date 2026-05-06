@@ -6,25 +6,29 @@ It is a paste-first and camera-adapter-ready scanner state model shaped for an
 Android `ViewModel` or Compose screen. The shell calls `GrainClient.scanPreview`,
 using an explicit trust anchor ID plus `GrainTrustProvider`, enables accept only
 after a verified preview, then calls provider-backed `GrainClient.scanAccept`.
-It also includes a minimal local identity preparation hook through public
-`GrainClient` lifecycle methods; bundle parsing and lifecycle mutation stay in
-the SDK.
+Local trust bundle helpers load app-managed JSON from a `Path`; the shell does
+not perform URL, platform CA, or network trust discovery. It also includes a
+minimal local identity preparation hook through public `GrainClient` lifecycle
+methods; bundle parsing and lifecycle mutation stay in the SDK.
 
 Durable state stays behind `dev.grain.android`: the shell persists the opaque
 `snapshotB64` returned by `exportStoreSnapshot` and restores it with
 `restoreStoreSnapshot`. File-backed persistence keeps the smoke deterministic;
 production Android apps can swap the same boundary for Keystore-backed
-encryption by providing a `GrainSnapshotCipher` and byte store.
+encryption by providing an Android Keystore `SecretKey` to
+`GrainAesGcmSnapshotCipher` and a byte store.
 
 `CameraScanAdapter` keeps CameraX and QR decoder choices outside protocol
 semantics. `CameraXFrameScanAdapter` accepts an injected frame decoder, maps a
 decoded QR string into the same scanner workflow, and is smoke-tested without a
 device.
 
-The smoke check proves preview, accept, duplicate accept, restore-after-restart,
-and blank/unknown trust-anchor rejection without network trust discovery,
-fallback issuer material, or accepted-record/snapshot writes before verified
-accept.
+The smoke check proves local trust bundle loading, preview, accept,
+accepted-scan listing, sync export status, duplicate accept,
+restore-after-restart, and blank/unknown trust-anchor rejection without network
+trust discovery, fallback issuer material, or accepted-record/snapshot writes
+before verified accept. The controller returns sync export payloads to app code
+but keeps UI state to statuses, counts, diagnostics, and scan IDs.
 
 ## Check
 

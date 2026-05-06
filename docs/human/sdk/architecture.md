@@ -84,7 +84,7 @@ This page defines boundaries. The SDK is a strict orchestration layer, not a new
   - `scripts/sdk/sync_swift_bindings.sh` and `scripts/sdk/check_swift_package.sh` keep generated sources reproducible
 - `sdk/kotlin/*`: Kotlin/JVM client package over generated workflow bindings
   - `src/main/kotlin/dev/grain` is the public wrapper surface
-  - `src/main/kotlin/dev/grain/android` is the Android adapter pack for app-owned opaque snapshot persistence through file storage or Keystore-backed encryption boundaries
+  - `src/main/kotlin/dev/grain/android` is the Android adapter pack for app-owned opaque snapshot persistence through file storage or AES-GCM/Keystore-backed encryption boundaries
   - `src/main/kotlin/uniffi/grain_client_core` is the synchronized generated binding source
   - `src/test/kotlin/dev/grain/fixture` executes `sdk/workflows` fixtures through the public Kotlin API
   - `src/test/kotlin/dev/grain/android` proves adapter persistence without instrumented device state

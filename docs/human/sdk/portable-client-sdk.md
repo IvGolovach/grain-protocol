@@ -81,18 +81,22 @@ The Android adapter pack is now present in the Kotlin package:
 - `dev.grain.android` provides `GrainSnapshotPersistence`,
   `GrainSnapshotCoordinator`, deterministic file-backed persistence, and a
   Keystore-ready encrypted persistence boundary behind the same opaque
-  `snapshotB64` contract
+  `snapshotB64` contract. `GrainAesGcmSnapshotCipher` can seal snapshots with
+  an Android Keystore-backed `SecretKey` while keeping protocol state opaque
 - `examples/android-scanner` wires camera/injected GR1 payloads through
   `trustAnchorId` plus `GrainTrustProvider`, never raw trust input in the
   production preview/accept path
-- the Android smoke proves preview, accept, duplicate accept,
-  restore-after-restart, and blank/unknown trust-anchor rejection through public
-  SDK APIs
+- the Android shell loads app-managed local trust bundle JSON, exposes
+  accepted-scan list/export status without storing sync bundle payloads in UI
+  state, and keeps network trust discovery out of the example
+- the Android smoke proves trust bundle loading, preview, accept, accepted-scan
+  listing, sync export, duplicate accept, restore-after-restart, and
+  blank/unknown trust-anchor rejection through public SDK APIs
 - `scripts/sdk/check_kotlin_package.sh` regenerates the Kotlin binding, rebuilds Rust client-core, runs the shared workflow fixtures through Kotlin, and fails if generated sources drift
 
 This proves the Android-facing package shape. It is not a Play Store Android app
-yet and it does not introduce a device-bound Keystore cipher, live CameraX
-session automation, or platform trust lookup.
+yet and it does not introduce live CameraX session automation, Android
+instrumentation, Play Store packaging, or platform trust lookup.
 
 The mobile-web package slice is now the WASM client package:
 
