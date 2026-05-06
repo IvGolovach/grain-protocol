@@ -2,9 +2,8 @@ FROM rust:1.86-bookworm AS build
 
 WORKDIR /work
 COPY core/rust/Cargo.toml core/rust/Cargo.lock ./core/rust/
-COPY core/rust/grain-core ./core/rust/grain-core
-COPY core/rust/grain-runner ./core/rust/grain-runner
-COPY core/rust/grain-core-wasm ./core/rust/grain-core-wasm
+COPY core/rust ./core/rust
+COPY conformance ./conformance
 RUN cargo build --manifest-path core/rust/Cargo.toml -p grain-runner --release
 
 FROM debian:bookworm-slim

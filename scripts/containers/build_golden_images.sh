@@ -15,7 +15,8 @@ fi
 
 if [[ -z "$REGISTRY" ]]; then
   if [[ -n "${GITHUB_REPOSITORY_OWNER:-}" ]]; then
-    REGISTRY="ghcr.io/${GITHUB_REPOSITORY_OWNER}"
+    owner_lc="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+    REGISTRY="ghcr.io/${owner_lc}"
   else
     echo "usage: $0 <registry> [version-tag]" >&2
     echo "set GOLDEN_IMAGE_REGISTRY or pass ghcr.io/<owner> explicitly" >&2

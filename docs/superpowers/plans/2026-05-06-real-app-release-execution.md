@@ -85,3 +85,13 @@ SDK roadmap:
   suite summary embeds SDK counts, while `sdk-suite-summary.json` carries the
   richer SDK runner metadata. The verifier fix is part of the same
   release-tooling slice before the next signed RC tag.
+- 2026-05-06: Signed RC tag `repo-rc-v0.4.0-rc3` was pushed for
+  `a9b2ad0857ccec21493f98d3bcd9b74613449b5a` after PR #58 merged and
+  post-merge `main` CI run `25452377643` passed. `interop-certify` passed on
+  run `25452731721`. `golden-images` progressed past owner casing and exposed
+  two remaining blockers: `grain-runner` built from an incomplete Rust
+  workspace/conformance copy, and GHCR returned `403 Forbidden` while pushing
+  `grain-certify`. The workspace/conformance-copy fix is tracked before
+  cutting the next signed RC tag; the GHCR package-access failure may still
+  require repository package permission repair outside the codebase if it
+  persists.
