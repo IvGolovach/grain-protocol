@@ -17,7 +17,8 @@ If you are building an app on Grain, start here. Keep the first version small an
 7. If you are building a camera-first iOS, Android, glasses, or robot client,
    read [Portable client SDK](./portable-client-sdk.md).
 8. For scanner-shell reference code, start with `examples/ios-scanner`,
-   `examples/android-scanner`, or `examples/wasm-scanner`.
+   `examples/ios-reference-app`, `examples/android-scanner`, or
+   `examples/wasm-scanner`.
 9. To create a real signed scanner input for local app development, run
    `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`
    and wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle.

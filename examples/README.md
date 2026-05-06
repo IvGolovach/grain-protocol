@@ -7,6 +7,8 @@ semantics.
 ## Scanner Shells
 
 - `ios-scanner`: SwiftUI shell over `sdk/swift`.
+- `ios-reference-app`: minimal SwiftUI app entrypoint over `ios-scanner`,
+  using bundled local trust and Keychain/file snapshot persistence.
 - `android-scanner`: Kotlin shell over `sdk/kotlin`, shaped for Android app
   state and unit-testable outside a device.
 - `wasm-scanner`: browser/mobile-web shell over `sdk/wasm`.

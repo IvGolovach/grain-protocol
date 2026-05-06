@@ -131,3 +131,10 @@ SDK roadmap:
 - 2026-05-06: Started the next mobile/devkit slice: add a cross-platform
   `GrainScanHandoff`, local snapshot-store API, Swift/Kotlin example usage, and
   workflow fixture coverage.
+- 2026-05-06: PR #62 merged to `main` as
+  `fea3fd14f67bde0feb59d3f5b5027e82f527ab5a`; PR CI run `25460070863`
+  passed, including `sdk-platform` and `evidence-bundle`.
+- 2026-05-06: Started the minimal iOS reference app slice on
+  `codex/ios-reference-app`: add a SwiftUI `App` package over the public
+  `GrainIOSScanner` and `GrainClientIOSAdapters` surfaces, plus a dedicated
+  `scripts/sdk/check_ios_reference_app.sh` gate.
