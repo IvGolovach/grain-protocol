@@ -45,5 +45,6 @@ payloads out of UI state and logs.
 
 ```bash
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
+sdk/kotlin/gradlew -p examples/android-scanner runAndroidParitySmoke
 sdk/kotlin/gradlew -p examples/android-scanner check
 ```

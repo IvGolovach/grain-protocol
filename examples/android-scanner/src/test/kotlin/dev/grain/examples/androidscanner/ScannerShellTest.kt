@@ -5,12 +5,15 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.grain.GrainTrustAnchorBundleException
 import dev.grain.android.GrainFileSnapshotPersistence
 import dev.grain.android.GrainSnapshotPersistence
+import java.io.ByteArrayInputStream
 import kotlin.io.path.Path
 import java.nio.file.Files
 
 fun main() {
     acceptRequiresVerifiedPreview()
     localTrustAnchorBundleLoadsAndInvalidBundleFailsClosed()
+    localTrustAnchorBundleStreamLoadsForAndroidAssetBoundary()
+    cameraFrameAdapterFeedsControllerAndIgnoresEmptyFrames()
     verifiedPreviewEnablesAcceptAndPersistsSnapshot()
     blankTrustAnchorRejectsWithoutWrite()
     unknownTrustAnchorRejectsWithoutWrite()
@@ -56,6 +59,51 @@ private fun localTrustAnchorBundleLoadsAndInvalidBundleFailsClosed() {
         error("missing local trust anchor bundle did not fail closed")
     } catch (_: ScannerTrustAnchorBundleLoadException) {
         // Expected.
+    }
+}
+
+private fun localTrustAnchorBundleStreamLoadsForAndroidAssetBoundary() {
+    val bundleJson = Files.readString(trustAnchorBundlePath())
+    val trustProvider = scannerTrustProviderFromBundleStream(
+        ByteArrayInputStream(bundleJson.toByteArray(Charsets.UTF_8)),
+    )
+
+    requireSmoke(trustProvider.trustPubB64(trustAnchorId()) == trustPubB64(), "stream bundle trust mismatch")
+
+    try {
+        scannerTrustProviderFromBundleStream(
+            ByteArrayInputStream("""{"bundle_v":1,"anchors":[]}""".toByteArray(Charsets.UTF_8)),
+        )
+        error("invalid stream trust anchor bundle did not fail closed")
+    } catch (_: GrainTrustAnchorBundleException) {
+        // Expected.
+    }
+}
+
+private fun cameraFrameAdapterFeedsControllerAndIgnoresEmptyFrames() {
+    val qrString = fixtureString("conformance/vectors/qr/POS-QR-001.json#/input/qr_string")
+
+    GrainScannerWorkflowClient().use { client ->
+        val controller = ScannerController(
+            client = client,
+            trustProvider = scannerTrustProviderFromLocalBundlePath(trustAnchorBundlePath()),
+        )
+        controller.updateQrString("manual-paste")
+
+        val emptyAdapter = CameraXFrameScanAdapter<String> { null }
+        requireSmoke(!controller.scanCameraFrame("empty-frame", emptyAdapter), "empty camera frame reported scan")
+        requireSmoke(controller.state.qrString == "manual-paste", "empty camera frame cleared manual input")
+        requireSmoke(controller.state.scanSource == null, "empty camera frame changed scan source")
+
+        val cameraAdapter = CameraXFrameScanAdapter<String> { "  $qrString  " }
+        requireSmoke(controller.scanCameraFrame("camera-frame", cameraAdapter), "camera frame did not report scan")
+        requireSmoke(controller.state.qrString == qrString, "camera frame did not update QR input")
+        requireSmoke(controller.state.scanSource == CameraScanSource.Camera, "camera frame did not record source")
+        requireSmoke(controller.state.previewStatus == null, "camera frame kept stale preview")
+        requireSmoke(!controller.state.canAccept, "camera frame kept stale accept gate")
+
+        controller.updateQrString("manual-paste-again")
+        requireSmoke(controller.state.scanSource == null, "manual paste did not clear scan source")
     }
 }
 

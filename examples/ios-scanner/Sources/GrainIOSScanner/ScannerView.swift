@@ -44,6 +44,10 @@ public struct ScannerView: View {
                     LabeledContent("Accept", value: acceptStatus.rawValue)
                 }
 
+                if let scanSource = model.state.scanSource {
+                    LabeledContent("Source", value: scanSource.rawValue)
+                }
+
                 if let acceptedScanID = model.state.acceptedScanID {
                     Text(acceptedScanID)
                         .font(.footnote.monospaced())

@@ -11,12 +11,16 @@ Make sure all of these are true:
 2. `main` is green.
 3. The `main protection` ruleset is enabled with the intended settings.
 4. Your tag signing key is configured.
+5. Your release machine is aligned with the repo pins from `.nvmrc`,
+   `mise.toml`, and `core/rust/rust-toolchain.toml`.
 
 Start with:
 
 ```bash
 ./scripts/doctor
 ./scripts/bootstrap
+python3 tools/ci/check_node_runtime_pin.py
+python3 tools/ci/check_toolchain_bootstrap.py
 ```
 
 ## Normal release flow
@@ -56,8 +60,35 @@ Start with:
      `check_sdk_release_package.py --require-strict --require-clean`
    - for `repo-*` tags, image alias `stable` is updated
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only and must not overwrite `stable`
-8. Verify the matching GitHub release entry exists and attached assets are present.
-9. If you are checking older imported tags, remember that some historical releases still point to reconstructed notes instead of fully reconstructed assets.
+8. Download and verify the attached release assets as one handoff:
+   ```bash
+   tag="<tag-name>"
+   sha="$(git rev-list -n 1 "$tag")"
+   rm -rf "artifacts/release-assets/$tag"
+   mkdir -p "artifacts/release-assets/$tag"
+   gh release download "$tag" --dir "artifacts/release-assets/$tag"
+   python3 tools/ci/check_release_evidence_assets.py \
+     --release-dir "artifacts/release-assets/$tag" \
+     --expected-commit "$sha" \
+     --expected-tag "$tag"
+   ```
+9. Verify the matching GitHub release entry exists and attached assets are present.
+10. If you are checking older imported tags, remember that some historical releases still point to reconstructed notes instead of fully reconstructed assets.
+
+## Release handoff record
+
+For a new release or RC, hand the coordinator these exact values:
+
+- tag name
+- tag target commit SHA
+- `release-evidence` run URL and result
+- `interop-certify` run URL and result
+- `evidence-<sha>.zip` asset name
+- SDK release package manifest SHA-256 from `SHA256SUMS`
+- local output from `check_release_evidence_assets.py`
+
+Do not call the release ready until the signed tag exists, the tag workflows are
+green, and the downloaded release assets pass the local handoff check.
 
 ## RC stabilization window gate (TOR-RC-STAB-A01)
 
