@@ -46,7 +46,7 @@ SCAN_ACCEPT_STATUS = {"Accepted", "AlreadyAccepted", "Rejected"}
 DEVICE_LIFECYCLE_STATUS = {"Ready", "Uninitialized"}
 PAIRING_STATUS = {"Paired", "AlreadyPaired", "Rejected"}
 SYNC_BUNDLE_STATUS = {"Imported", "AlreadyImported", "Rejected"}
-STORE_SNAPSHOT_STATUS = {"Restored", "Rejected"}
+STORE_SNAPSHOT_STATUS = {"Exported", "Restored", "Empty", "Rejected"}
 ALLOWED_TOP_LEVEL = {"fixture_id", "workflow", "strict", "input", "expect", "meta"}
 ALLOWED_INPUT = {
     "qr_string_ref",
@@ -459,8 +459,16 @@ def main() -> int:
     require(paths, "expected at least one client workflow fixture")
 
     seen_ids: set[str] = set()
+    seen_workflows: set[str] = set()
     for path in paths:
         validate_fixture(path, seen_ids)
+        seen_workflows.add(load_json(path)["workflow"])
+
+    missing_workflows = ALLOWED_WORKFLOW - seen_workflows
+    require(
+        not missing_workflows,
+        f"missing fixture coverage for workflows: {sorted(missing_workflows)}",
+    )
 
     print(f"Client workflow fixture check: OK ({len(paths)} fixtures)")
     return 0

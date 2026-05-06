@@ -17,6 +17,17 @@ workflow. `GrainIndexedDBSnapshotPersistence` can restore the opaque
 `snapshotB64` on startup and persist it after device setup or accepted scans.
 Service workers and production npm release packaging stay outside this shell.
 
+## Try A Generated Issuer QR
+
+Use `docs/human/sdk/scan-quickstart.md` to generate `issuer-output.json`,
+`qr-string.txt`, and `local-trust-bundle.json`. Load that bundle into the
+browser trust provider, pass `trustAnchorId = "publisher:primary"`, and feed the
+generated `qr_string` through paste or `createBrowserCameraAdapter`.
+
+IndexedDB persistence is an example storage boundary, not a hardware custody
+claim. Production browser apps should add app-controlled sealing around stored
+snapshots.
+
 ## Check
 
 ```bash

@@ -7,18 +7,20 @@ The repo already has strong guardrails. This page helps you find them fast.
 
 1. Run `./scripts/doctor`.
    - This gives you a quick health check for branch state, toolchains, and recent verification artifacts.
-2. Run `./scripts/bootstrap` if this clone does not already have the pinned local toolchains.
+2. If the change touches the portable SDK or scanner docs, run `scripts/sdk/doctor`.
+   - This gives you a lightweight SDK readiness view without platform builds.
+3. Run `./scripts/bootstrap` if this clone does not already have the pinned local toolchains.
    - This is the blessed host setup path. It uses `mise` plus the repo package installs.
-3. Run `./scripts/verify`.
+4. Run `./scripts/verify`.
    - This is the normal day-to-day confidence pass.
-4. Read `CONTRIBUTING.md`.
+5. Read `CONTRIBUTING.md`.
    - It tells you the repo rules that matter during normal work.
-5. Read `docs/human/release-process.md`.
+6. Read `docs/human/release-process.md`.
    - This is the shortest reliable path to a release.
-6. Read `docs/human/repository-settings.md`.
+7. Read `docs/human/repository-settings.md`.
    - This explains the GitHub rules the repo expects to stay true.
 
-If you only do one thing before reviewing or merging changes, do steps 1 through 3.
+If you only do one thing before reviewing or merging changes, do steps 1 through 4.
 
 ## What matters most
 

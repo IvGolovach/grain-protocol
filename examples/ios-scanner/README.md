@@ -45,6 +45,24 @@ scan listing, sync export, duplicate accept, restore-after-restart, and
 blank/unknown trust-anchor rejection without network trust discovery or fallback
 issuer material.
 
+## Try A Generated Issuer QR
+
+Use `docs/human/sdk/scan-quickstart.md` to generate `issuer-output.json`,
+`qr-string.txt`, and `local-trust-bundle.json`. The production initializer takes
+the local trust bundle URL and a stable trust anchor ID:
+
+```swift
+let model = try ScannerShellModel(
+    keychainBackedTrustAnchorBundleURL: localTrustAnchorBundleURL,
+    initialTrustAnchorID: "publisher:primary"
+)
+```
+
+Pass the generated `qr_string` through the paste path or a `CameraScanAdapter`.
+The shell should preview with `Verified`, enable accept, persist the opaque
+snapshot, and restore accepted-scan state without exposing raw bundle payloads
+in UI state.
+
 ## Check
 
 ```bash

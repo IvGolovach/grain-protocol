@@ -16,6 +16,7 @@ Pick one path and get a quick win first:
 - See the repo quickly: `docs/human/start-here.md`
 - Run one happy-path demo: `docs/human/quickstart.md`
 - Build the smallest possible app: `docs/human/sdk/minimal-app-example.md`
+- Build a scanner app: `docs/human/sdk/scan-quickstart.md`
 - Build an app on top of Grain: `docs/human/building-on-grain.md`
 - Use the SDK path: `docs/human/sdk/start-here.md`
 - Implement Grain itself: `docs/human/implementing-grain.md`
@@ -25,7 +26,7 @@ Pick one path and get a quick win first:
 ## Project areas
 
 - Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`
-- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/minimal-app-example.md`, `core/ts/grain-sdk/README.md`
+- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/minimal-app-example.md`, `sdk/README.md`, `examples/README.md`, `core/ts/grain-sdk/README.md`
 - Implement: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
 - Operate: `docs/human/portability-pack.md`, `docs/human/repro-checklist.md`, `docs/human/release-process.md`
 - Maintain: `docs/human/maintainer-start-here.md`, `CONTRIBUTING.md`, `docs/human/repository-settings.md`, `docs/human/maintainer-writing.md`

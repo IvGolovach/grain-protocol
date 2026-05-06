@@ -10,8 +10,15 @@ ROOT = Path(__file__).resolve().parents[2]
 
 MD_FILES = [
     ROOT / "README.md",
+    ROOT / "sdk" / "README.md",
+    ROOT / "sdk" / "swift" / "README.md",
+    ROOT / "sdk" / "kotlin" / "README.md",
+    ROOT / "sdk" / "wasm" / "README.md",
     *sorted((ROOT / "docs" / "human").rglob("*.md")),
     *sorted((ROOT / "docs" / "llm").rglob("*.md")),
+    *sorted((ROOT / "sdk" / "workflows").rglob("*.md")),
+    *sorted((ROOT / "sdk" / "trust").rglob("*.md")),
+    *sorted((ROOT / "examples").rglob("*.md")),
 ]
 
 LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")

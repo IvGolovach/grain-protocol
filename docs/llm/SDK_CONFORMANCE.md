@@ -65,6 +65,7 @@ Workflow fixtures:
 - `sdk/workflows/fixtures/pairing/*.json`
 - `sdk/workflows/fixtures/scan-accept/*.json`
 - `sdk/workflows/fixtures/scan-preview/*.json`
+- `sdk/workflows/fixtures/store-snapshot/*.json`
 - `sdk/workflows/fixtures/sync-bundle/*.json`
 
 Fixture validation:
@@ -89,6 +90,7 @@ Expected contract:
 - `device_lifecycle` fixtures cover root creation, device add/activate/revoke, and lifecycle counters
 - `pairing` fixtures cover create/preview/accept/replay behavior through public client APIs
 - `sync_bundle` fixtures cover export/import/replay of identity, accepted scans, and lifecycle events
+- `store_snapshot` fixtures cover opaque snapshot export/restore behavior through public client APIs
 - platform adapter contract tests cover deterministic storage listing, idempotent re-put, rollback at the repository boundary, no anchor, missing anchor, malformed anchor, and valid anchor
 - FFI DTO contract tests keep binding-facing values owned and flat: strings, vectors, optional strings, no borrowed Rust lifetimes
 - `tools/ci/check_sdk_trust_provider_boundary.py` blocks hidden network trust lookup, TOFU/default issuer, and fallback trust patterns in generated platform SDK wrapper sources
@@ -221,6 +223,28 @@ checksums, and SBOM. `check_sdk_release_package.py` proves the metadata matches
 the files and version matrix. Repository release evidence still comes from
 `./scripts/verify`, `./scripts/certify`, and mandatory GitHub CI; do not treat a
 package smoke by itself as full release authority.
+
+## Developer DX Doctor
+
+Lightweight SDK readiness check:
+
+```bash
+scripts/sdk/doctor
+```
+
+Expected contract:
+- reports the root repo doctor state and platform prerequisite availability
+- runs docs, LLM docs, workflow fixture, no-network, trust-boundary,
+  secret-logging, and AI-boundary guards
+- checks current-HEAD SDK release package metadata when
+  `artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json` exists
+- prints `WARN` instead of a final `PASS` when optional local readiness or SDK
+  source package follow-up is still needed
+- does not run platform builds, package SDK artifacts, publish registries, or
+  claim App Store, Play Store, PWA, or future-device distribution readiness
+
+Use `scripts/sdk/doctor --require-release-package` only when the source package
+for the exact current commit is supposed to exist already.
 
 ## Diagnostics contract
 

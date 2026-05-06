@@ -2,6 +2,11 @@
 
 This is the smallest Grain app we recommend for a first try.
 
+If you are building a scanner app for iOS, Android, browser, glasses, robots, or
+another camera/sensor client, start with [Scanner app quickstart](./scan-quickstart.md)
+instead. This page is a TypeScript ledger demo, not the storage, trust, or
+custody template for scanner clients.
+
 It does four things:
 - creates an SDK instance
 - creates a root identity

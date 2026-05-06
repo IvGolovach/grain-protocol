@@ -30,6 +30,17 @@ trust discovery, fallback issuer material, or accepted-record/snapshot writes
 before verified accept. The controller returns sync export payloads to app code
 but keeps UI state to statuses, counts, diagnostics, and scan IDs.
 
+## Try A Generated Issuer QR
+
+Use `docs/human/sdk/scan-quickstart.md` to generate `issuer-output.json`,
+`qr-string.txt`, and `local-trust-bundle.json`. Load the trust bundle through
+the scanner helper, keep `trustAnchorId = "publisher:primary"`, and feed the
+generated `qr_string` through the paste path or `CameraScanAdapter`.
+
+The expected app flow is preview `Verified`, accept, persist opaque
+`snapshotB64`, restore accepted-scan state after restart, and keep raw bundle
+payloads out of UI state and logs.
+
 ## Check
 
 ```bash
