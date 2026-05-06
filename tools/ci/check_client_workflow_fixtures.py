@@ -18,6 +18,7 @@ TRUST_BUNDLE_REF_RE = re.compile(r"^sdk/trust/fixtures/[A-Za-z0-9_-]+\.json$")
 ALLOWED_WORKFLOW = {
     "scan_preview",
     "scan_accept",
+    "scan_handoff",
     "device_lifecycle",
     "pairing",
     "sync_bundle",
@@ -43,6 +44,7 @@ ALLOWED_STATUS = {
 }
 SCAN_PREVIEW_STATUS = {"Verified", "Untrusted", "Rejected"}
 SCAN_ACCEPT_STATUS = {"Accepted", "AlreadyAccepted", "Rejected"}
+SCAN_HANDOFF_STATUS = {"Accepted", "AlreadyAccepted", "Rejected"}
 DEVICE_LIFECYCLE_STATUS = {"Ready", "Uninitialized"}
 PAIRING_STATUS = {"Paired", "AlreadyPaired", "Rejected"}
 SYNC_BUNDLE_STATUS = {"Imported", "AlreadyImported", "Rejected"}
@@ -58,6 +60,7 @@ ALLOWED_INPUT = {
     "import_attempts",
     "root_label",
     "device_label",
+    "handoff_source",
 }
 ALLOWED_EXPECT = {
     "status",
@@ -76,6 +79,18 @@ ALLOWED_EXPECT = {
     "envelope_b64",
     "bundle_b64",
     "snapshot_b64",
+    "handoff_source",
+}
+ALLOWED_HANDOFF_SOURCE = {
+    "manual_entry",
+    "camera",
+    "injected",
+    "share_sheet",
+    "deep_link",
+    "clipboard",
+    "robot_vision",
+    "external_sensor",
+    "unknown",
 }
 REQUIRED_EXPECT = {"status"}
 PRESENCE_FIELDS = {
@@ -283,6 +298,11 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
     for label in ("root_label", "device_label"):
         if label in input_obj:
             require(isinstance(input_obj[label], str), f"{path}: {label} must be a string")
+    if "handoff_source" in input_obj:
+        require(
+            input_obj["handoff_source"] in ALLOWED_HANDOFF_SOURCE,
+            f"{path}: invalid handoff_source",
+        )
 
     expect = data["expect"]
     require(isinstance(expect, dict), f"{path}: expect must be an object")
@@ -302,6 +322,8 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
         require(status in SCAN_PREVIEW_STATUS, f"{path}: invalid scan_preview status")
     if workflow == "scan_accept":
         require(status in SCAN_ACCEPT_STATUS, f"{path}: invalid scan_accept status")
+    if workflow == "scan_handoff":
+        require(status in SCAN_HANDOFF_STATUS, f"{path}: invalid scan_handoff status")
     if workflow == "device_lifecycle":
         require(status in DEVICE_LIFECYCLE_STATUS, f"{path}: invalid device_lifecycle status")
     if workflow == "pairing":
@@ -369,6 +391,34 @@ def validate_fixture(path: Path, seen_ids: set[str]) -> None:
             require(
                 store_mutation == "none" and expect["accepted_record_count"] == 0,
                 f"{path}: rejected scan_accept must not persist records",
+            )
+    if workflow == "scan_handoff":
+        require(
+            {"cose_b64", "store_mutation", "accepted_record_count", "handoff_source"}.issubset(expect),
+            f"{path}: scan_handoff missing handoff expectations",
+        )
+        require(
+            "trust_anchor_bundle_ref" in input_obj and "trust_anchor_id" in input_obj,
+            f"{path}: scan_handoff must use explicit trust anchor bundle and ID",
+        )
+        require(
+            expect["handoff_source"] in ALLOWED_HANDOFF_SOURCE,
+            f"{path}: invalid expected handoff_source",
+        )
+        require(
+            input_obj.get("handoff_source", "manual_entry") == expect["handoff_source"],
+            f"{path}: handoff source expectation must match input",
+        )
+        if status == "Rejected":
+            require(
+                store_mutation == "none" and expect["accepted_record_count"] == 0,
+                f"{path}: rejected scan_handoff must not persist records",
+            )
+        else:
+            require(
+                store_mutation == "accepted_scan_inserted"
+                and expect["accepted_record_count"] == 1,
+                f"{path}: accepted scan_handoff must leave exactly one record",
             )
     if workflow == "device_lifecycle":
         require(

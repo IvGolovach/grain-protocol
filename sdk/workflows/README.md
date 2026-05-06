@@ -19,6 +19,15 @@ The second workflow is `scan_accept`:
 - prove duplicate-scan idempotency by repeating the public accept workflow in fixtures;
 - never persist rejected scans.
 
+The platform handoff workflow is `scan_handoff`:
+
+- receive QR payloads from camera, paste, share-sheet, glasses, robot vision, or
+  other sensor adapters as a single SDK handoff object;
+- require an explicit trust anchor ID resolved by the platform trust provider;
+- preview before mutation and accept only verified handoffs;
+- persist exactly one accepted scan record and preserve duplicate-scan
+  idempotency.
+
 Trust-provider fixtures add `trust_anchor_id` to prove that platform wrappers
 can resolve app trust through explicit anchor IDs and fail closed when no anchor
 material exists. Fixtures that model app-distributed trust use

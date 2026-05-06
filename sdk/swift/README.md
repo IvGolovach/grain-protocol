@@ -25,7 +25,7 @@ import GrainClient
 import GrainClientIOSAdapters
 
 let client = GrainClient()
-let snapshots = GrainSnapshotCoordinator(
+let snapshots = GrainLocalSnapshotStore(
     persistence: try GrainFileSnapshotPersistence.applicationSupport()
 )
 _ = try snapshots.restore(into: client)
@@ -38,7 +38,11 @@ let trustProvider = GrainStaticTrustProvider(
     trustPubB64: "<trusted publisher public key base64>"
 )
 // Or: let trustProvider = try GrainStaticTrustProvider(bundleJSON: localTrustAnchorBundleJSON)
-let scannedQRCode = "<GR1...>"
+let handoff = GrainScanHandoff(
+    qrString: "<GR1...>",
+    trustAnchorID: trustAnchorID,
+    source: .camera
+)
 
 if client.clientLifecycle().status != "Ready" {
     let identity = client.createRootIdentity(label: "phone")
@@ -51,28 +55,29 @@ if client.clientLifecycle().status != "Ready" {
 }
 
 let preview = client.scanPreview(
-    qrString: scannedQRCode,
-    trustAnchorID: trustAnchorID,
+    handoff: handoff,
     trustProvider: trustProvider
 )
 
 if preview.status == .verified {
     let accepted = client.scanAccept(
-        qrString: scannedQRCode,
-        trustAnchorID: trustAnchorID,
+        handoff: handoff,
         trustProvider: trustProvider
     )
 
     if accepted.status == .accepted || accepted.status == .alreadyAccepted {
         let saved = client.listAcceptedScans()
         print(saved.count)
-        _ = try snapshots.persist(from: client)
+        _ = try snapshots.save(from: client)
     }
 }
 ```
 
 ## Workflow notes
 
+- `GrainScanHandoff` is the portable input object for camera, paste,
+  share-sheet, glasses, or robot-vision QR capture. Platform code owns the
+  sensor; Grain owns preview, accept, diagnostics, and mutation.
 - `scanPreview` never writes local storage.
 - `scanAccept` should use an explicit `trustAnchorID` plus `GrainTrustProvider`
   in production and persists at most one accepted record for the same verified
@@ -83,10 +88,11 @@ if preview.status == .verified {
   backup or pairing setup.
 - `exportSyncBundle` exports identity, accepted scans, and lifecycle events as a
   portable evidence/state bundle.
-- `GrainClientIOSAdapters` adds an opaque snapshot persistence seam for iOS
-  apps. File persistence is deterministic for tests and simulator smoke; the
-  Keychain-backed implementation keeps the same `snapshotB64` boundary isolated
-  from protocol semantics.
+- `GrainClientIOSAdapters` adds an opaque snapshot persistence boundary for iOS
+  apps. `GrainLocalSnapshotStore` gives app code restore/save/clear operations
+  over that boundary. File persistence is deterministic for tests and simulator
+  smoke; the Keychain-backed implementation keeps `snapshotB64` isolated from
+  protocol semantics.
 - `examples/ios-scanner` composes local trust-bundle loading with the
   Keychain-backed persistence initializer for production app setup, while its
   smoke path keeps injected QR input and file persistence deterministic.

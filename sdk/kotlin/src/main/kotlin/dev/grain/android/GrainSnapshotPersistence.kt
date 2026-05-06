@@ -62,6 +62,22 @@ class GrainSnapshotCoordinator(
     }
 }
 
+class GrainLocalSnapshotStore(
+    private val persistence: GrainSnapshotPersistence,
+) {
+    private val coordinator = GrainSnapshotCoordinator(persistence)
+
+    fun restore(client: GrainSnapshotClient): GrainStoreSnapshotResult? =
+        coordinator.restore(client = client)
+
+    fun save(client: GrainSnapshotClient): GrainStoreSnapshotResult =
+        coordinator.persist(client = client)
+
+    fun clear() {
+        persistence.clearSnapshot()
+    }
+}
+
 sealed class GrainSnapshotPersistenceException(message: String) : RuntimeException(message) {
     object MissingExportedSnapshot : GrainSnapshotPersistenceException(
         "exportStoreSnapshot returned Exported without snapshotB64",

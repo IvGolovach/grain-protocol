@@ -95,6 +95,34 @@ public struct GrainAcceptedScan: Equatable, Sendable {
     public let trustPubB64: String
 }
 
+public enum GrainScanHandoffSource: String, Equatable, Sendable {
+    case manualEntry = "manual_entry"
+    case camera
+    case injected
+    case shareSheet = "share_sheet"
+    case deepLink = "deep_link"
+    case clipboard
+    case robotVision = "robot_vision"
+    case externalSensor = "external_sensor"
+    case unknown
+}
+
+public struct GrainScanHandoff: Equatable, Sendable {
+    public let qrString: String
+    public let trustAnchorID: String?
+    public let source: GrainScanHandoffSource
+
+    public init(
+        qrString: String,
+        trustAnchorID: String?,
+        source: GrainScanHandoffSource = .manualEntry
+    ) {
+        self.qrString = qrString
+        self.trustAnchorID = trustAnchorID
+        self.source = source
+    }
+}
+
 public struct GrainIdentityResult: Equatable, Sendable {
     public let status: String
     public let diag: [String]
@@ -324,6 +352,17 @@ public final class GrainClient {
         }
     }
 
+    public func scanPreview(
+        handoff: GrainScanHandoff,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanPreview {
+        scanPreview(
+            qrString: handoff.qrString,
+            trustAnchorID: handoff.trustAnchorIDForResolution,
+            trustProvider: trustProvider
+        )
+    }
+
     public func scanAcceptPrepare(qrString: String, trustPubB64: String) -> GrainScanAccept {
         let accepted = grainScanAcceptPrepare(
             request: FfiScanAcceptRequest(qrString: qrString, trustPubB64: trustPubB64)
@@ -362,6 +401,17 @@ public final class GrainClient {
         case let .rejected(diag):
             return GrainScanAccept.rejected(diag)
         }
+    }
+
+    public func scanAccept(
+        handoff: GrainScanHandoff,
+        trustProvider: any GrainTrustProvider
+    ) -> GrainScanAccept {
+        scanAccept(
+            qrString: handoff.qrString,
+            trustAnchorID: handoff.trustAnchorIDForResolution,
+            trustProvider: trustProvider
+        )
     }
 
     public func listAcceptedScans() -> [GrainAcceptedScan] {
@@ -437,6 +487,12 @@ public final class GrainClient {
     }
 }
 
+private extension GrainScanHandoff {
+    var trustAnchorIDForResolution: String {
+        trustAnchorID ?? ""
+    }
+}
+
 private enum GrainTrustResolution {
     case resolved(String)
     case rejected(String)
@@ -479,6 +535,15 @@ extension GrainScanAccept: CustomStringConvertible, CustomDebugStringConvertible
 extension GrainAcceptedScan: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         "GrainAcceptedScan(scanID: \(scanID), coseB64: [REDACTED], trustPubB64: [REDACTED])"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainScanHandoff: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainScanHandoff(qrString: [REDACTED], trustAnchorID: \(String(describing: trustAnchorID)), " +
+            "source: \(source.rawValue))"
     }
 
     public var debugDescription: String { description }

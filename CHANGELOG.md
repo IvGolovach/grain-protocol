@@ -91,6 +91,11 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `sdk/wasm` persists opaque client snapshots through deterministic memory storage or IndexedDB-backed browser storage without parsing protocol state
     - `examples/wasm-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
     - WASM scanner smoke proves injected/browser camera handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
+  - added the portable platform handoff/devkit layer:
+    - Swift and Kotlin expose `GrainScanHandoff` so camera, paste, glasses, robot, or other sensor adapters can pass QR input through one public SDK entrypoint
+    - iOS and Android adapters expose `GrainLocalSnapshotStore` for restore/save/clear over opaque `snapshotB64` persistence
+    - `scan_handoff` workflow fixtures now cover trust-provider resolution, preview-before-mutation, accept, handoff source preservation, and accepted-record persistence through public Swift/Kotlin fixture runners
+    - iOS and Android scanner examples now build preview/accept paths from `GrainScanHandoff` instead of bespoke QR/trust call sites
   - hardened SDK release certification:
     - SDK packaging now emits `manifest.json`, `SHA256SUMS`, and SPDX JSON SBOM metadata for generated bindings, Swift, Kotlin, WASM/mobile-web, and workflow-contract artifacts
     - release package checking verifies same-SHA version-matrix hashes, SDK component versions, artifact byte counts, SHA-256 sums, archive cleanliness, and SBOM package checksums

@@ -8,6 +8,8 @@ import dev.grain.GrainClient
 import dev.grain.GrainCustodyBinding
 import dev.grain.GrainCustodyMaterial
 import dev.grain.GrainCustodyPolicies
+import dev.grain.GrainScanHandoff
+import dev.grain.GrainScanHandoffSource
 import dev.grain.GrainStaticTrustProvider
 import java.nio.file.Files
 import java.nio.file.Path
@@ -18,6 +20,7 @@ import kotlin.io.path.name
 fun main() {
     runScanPreviewFixtures()
     runScanAcceptFixtures()
+    runScanHandoffFixtures()
     runDeviceLifecycleFixtures()
     runPairingFixtures()
     runSyncBundleFixtures()
@@ -45,6 +48,7 @@ private data class FixtureInput(
     @JsonProperty("import_attempts") val importAttempts: Int? = null,
     @JsonProperty("root_label") val rootLabel: String? = null,
     @JsonProperty("device_label") val deviceLabel: String? = null,
+    @JsonProperty("handoff_source") val handoffSource: String? = null,
 )
 
 private data class FixtureExpectation(
@@ -64,6 +68,7 @@ private data class FixtureExpectation(
     @JsonProperty("envelope_b64") val envelopeB64: String? = null,
     @JsonProperty("bundle_b64") val bundleB64: String? = null,
     @JsonProperty("snapshot_b64") val snapshotB64: String? = null,
+    @JsonProperty("handoff_source") val handoffSource: String? = null,
 )
 
 private val mapper = jacksonObjectMapper()
@@ -135,6 +140,62 @@ private fun runScanAcceptFixtures() {
                 acceptedCoseB64,
                 requiredExpectation(fixture.expect.coseB64, "cose_b64", fixture.fixtureId),
                 fixture.fixtureId,
+            )
+
+            val records = client.listAcceptedScans()
+            when (requiredExpectation(fixture.expect.storeMutation, "store_mutation", fixture.fixtureId)) {
+                "accepted_scan_inserted" ->
+                    requireFixture(records.isNotEmpty(), "${fixture.fixtureId} expected persisted record")
+                "none" ->
+                    requireFixture(records.isEmpty(), "${fixture.fixtureId} expected no persisted records")
+                else -> throw FixtureException("${fixture.fixtureId} unsupported store mutation")
+            }
+
+            fixture.expect.acceptedRecordCount?.let { expectedCount ->
+                requireFixture(records.size == expectedCount, "${fixture.fixtureId} accepted record count mismatch")
+            }
+        }
+    }
+}
+
+private fun runScanHandoffFixtures() {
+    loadFixtures("scan-handoff").forEach { fixture ->
+        requireFixture(fixture.workflow == "scan_handoff", "${fixture.fixtureId} workflow mismatch")
+        requireFixture(fixture.strict, "${fixture.fixtureId} must be strict")
+
+        GrainClient().use { client ->
+            val handoff = GrainScanHandoff(
+                qrString = fixtureQrString(fixture),
+                trustAnchorId = fixture.input.trustAnchorId,
+                source = fixtureHandoffSource(fixture),
+            )
+            val trustProvider = fixtureTrustProvider(fixture.input)
+            val preview = client.scanPreview(handoff = handoff, trustProvider = trustProvider)
+            requireFixture(preview.status.rawValue == "Verified", "${fixture.fixtureId} handoff preview mismatch")
+            requireFixture(client.listAcceptedScans().isEmpty(), "${fixture.fixtureId} handoff preview mutated storage")
+
+            val attempts = fixture.input.acceptAttempts ?: 1
+            requireFixture(attempts > 0, "${fixture.fixtureId} accept_attempts must be positive")
+            var acceptedStatus: String? = null
+            var acceptedDiag: List<String>? = null
+            var acceptedCoseB64: String? = null
+            repeat(attempts) {
+                val accepted = client.scanAccept(handoff = handoff, trustProvider = trustProvider)
+                acceptedStatus = accepted.status.rawValue
+                acceptedDiag = accepted.diag
+                acceptedCoseB64 = accepted.coseB64
+            }
+
+            requireFixture(acceptedStatus == fixture.expect.status, "${fixture.fixtureId} handoff status mismatch")
+            requireDiagnostics(acceptedDiag ?: emptyList(), fixture.expect, fixture.fixtureId)
+            requireCosePresence(
+                acceptedCoseB64,
+                requiredExpectation(fixture.expect.coseB64, "cose_b64", fixture.fixtureId),
+                fixture.fixtureId,
+            )
+            requireFixture(
+                handoff.source.rawValue == fixture.expect.handoffSource,
+                "${fixture.fixtureId} handoff source mismatch",
             )
 
             val records = client.listAcceptedScans()
@@ -451,6 +512,10 @@ private fun fixtureQrString(fixture: WorkflowFixture): String =
         fixture.input.qrStringRef
             ?: throw FixtureException("${fixture.fixtureId} missing qr_string_ref"),
     )
+
+private fun fixtureHandoffSource(fixture: WorkflowFixture): GrainScanHandoffSource =
+    GrainScanHandoffSource.fromRawValue(fixture.input.handoffSource ?: "manual_entry")
+        ?: throw FixtureException("${fixture.fixtureId} invalid handoff_source")
 
 private fun <T> requiredExpectation(value: T?, field: String, fixtureId: String): T =
     value ?: throw FixtureException("$fixtureId missing $field expectation")

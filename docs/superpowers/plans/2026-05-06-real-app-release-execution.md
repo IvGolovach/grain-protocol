@@ -120,3 +120,14 @@ SDK roadmap:
 - 2026-05-06: Started the final-release execution sequence with a narrow
   workflow hygiene slice: update pinned `actions/setup-java` from v4.8.0 to
   v5.2.0 so Java setup runs on Node.js 24 before final release promotion.
+- 2026-05-06: PR #61 merged to `main` as
+  `b6f95c5c4d0c41aa190d0f46888c34ff18fb9dfd`; post-merge `main` CI run
+  `25458629602` passed, including `sdk-platform` and evidence bundle.
+- 2026-05-06: Signed final tag `repo-v0.4.0` was pushed for
+  `b6f95c5c4d0c41aa190d0f46888c34ff18fb9dfd`. `release-evidence` run
+  `25459035298`, `interop-certify` run `25459035319`, and `golden-images` run
+  `25459035295` all passed. Downloaded GitHub release assets passed
+  `tools/ci/check_release_evidence_assets.py` for the expected commit and tag.
+- 2026-05-06: Started the next mobile/devkit slice: add a cross-platform
+  `GrainScanHandoff`, local snapshot-store API, Swift/Kotlin example usage, and
+  workflow fixture coverage.

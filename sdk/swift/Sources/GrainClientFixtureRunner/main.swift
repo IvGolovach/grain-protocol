@@ -3,6 +3,7 @@ import GrainClient
 
 try runScanPreviewFixtures()
 try runScanAcceptFixtures()
+try runScanHandoffFixtures()
 try runDeviceLifecycleFixtures()
 try runPairingFixtures()
 try runSyncBundleFixtures()
@@ -36,6 +37,7 @@ private struct FixtureInput: Decodable {
     let importAttempts: Int?
     let rootLabel: String?
     let deviceLabel: String?
+    let handoffSource: String?
 
     enum CodingKeys: String, CodingKey {
         case qrStringRef = "qr_string_ref"
@@ -47,6 +49,7 @@ private struct FixtureInput: Decodable {
         case importAttempts = "import_attempts"
         case rootLabel = "root_label"
         case deviceLabel = "device_label"
+        case handoffSource = "handoff_source"
     }
 }
 
@@ -67,6 +70,7 @@ private struct FixtureExpectation: Decodable {
     let envelopeB64: String?
     let bundleB64: String?
     let snapshotB64: String?
+    let handoffSource: String?
 
     enum CodingKeys: String, CodingKey {
         case status
@@ -85,6 +89,7 @@ private struct FixtureExpectation: Decodable {
         case envelopeB64 = "envelope_b64"
         case bundleB64 = "bundle_b64"
         case snapshotB64 = "snapshot_b64"
+        case handoffSource = "handoff_source"
     }
 }
 
@@ -155,6 +160,66 @@ private func runScanAcceptFixtures() throws {
             result.coseB64,
             try requiredExpectation(fixture.expect.coseB64, "cose_b64", fixture.fixtureID),
             fixture.fixtureID
+        )
+
+        let records = client.listAcceptedScans()
+        switch try requiredExpectation(fixture.expect.storeMutation, "store_mutation", fixture.fixtureID) {
+        case "accepted_scan_inserted":
+            try require(!records.isEmpty, "\(fixture.fixtureID) expected persisted record")
+        case "none":
+            try require(records.isEmpty, "\(fixture.fixtureID) expected no persisted records")
+        default:
+            throw FixtureError.invalidReference("\(fixture.fixtureID) unsupported store mutation")
+        }
+
+        if let expectedCount = fixture.expect.acceptedRecordCount {
+            try require(records.count == expectedCount, "\(fixture.fixtureID) accepted record count mismatch")
+        }
+    }
+}
+
+private func runScanHandoffFixtures() throws {
+    for fixture in try loadFixtures(kind: "scan-handoff") {
+        try require(fixture.workflow == "scan_handoff", "\(fixture.fixtureID) workflow mismatch")
+        try require(fixture.strict, "\(fixture.fixtureID) must be strict")
+
+        let handoff = GrainScanHandoff(
+            qrString: try fixtureQRString(fixture),
+            trustAnchorID: fixture.input.trustAnchorID,
+            source: try fixtureHandoffSource(fixture)
+        )
+
+        let client = GrainClient()
+        let preview = client.scanPreview(
+            handoff: handoff,
+            trustProvider: try fixtureTrustProvider(fixture.input)
+        )
+        try require(preview.status == .verified, "\(fixture.fixtureID) handoff preview mismatch")
+        try require(client.listAcceptedScans().isEmpty, "\(fixture.fixtureID) handoff preview mutated storage")
+
+        let attempts = fixture.input.acceptAttempts ?? 1
+        try require(attempts > 0, "\(fixture.fixtureID) accept_attempts must be positive")
+        var accepted: GrainScanAccept?
+        for _ in 0..<attempts {
+            accepted = client.scanAccept(
+                handoff: handoff,
+                trustProvider: try fixtureTrustProvider(fixture.input)
+            )
+        }
+        guard let result = accepted else {
+            throw FixtureError.invalidReference("\(fixture.fixtureID) did not execute handoff accept")
+        }
+
+        try require(result.status.rawValue == fixture.expect.status, "\(fixture.fixtureID) handoff status mismatch")
+        try requireDiagnostics(result.diag, fixture.expect, fixture.fixtureID)
+        try requireCosePresence(
+            result.coseB64,
+            try requiredExpectation(fixture.expect.coseB64, "cose_b64", fixture.fixtureID),
+            fixture.fixtureID
+        )
+        try require(
+            handoff.source.rawValue == fixture.expect.handoffSource,
+            "\(fixture.fixtureID) handoff source mismatch"
         )
 
         let records = client.listAcceptedScans()
@@ -491,6 +556,16 @@ private func fixtureQRString(_ fixture: WorkflowFixture) throws -> String {
         throw FixtureError.invalidReference("\(fixture.fixtureID) missing qr_string_ref")
     }
     return try resolveStringRef(ref)
+}
+
+private func fixtureHandoffSource(_ fixture: WorkflowFixture) throws -> GrainScanHandoffSource {
+    guard let rawSource = fixture.input.handoffSource else {
+        return .manualEntry
+    }
+    guard let source = GrainScanHandoffSource(rawValue: rawSource) else {
+        throw FixtureError.invalidReference("\(fixture.fixtureID) invalid handoff_source")
+    }
+    return source
 }
 
 private func requiredExpectation<T>(_ value: T?, _ field: String, _ fixtureID: String) throws -> T {

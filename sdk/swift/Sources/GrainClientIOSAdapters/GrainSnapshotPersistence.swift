@@ -53,6 +53,29 @@ public struct GrainSnapshotCoordinator: Sendable {
     }
 }
 
+public struct GrainLocalSnapshotStore: Sendable {
+    private let persistence: any GrainSnapshotPersistence
+    private let coordinator: GrainSnapshotCoordinator
+
+    public init(persistence: any GrainSnapshotPersistence) {
+        self.persistence = persistence
+        self.coordinator = GrainSnapshotCoordinator(persistence: persistence)
+    }
+
+    public func restore(into client: any GrainSnapshotClient) throws -> GrainStoreSnapshotResult? {
+        try coordinator.restore(into: client)
+    }
+
+    @discardableResult
+    public func save(from client: any GrainSnapshotClient) throws -> GrainStoreSnapshotResult {
+        try coordinator.persist(from: client)
+    }
+
+    public func clear() throws {
+        try persistence.clearSnapshot()
+    }
+}
+
 public struct GrainFileSnapshotPersistence: GrainSnapshotPersistence, Sendable {
     public let fileURL: URL
     public let excludeFromBackup: Bool

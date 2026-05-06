@@ -12,7 +12,15 @@
     },
     "workflow": {
       "type": "string",
-      "enum": ["scan_preview", "scan_accept", "device_lifecycle", "pairing", "sync_bundle", "store_snapshot"]
+      "enum": [
+        "scan_preview",
+        "scan_accept",
+        "scan_handoff",
+        "device_lifecycle",
+        "pairing",
+        "sync_bundle",
+        "store_snapshot"
+      ]
     },
     "strict": {
       "const": true
@@ -49,6 +57,20 @@
         },
         "device_label": {
           "type": "string"
+        },
+        "handoff_source": {
+          "type": "string",
+          "enum": [
+            "manual_entry",
+            "camera",
+            "injected",
+            "share_sheet",
+            "deep_link",
+            "clipboard",
+            "robot_vision",
+            "external_sensor",
+            "unknown"
+          ]
         }
       },
       "not": {
@@ -159,6 +181,20 @@
         },
         "snapshot_b64": {
           "$ref": "#/$defs/presence"
+        },
+        "handoff_source": {
+          "type": "string",
+          "enum": [
+            "manual_entry",
+            "camera",
+            "injected",
+            "share_sheet",
+            "deep_link",
+            "clipboard",
+            "robot_vision",
+            "external_sensor",
+            "unknown"
+          ]
         }
       }
     },

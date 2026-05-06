@@ -26,6 +26,8 @@ dynamic library built for the host.
 ```kotlin
 import dev.grain.GrainClient
 import dev.grain.GrainScanAcceptStatus
+import dev.grain.GrainScanHandoff
+import dev.grain.GrainScanHandoffSource
 import dev.grain.GrainScanPreviewStatus
 import dev.grain.GrainStaticTrustProvider
 
@@ -38,7 +40,11 @@ GrainClient().use { client ->
         trustPubB64 = "<trusted publisher public key base64>",
     )
     // Or: val trustProvider = GrainStaticTrustProvider.fromBundleJson(localTrustAnchorBundleJson)
-    val scannedQRCode = "<GR1...>"
+    val handoff = GrainScanHandoff(
+        qrString = "<GR1...>",
+        trustAnchorId = trustAnchorId,
+        source = GrainScanHandoffSource.Camera,
+    )
 
     if (client.clientLifecycle().status != "Ready") {
         val identity = client.createRootIdentity(label = "phone")
@@ -49,15 +55,13 @@ GrainClient().use { client ->
     }
 
     val preview = client.scanPreview(
-        qrString = scannedQRCode,
-        trustAnchorId = trustAnchorId,
+        handoff = handoff,
         trustProvider = trustProvider,
     )
 
     if (preview.status == GrainScanPreviewStatus.Verified) {
         val accepted = client.scanAccept(
-            qrString = scannedQRCode,
-            trustAnchorId = trustAnchorId,
+            handoff = handoff,
             trustProvider = trustProvider,
         )
 
@@ -82,6 +86,9 @@ GrainClient().use { client ->
 
 ## Workflow notes
 
+- `GrainScanHandoff` is the portable input object for camera, paste,
+  share-sheet, glasses, or robot-vision QR capture. Platform code owns the
+  sensor; Grain owns preview, accept, diagnostics, and mutation.
 - `scanPreview` never writes local storage.
 - `scanAccept` should use an explicit `trustAnchorId` plus `GrainTrustProvider`
   in production and persists at most one accepted record for the same verified
@@ -94,11 +101,12 @@ GrainClient().use { client ->
   portable evidence/state bundle. Treat `bundleB64` as secret portable state and
   never log the raw value.
 - `dev.grain.android` adds an Android adapter persistence boundary for opaque
-  `snapshotB64` state. File persistence is deterministic for JVM smoke tests;
-  `GrainKeystoreSnapshotPersistence` keeps Android Keystore encryption behind an
-  injected cipher/store boundary, and `GrainAesGcmSnapshotCipher` can seal the
-  snapshot with an Android Keystore-backed `SecretKey` without parsing protocol
-  state.
+  `snapshotB64` state. `GrainLocalSnapshotStore` gives app code
+  restore/save/clear operations over that boundary. File persistence is
+  deterministic for JVM smoke tests; `GrainKeystoreSnapshotPersistence` keeps
+  Android Keystore encryption behind an injected cipher/store boundary, and
+  `GrainAesGcmSnapshotCipher` can seal the snapshot with an Android
+  Keystore-backed `SecretKey` without parsing protocol state.
 - `GrainCustodyPolicies` names the expected boundary: snapshots are device
   local and non-exportable, while identity bundles, pairing envelopes, and sync
   bundles are portable secret transfer artifacts.

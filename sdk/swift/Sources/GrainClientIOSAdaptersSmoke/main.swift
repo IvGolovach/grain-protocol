@@ -7,6 +7,7 @@ struct GrainClientIOSAdaptersSmoke {
     static func main() throws {
         try filePersistenceRestoresOpaqueClientSnapshot()
         try emptySnapshotClearsPersistedState()
+        try localSnapshotStoreSavesRestoresAndClears()
         print("swift ios adapters smoke: PASS")
     }
 }
@@ -47,6 +48,28 @@ private func emptySnapshotClearsPersistedState() throws {
     let exported = try coordinator.persist(from: empty)
     try require(exported.status == "Empty", "empty snapshot status mismatch")
     try require(try persistence.loadSnapshotB64() == nil, "empty snapshot did not clear persisted state")
+}
+
+private func localSnapshotStoreSavesRestoresAndClears() throws {
+    let persistence = GrainFileSnapshotPersistence(fileURL: temporarySnapshotURL())
+    let localStore = GrainLocalSnapshotStore(persistence: persistence)
+    defer { try? localStore.clear() }
+
+    let source = GrainClient()
+    _ = source.createRootIdentity(label: "phone")
+    _ = source.addDeviceKey(label: "scanner")
+
+    let saved = try localStore.save(from: source)
+    try require(saved.status == "Exported", "local store save status mismatch")
+    try require(try persistence.loadSnapshotB64() != nil, "local store did not save snapshot")
+
+    let restored = GrainClient()
+    let restoreResult = try localStore.restore(into: restored)
+    try require(restoreResult?.status == "Restored", "local store restore status mismatch")
+    try require(restored.clientLifecycle().deviceCount == 2, "local store restored device count mismatch")
+
+    try localStore.clear()
+    try require(try persistence.loadSnapshotB64() == nil, "local store did not clear snapshot")
 }
 
 private func temporarySnapshotURL() -> URL {
