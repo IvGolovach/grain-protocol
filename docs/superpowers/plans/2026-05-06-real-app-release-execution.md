@@ -95,3 +95,11 @@ SDK roadmap:
   cutting the next signed RC tag; the GHCR package-access failure may still
   require repository package permission repair outside the codebase if it
   persists.
+- 2026-05-06: Signed RC tag `repo-rc-v0.4.0-rc4` was pushed for
+  `052fc9fac19952ba9466f8db001ee15bcbdc2a05` after PR #59 merged and
+  post-merge `main` CI run `25453609947` passed. `release-evidence` passed on
+  run `25454024026` and `interop-certify` passed on run `25454024031`.
+  `golden-images` confirmed both Dockerfiles build far enough to publish, then
+  failed on GHCR `403 Forbidden` while pushing account-level image names for
+  both `grain-runner` and `grain-certify`. The next slice moves golden image
+  publication to a repo-scoped GHCR namespace before cutting another RC tag.

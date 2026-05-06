@@ -47,7 +47,8 @@ jobs:
         run: |
           set -euo pipefail
           owner_lc="$(printf '%s' "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          image_base="ghcr.io/${owner_lc}/${{ matrix.image.name }}"
+          repo_lc="$(printf '%s' "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
+          image_base="ghcr.io/${owner_lc}/${repo_lc}/${{ matrix.image.name }}"
           publish_tag="${image_base}:${PUBLISH_TAG}"
           sha_tag="${image_base}:${GITHUB_SHA}"
           docker buildx build \
@@ -63,10 +64,11 @@ jobs:
       - name: Write digest manifest
         run: |
           owner_lc="$(printf '%s' "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          repo_lc="$(printf '%s' "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
           mkdir -p artifacts
           cat > "artifacts/${{ matrix.image.name }}-digest.json" <<JSON
           {
-            "image": "ghcr.io/${owner_lc}/${{ matrix.image.name }}",
+            "image": "ghcr.io/${owner_lc}/${repo_lc}/${{ matrix.image.name }}",
             "commit_sha": "${{ github.sha }}",
             "digest": "${IMAGE_DIGEST}"
           }

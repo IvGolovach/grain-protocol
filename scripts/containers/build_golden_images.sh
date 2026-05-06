@@ -14,12 +14,12 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if [[ -z "$REGISTRY" ]]; then
-  if [[ -n "${GITHUB_REPOSITORY_OWNER:-}" ]]; then
-    owner_lc="$(printf '%s' "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
-    REGISTRY="ghcr.io/${owner_lc}"
+  if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+    repository_lc="$(printf '%s' "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
+    REGISTRY="ghcr.io/${repository_lc}"
   else
     echo "usage: $0 <registry> [version-tag]" >&2
-    echo "set GOLDEN_IMAGE_REGISTRY or pass ghcr.io/<owner> explicitly" >&2
+    echo "set GOLDEN_IMAGE_REGISTRY or pass ghcr.io/<owner>/<repo> explicitly" >&2
     exit 1
   fi
 fi
