@@ -52,8 +52,21 @@ public struct ScannerView: View {
 
                 LabeledContent("Saved", value: "\(model.state.acceptedCount)")
 
+                ForEach(model.state.acceptedScans) { scan in
+                    Text(scan.id)
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                }
+
                 if let snapshotStatus = model.state.snapshotStatus {
                     LabeledContent("Snapshot", value: snapshotStatus)
+                }
+
+                if let exportStatus = model.state.exportStatus {
+                    LabeledContent("Export", value: exportStatus)
+                    LabeledContent("Exported scans", value: "\(model.state.exportAcceptedCount)")
+                    LabeledContent("Exported devices", value: "\(model.state.exportDeviceCount)")
+                    LabeledContent("Exported events", value: "\(model.state.exportLifecycleEventCount)")
                 }
 
                 ForEach(model.state.diagnostics, id: \.self) { diagnostic in
@@ -64,24 +77,38 @@ public struct ScannerView: View {
             }
 
             Section {
-                HStack {
-                    Button("Prepare device") {
-                        model.prepareLocalIdentity()
+                Grid(horizontalSpacing: 12, verticalSpacing: 8) {
+                    GridRow {
+                        Button("Prepare") {
+                            model.prepareLocalIdentity()
+                        }
+
+                        Button("Preview") {
+                            model.preview()
+                        }
+
+                        Button("Accept") {
+                            model.accept()
+                        }
+                        .disabled(!model.state.canAccept)
                     }
 
-                    Button("Preview") {
-                        model.preview()
-                    }
+                    GridRow {
+                        Button("List") {
+                            model.refreshAcceptedScans()
+                        }
 
-                    Button("Accept") {
-                        model.accept()
-                    }
-                    .disabled(!model.state.canAccept)
+                        Button("Export") {
+                            _ = model.exportSyncBundleForShare()
+                        }
 
-                    Button("Restore") {
-                        model.restorePersistedSnapshot()
+                        Button("Restore") {
+                            model.restorePersistedSnapshot()
+                        }
                     }
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
             }
         }
     }

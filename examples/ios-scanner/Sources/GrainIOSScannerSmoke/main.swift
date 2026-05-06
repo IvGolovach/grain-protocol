@@ -6,17 +6,38 @@ import GrainIOSScanner
 @main
 struct GrainIOSScannerSmoke {
     static func main() async throws {
+        try await MainActor.run {
+            try rejectsNonFileTrustBundleURL()
+        }
         try await scannerFlowPersistsThroughSnapshot()
         try await rejectsUnknownTrustAnchorWithoutWritingSnapshot()
         print("iOS scanner shell smoke: PASS")
     }
 }
 
+@MainActor
+private func rejectsNonFileTrustBundleURL() throws {
+    let persistence = GrainFileSnapshotPersistence(fileURL: temporarySnapshotURL())
+    defer { try? persistence.clearSnapshot() }
+
+    do {
+        _ = try ScannerShellModel(
+            trustAnchorBundleURL: URL(string: "grain://trust-anchor-bundle")!,
+            initialTrustAnchorID: "fixture:primary",
+            snapshotPersistence: persistence
+        )
+        throw FixtureError.assertion("non-file trust bundle URL was accepted")
+    } catch ScannerShellConfigurationError.nonFileTrustAnchorBundleURL {
+        return
+    }
+}
+
 private func scannerFlowPersistsThroughSnapshot() async throws {
     let qrString = try fixtureString("conformance/vectors/qr/POS-QR-001.json#/input/qr_string")
-    let trustPubB64 = try fixtureString("conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64")
+    let trustAnchorBundleURL = try fixtureFileURL("sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json")
+    let trustAnchorBundleJSON = try fixtureFileContents("sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json")
     let trustAnchorID = "fixture:primary"
-    let trustProvider = GrainStaticTrustProvider(anchorID: trustAnchorID, trustPubB64: trustPubB64)
+    let trustProvider = try GrainStaticTrustProvider(bundleJSON: trustAnchorBundleJSON)
     let persistence = GrainFileSnapshotPersistence(fileURL: temporarySnapshotURL())
     let guardedPersistence = GrainFileSnapshotPersistence(fileURL: temporarySnapshotURL())
     defer { try? persistence.clearSnapshot() }
@@ -39,8 +60,9 @@ private func scannerFlowPersistsThroughSnapshot() async throws {
             "accept guard diagnostics mismatch"
         )
 
-        let model = ScannerShellModel(
-            trustProvider: trustProvider,
+        let model = try ScannerShellModel(
+            trustAnchorBundleURL: trustAnchorBundleURL,
+            initialTrustAnchorID: trustAnchorID,
             snapshotPersistence: persistence
         )
         model.prepareLocalIdentity()
@@ -51,7 +73,6 @@ private func scannerFlowPersistsThroughSnapshot() async throws {
         try require(model.state.deviceCount == 2, "repeat prepare duplicated device")
         try require(model.state.lifecycleEventCount == 1, "repeat prepare duplicated lifecycle event")
 
-        model.updateTrustAnchorID(trustAnchorID)
         model.receiveCameraPayload(cameraPayload)
         model.preview()
 
@@ -64,8 +85,18 @@ private func scannerFlowPersistsThroughSnapshot() async throws {
         try require(model.state.acceptStatus == .accepted, "accept status mismatch")
         try require(model.state.acceptedCount == 1, "accepted count mismatch")
         try require(!(model.state.acceptedScanID?.isEmpty ?? true), "accepted scan id missing")
+        try require(model.state.acceptedScans.count == 1, "accepted scan list mismatch")
+        try require(model.state.acceptedScans.first?.id == model.state.acceptedScanID, "accepted scan list id mismatch")
         try require(model.state.snapshotStatus == "Exported", "snapshot export status mismatch")
         try require(try persistence.loadSnapshotB64() != nil, "snapshot was not persisted")
+
+        let exported = model.exportSyncBundleForShare()
+        try require(exported.status == "Exported", "sync export status mismatch")
+        try require(exported.bundleB64 != nil, "sync export bundle missing")
+        try require(model.state.exportStatus == "Exported", "state export status mismatch")
+        try require(model.state.exportAcceptedCount == 1, "state export accepted count mismatch")
+        try require(model.state.exportDeviceCount == 2, "state export device count mismatch")
+        try require(model.state.exportLifecycleEventCount == 1, "state export lifecycle count mismatch")
 
         model.accept()
 
@@ -80,6 +111,7 @@ private func scannerFlowPersistsThroughSnapshot() async throws {
         restored.restorePersistedSnapshot()
         try require(restored.state.snapshotStatus == "Restored", "snapshot restore status mismatch")
         try require(restored.state.acceptedCount == 1, "restored accepted count mismatch")
+        try require(restored.state.acceptedScans.count == 1, "restored accepted scan list mismatch")
         try require(restored.state.lifecycleStatus == "Ready", "restored lifecycle status mismatch")
 
         restored.updateTrustAnchorID(trustAnchorID)
@@ -93,8 +125,8 @@ private func scannerFlowPersistsThroughSnapshot() async throws {
 
 private func rejectsUnknownTrustAnchorWithoutWritingSnapshot() async throws {
     let qrString = try fixtureString("conformance/vectors/qr/POS-QR-001.json#/input/qr_string")
-    let trustPubB64 = try fixtureString("conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64")
-    let trustProvider = GrainStaticTrustProvider(anchorID: "fixture:primary", trustPubB64: trustPubB64)
+    let trustAnchorBundleJSON = try fixtureFileContents("sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json")
+    let trustProvider = try GrainStaticTrustProvider(bundleJSON: trustAnchorBundleJSON)
     let persistence = GrainFileSnapshotPersistence(fileURL: temporarySnapshotURL())
     defer { try? persistence.clearSnapshot() }
 
@@ -135,6 +167,20 @@ private func rejectsUnknownTrustAnchorWithoutWritingSnapshot() async throws {
         try require(unknown.state.acceptedCount == 0, "unknown anchor wrote accepted records")
         try require(try persistence.loadSnapshotB64() == nil, "unknown anchor persisted snapshot")
     }
+}
+
+private func fixtureFileContents(_ path: String) throws -> String {
+    let fileURL = try fixtureFileURL(path)
+    let data = try Data(contentsOf: fileURL)
+    guard let contents = String(data: data, encoding: .utf8) else {
+        throw FixtureError.invalidReference(path)
+    }
+    return contents
+}
+
+private func fixtureFileURL(_ path: String) throws -> URL {
+    let root = try repoRoot()
+    return root.appendingPathComponent(path).standardizedFileURL
 }
 
 private func temporarySnapshotURL() -> URL {

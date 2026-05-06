@@ -87,6 +87,9 @@ if preview.status == .verified {
   apps. File persistence is deterministic for tests and simulator smoke; the
   Keychain-backed implementation keeps the same `snapshotB64` boundary isolated
   from protocol semantics.
+- `examples/ios-scanner` composes local trust-bundle loading with the
+  Keychain-backed persistence initializer for production app setup, while its
+  smoke path keeps injected QR input and file persistence deterministic.
 - Do not log `snapshotB64`, identity bundles, sync bundles, or trust material.
   Persist them through app-owned protected storage and expose only statuses,
   counts, or diagnostics to UI/logs.

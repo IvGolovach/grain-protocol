@@ -81,7 +81,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - added the Swift iOS adapter pack:
     - `GrainClientIOSAdapters` persists opaque client snapshots through deterministic file storage or Keychain-backed storage without parsing protocol state
     - `examples/ios-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths
-    - iOS scanner smoke proves injected camera handoff, verified accept, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
+    - iOS scanner smoke proves trust bundle loading, injected camera handoff, verified accept, accepted scan listing, sync export, duplicate accept, restore-after-restart, and blank/unknown anchor rejection
   - added the Kotlin Android adapter pack:
     - `dev.grain.android` persists opaque client snapshots through deterministic file storage or a Keystore-ready encrypted boundary without parsing protocol state
     - `examples/android-scanner` now uses explicit trust anchor IDs plus `GrainTrustProvider` for preview/accept paths

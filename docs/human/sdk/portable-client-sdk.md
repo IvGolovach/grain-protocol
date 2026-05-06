@@ -65,8 +65,12 @@ The iOS adapter pack is now present in the Swift package:
 - `examples/ios-scanner` wires camera/injected GR1 payloads through
   `trustAnchorID` plus `GrainTrustProvider`, never raw trust input in the
   production preview/accept path
-- the iOS smoke proves preview, accept, duplicate accept, restore-after-restart,
-  and blank/unknown trust-anchor rejection through public SDK APIs
+- the iOS shell can be initialized with app-managed trust bundle JSON plus
+  Keychain-backed snapshot persistence, and its UI state exposes list/export
+  status without printing snapshot or bundle payload material
+- the iOS smoke proves trust bundle loading, preview, accept, accepted-scan
+  listing, sync export, duplicate accept, restore-after-restart, and
+  blank/unknown trust-anchor rejection through public SDK APIs
 
 This is still an adapter pack and reference shell, not App Store packaging or
 live AVFoundation session automation.

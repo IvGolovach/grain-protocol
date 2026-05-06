@@ -220,10 +220,15 @@ scripts/sdk/check_scanner_examples.sh
 Expected iOS adapter contract:
 - `examples/ios-scanner` accepts injected or AVFoundation-derived QR payloads as GR1 strings and sends them through public Swift workflow APIs
 - production preview/accept paths use `trustAnchorID` plus `GrainTrustProvider`
+- the production initializer loads app-managed trust bundle JSON and stores
+  snapshots through `GrainKeychainSnapshotPersistence`
 - the shell persists only opaque `snapshotB64` through `GrainClientIOSAdapters`
+  and exposes accepted-scan list/export flow without displaying snapshot or
+  bundle payload material
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
 - local trust anchor bundles load through `GrainStaticTrustProvider(bundleJSON:)`
   and invalid bundles fail closed before scan preview/accept
+- URL-based scanner bundle loading accepts only local file URLs
 - preview and rejected accept paths do not write accepted records
 - static guards reject raw protocol API calls, hidden trust lookup, network trust discovery, TOFU, and fallback trust patterns
 

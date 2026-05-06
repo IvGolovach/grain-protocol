@@ -25,6 +25,9 @@ Portable client SDK lanes:
 Reference scanner shells live under `examples/`. They show paste-first iOS,
 Android/Kotlin, and browser/mobile-web clients that call the public workflow
 SDKs and keep camera or sensor adapters outside protocol-critical logic.
+The iOS shell now has a Keychain-backed production initializer, local trust
+bundle loading, accepted-scan listing, sync export status, and deterministic
+injected-camera smoke coverage.
 For local issuer-side scanner inputs, `core/rust/grain-issuer-kit` emits a
 signed `GR1:` QR string plus public `trust_pub_b64` material without persisting
 or printing private signing keys.
