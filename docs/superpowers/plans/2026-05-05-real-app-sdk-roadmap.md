@@ -23,8 +23,8 @@
 
 | Step | Slice | Status | Branch | PR | Merge commit | Local proof | Remote proof |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | SDK release channel | In progress | `codex/grain-real-app-roadmap` | | | | |
-| 2 | Issuer kit | Not started | | | | | |
+| 1 | SDK release channel | Merged | `codex/grain-real-app-roadmap` | #49 | `b42f91350449bbc3e776042913b397ccdba1c2a0` | `git diff --check`; `git diff --cached --check`; YAML parse; workflow pinning; docs checks; ledger checks; SDK package smoke | PR CI passed on `86555f5b169754c36f5fa7ef2d81847934ca8dd0`; post-merge main CI run `25413371566` passed |
+| 2 | Issuer kit | In progress | `codex/issuer-kit-reference-step2` | | | | |
 | 3 | Trust anchor bundle | Not started | | | | | |
 | 4 | Production iOS vertical slice | Not started | | | | | |
 | 5 | Android parity slice | Not started | | | | | |
@@ -201,3 +201,5 @@
 
 - 2026-05-05: Plan created on branch `codex/grain-real-app-roadmap` from `origin/main` at `d9bd721e86b04fe067398746f051f0dda508d056`.
 - 2026-05-05: Step 1 started. Release evidence workflow is being updated to run the strict platform SDK gate before attaching same-commit SDK source package assets to tagged GitHub releases.
+- 2026-05-05: Step 1 merged as PR #49. Required PR CI and post-merge `main` CI passed; Greptile was requested and did not return a review before merge readiness.
+- 2026-05-05: Step 2 started on `codex/issuer-kit-reference-step2` from `origin/main` at `b42f91350449bbc3e776042913b397ccdba1c2a0`.

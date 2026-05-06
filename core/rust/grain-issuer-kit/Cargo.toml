@@ -1,0 +1,19 @@
+[package]
+name = "grain-issuer-kit"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+base64 = { workspace = true }
+clap = { workspace = true }
+ed25519-dalek = { workspace = true }
+flate2 = { workspace = true }
+getrandom = { workspace = true }
+grain-core = { path = "../grain-core" }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+grain-client-core = { path = "../grain-client-core", default-features = false }

@@ -126,6 +126,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `scripts/sdk/check_wasm_package.sh`, `scripts/sdk/check_scanner_examples.sh`, `sdk/wasm/tests/run-browser-adapters-smoke.mjs`, `examples/wasm-scanner/tests/scanner-shell-smoke.mjs`
   Modules: `sdk/wasm/src/index.mjs`, `sdk/wasm/src/browser-storage.mjs`, `sdk/wasm/tests/run-browser-adapters-smoke.mjs`, `examples/wasm-scanner/src/scanner-shell.mjs`, `examples/wasm-scanner/src/camera-adapter.mjs`, `examples/wasm-scanner/tests/scanner-shell-smoke.mjs`
 
+- SDK-INV-0030: reference issuer tooling MUST generate signed `GR1:` scanner examples from strict DAG-CBOR `ServingOffer` payloads, emit only public trust material, reject mismatched issuer IDs before signing, and prove the output verifies through `grain-client-core`.
+  Tests: `cargo test --manifest-path core/rust/Cargo.toml -p grain-issuer-kit`
+  Modules: `core/rust/grain-issuer-kit`, `core/rust/grain-core/src/cose.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-client-core/src/scan.rs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`
