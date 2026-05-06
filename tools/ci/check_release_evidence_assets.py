@@ -62,6 +62,23 @@ def require_zero(summary: dict[str, object], section: str, key: str) -> None:
     require(value.get(key) == 0, f"RELEASE_EVIDENCE_ERR_SUITE_FAILURE: {section}.{key}")
 
 
+def validate_embedded_sdk_summary(
+    suite_summary: dict[str, object],
+    sdk_summary: dict[str, object],
+    *,
+    expected_commit: str,
+) -> None:
+    embedded = suite_summary.get("sdk_suite")
+    require(isinstance(embedded, dict), "RELEASE_EVIDENCE_ERR_SDK_SUITE_SUMMARY")
+    require(sdk_summary.get("commit_sha") == expected_commit, "RELEASE_EVIDENCE_ERR_SDK_SUMMARY_COMMIT")
+    require(sdk_summary.get("strict") is True, "RELEASE_EVIDENCE_ERR_SDK_SUMMARY_STRICT")
+    for key in ("total", "passed", "failed"):
+        require(
+            embedded.get(key) == sdk_summary.get(key),
+            f"RELEASE_EVIDENCE_ERR_SDK_SUITE_SUMMARY: {key}",
+        )
+
+
 def read_json_entry(archive: zipfile.ZipFile, entry: str) -> dict[str, object]:
     try:
         raw = archive.read(entry)
@@ -108,7 +125,11 @@ def validate_evidence_zip(path: Path, *, expected_commit: str, expected_tag: str
     require(isinstance(metadata, dict), "RELEASE_EVIDENCE_ERR_RUN_METADATA")
     require(metadata.get("workflow") == "release-evidence", "RELEASE_EVIDENCE_ERR_WORKFLOW")
 
-    require(suite_summary.get("sdk_suite") == sdk_summary, "RELEASE_EVIDENCE_ERR_SDK_SUITE_SUMMARY")
+    validate_embedded_sdk_summary(
+        suite_summary,
+        sdk_summary,
+        expected_commit=expected_commit,
+    )
     for section, key in ZERO_FAILURE_FIELDS:
         require_zero(suite_summary, section, key)
 

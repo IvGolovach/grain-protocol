@@ -70,3 +70,18 @@ SDK roadmap:
   `mise exec -- env JAVA_HOME=<arm64-openjdk17-home> scripts/sdk/verify_all_sdks.sh --strict --out-dir artifacts/sdk-verify-all-roadmap-final`.
   The gate covered Rust client workflow tests, fixtures, generated bindings,
   docs/policy guards, WASM, Swift, Kotlin, and reference scanner examples.
+- 2026-05-06: PR #57 merged to `main` at
+  `e5d32ebf5591d5e79c097a1257f2cdd9086c0eb4`; post-merge `main` CI run
+  `25450444691` passed.
+- 2026-05-06: Signed RC tag `repo-rc-v0.4.0-rc2` was pushed for
+  `e5d32ebf5591d5e79c097a1257f2cdd9086c0eb4`. `interop-certify` passed on
+  run `25451350651`. `golden-images` exposed a release-tooling blocker: GHCR
+  image refs used mixed-case repository owner text, which Docker rejects before
+  build/push. The fix is tracked as a narrow CI/release-tooling slice before
+  cutting the next signed RC tag.
+- 2026-05-06: `release-evidence` run `25451350637` passed and attached the
+  expected source SDK/evidence assets to `repo-rc-v0.4.0-rc2`. Downloaded asset
+  verification then exposed a handoff-verifier shape mismatch: the aggregate
+  suite summary embeds SDK counts, while `sdk-suite-summary.json` carries the
+  richer SDK runner metadata. The verifier fix is part of the same
+  release-tooling slice before the next signed RC tag.
