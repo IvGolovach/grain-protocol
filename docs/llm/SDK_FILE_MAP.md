@@ -35,7 +35,7 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 15. `core/rust/grain-issuer-kit`
    - Reference issuer CLI/library for local scanner development. It emits signed `GR1:` examples and public trust material; it is not a platform SDK API or production key-management system.
 16. `core/rust/grain-client-core/src/*`
-   - Portable Rust workflow layer for generated platform SDKs: `scan.rs` owns scan workflows; `identity.rs`, `device.rs`, `pairing.rs`, and `sync.rs` own lifecycle workflows; `types.rs` owns Rust DTOs; `ffi_types.rs` owns binding-safe DTOs; `binding_api.rs` and `grain_client_core.udl` own the UniFFI-safe generated-binding facade; `platform/storage.rs` and `platform/trust.rs` own adapter contracts; `trust.rs` owns explicit trust decoding; `store.rs` owns the atomic storage contract; `memory_store.rs` owns the reference store plus opaque snapshot export/restore; and `diag.rs` owns SDK-only diagnostics.
+   - Portable Rust workflow layer for generated platform SDKs: `scan.rs` owns scan workflows; `identity.rs`, `device.rs`, `pairing.rs`, and `sync.rs` own lifecycle workflows; `custody.rs` owns portable transfer metadata for pairing/sync payloads; `types.rs` owns Rust DTOs and redacted debug output; `ffi_types.rs` owns binding-safe DTOs and redacted debug output; `binding_api.rs` and `grain_client_core.udl` own the UniFFI-safe generated-binding facade; `platform/storage.rs` and `platform/trust.rs` own adapter contracts; `trust.rs` owns explicit trust decoding; `store.rs` owns the atomic storage contract; `memory_store.rs` owns the reference store plus opaque snapshot export/restore; and `diag.rs` owns SDK-only diagnostics.
 17. `core/rust/uniffi-bindgen`, `scripts/sdk/*generated_bindings.sh`, and `sdk/generated/README.md`
    - Binding generation harness and docs. These are not published platform SDK packages.
 18. `sdk/swift/**`
@@ -45,7 +45,7 @@ Hi teammate LLM. This is the shortest safe path through the SDK layer.
 20. `core/rust/grain-client-wasm/**`
    - WASM client workflow export over `grain-client-core`. This is distinct from `grain-core-wasm`, which remains the protocol/vector portability lane.
 21. `sdk/wasm/**`
-   - WASM/mobile-web client package over workflow bindings. Public app API lives in `src/index.mjs`, the browser/mobile-web adapter pack lives in `src/browser-storage.mjs`, the Node/WASI smoke loader lives in `src/node.mjs`, the fixture runner lives in `tests/run-workflow-fixtures.mjs`, and the browser adapter smoke lives in `tests/run-browser-adapters-smoke.mjs`. Store snapshot methods remain the Rust-owned persistence bridge; the WASM/mobile-web adapter pack persists only opaque snapshots.
+   - WASM/mobile-web client package over workflow bindings. Public app API lives in `src/index.mjs`/`src/index.d.ts`, the browser/mobile-web adapter pack lives in `src/browser-storage.mjs`, the Node/WASI smoke loader lives in `src/node.mjs`, the fixture runner lives in `tests/run-workflow-fixtures.mjs`, and the browser adapter smoke lives in `tests/run-browser-adapters-smoke.mjs`. Store snapshot methods remain the Rust-owned persistence bridge; the WASM/mobile-web adapter pack persists only opaque snapshots. Custody policy helpers and `redactGrainClientLogValue` are SDK-DX helpers, not hidden key management.
 22. `docs/human/sdk/impossible-misuse.md`
    - Human-readable reject-path summary.
 23. `docs/human/sdk/errors.md`

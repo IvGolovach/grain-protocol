@@ -155,6 +155,83 @@ public struct GrainStoreSnapshotResult: Equatable, Sendable {
     public let lifecycleEventCount: UInt64
 }
 
+public enum GrainCustodyMaterial: String, Equatable, Sendable {
+    case storeSnapshot
+    case identityBundle
+    case pairingEnvelope
+    case syncBundle
+    case trustMaterial
+}
+
+public enum GrainCustodyBinding: String, Equatable, Sendable {
+    case portableTransfer
+    case deviceKeychain
+    case deviceKeystore
+    case secureEnclave
+    case externalSecureModule
+    case appManaged
+}
+
+public struct GrainCustodyDescriptor: Equatable, Sendable {
+    public let material: GrainCustodyMaterial
+    public let binding: GrainCustodyBinding
+    public let exportable: Bool
+    public let deviceBound: Bool
+
+    public init(
+        material: GrainCustodyMaterial,
+        binding: GrainCustodyBinding,
+        exportable: Bool,
+        deviceBound: Bool
+    ) {
+        self.material = material
+        self.binding = binding
+        self.exportable = exportable
+        self.deviceBound = deviceBound
+    }
+}
+
+public enum GrainCustodyPolicies {
+    public static func portableIdentityBundle() -> GrainCustodyDescriptor {
+        portable(.identityBundle)
+    }
+
+    public static func portablePairingEnvelope() -> GrainCustodyDescriptor {
+        portable(.pairingEnvelope)
+    }
+
+    public static func portableSyncBundle() -> GrainCustodyDescriptor {
+        portable(.syncBundle)
+    }
+
+    public static func keychainSnapshot() -> GrainCustodyDescriptor {
+        GrainCustodyDescriptor(
+            material: .storeSnapshot,
+            binding: .deviceKeychain,
+            exportable: false,
+            deviceBound: true
+        )
+    }
+
+    public static func secureEnclaveSnapshot() -> GrainCustodyDescriptor {
+        GrainCustodyDescriptor(
+            material: .storeSnapshot,
+            binding: .secureEnclave,
+            exportable: false,
+            deviceBound: true
+        )
+    }
+
+    private static func portable(_ material: GrainCustodyMaterial) -> GrainCustodyDescriptor {
+        GrainCustodyDescriptor(
+            material: material,
+            binding: .portableTransfer,
+            exportable: true,
+            deviceBound: false
+        )
+    }
+}
+
 public protocol GrainTrustProvider: Sendable {
     func trustPubB64(anchorID: String) -> String?
 }
@@ -376,6 +453,76 @@ private func resolveTrustPubB64(
         return .rejected(sdkErrTrustAnchorNotFound)
     }
     return .resolved(trustPubB64)
+}
+
+private func redactedOptional(_ value: String?) -> String {
+    value == nil ? "nil" : "[REDACTED]"
+}
+
+extension GrainScanPreview: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainScanPreview(status: \(status.rawValue), diag: \(diag), coseB64: \(redactedOptional(coseB64)))"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainScanAccept: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainScanAccept(status: \(status.rawValue), diag: \(diag), scanID: \(String(describing: scanID)), " +
+            "coseB64: \(redactedOptional(coseB64)), trustPubB64: \(redactedOptional(trustPubB64)))"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainAcceptedScan: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainAcceptedScan(scanID: \(scanID), coseB64: [REDACTED], trustPubB64: [REDACTED])"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainIdentityResult: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainIdentityResult(status: \(status), diag: \(diag), rootKID: \(String(describing: rootKID)), " +
+            "activeAK: \(String(describing: activeAK)), bundleB64: \(redactedOptional(bundleB64)), " +
+            "deviceCount: \(deviceCount), revokedCount: \(revokedCount), " +
+            "lifecycleEventCount: \(lifecycleEventCount))"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainPairingResult: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainPairingResult(status: \(status), diag: \(diag), pairingID: \(String(describing: pairingID)), " +
+            "envelopeB64: \(redactedOptional(envelopeB64)), rootKID: \(String(describing: rootKID)), " +
+            "deviceCount: \(deviceCount))"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainSyncResult: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainSyncResult(status: \(status), diag: \(diag), bundleB64: \(redactedOptional(bundleB64)), " +
+            "acceptedRecordCount: \(acceptedRecordCount), deviceCount: \(deviceCount), " +
+            "lifecycleEventCount: \(lifecycleEventCount))"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension GrainStoreSnapshotResult: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "GrainStoreSnapshotResult(status: \(status), diag: \(diag), snapshotB64: \(redactedOptional(snapshotB64)), " +
+            "acceptedRecordCount: \(acceptedRecordCount), deviceCount: \(deviceCount), " +
+            "lifecycleEventCount: \(lifecycleEventCount))"
+    }
+
+    public var debugDescription: String { description }
 }
 
 private extension GrainScanPreview {

@@ -99,6 +99,12 @@ GrainClient().use { client ->
   injected cipher/store boundary, and `GrainAesGcmSnapshotCipher` can seal the
   snapshot with an Android Keystore-backed `SecretKey` without parsing protocol
   state.
+- `GrainCustodyPolicies` names the expected boundary: snapshots are device
+  local and non-exportable, while identity bundles, pairing envelopes, and sync
+  bundles are portable secret transfer artifacts.
+- Android apps own `SecretKey` creation, rotation policy, authentication
+  requirements, and backup rules. The SDK accepts the key/cipher boundary; it
+  does not create a hidden platform key or silently fall back to plaintext.
 - Do not log `snapshotB64`, identity bundles, sync bundles, or trust material.
   Persist them through app-owned protected storage and expose only statuses,
   counts, or diagnostics to UI/logs.

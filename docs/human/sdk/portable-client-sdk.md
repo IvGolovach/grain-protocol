@@ -149,6 +149,34 @@ This is still a portable SDK core, not final production key custody. iOS,
 Android, and WASM/mobile-web now have adapter boundaries; future devices should
 get the same shape in later slices.
 
+## Production Custody Model
+
+Thin clients provide sensors, local trust policy, secure storage, and transfer
+channels. Grain owns protocol parsing, verification, lifecycle mutation,
+rollback/idempotency, snapshot import/export, and sync conflict behavior.
+
+Artifact custody is split deliberately:
+
+- `snapshotB64` is device-local runtime state. It may contain identity and
+  client state, so apps restore it on launch and persist it after successful
+  identity, device, accept, pairing, or sync-import mutations. Do not parse it,
+  display it, sync it as a user-facing artifact, or log it.
+- identity bundles, pairing envelopes, and sync bundles are portable secret
+  transfer artifacts. They are exportable for backup, handoff, pairing, or sync,
+  but they are not proof that platform custody is implemented. Move them only
+  through encrypted/authenticated app channels.
+- accepted scans contain verified COSE/trust material. UI should show scan IDs,
+  counts, and status; raw payloads stay in SDK storage or explicit exports.
+- trust bundles are local app-managed verification policy. They should be
+  app-packaged, signed, MDM-provisioned, or otherwise integrity-controlled and
+  must fail closed when missing, unknown, or malformed.
+
+Robot/glasses adapters follow the same shape as iOS and Android: a camera or
+sensor adapter returns a `GR1:` string, a trust provider resolves a local anchor
+ID, and snapshot persistence wraps device-bound protected storage such as
+TPM/HSM-backed encryption. No future-device adapter should call raw QR, COSE,
+DAG-CBOR, or protocol-runner APIs.
+
 ## Certification Boundary
 
 Current certification covers workflow parity, explicit trust-anchor wiring,

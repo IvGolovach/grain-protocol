@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::custody::PortableTransferCustodyV1;
 use crate::diag::{
     SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_IDENTITY_MISSING, SDK_ERR_PAIRING_ENVELOPE_INVALID,
 };
@@ -12,6 +13,8 @@ struct PairingEnvelopeV1 {
     pairing_v: u32,
     pairing_id: String,
     transfer: String,
+    #[serde(default = "pairing_custody_default")]
+    custody: PortableTransferCustodyV1,
     identity_bundle: IdentityBundleV1,
 }
 
@@ -23,6 +26,7 @@ pub fn pairing_create_envelope<S: IdentityClientStore>(store: &S) -> PairingResu
         pairing_v: 1,
         pairing_id: pairing_id_for_bundle(&bundle),
         transfer: "identity_bundle_v1".to_string(),
+        custody: PortableTransferCustodyV1::pairing_identity_bundle(),
         identity_bundle: bundle.clone(),
     };
 
@@ -98,6 +102,9 @@ fn decode_pairing_envelope(envelope_b64: &str) -> Result<PairingEnvelopeV1, Stri
         decode_json_b64::<PairingEnvelopeV1>(envelope_b64, SDK_ERR_PAIRING_ENVELOPE_INVALID)?;
     if envelope.pairing_v != 1
         || envelope.transfer != "identity_bundle_v1"
+        || !envelope
+            .custody
+            .is_portable_transfer_for("identity_bundle_v1")
         || envelope.pairing_id != pairing_id_for_bundle(&envelope.identity_bundle)
     {
         return Err(SDK_ERR_PAIRING_ENVELOPE_INVALID.to_string());
@@ -116,6 +123,10 @@ fn pairing_id_for_bundle(bundle: &IdentityBundleV1) -> String {
         bundle.device_keys.len()
     );
     format!("pairing-sha256:{}", hex_sha256(material.as_bytes()))
+}
+
+fn pairing_custody_default() -> PortableTransferCustodyV1 {
+    PortableTransferCustodyV1::pairing_identity_bundle()
 }
 
 fn pairing_rejected(diag: impl Into<String>) -> PairingResult {

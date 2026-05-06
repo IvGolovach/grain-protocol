@@ -6,10 +6,10 @@ use base64::Engine;
 use grain_client_core::{
     client_lifecycle, device_add_key, identity_create_root, pairing_accept_envelope,
     pairing_create_envelope, pairing_preview_envelope, scan_accept, sync_export_bundle,
-    sync_import_bundle, IdentityClientStore, IdentityStatus, MemoryClientStore, PairingStatus,
-    SyncStatus,
+    sync_import_bundle, ClientStore, IdentityClientStore, IdentityStatus, MemoryClientStore,
+    PairingStatus, SyncStatus,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
 
 #[test]
 fn pairing_envelope_preview_is_pure_and_accept_is_idempotent() {
@@ -31,6 +31,28 @@ fn pairing_envelope_preview_is_pure_and_accept_is_idempotent() {
 
     let replay = pairing_accept_envelope(&mut target, envelope_b64);
     assert_eq!(replay.status, PairingStatus::AlreadyPaired);
+}
+
+#[test]
+fn pairing_envelope_rejects_device_bound_custody_claim() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "phone").status,
+        IdentityStatus::Created
+    );
+    let envelope = pairing_create_envelope(&source);
+    let envelope_b64 = envelope.envelope_b64.as_deref().expect("envelope present");
+    let mut envelope_json = decode_bundle_value(envelope_b64);
+    envelope_json["custody"]["device_bound"] = Value::Bool(true);
+    let tampered_b64 = encode_bundle_value(&envelope_json);
+
+    let preview = pairing_preview_envelope(&tampered_b64);
+    assert_eq!(preview.status, PairingStatus::Rejected);
+
+    let mut target = MemoryClientStore::new();
+    let accepted = pairing_accept_envelope(&mut target, &tampered_b64);
+    assert_eq!(accepted.status, PairingStatus::Rejected);
+    assert!(target.load_identity_bundle().is_none());
 }
 
 #[test]
@@ -76,6 +98,24 @@ fn sync_bundle_imports_identity_lifecycle_and_scans_idempotently() {
 }
 
 #[test]
+fn sync_bundle_rejects_device_bound_custody_claim_without_mutation() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "phone").status,
+        IdentityStatus::Created
+    );
+    let exported = sync_export_bundle(&source);
+    let mut bundle_json = decode_bundle_value(exported.bundle_b64.as_deref().expect("bundle"));
+    bundle_json["custody"]["device_bound"] = Value::Bool(true);
+
+    let mut target = MemoryClientStore::new();
+    let rejected = sync_import_bundle(&mut target, &encode_bundle_value(&bundle_json));
+    assert_eq!(rejected.status, SyncStatus::Rejected);
+    assert!(target.load_identity_bundle().is_none());
+    assert!(target.list_accepted_scans().is_empty());
+}
+
+#[test]
 fn sync_identity_conflict_rolls_back_import() {
     let mut source = MemoryClientStore::new();
     assert_eq!(
@@ -94,6 +134,77 @@ fn sync_identity_conflict_rolls_back_import() {
     let rejected = sync_import_bundle(&mut target, bundle_b64);
     assert_eq!(rejected.status, SyncStatus::Rejected);
     assert_eq!(target.load_identity_bundle(), before);
+}
+
+#[test]
+fn sync_secret_conflict_rolls_back_later_records() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "source").status,
+        IdentityStatus::Created
+    );
+    let exported = sync_export_bundle(&source);
+    let bundle_b64 = exported.bundle_b64.as_deref().expect("sync bundle present");
+
+    let mut target = MemoryClientStore::new();
+    assert_eq!(
+        sync_import_bundle(&mut target, bundle_b64).status,
+        SyncStatus::Imported
+    );
+    let before_identity = target.load_identity_bundle();
+    let before_scan_count = target.list_accepted_scans().len();
+    let before_event_count = target.list_lifecycle_events().len();
+
+    let mut bundle = decode_bundle_value(bundle_b64);
+    bundle["identity"]["sync_secret_b64"] = Value::String(STANDARD.encode([42u8; 32]));
+    bundle["accepted_scans"]
+        .as_array_mut()
+        .expect("accepted_scans array")
+        .push(json!({
+            "scan_id": "conflict-extra-scan",
+            "cose_b64": STANDARD.encode(b"cose"),
+            "trust_pub_b64": STANDARD.encode(b"trust"),
+        }));
+
+    let rejected = sync_import_bundle(&mut target, &encode_bundle_value(&bundle));
+    assert_eq!(rejected.status, SyncStatus::Rejected);
+    assert_eq!(target.load_identity_bundle(), before_identity);
+    assert_eq!(target.list_accepted_scans().len(), before_scan_count);
+    assert_eq!(target.list_lifecycle_events().len(), before_event_count);
+}
+
+#[test]
+fn debug_output_redacts_transfer_and_scan_payloads() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "phone").status,
+        IdentityStatus::Created
+    );
+    let qr = fixture_string("conformance/vectors/qr/POS-QR-001.json#/input/qr_string");
+    let trust = fixture_string("conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64");
+    let accepted = scan_accept(&mut source, &qr, Some(&trust));
+    assert!(accepted.diag.is_empty());
+    let accepted_debug = format!("{accepted:?}");
+    let accepted_scan = source
+        .list_accepted_scans()
+        .into_iter()
+        .next()
+        .expect("accepted scan");
+    assert!(!accepted_debug.contains(&accepted_scan.cose_b64));
+    assert!(!accepted_debug.contains(&accepted_scan.trust_pub_b64));
+    assert!(accepted_debug.contains("[REDACTED]"));
+
+    let pairing = pairing_create_envelope(&source);
+    let envelope_b64 = pairing.envelope_b64.as_deref().expect("envelope present");
+    let pairing_debug = format!("{pairing:?}");
+    assert!(!pairing_debug.contains(envelope_b64));
+    assert!(pairing_debug.contains("[REDACTED]"));
+
+    let exported = sync_export_bundle(&source);
+    let bundle_b64 = exported.bundle_b64.as_deref().expect("bundle present");
+    let sync_debug = format!("{exported:?}");
+    assert!(!sync_debug.contains(bundle_b64));
+    assert!(sync_debug.contains("[REDACTED]"));
 }
 
 #[test]

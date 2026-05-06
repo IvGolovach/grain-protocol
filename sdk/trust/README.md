@@ -19,3 +19,9 @@ The v1 shape is:
 
 Parsers must reject unknown fields, unsupported versions, empty bundles, blank
 or duplicate IDs, and invalid or empty `trust_pub_b64` values.
+
+Treat bundles as integrity-sensitive local verification policy. Production apps
+should package, sign, MDM-provision, or otherwise pin the bundle through an
+app-owned channel and fail closed on missing, unknown, malformed, or unexpected
+anchors. Network lookup, TOFU, platform CA fallback, and default issuers do not
+belong in SDK trust resolution.

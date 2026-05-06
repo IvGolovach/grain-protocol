@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0029` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0031` and `SDK-AI-000` through `SDK-AI-007`
 
 ## Portable client core
 
@@ -51,6 +51,10 @@ Expected contract:
 - identity/device lifecycle workflows create, import/export, activate, revoke, and report lifecycle counts deterministically
 - pairing preview is pure, pairing accept is atomic, and repeated pairing accept is idempotent
 - sync bundle export/import carries identity, accepted scans, and lifecycle events atomically
+- pairing and sync transfer metadata rejects unsupported or falsely device-bound
+  custody claims before mutation
+- Rust and binding DTO debug output redacts snapshots, identity bundles, pairing
+  envelopes, sync bundles, accepted-scan COSE, and trust material
 
 ## Client workflow fixtures
 
@@ -88,8 +92,34 @@ Expected contract:
 - platform adapter contract tests cover deterministic storage listing, idempotent re-put, rollback at the repository boundary, no anchor, missing anchor, malformed anchor, and valid anchor
 - FFI DTO contract tests keep binding-facing values owned and flat: strings, vectors, optional strings, no borrowed Rust lifetimes
 - `tools/ci/check_sdk_trust_provider_boundary.py` blocks hidden network trust lookup, TOFU/default issuer, and fallback trust patterns in generated platform SDK wrapper sources
+- `tools/ci/check_sdk_secret_logging.py` blocks source-level log/print calls
+  that include SDK secret-transfer field names in public SDK and example roots
 
 Rust fixture execution must load these fixtures and compare them against public `grain_client_core` workflow APIs.
+
+## Production custody and redaction
+
+Custody/redaction guard:
+
+```bash
+python3 tools/ci/check_sdk_secret_logging.py
+cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core --test pairing_sync_bundle
+```
+
+Expected contract:
+- `snapshotB64` is device-local runtime state and must stay opaque to apps
+- identity bundles, pairing envelopes, and sync bundles are portable secret
+  transfer artifacts, not proof of device-bound custody
+- pairing/sync imports reject transfer metadata that falsely claims
+  device-bound custody or mismatched material
+- generated Swift/Kotlin/WASM wrappers expose a shared custody vocabulary so
+  future iOS, Android, browser, glasses, robot, TPM, HSM, or external-module
+  adapters can describe custody without changing protocol workflows
+- public debug/toString/log helper output redacts raw snapshots, bundles,
+  envelopes, accepted-scan COSE, and trust material
+- production readiness is not certified by SDK workflow parity alone; platform
+  apps must name their camera/sensor adapter, trust provider, snapshot custody,
+  and transfer/share channel
 
 ## Generated binding harness
 

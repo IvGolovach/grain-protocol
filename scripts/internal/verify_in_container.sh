@@ -33,6 +33,7 @@ python3 tools/ci/check_runner_shim_boundary.py
 python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
 python3 tools/ci/check_sdk_no_network.py
+python3 tools/ci/check_sdk_secret_logging.py
 python3 tools/ci/check_sdk_ai_boundary.py
 
 cargo build --manifest-path core/rust/Cargo.toml -p grain-runner

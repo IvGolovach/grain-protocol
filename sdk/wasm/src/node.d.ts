@@ -1,4 +1,11 @@
-export { GrainClient, GrainStaticTrustProvider } from "./index.mjs";
+export {
+  GrainClient,
+  GrainCustodyBinding,
+  GrainCustodyMaterial,
+  GrainCustodyPolicies,
+  GrainStaticTrustProvider,
+  redactGrainClientLogValue,
+} from "./index.mjs";
 export {
   GrainIndexedDBSnapshotPersistence,
   GrainMemorySnapshotPersistence,
@@ -8,6 +15,9 @@ export {
 export type {
   AcceptedScan,
   GrainAcceptedScan,
+  GrainCustodyBinding,
+  GrainCustodyDescriptor,
+  GrainCustodyMaterial,
   GrainScanAccept,
   GrainScanAcceptInput,
   GrainScanAcceptStatus,

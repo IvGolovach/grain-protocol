@@ -56,7 +56,8 @@ else
 fi
 
 has_secret_logging() {
-  local pattern='(print|println|debugPrint|NSLog|os_log|Log\.[a-z]+|Timber\.[a-z]+|Logger\.[a-z]+|console\.[a-z]+)\s*\([^)]*(snapshotB64|bundleB64|trustPubB64)'
+  local sensitive='snapshotB64|snapshot_b64|bundleB64|bundle_b64|identityBundle|identity_bundle|syncBundle|sync_bundle|syncSecret|sync_secret_b64|envelopeB64|envelope_b64|coseB64|cose_b64|trustPubB64|trust_pub_b64|trustMaterial|trust_material'
+  local pattern="(print|println|debugPrint|NSLog|os_log|Log\\.[a-z]+|Timber\\.[a-z]+|Logger\\.[a-z]+|console\\.[a-z]+)\\s*\\([^)]*(${sensitive})"
   python3 tools/ci/find_regex_match.py \
     --ignore-case "$pattern" \
     examples/ios-scanner \

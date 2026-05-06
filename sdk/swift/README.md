@@ -90,6 +90,13 @@ if preview.status == .verified {
 - `examples/ios-scanner` composes local trust-bundle loading with the
   Keychain-backed persistence initializer for production app setup, while its
   smoke path keeps injected QR input and file persistence deterministic.
+- `GrainCustodyPolicies` names the expected boundary: snapshots are device
+  local and non-exportable, while identity bundles, pairing envelopes, and sync
+  bundles are portable secret transfer artifacts.
+- Choose Keychain accessibility deliberately for the app threat model. Large or
+  frequently changing snapshots can be sealed into files with keys held by
+  Keychain or Secure Enclave-backed policy instead of storing growing blobs
+  directly in Keychain.
 - Do not log `snapshotB64`, identity bundles, sync bundles, or trust material.
   Persist them through app-owned protected storage and expose only statuses,
   counts, or diagnostics to UI/logs.

@@ -110,3 +110,12 @@ should instantiate the same WASM exports and pass the instance to
   `GrainSnapshotCoordinator` plus `GrainIndexedDBSnapshotPersistence` or an
   app-controlled secure store. Persist only opaque `snapshotB64` and restore it
   with `restoreStoreSnapshot`; never parse snapshot internals in app code.
+- `GrainCustodyPolicies` names the expected boundary: snapshots are app-managed
+  browser state, while identity bundles, pairing envelopes, and sync bundles are
+  portable secret transfer artifacts.
+- IndexedDB persistence is a storage primitive, not a custody guarantee. A
+  production browser app should inject WebCrypto or external secure-module
+  sealing before writing snapshots or portable transfer material.
+- `redactGrainClientLogValue` is available for diagnostics wrappers that must
+  sanitize SDK DTOs before logging. It is not a substitute for avoiding raw
+  secret logs in app code.

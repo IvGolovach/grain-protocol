@@ -105,6 +105,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_sdk_trust_provider_boundary.py
 
+    - name: Check SDK secret logging guard
+      shell: bash
+      run: python3 tools/ci/check_sdk_secret_logging.py
+
     - name: Check SDK AI boundary guard
       shell: bash
       run: python3 tools/ci/check_sdk_ai_boundary.py

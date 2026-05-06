@@ -2,6 +2,7 @@
 
 #[cfg(feature = "bindings")]
 mod binding_api;
+mod custody;
 mod device;
 pub mod diag;
 #[cfg(feature = "bindings")]

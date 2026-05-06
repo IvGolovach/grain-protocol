@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::custody::PortableTransferCustodyV1;
 use crate::diag::{SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_SYNC_BUNDLE_INVALID};
 use crate::identity::{decode_json_b64, encode_json_b64, validate_identity_bundle};
 use crate::store::{IdentityClientStore, StorePutResult};
@@ -12,6 +13,8 @@ use crate::types::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct SyncBundleV1 {
     bundle_v: u32,
+    #[serde(default = "sync_custody_default")]
+    custody: PortableTransferCustodyV1,
     identity: Option<IdentityBundleV1>,
     accepted_scans: Vec<AcceptedScanRecord>,
     lifecycle_events: Vec<LifecycleEventRecord>,
@@ -38,10 +41,11 @@ pub fn sync_export_bundle<S: IdentityClientStore>(store: &S) -> SyncResult {
         .map(|bundle| bundle.device_keys.len() as u64)
         .unwrap_or(0);
     let bundle = SyncBundleV1 {
+        bundle_v: 1,
+        custody: PortableTransferCustodyV1::sync_bundle(),
         identity,
         accepted_scans,
         lifecycle_events,
-        bundle_v: 1,
     };
     match encode_json_b64(&bundle) {
         Ok(bundle_b64) => SyncResult {
@@ -117,7 +121,7 @@ pub fn sync_import_bundle<S: IdentityClientStore>(store: &mut S, bundle_b64: &st
 
 fn decode_sync_bundle(bundle_b64: &str) -> Result<SyncBundleV1, String> {
     let bundle = decode_json_b64::<SyncBundleV1>(bundle_b64, SDK_ERR_SYNC_BUNDLE_INVALID)?;
-    if bundle.bundle_v != 1 {
+    if bundle.bundle_v != 1 || !bundle.custody.is_portable_transfer_for("sync_bundle_v1") {
         return Err(SDK_ERR_SYNC_BUNDLE_INVALID.to_string());
     }
     if let Some(identity) = &bundle.identity {
@@ -239,6 +243,10 @@ fn merge_identity_bundle(
 
     validate_identity_bundle(&existing).map_err(|_| SDK_ERR_SYNC_BUNDLE_INVALID.to_string())?;
     Ok(existing)
+}
+
+fn sync_custody_default() -> PortableTransferCustodyV1 {
+    PortableTransferCustodyV1::sync_bundle()
 }
 
 fn sync_rejected(diag: impl Into<String>) -> SyncResult {
