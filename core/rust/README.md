@@ -9,6 +9,7 @@ This directory contains the Rust reference implementation for Protocol v0.1 froz
 - `grain-core-wasm`: WASM read/verify export (`grain_run_vector` ABI) for portability smoke checks
 - `grain-client-core`: portable workflow layer for generated platform SDKs
 - `grain-client-wasm`: WASM client workflow export for mobile-web SDK checks
+- `grain-issuer-kit`: reference issuer CLI/library for generating signed GR1 scanner examples
 - `uniffi-bindgen`: repo-local UniFFI binding generator wrapper for client workflow bindings
 
 Quickstart demo command:

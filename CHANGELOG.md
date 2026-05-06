@@ -92,6 +92,10 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - CI packages the SDK release artifacts after the strict platform SDK gate and re-checks the package metadata before final evidence build
     - tag release evidence now runs the strict platform SDK gate, verifies the same-commit SDK package, includes the SDK suite summary in the evidence bundle, and attaches SDK source package assets to GitHub releases
     - forbidden tracked-file checks now reject forced-added release artifacts, build outputs, WASM binaries, and secret-like local files
+  - added the reference issuer kit:
+    - `core/rust/grain-issuer-kit` generates signed `GR1:` scanner examples and public trust material for app development
+    - issuer payloads are strict DAG-CBOR `ServingOffer` records signed under the existing untagged COSE_Sign1 profile
+    - issuer tests prove generated QR strings verify through `grain-client-core` and reject under wrong trust
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`

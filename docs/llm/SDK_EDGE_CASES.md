@@ -28,6 +28,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0022: portable store snapshot restore receives malformed base64/JSON, unsupported snapshot version, invalid identity, malformed accepted scan/event rows, or lifecycle events without identity -> `Rejected` with no existing-store mutation
 - SDK-NEG-0023: generated SDK trust-provider scan receives a blank or unknown `trustAnchorID` -> `SDK_ERR_TRUST_ANCHOR_REQUIRED` / `SDK_ERR_TRUST_ANCHOR_NOT_FOUND`, no fallback trust, and no storage mutation
 - SDK-NEG-0024: iOS scanner adapter receives blank/unknown trust anchor, missing persisted snapshot, duplicate accept after restore, or rejected preview/accept -> explicit SDK/example rejection or no-op, no fallback trust, no network trust discovery, and no accepted-record write before verified accept
+- SDK-NEG-0025: reference issuer tooling receives non-DAG-CBOR payloads, non-`ServingOffer` payloads, or payloads whose `issuer_kid` does not match the generated issuer public key -> reject before signing and print no private key material
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
@@ -71,4 +72,5 @@ These checks are asserted in:
 - `tools/ci/check_sdk_trust_provider_boundary.py`
 - `scripts/sdk/check_scanner_examples.sh`
 - `tools/ci/check_client_workflow_fixtures.py`
+- `core/rust/grain-issuer-kit/tests/reference_issuer.rs`
 - `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`

@@ -245,3 +245,21 @@ Expected WASM/mobile-web adapter contract:
   trust discovery, TOFU, fallback trust, and secret snapshot/trust logging
 
 If this mapping drifts, report a blocking issue before proposing any semantic change.
+
+## Reference issuer kit
+
+Reference issuer proof:
+
+```bash
+cargo test --manifest-path core/rust/Cargo.toml -p grain-issuer-kit
+cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty
+```
+
+Expected contract:
+- generated sample payloads are strict DAG-CBOR `ServingOffer` maps
+- QR strings use the existing `GR1:` transport and untagged COSE_Sign1 profile
+- CLI output contains `qr_string`, `trust_pub_b64`, `issuer_kid_b64`, and
+  `cose_b64`
+- CLI output must not contain private signing key material
+- generated QR strings verify through `grain-client-core` with emitted trust
+  material and reject under wrong trust

@@ -5,6 +5,7 @@ members = [
   "grain-core-wasm",
   "grain-client-core",
   "grain-client-wasm",
+  "grain-issuer-kit",
   "uniffi-bindgen",
 ]
 resolver = "2"
