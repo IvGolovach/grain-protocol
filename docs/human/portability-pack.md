@@ -81,15 +81,17 @@ Build or publish script:
 
 ```bash
 OWNER="${GITHUB_REPOSITORY_OWNER:-your-ghcr-namespace}"
-./scripts/containers/build_golden_images.sh "ghcr.io/${OWNER}"
+REPO="${GITHUB_REPOSITORY#*/}"
+REPO="${REPO:-your-repo}"
+./scripts/containers/build_golden_images.sh "ghcr.io/${OWNER}/${REPO}"
 ```
 
 Expected image families:
 
-- `ghcr.io/${OWNER}/grain-runner:stable`
-- `ghcr.io/${OWNER}/grain-certify:stable`
+- `ghcr.io/${OWNER}/${REPO}/grain-runner:stable`
+- `ghcr.io/${OWNER}/${REPO}/grain-certify:stable`
 
-If `GITHUB_REPOSITORY_OWNER` or `GOLDEN_IMAGE_REGISTRY` is already set, the script can derive the registry without an explicit argument.
+If `GITHUB_REPOSITORY` or `GOLDEN_IMAGE_REGISTRY` is already set, the script can derive the registry without an explicit argument.
 
 ## WASM read/verify path
 
