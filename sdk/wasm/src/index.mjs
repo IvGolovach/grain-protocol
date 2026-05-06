@@ -11,6 +11,77 @@ const STORE_SNAPSHOT_STATUSES = new Set(["Exported", "Restored", "Empty", "Rejec
 const SDK_ERR_TRUST_ANCHOR_REQUIRED = "SDK_ERR_TRUST_ANCHOR_REQUIRED";
 const SDK_ERR_TRUST_ANCHOR_NOT_FOUND = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND";
 const SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID = "SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID";
+const REDACTED = "[REDACTED]";
+const SENSITIVE_LOG_KEYS = new Set([
+  "bundleB64",
+  "coseB64",
+  "envelopeB64",
+  "identityBundle",
+  "snapshotB64",
+  "syncBundle",
+  "syncSecret",
+  "trustPubB64",
+  "bundle_b64",
+  "cose_b64",
+  "envelope_b64",
+  "identity_bundle",
+  "snapshot_b64",
+  "sync_bundle",
+  "sync_secret_b64",
+  "trust_pub_b64",
+  "trustMaterial",
+  "trust_material",
+]);
+
+export const GrainCustodyMaterial = Object.freeze({
+  StoreSnapshot: "storeSnapshot",
+  IdentityBundle: "identityBundle",
+  PairingEnvelope: "pairingEnvelope",
+  SyncBundle: "syncBundle",
+  TrustMaterial: "trustMaterial",
+});
+
+export const GrainCustodyBinding = Object.freeze({
+  PortableTransfer: "portableTransfer",
+  DeviceKeychain: "deviceKeychain",
+  DeviceKeystore: "deviceKeystore",
+  SecureEnclave: "secureEnclave",
+  ExternalSecureModule: "externalSecureModule",
+  AppManaged: "appManaged",
+});
+
+export const GrainCustodyPolicies = Object.freeze({
+  portableIdentityBundle: () => custodyDescriptor(GrainCustodyMaterial.IdentityBundle, GrainCustodyBinding.PortableTransfer, true, false),
+  portablePairingEnvelope: () => custodyDescriptor(GrainCustodyMaterial.PairingEnvelope, GrainCustodyBinding.PortableTransfer, true, false),
+  portableSyncBundle: () => custodyDescriptor(GrainCustodyMaterial.SyncBundle, GrainCustodyBinding.PortableTransfer, true, false),
+  browserSnapshot: () => custodyDescriptor(GrainCustodyMaterial.StoreSnapshot, GrainCustodyBinding.AppManaged, false, false),
+  externalSecureModuleSnapshot: () => custodyDescriptor(GrainCustodyMaterial.StoreSnapshot, GrainCustodyBinding.ExternalSecureModule, false, true),
+});
+
+export function redactGrainClientLogValue(value) {
+  return redactValue(value);
+}
+
+function custodyDescriptor(material, binding, exportable, deviceBound) {
+  return Object.freeze({ material, binding, exportable, deviceBound });
+}
+
+function redactValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactValue(item));
+  }
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const redacted = {};
+  for (const [key, item] of Object.entries(value)) {
+    redacted[key] = SENSITIVE_LOG_KEYS.has(key) && item !== null && item !== undefined
+      ? REDACTED
+      : redactValue(item);
+  }
+  return redacted;
+}
 
 export class GrainStaticTrustProvider {
   #anchors;

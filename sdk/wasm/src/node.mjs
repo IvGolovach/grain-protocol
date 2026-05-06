@@ -15,7 +15,14 @@ export async function createNodeGrainClient({ wasmPath } = {}) {
   return new GrainClient(wasm.instance.exports);
 }
 
-export { GrainClient, GrainStaticTrustProvider } from "./index.mjs";
+export {
+  GrainClient,
+  GrainCustodyBinding,
+  GrainCustodyMaterial,
+  GrainCustodyPolicies,
+  GrainStaticTrustProvider,
+  redactGrainClientLogValue,
+} from "./index.mjs";
 export {
   GrainIndexedDBSnapshotPersistence,
   GrainMemorySnapshotPersistence,

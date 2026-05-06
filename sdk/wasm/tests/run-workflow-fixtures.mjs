@@ -3,7 +3,14 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { GrainStaticTrustProvider, createNodeGrainClient } from "../src/node.mjs";
+import {
+  GrainCustodyBinding,
+  GrainCustodyMaterial,
+  GrainCustodyPolicies,
+  GrainStaticTrustProvider,
+  createNodeGrainClient,
+  redactGrainClientLogValue,
+} from "../src/node.mjs";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const vectorsRoot = realpathSync(resolve(repoRoot, "conformance/vectors"));
@@ -20,6 +27,7 @@ await runDeviceLifecycleFixtures();
 await runPairingFixtures();
 await runSyncBundleFixtures();
 await runStoreSnapshotFixtures();
+await runCustodyAndRedactionChecks();
 console.log("WASM client workflow fixtures: PASS");
 
 async function runScanPreviewFixtures() {
@@ -314,6 +322,35 @@ async function runStoreSnapshotFixtures() {
       target.close();
     }
   }
+}
+
+async function runCustodyAndRedactionChecks() {
+  const client = await createNodeGrainClient({ wasmPath });
+  try {
+    requireFixture(client.createRootIdentity({ label: "redaction" }).status === "Created", "redaction root create mismatch");
+    const identity = client.exportIdentityBundle();
+    const pairing = client.createPairingEnvelope();
+    const sync = client.exportSyncBundle();
+    const snapshot = client.exportStoreSnapshot();
+    const rendered = JSON.stringify(redactGrainClientLogValue({ identity, pairing, sync, snapshot }));
+
+    for (const payload of [identity.bundleB64, pairing.envelopeB64, sync.bundleB64, snapshot.snapshotB64].filter(Boolean)) {
+      requireFixture(!rendered.includes(payload), "WASM redacted log value leaked transfer payload");
+    }
+    requireFixture(rendered.includes("[REDACTED]"), "WASM redacted log value did not mark redaction");
+  } finally {
+    client.close();
+  }
+
+  const pairingPolicy = GrainCustodyPolicies.portablePairingEnvelope();
+  requireFixture(pairingPolicy.material === GrainCustodyMaterial.PairingEnvelope, "pairing custody material mismatch");
+  requireFixture(pairingPolicy.binding === GrainCustodyBinding.PortableTransfer, "pairing custody binding mismatch");
+  requireFixture(pairingPolicy.exportable === true && pairingPolicy.deviceBound === false, "pairing custody must be portable");
+
+  const snapshotPolicy = GrainCustodyPolicies.externalSecureModuleSnapshot();
+  requireFixture(snapshotPolicy.material === GrainCustodyMaterial.StoreSnapshot, "snapshot custody material mismatch");
+  requireFixture(snapshotPolicy.binding === GrainCustodyBinding.ExternalSecureModule, "snapshot custody binding mismatch");
+  requireFixture(snapshotPolicy.exportable === false && snapshotPolicy.deviceBound === true, "snapshot custody must be device-bound");
 }
 
 function loadFixtures(kind) {

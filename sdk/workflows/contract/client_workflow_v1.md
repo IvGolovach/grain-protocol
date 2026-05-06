@@ -121,6 +121,8 @@ Expected fields:
 - `device_count`: device count transferred by the pairing envelope.
 
 Pairing envelopes are app-controlled transfer artifacts. They move the portable identity bundle through the generated SDK workflow surface; they are not a claim that the SDK has implemented platform key custody or a secure remote pairing protocol.
+They must be treated as secret portable transfer payloads and kept out of UI
+state, diagnostics logs, analytics, crash reports, and support bundles.
 
 ## `sync_bundle`
 
@@ -140,6 +142,9 @@ Expected fields:
 - `accepted_record_count`, `device_count`, `lifecycle_event_count`: final imported counters.
 
 Sync import must be atomic. Identity conflicts reject without importing accepted scans or lifecycle events.
+Sync bundles are secret portable transfer payloads, not device custody. Apps may
+use them for encrypted/authenticated backup, handoff, sync, or audit channels,
+but generated SDKs must not log, display, or treat them as UI state.
 
 ## `store_snapshot`
 
@@ -158,3 +163,6 @@ Expected public API behavior:
 
 The snapshot payload is opaque SDK state. Apps persist the returned string; they
 must not parse it or use it as a raw mutation surface.
+Production apps should bind snapshots to device or app-managed protected
+storage such as Keychain, Keystore, IndexedDB plus app sealing, TPM/HSM-backed
+storage, or equivalent platform custody.

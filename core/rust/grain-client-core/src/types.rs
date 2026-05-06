@@ -19,7 +19,7 @@ pub enum ScanPreviewStatus {
 /// This type is intentionally FFI-friendly: platform bindings can expose the
 /// status, deterministic diag strings, and optional COSE bytes without exposing
 /// raw protocol runner operations to app developers.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ScanPreview {
     pub status: ScanPreviewStatus,
     pub diag: Vec<String>,
@@ -52,11 +52,30 @@ impl ScanPreview {
     }
 }
 
+impl fmt::Debug for ScanPreview {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ScanPreview")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("cose_b64", &self.cose_b64.as_ref().map(|_| "[REDACTED]"))
+            .finish()
+    }
+}
+
 /// Request DTO for generated SDK scan-accept workflows.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ScanAcceptRequest {
     pub qr_string: String,
     pub trust_pub_b64: String,
+}
+
+impl fmt::Debug for ScanAcceptRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ScanAcceptRequest")
+            .field("qr_string", &self.qr_string)
+            .field("trust_pub_b64", &"[REDACTED]")
+            .finish()
+    }
 }
 
 /// Accept status for a scanned transport payload.
@@ -75,19 +94,39 @@ pub enum ScanAcceptStatus {
 }
 
 /// Verified scan record prepared for later atomic persistence.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AcceptedScan {
     pub scan_id: String,
     pub cose_b64: String,
     pub trust_pub_b64: String,
 }
 
+impl fmt::Debug for AcceptedScan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AcceptedScan")
+            .field("scan_id", &self.scan_id)
+            .field("cose_b64", &"[REDACTED]")
+            .field("trust_pub_b64", &"[REDACTED]")
+            .finish()
+    }
+}
+
 /// Persisted accepted scan record.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AcceptedScanRecord {
     pub scan_id: String,
     pub cose_b64: String,
     pub trust_pub_b64: String,
+}
+
+impl fmt::Debug for AcceptedScanRecord {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AcceptedScanRecord")
+            .field("scan_id", &self.scan_id)
+            .field("cose_b64", &"[REDACTED]")
+            .field("trust_pub_b64", &"[REDACTED]")
+            .finish()
+    }
 }
 
 impl From<AcceptedScan> for AcceptedScanRecord {
@@ -269,7 +308,7 @@ pub enum PairingStatus {
     Rejected,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PairingResult {
     pub status: PairingStatus,
     pub diag: Vec<String>,
@@ -277,6 +316,22 @@ pub struct PairingResult {
     pub envelope_b64: Option<String>,
     pub root_kid: Option<String>,
     pub device_count: u64,
+}
+
+impl fmt::Debug for PairingResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PairingResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("pairing_id", &self.pairing_id)
+            .field(
+                "envelope_b64",
+                &self.envelope_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("root_kid", &self.root_kid)
+            .field("device_count", &self.device_count)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -325,7 +380,7 @@ impl From<AcceptedScanRecord> for AcceptedScan {
 }
 
 /// Pure scan-accept preparation output.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct ScanAccept {
     pub status: ScanAcceptStatus,
     pub diag: Vec<String>,
@@ -355,5 +410,21 @@ impl ScanAccept {
             diag: vec![diag.into()],
             accepted: None,
         }
+    }
+}
+
+impl fmt::Debug for ScanAccept {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ScanAccept")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field(
+                "accepted",
+                &self
+                    .accepted
+                    .as_ref()
+                    .map(|accepted| (&accepted.scan_id, "[REDACTED]")),
+            )
+            .finish()
     }
 }

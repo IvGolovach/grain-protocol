@@ -119,6 +119,20 @@ Every platform wrapper exposes the same product-level operations:
 - persist client runtime state with `exportStoreSnapshot` and
   `restoreStoreSnapshot`
 
+Production app checklist:
+
+- restore the last `snapshotB64` through a platform persistence adapter on
+  launch before showing scanner state
+- load app-owned local trust anchors and resolve scans through
+  `trustAnchorID` plus `TrustProvider`
+- scan -> preview -> accept only through the public workflow API
+- persist a fresh snapshot after successful identity, device, accept, pairing,
+  or sync-import mutations
+- keep UI, logs, analytics, crash reports, and support bundles limited to
+  statuses, counts, IDs, and diagnostic codes
+- never log raw snapshots, identity bundles, pairing envelopes, sync bundles,
+  accepted-scan COSE payloads, or trust material
+
 Trust setup is intentionally outside the protocol core. Production apps should
 pass a `trustAnchorID` plus a platform `TrustProvider`; the wrapper resolves
 that anchor to `trustPubB64` and fails closed with `SDK_ERR_TRUST_ANCHOR_*`
@@ -131,3 +145,15 @@ the returned `snapshotB64` string in their platform storage layer and restore it
 into a fresh client on launch. Snapshot payloads can include identity material,
 so production adapters should place them behind the platform security boundary
 appropriate for the device.
+
+Custody vocabulary is intentionally small:
+
+- `snapshotB64` is device-local runtime state. Store it through Keychain,
+  Keystore, IndexedDB plus app sealing, TPM/HSM-backed storage, or equivalent
+  protected local storage. It is not a user-visible export format.
+- identity bundles, pairing envelopes, and sync bundles are portable secret
+  transfer artifacts. Move them only through encrypted/authenticated backup,
+  handoff, or pairing channels.
+- trust bundles are app-distributed verification policy. Treat them as
+  integrity-sensitive local inputs: no network lookup, TOFU, platform CA
+  fallback, or default issuer belongs inside the SDK.

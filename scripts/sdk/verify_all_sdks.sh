@@ -138,6 +138,8 @@ run_check "SDK no-network policy" \
   python3 tools/ci/check_sdk_no_network.py
 run_check "SDK trust-provider boundary policy" \
   python3 tools/ci/check_sdk_trust_provider_boundary.py
+run_check "SDK secret logging policy" \
+  python3 tools/ci/check_sdk_secret_logging.py
 
 if have_cmd cargo && have_cmd rustc && have_cmd npm; then
   if run_check "WASM target ready" ensure_wasm_target_ready; then

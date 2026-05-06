@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.grain.GrainClient
+import dev.grain.GrainCustodyBinding
+import dev.grain.GrainCustodyMaterial
+import dev.grain.GrainCustodyPolicies
 import dev.grain.GrainStaticTrustProvider
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,6 +22,7 @@ fun main() {
     runPairingFixtures()
     runSyncBundleFixtures()
     runStoreSnapshotFixtures()
+    runCustodyAndRedactionChecks()
     println("Kotlin client workflow fixtures: PASS")
 }
 
@@ -353,6 +357,35 @@ private fun runStoreSnapshotFixtures() {
             }
         }
     }
+}
+
+private fun runCustodyAndRedactionChecks() {
+    GrainClient().use { client ->
+        requireFixture(
+            client.createRootIdentity(label = "redaction").status == "Created",
+            "redaction root create mismatch",
+        )
+        val identity = client.exportIdentityBundle()
+        val pairing = client.createPairingEnvelope()
+        val sync = client.exportSyncBundle()
+        val snapshot = client.exportStoreSnapshot()
+        val rendered = listOf(identity, pairing, sync, snapshot).joinToString("\n")
+
+        listOfNotNull(identity.bundleB64, pairing.envelopeB64, sync.bundleB64, snapshot.snapshotB64).forEach { payload ->
+            requireFixture(!rendered.contains(payload), "Kotlin public result toString leaked transfer payload")
+        }
+        requireFixture(rendered.contains("[REDACTED]"), "Kotlin public result toString did not mark redaction")
+    }
+
+    val pairingPolicy = GrainCustodyPolicies.portablePairingEnvelope()
+    requireFixture(pairingPolicy.material == GrainCustodyMaterial.PairingEnvelope, "pairing custody material mismatch")
+    requireFixture(pairingPolicy.binding == GrainCustodyBinding.PortableTransfer, "pairing custody binding mismatch")
+    requireFixture(pairingPolicy.exportable && !pairingPolicy.deviceBound, "pairing custody must be portable")
+
+    val snapshotPolicy = GrainCustodyPolicies.deviceKeystoreSnapshot()
+    requireFixture(snapshotPolicy.material == GrainCustodyMaterial.StoreSnapshot, "snapshot custody material mismatch")
+    requireFixture(snapshotPolicy.binding == GrainCustodyBinding.DeviceKeystore, "snapshot custody binding mismatch")
+    requireFixture(!snapshotPolicy.exportable && snapshotPolicy.deviceBound, "snapshot custody must be device-bound")
 }
 
 private fun loadFixtures(kind: String): List<WorkflowFixture> {

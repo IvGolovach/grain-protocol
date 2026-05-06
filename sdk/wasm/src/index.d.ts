@@ -12,6 +12,19 @@ export type GrainClientLifecycleStatus = "Ready" | "Uninitialized";
 export type GrainPairingStatus = "Created" | "Valid" | "Paired" | "AlreadyPaired" | "Rejected";
 export type GrainSyncStatus = "Exported" | "Empty" | "Imported" | "AlreadyImported" | "Rejected";
 export type GrainStoreSnapshotStatus = "Exported" | "Restored" | "Empty" | "Rejected";
+export type GrainCustodyMaterial =
+  | "storeSnapshot"
+  | "identityBundle"
+  | "pairingEnvelope"
+  | "syncBundle"
+  | "trustMaterial";
+export type GrainCustodyBinding =
+  | "portableTransfer"
+  | "deviceKeychain"
+  | "deviceKeystore"
+  | "secureEnclave"
+  | "externalSecureModule"
+  | "appManaged";
 
 export interface GrainScanPreviewInput {
   qrString: string;
@@ -139,6 +152,13 @@ export interface GrainStoreSnapshotResult {
   lifecycleEventCount: number;
 }
 
+export interface GrainCustodyDescriptor {
+  material: GrainCustodyMaterial;
+  binding: GrainCustodyBinding;
+  exportable: boolean;
+  deviceBound: boolean;
+}
+
 export class GrainStaticTrustProvider implements GrainTrustProvider {
   constructor(anchors?: Record<string, string> | Map<string, string>);
   static fromBundleJson(bundleJson: string): GrainStaticTrustProvider;
@@ -170,3 +190,30 @@ export class GrainClient {
 }
 
 export function createGrainClientFromInstance(instance: WebAssembly.Instance): GrainClient;
+
+export const GrainCustodyMaterial: Readonly<{
+  StoreSnapshot: "storeSnapshot";
+  IdentityBundle: "identityBundle";
+  PairingEnvelope: "pairingEnvelope";
+  SyncBundle: "syncBundle";
+  TrustMaterial: "trustMaterial";
+}>;
+
+export const GrainCustodyBinding: Readonly<{
+  PortableTransfer: "portableTransfer";
+  DeviceKeychain: "deviceKeychain";
+  DeviceKeystore: "deviceKeystore";
+  SecureEnclave: "secureEnclave";
+  ExternalSecureModule: "externalSecureModule";
+  AppManaged: "appManaged";
+}>;
+
+export const GrainCustodyPolicies: Readonly<{
+  portableIdentityBundle: () => GrainCustodyDescriptor;
+  portablePairingEnvelope: () => GrainCustodyDescriptor;
+  portableSyncBundle: () => GrainCustodyDescriptor;
+  browserSnapshot: () => GrainCustodyDescriptor;
+  externalSecureModuleSnapshot: () => GrainCustodyDescriptor;
+}>;
+
+export function redactGrainClientLogValue<T>(value: T): T;

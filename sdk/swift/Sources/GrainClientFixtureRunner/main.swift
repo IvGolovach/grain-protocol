@@ -7,6 +7,7 @@ try runDeviceLifecycleFixtures()
 try runPairingFixtures()
 try runSyncBundleFixtures()
 try runStoreSnapshotFixtures()
+try runCustodyAndRedactionChecks()
 print("Swift client workflow fixtures: PASS")
 
 private struct WorkflowFixture: Decodable {
@@ -379,6 +380,40 @@ private func runStoreSnapshotFixtures() throws {
             fixture.fixtureID
         )
     }
+}
+
+private func runCustodyAndRedactionChecks() throws {
+    let client = GrainClient()
+    try require(client.createRootIdentity(label: "redaction").status == "Created", "redaction root create mismatch")
+    let identity = client.exportIdentityBundle()
+    let pairing = client.createPairingEnvelope()
+    let sync = client.exportSyncBundle()
+    let snapshot = client.exportStoreSnapshot()
+    let rendered = [
+        String(describing: identity),
+        String(reflecting: identity),
+        String(describing: pairing),
+        String(reflecting: pairing),
+        String(describing: sync),
+        String(reflecting: sync),
+        String(describing: snapshot),
+        String(reflecting: snapshot),
+    ].joined(separator: "\n")
+
+    for payload in [identity.bundleB64, pairing.envelopeB64, sync.bundleB64, snapshot.snapshotB64].compactMap({ $0 }) {
+        try require(!rendered.contains(payload), "Swift public result description leaked transfer payload")
+    }
+    try require(rendered.contains("[REDACTED]"), "Swift public result description did not mark redaction")
+
+    let pairingPolicy = GrainCustodyPolicies.portablePairingEnvelope()
+    try require(pairingPolicy.material == .pairingEnvelope, "pairing custody material mismatch")
+    try require(pairingPolicy.binding == .portableTransfer, "pairing custody binding mismatch")
+    try require(pairingPolicy.exportable && !pairingPolicy.deviceBound, "pairing custody must be portable")
+
+    let snapshotPolicy = GrainCustodyPolicies.keychainSnapshot()
+    try require(snapshotPolicy.material == .storeSnapshot, "snapshot custody material mismatch")
+    try require(snapshotPolicy.binding == .deviceKeychain, "snapshot custody binding mismatch")
+    try require(!snapshotPolicy.exportable && snapshotPolicy.deviceBound, "snapshot custody must be device-bound")
 }
 
 private func loadFixtures(kind: String) throws -> [WorkflowFixture] {

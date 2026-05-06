@@ -5,23 +5,46 @@ use crate::types::{
     ScanAcceptRequest, ScanAcceptStatus, ScanPreview, ScanPreviewStatus, StoreSnapshotResult,
     StoreSnapshotStatus, SyncResult, SyncStatus,
 };
+use std::fmt;
 
 /// Binding-safe scan-preview request DTO.
 ///
 /// `scan_preview` has no separate core request type today; generated bindings
 /// pass these owned fields directly to the core function.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiScanPreviewRequest {
     pub qr_string: String,
     pub trust_pub_b64: Option<String>,
 }
 
+impl fmt::Debug for FfiScanPreviewRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiScanPreviewRequest")
+            .field("qr_string", &self.qr_string)
+            .field(
+                "trust_pub_b64",
+                &self.trust_pub_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .finish()
+    }
+}
+
 /// Binding-safe scan-preview result DTO.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiScanPreview {
     pub status: String,
     pub diag: Vec<String>,
     pub cose_b64: Option<String>,
+}
+
+impl fmt::Debug for FfiScanPreview {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiScanPreview")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("cose_b64", &self.cose_b64.as_ref().map(|_| "[REDACTED]"))
+            .finish()
+    }
 }
 
 impl From<ScanPreview> for FfiScanPreview {
@@ -35,10 +58,19 @@ impl From<ScanPreview> for FfiScanPreview {
 }
 
 /// Binding-safe scan-accept request DTO.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiScanAcceptRequest {
     pub qr_string: String,
     pub trust_pub_b64: String,
+}
+
+impl fmt::Debug for FfiScanAcceptRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiScanAcceptRequest")
+            .field("qr_string", &self.qr_string)
+            .field("trust_pub_b64", &"[REDACTED]")
+            .finish()
+    }
 }
 
 impl From<FfiScanAcceptRequest> for ScanAcceptRequest {
@@ -60,11 +92,21 @@ impl From<ScanAcceptRequest> for FfiScanAcceptRequest {
 }
 
 /// Binding-safe accepted scan DTO.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiAcceptedScan {
     pub scan_id: String,
     pub cose_b64: String,
     pub trust_pub_b64: String,
+}
+
+impl fmt::Debug for FfiAcceptedScan {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiAcceptedScan")
+            .field("scan_id", &self.scan_id)
+            .field("cose_b64", &"[REDACTED]")
+            .field("trust_pub_b64", &"[REDACTED]")
+            .finish()
+    }
 }
 
 impl From<AcceptedScan> for FfiAcceptedScan {
@@ -88,13 +130,28 @@ impl From<AcceptedScanRecord> for FfiAcceptedScan {
 }
 
 /// Binding-safe scan-accept result DTO.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiScanAccept {
     pub status: String,
     pub diag: Vec<String>,
     pub scan_id: Option<String>,
     pub cose_b64: Option<String>,
     pub trust_pub_b64: Option<String>,
+}
+
+impl fmt::Debug for FfiScanAccept {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiScanAccept")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("scan_id", &self.scan_id)
+            .field("cose_b64", &self.cose_b64.as_ref().map(|_| "[REDACTED]"))
+            .field(
+                "trust_pub_b64",
+                &self.trust_pub_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .finish()
+    }
 }
 
 impl From<ScanAccept> for FfiScanAccept {
@@ -138,7 +195,7 @@ impl From<StorePutResult> for FfiStorePutResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiStoreSnapshotResult {
     pub status: String,
     pub diag: Vec<String>,
@@ -146,6 +203,22 @@ pub struct FfiStoreSnapshotResult {
     pub accepted_record_count: u64,
     pub device_count: u64,
     pub lifecycle_event_count: u64,
+}
+
+impl fmt::Debug for FfiStoreSnapshotResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiStoreSnapshotResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field(
+                "snapshot_b64",
+                &self.snapshot_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("accepted_record_count", &self.accepted_record_count)
+            .field("device_count", &self.device_count)
+            .field("lifecycle_event_count", &self.lifecycle_event_count)
+            .finish()
+    }
 }
 
 impl From<StoreSnapshotResult> for FfiStoreSnapshotResult {
@@ -161,7 +234,7 @@ impl From<StoreSnapshotResult> for FfiStoreSnapshotResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiIdentityResult {
     pub status: String,
     pub diag: Vec<String>,
@@ -171,6 +244,24 @@ pub struct FfiIdentityResult {
     pub device_count: u64,
     pub revoked_count: u64,
     pub lifecycle_event_count: u64,
+}
+
+impl fmt::Debug for FfiIdentityResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiIdentityResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("root_kid", &self.root_kid)
+            .field("active_ak", &self.active_ak)
+            .field(
+                "bundle_b64",
+                &self.bundle_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("device_count", &self.device_count)
+            .field("revoked_count", &self.revoked_count)
+            .field("lifecycle_event_count", &self.lifecycle_event_count)
+            .finish()
+    }
 }
 
 impl From<IdentityResult> for FfiIdentityResult {
@@ -242,12 +333,20 @@ impl From<ClientLifecycle> for FfiClientLifecycle {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiPairingEnvelopeRequest {
     pub envelope_b64: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl fmt::Debug for FfiPairingEnvelopeRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiPairingEnvelopeRequest")
+            .field("envelope_b64", &"[REDACTED]")
+            .finish()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiPairingResult {
     pub status: String,
     pub diag: Vec<String>,
@@ -270,12 +369,36 @@ impl From<PairingResult> for FfiPairingResult {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl fmt::Debug for FfiPairingResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiPairingResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field("pairing_id", &self.pairing_id)
+            .field(
+                "envelope_b64",
+                &self.envelope_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("root_kid", &self.root_kid)
+            .field("device_count", &self.device_count)
+            .finish()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiSyncBundleRequest {
     pub bundle_b64: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl fmt::Debug for FfiSyncBundleRequest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiSyncBundleRequest")
+            .field("bundle_b64", &"[REDACTED]")
+            .finish()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct FfiSyncResult {
     pub status: String,
     pub diag: Vec<String>,
@@ -283,6 +406,22 @@ pub struct FfiSyncResult {
     pub accepted_record_count: u64,
     pub device_count: u64,
     pub lifecycle_event_count: u64,
+}
+
+impl fmt::Debug for FfiSyncResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FfiSyncResult")
+            .field("status", &self.status)
+            .field("diag", &self.diag)
+            .field(
+                "bundle_b64",
+                &self.bundle_b64.as_ref().map(|_| "[REDACTED]"),
+            )
+            .field("accepted_record_count", &self.accepted_record_count)
+            .field("device_count", &self.device_count)
+            .field("lifecycle_event_count", &self.lifecycle_event_count)
+            .finish()
+    }
 }
 
 impl From<SyncResult> for FfiSyncResult {

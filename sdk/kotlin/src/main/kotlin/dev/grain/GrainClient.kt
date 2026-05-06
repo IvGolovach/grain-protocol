@@ -64,7 +64,10 @@ data class GrainScanPreview(
     val status: GrainScanPreviewStatus,
     val diag: List<String>,
     val coseB64: String?,
-)
+) {
+    override fun toString(): String =
+        "GrainScanPreview(status=$status, diag=$diag, coseB64=${coseB64.redactedOptional()})"
+}
 
 data class GrainScanAccept(
     val status: GrainScanAcceptStatus,
@@ -72,13 +75,20 @@ data class GrainScanAccept(
     val scanId: String?,
     val coseB64: String?,
     val trustPubB64: String?,
-)
+) {
+    override fun toString(): String =
+        "GrainScanAccept(status=$status, diag=$diag, scanId=$scanId, " +
+            "coseB64=${coseB64.redactedOptional()}, trustPubB64=${trustPubB64.redactedOptional()})"
+}
 
 data class GrainAcceptedScan(
     val scanId: String,
     val coseB64: String,
     val trustPubB64: String,
-)
+) {
+    override fun toString(): String =
+        "GrainAcceptedScan(scanId=$scanId, coseB64=[REDACTED], trustPubB64=[REDACTED])"
+}
 
 data class GrainIdentityResult(
     val status: String,
@@ -89,7 +99,12 @@ data class GrainIdentityResult(
     val deviceCount: ULong,
     val revokedCount: ULong,
     val lifecycleEventCount: ULong,
-)
+) {
+    override fun toString(): String =
+        "GrainIdentityResult(status=$status, diag=$diag, rootKid=$rootKid, activeAk=$activeAk, " +
+            "bundleB64=${bundleB64.redactedOptional()}, deviceCount=$deviceCount, " +
+            "revokedCount=$revokedCount, lifecycleEventCount=$lifecycleEventCount)"
+}
 
 data class GrainDeviceResult(
     val status: String,
@@ -120,7 +135,11 @@ data class GrainPairingResult(
     val envelopeB64: String?,
     val rootKid: String?,
     val deviceCount: ULong,
-)
+) {
+    override fun toString(): String =
+        "GrainPairingResult(status=$status, diag=$diag, pairingId=$pairingId, " +
+            "envelopeB64=${envelopeB64.redactedOptional()}, rootKid=$rootKid, deviceCount=$deviceCount)"
+}
 
 data class GrainSyncResult(
     val status: String,
@@ -129,7 +148,12 @@ data class GrainSyncResult(
     val acceptedRecordCount: ULong,
     val deviceCount: ULong,
     val lifecycleEventCount: ULong,
-)
+) {
+    override fun toString(): String =
+        "GrainSyncResult(status=$status, diag=$diag, bundleB64=${bundleB64.redactedOptional()}, " +
+            "acceptedRecordCount=$acceptedRecordCount, deviceCount=$deviceCount, " +
+            "lifecycleEventCount=$lifecycleEventCount)"
+}
 
 data class GrainStoreSnapshotResult(
     val status: String,
@@ -138,7 +162,63 @@ data class GrainStoreSnapshotResult(
     val acceptedRecordCount: ULong,
     val deviceCount: ULong,
     val lifecycleEventCount: ULong,
+) {
+    override fun toString(): String =
+        "GrainStoreSnapshotResult(status=$status, diag=$diag, snapshotB64=${snapshotB64.redactedOptional()}, " +
+            "acceptedRecordCount=$acceptedRecordCount, deviceCount=$deviceCount, " +
+            "lifecycleEventCount=$lifecycleEventCount)"
+}
+
+enum class GrainCustodyMaterial {
+    StoreSnapshot,
+    IdentityBundle,
+    PairingEnvelope,
+    SyncBundle,
+    TrustMaterial,
+}
+
+enum class GrainCustodyBinding {
+    PortableTransfer,
+    DeviceKeychain,
+    DeviceKeystore,
+    SecureEnclave,
+    ExternalSecureModule,
+    AppManaged,
+}
+
+data class GrainCustodyDescriptor(
+    val material: GrainCustodyMaterial,
+    val binding: GrainCustodyBinding,
+    val exportable: Boolean,
+    val deviceBound: Boolean,
 )
+
+object GrainCustodyPolicies {
+    fun portableIdentityBundle(): GrainCustodyDescriptor =
+        portable(GrainCustodyMaterial.IdentityBundle)
+
+    fun portablePairingEnvelope(): GrainCustodyDescriptor =
+        portable(GrainCustodyMaterial.PairingEnvelope)
+
+    fun portableSyncBundle(): GrainCustodyDescriptor =
+        portable(GrainCustodyMaterial.SyncBundle)
+
+    fun deviceKeystoreSnapshot(): GrainCustodyDescriptor =
+        GrainCustodyDescriptor(
+            material = GrainCustodyMaterial.StoreSnapshot,
+            binding = GrainCustodyBinding.DeviceKeystore,
+            exportable = false,
+            deviceBound = true,
+        )
+
+    private fun portable(material: GrainCustodyMaterial): GrainCustodyDescriptor =
+        GrainCustodyDescriptor(
+            material = material,
+            binding = GrainCustodyBinding.PortableTransfer,
+            exportable = true,
+            deviceBound = false,
+        )
+}
 
 fun interface GrainTrustProvider {
     fun trustPubB64(anchorId: String): String?
@@ -215,6 +295,9 @@ private fun isNonEmptyStandardBase64(value: String): Boolean =
     } catch (_: IllegalArgumentException) {
         false
     }
+
+private fun String?.redactedOptional(): String =
+    if (this == null) "null" else "[REDACTED]"
 
 class GrainClient : AutoCloseable {
     private val store = GrainClientMemoryStore()

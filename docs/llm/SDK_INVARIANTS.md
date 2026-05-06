@@ -134,6 +134,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `cargo test --manifest-path core/rust/Cargo.toml -p grain-issuer-kit`
   Modules: `core/rust/grain-issuer-kit`, `core/rust/grain-core/src/cose.rs`, `core/rust/grain-core/src/qr.rs`, `core/rust/grain-client-core/src/scan.rs`
 
+- SDK-INV-0031: generated platform SDKs MUST keep device-bound custody separate from portable transfer artifacts. Store snapshots stay opaque and protected by app/device storage; identity bundles, pairing envelopes, and sync bundles are secret portable transfer payloads; UI/logs expose only statuses, counts, IDs, and diagnostics. Public Rust/FFI/Swift/Kotlin debug output and WASM logging helpers MUST redact raw snapshot, bundle, envelope, accepted-scan COSE, and trust material.
+  Tests: `core/rust/grain-client-core/tests/pairing_sync_bundle.rs`, `sdk/swift/Sources/GrainClientFixtureRunner/main.swift`, `sdk/kotlin/src/test/kotlin/dev/grain/fixture/GrainClientFixtureRunner.kt`, `sdk/wasm/tests/run-workflow-fixtures.mjs`, `tools/ci/check_sdk_secret_logging.py`
+  Modules: `core/rust/grain-client-core/src/custody.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/ffi_types.rs`, `core/rust/grain-client-core/src/pairing.rs`, `core/rust/grain-client-core/src/sync.rs`, `sdk/swift/Sources/GrainClient/GrainClient.swift`, `sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt`, `sdk/wasm/src/index.mjs`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`

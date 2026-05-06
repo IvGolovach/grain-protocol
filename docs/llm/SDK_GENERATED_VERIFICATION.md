@@ -59,7 +59,9 @@ Rust client workflows:
 
 ```bash
 cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core
+cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core --test pairing_sync_bundle
 python3 tools/ci/check_client_workflow_fixtures.py
+python3 tools/ci/check_sdk_secret_logging.py
 ```
 
 Swift package:
@@ -130,6 +132,15 @@ python3 tools/ci/check_sdk_release_package.py \
   persistence is allowed for deterministic browser/mobile-web smoke; adapters
   must not parse or log `snapshotB64`, sync bundles, pairing envelopes, or trust
   material.
+- Generated wrapper readiness is not production custody readiness unless the
+  consuming app also names its camera/sensor adapter, local trust provider,
+  snapshot custody adapter, and encrypted/authenticated transfer/share channel.
+  `GrainCustodyPolicies` is vocabulary for that boundary, not hidden key
+  management.
+- Public debug/toString/log helper paths must redact raw snapshots, identity
+  bundles, pairing envelopes, sync bundles, accepted-scan COSE, and trust
+  material. Keep `tools/ci/check_sdk_secret_logging.py` wired into SDK and
+  Python policy checks when adding new platform wrappers or scanner examples.
 
 ## Packaging Rules
 
