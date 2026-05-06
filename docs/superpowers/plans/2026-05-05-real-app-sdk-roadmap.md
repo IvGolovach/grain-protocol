@@ -25,8 +25,8 @@
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | SDK release channel | Merged | `codex/grain-real-app-roadmap` | #49 | `b42f91350449bbc3e776042913b397ccdba1c2a0` | `git diff --check`; `git diff --cached --check`; YAML parse; workflow pinning; docs checks; ledger checks; SDK package smoke | PR CI passed on `86555f5b169754c36f5fa7ef2d81847934ca8dd0`; post-merge main CI run `25413371566` passed |
 | 2 | Issuer kit | Merged | `codex/issuer-kit-reference-step2` | #50 | `745dc3518d1a6f484735b82898413ebc2c9cff19` | `cargo test --locked --manifest-path core/rust/Cargo.toml -p grain-core -p grain-client-core -p grain-issuer-kit`; issuer CLI smoke; docs/guard checks; ledger checks | PR CI passed on `fe9b5c6979699d43597b7f0ba4a4024f118f45ec`; post-merge main CI run `25414079835` passed |
-| 3 | Trust anchor bundle | In progress | `codex/trust-anchor-bundle-step3` | | | | |
-| 4 | Production iOS vertical slice | Not started | | | | | |
+| 3 | Trust anchor bundle | Merged | `codex/trust-anchor-bundle-step3` | #51 | `adea8ad6e2eba3345730b72ad2befec8e949b01f` | `cargo test --locked --manifest-path core/rust/Cargo.toml -p grain-client-core`; Swift/WASM/Kotlin package checks; Android example compile; workflow/docs/guard checks; ledger checks; SDK package smoke | PR CI passed on `0cffac08870f03513e0c416c8e9108e1c4b8f906`; post-merge main CI run `25415348249` passed |
+| 4 | Production iOS vertical slice | In review | `codex/ios-scanner-vertical-slice-step4` | #52 | | `cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core`; iOS scanner smoke with scratch path; `scripts/sdk/check_swift_package.sh`; docs/LLM/no-network/trust-boundary/ledger checks | Pending required GitHub CI and review |
 | 5 | Android parity slice | Not started | | | | | |
 | 6 | Custody and sync hardening | Not started | | | | | |
 | 7 | Developer DX closeout | Not started | | | | | |
@@ -205,3 +205,6 @@
 - 2026-05-05: Step 2 started on `codex/issuer-kit-reference-step2` from `origin/main` at `b42f91350449bbc3e776042913b397ccdba1c2a0`.
 - 2026-05-05: Step 2 merged as PR #50. Required PR CI, `sdk-platform`, `evidence-bundle`, and post-merge `main` CI passed; Greptile was requested and did not return a review before merge readiness.
 - 2026-05-05: Step 3 started on `codex/trust-anchor-bundle-step3` from `origin/main` at `745dc3518d1a6f484735b82898413ebc2c9cff19`.
+- 2026-05-05: Step 3 merged as PR #51. Required PR CI and post-merge `main` CI passed after the Android scanner example received its missing runtime Jackson dependency; Greptile was requested and did not return a review before merge readiness.
+- 2026-05-05: Step 4 started on `codex/ios-scanner-vertical-slice-step4` from `origin/main` at `adea8ad6e2eba3345730b72ad2befec8e949b01f`.
+- 2026-05-05: Step 4 opened as PR #52 after targeted local iOS scanner, Swift package, docs, no-network, trust-boundary, diff, and ledger checks passed. Full scanner-example proof is delegated to required GitHub `sdk-platform` because the local JVM architecture blocks the Android lane before repo checks.

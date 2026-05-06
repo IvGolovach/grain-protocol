@@ -1,4 +1,5 @@
 import Combine
+import Foundation
 import GrainClient
 import GrainClientIOSAdapters
 
@@ -17,12 +18,25 @@ public protocol ScannerWorkflowClient: GrainSnapshotClient {
         trustProvider: any GrainTrustProvider
     ) -> GrainScanAccept
     func listAcceptedScans() -> [GrainAcceptedScan]
+    func exportSyncBundle() -> GrainSyncResult
     func createRootIdentity(label: String) -> GrainIdentityResult
     func addDeviceKey(label: String) -> GrainDeviceResult
     func clientLifecycle() -> GrainClientLifecycle
 }
 
 extension GrainClient: ScannerWorkflowClient {}
+
+public enum ScannerShellConfigurationError: Error, Equatable, Sendable {
+    case nonFileTrustAnchorBundleURL
+}
+
+public struct ScannerAcceptedScanSummary: Equatable, Identifiable, Sendable {
+    public let id: String
+
+    public init(scanID: String) {
+        self.id = scanID
+    }
+}
 
 public struct ScannerShellState: Equatable, Sendable {
     public var qrString: String
@@ -33,10 +47,15 @@ public struct ScannerShellState: Equatable, Sendable {
     public var canAccept: Bool
     public var acceptedCount: Int
     public var acceptedScanID: String?
+    public var acceptedScans: [ScannerAcceptedScanSummary]
     public var lifecycleStatus: String?
     public var deviceCount: UInt64
     public var lifecycleEventCount: UInt64
     public var snapshotStatus: String?
+    public var exportStatus: String?
+    public var exportAcceptedCount: UInt64
+    public var exportDeviceCount: UInt64
+    public var exportLifecycleEventCount: UInt64
 
     public init(
         qrString: String = "",
@@ -47,10 +66,15 @@ public struct ScannerShellState: Equatable, Sendable {
         canAccept: Bool = false,
         acceptedCount: Int = 0,
         acceptedScanID: String? = nil,
+        acceptedScans: [ScannerAcceptedScanSummary] = [],
         lifecycleStatus: String? = nil,
         deviceCount: UInt64 = 0,
         lifecycleEventCount: UInt64 = 0,
-        snapshotStatus: String? = nil
+        snapshotStatus: String? = nil,
+        exportStatus: String? = nil,
+        exportAcceptedCount: UInt64 = 0,
+        exportDeviceCount: UInt64 = 0,
+        exportLifecycleEventCount: UInt64 = 0
     ) {
         self.qrString = qrString
         self.trustAnchorID = trustAnchorID
@@ -60,10 +84,15 @@ public struct ScannerShellState: Equatable, Sendable {
         self.canAccept = canAccept
         self.acceptedCount = acceptedCount
         self.acceptedScanID = acceptedScanID
+        self.acceptedScans = acceptedScans
         self.lifecycleStatus = lifecycleStatus
         self.deviceCount = deviceCount
         self.lifecycleEventCount = lifecycleEventCount
         self.snapshotStatus = snapshotStatus
+        self.exportStatus = exportStatus
+        self.exportAcceptedCount = exportAcceptedCount
+        self.exportDeviceCount = exportDeviceCount
+        self.exportLifecycleEventCount = exportLifecycleEventCount
     }
 }
 
@@ -78,7 +107,8 @@ public final class ScannerShellModel: ObservableObject {
     public init(
         client: ScannerWorkflowClient = GrainClient(),
         trustProvider: any GrainTrustProvider = GrainStaticTrustProvider(anchors: [:]),
-        snapshotPersistence: (any GrainSnapshotPersistence)? = nil
+        snapshotPersistence: (any GrainSnapshotPersistence)? = nil,
+        initialTrustAnchorID: String = ""
     ) {
         self.client = client
         self.trustProvider = trustProvider
@@ -87,7 +117,32 @@ public final class ScannerShellModel: ObservableObject {
         } else {
             self.snapshotCoordinator = nil
         }
-        self.state = ScannerShellState()
+        self.state = ScannerShellState(trustAnchorID: initialTrustAnchorID)
+    }
+
+    public convenience init(
+        trustAnchorBundleJSON: String,
+        initialTrustAnchorID: String,
+        snapshotPersistence: any GrainSnapshotPersistence
+    ) throws {
+        try self.init(
+            trustProvider: GrainStaticTrustProvider(bundleJSON: trustAnchorBundleJSON),
+            snapshotPersistence: snapshotPersistence,
+            initialTrustAnchorID: initialTrustAnchorID
+        )
+    }
+
+    public convenience init(
+        trustAnchorBundleURL: URL,
+        initialTrustAnchorID: String,
+        snapshotPersistence: any GrainSnapshotPersistence
+    ) throws {
+        let bundleJSON = try loadLocalTrustAnchorBundleJSON(from: trustAnchorBundleURL)
+        try self.init(
+            trustAnchorBundleJSON: bundleJSON,
+            initialTrustAnchorID: initialTrustAnchorID,
+            snapshotPersistence: snapshotPersistence
+        )
     }
 
     public func updateQrString(_ value: String) {
@@ -141,7 +196,7 @@ public final class ScannerShellModel: ObservableObject {
         state.acceptedScanID = nil
         state.diagnostics = preview.diag
         state.canAccept = preview.status == .verified
-        state.acceptedCount = client.listAcceptedScans().count
+        refreshAcceptedScans()
     }
 
     public func accept() {
@@ -163,11 +218,28 @@ public final class ScannerShellModel: ObservableObject {
         state.acceptStatus = accepted.status
         state.acceptedScanID = accepted.scanID
         state.diagnostics = accepted.diag
-        state.acceptedCount = client.listAcceptedScans().count
+        refreshAcceptedScans()
         state.canAccept = state.previewStatus == .verified
         if accepted.status == .accepted || accepted.status == .alreadyAccepted {
             persistSnapshot()
         }
+    }
+
+    public func refreshAcceptedScans() {
+        let scans = client.listAcceptedScans()
+        state.acceptedScans = scans.map { ScannerAcceptedScanSummary(scanID: $0.scanID) }
+        state.acceptedCount = scans.count
+    }
+
+    @discardableResult
+    public func exportSyncBundleForShare() -> GrainSyncResult {
+        let exported = client.exportSyncBundle()
+        state.exportStatus = exported.status
+        state.exportAcceptedCount = exported.acceptedRecordCount
+        state.exportDeviceCount = exported.deviceCount
+        state.exportLifecycleEventCount = exported.lifecycleEventCount
+        state.diagnostics = exported.diag
+        return exported
     }
 
     public func restorePersistedSnapshot() {
@@ -178,12 +250,12 @@ public final class ScannerShellModel: ObservableObject {
             guard let restored = try snapshotCoordinator.restore(into: client) else {
                 state.snapshotStatus = "Empty"
                 refreshLifecycle()
-                state.acceptedCount = client.listAcceptedScans().count
+                refreshAcceptedScans()
                 return
             }
             state.snapshotStatus = restored.status
             state.diagnostics = restored.diag
-            state.acceptedCount = Int(restored.acceptedRecordCount)
+            refreshAcceptedScans()
             refreshLifecycle()
         } catch {
             state.snapshotStatus = "PersistenceError"
@@ -229,4 +301,54 @@ public final class ScannerShellModel: ObservableObject {
         state.diagnostics = []
         state.canAccept = false
     }
+}
+
+#if canImport(Security)
+public extension ScannerShellModel {
+    convenience init(
+        keychainBackedTrustAnchorBundleJSON bundleJSON: String,
+        initialTrustAnchorID: String,
+        snapshotService: String = "dev.grain.ios-scanner.snapshot",
+        snapshotAccount: String = "default",
+        snapshotAccessGroup: String? = nil,
+        snapshotAccessible: GrainKeychainAccessibility = .whenUnlockedThisDeviceOnly
+    ) throws {
+        try self.init(
+            trustAnchorBundleJSON: bundleJSON,
+            initialTrustAnchorID: initialTrustAnchorID,
+            snapshotPersistence: GrainKeychainSnapshotPersistence(
+                service: snapshotService,
+                account: snapshotAccount,
+                accessGroup: snapshotAccessGroup,
+                accessible: snapshotAccessible
+            )
+        )
+    }
+
+    convenience init(
+        keychainBackedTrustAnchorBundleURL bundleURL: URL,
+        initialTrustAnchorID: String,
+        snapshotService: String = "dev.grain.ios-scanner.snapshot",
+        snapshotAccount: String = "default",
+        snapshotAccessGroup: String? = nil,
+        snapshotAccessible: GrainKeychainAccessibility = .whenUnlockedThisDeviceOnly
+    ) throws {
+        let bundleJSON = try loadLocalTrustAnchorBundleJSON(from: bundleURL)
+        try self.init(
+            keychainBackedTrustAnchorBundleJSON: bundleJSON,
+            initialTrustAnchorID: initialTrustAnchorID,
+            snapshotService: snapshotService,
+            snapshotAccount: snapshotAccount,
+            snapshotAccessGroup: snapshotAccessGroup,
+            snapshotAccessible: snapshotAccessible
+        )
+    }
+}
+#endif
+
+private func loadLocalTrustAnchorBundleJSON(from url: URL) throws -> String {
+    guard url.isFileURL else {
+        throw ScannerShellConfigurationError.nonFileTrustAnchorBundleURL
+    }
+    return try String(contentsOf: url, encoding: .utf8)
 }
