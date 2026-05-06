@@ -340,11 +340,39 @@ function fixtureTrustProvider(input) {
   if (typeof input.trust_anchor_id !== "string") {
     throw new Error("trust_anchor_id is required for provider fixtures");
   }
+  if (input.trust_anchor_bundle_ref !== undefined) {
+    if (input.trust_pub_b64_ref !== undefined || input.trust_pub_b64 !== undefined) {
+      throw new Error("trust_anchor_bundle_ref cannot be mixed with direct trust material");
+    }
+    return GrainStaticTrustProvider.fromBundleJson(resolveTrustAnchorBundleRef(input.trust_anchor_bundle_ref));
+  }
   const trustPubB64 = resolveTrustInput(input);
   if (trustPubB64 === null) {
     return new GrainStaticTrustProvider();
   }
   return new GrainStaticTrustProvider({ [input.trust_anchor_id]: trustPubB64 });
+}
+
+function resolveTrustAnchorBundleRef(ref) {
+  if (typeof ref !== "string") {
+    throw new Error("trust_anchor_bundle_ref is required");
+  }
+  const components = ref.split("/");
+  if (
+    ref.startsWith("/") ||
+    !ref.startsWith("sdk/trust/fixtures/") ||
+    !ref.endsWith(".json") ||
+    components.some((part) => part.length === 0 || part === "." || part === "..")
+  ) {
+    throw new Error(`invalid trust_anchor_bundle_ref: ${ref}`);
+  }
+
+  const bundleRoot = realpathSync(resolve(repoRoot, "sdk/trust/fixtures"));
+  const filePath = realpathSync(resolve(repoRoot, ref));
+  if (filePath !== bundleRoot && !filePath.startsWith(`${bundleRoot}${sep}`)) {
+    throw new Error(`invalid trust_anchor_bundle_ref: ${ref}`);
+  }
+  return readFileSync(filePath, "utf8");
 }
 
 function fixtureQrString(fixture) {

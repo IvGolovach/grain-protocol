@@ -42,6 +42,7 @@ try {
   const trustProvider = new GrainStaticTrustProvider({
     [trustAnchorId]: "<trusted publisher public key base64>",
   });
+  // Or: const trustProvider = GrainStaticTrustProvider.fromBundleJson(localTrustAnchorBundleJson);
   const snapshotPersistence = new GrainMemorySnapshotPersistence();
   const snapshots = new GrainSnapshotCoordinator(snapshotPersistence);
   const scannedQRCode = "<GR1...>";

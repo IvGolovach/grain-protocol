@@ -37,6 +37,7 @@ GrainClient().use { client ->
         anchorId = trustAnchorId,
         trustPubB64 = "<trusted publisher public key base64>",
     )
+    // Or: val trustProvider = GrainStaticTrustProvider.fromBundleJson(localTrustAnchorBundleJson)
     val scannedQRCode = "<GR1...>"
 
     if (client.clientLifecycle().status != "Ready") {

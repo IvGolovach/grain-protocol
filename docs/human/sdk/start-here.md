@@ -16,7 +16,9 @@ If you are building an app on Grain, start here. Keep the first version small an
 7. To create a real signed scanner input for local app development, run
    `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`
    and pass the emitted `qr_string` plus `trust_pub_b64` to the scanner flow.
-8. If you build manually, use the SDK build. It will build the shared
+8. For app-owned trust material, load a local `sdk/trust`-shaped bundle into
+   the platform static trust provider and pass a stable `trustAnchorID`.
+9. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash

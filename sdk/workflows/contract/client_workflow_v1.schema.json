@@ -33,6 +33,9 @@
         "trust_anchor_id": {
           "type": "string"
         },
+        "trust_anchor_bundle_ref": {
+          "$ref": "#/$defs/trust_bundle_ref"
+        },
         "accept_attempts": {
           "type": "integer",
           "minimum": 1
@@ -50,7 +53,22 @@
       },
       "not": {
         "required": ["trust_pub_b64_ref", "trust_pub_b64"]
-      }
+      },
+      "dependentRequired": {
+        "trust_anchor_bundle_ref": ["trust_anchor_id"]
+      },
+      "allOf": [
+        {
+          "not": {
+            "required": ["trust_anchor_bundle_ref", "trust_pub_b64_ref"]
+          }
+        },
+        {
+          "not": {
+            "required": ["trust_anchor_bundle_ref", "trust_pub_b64"]
+          }
+        }
+      ]
     },
     "expect": {
       "type": "object",
@@ -159,6 +177,10 @@
     "ref": {
       "type": "string",
       "pattern": "^conformance/vectors/[A-Za-z0-9_/-]+\\.json#/[A-Za-z0-9_~./-]+$"
+    },
+    "trust_bundle_ref": {
+      "type": "string",
+      "pattern": "^sdk/trust/fixtures/[A-Za-z0-9_-]+\\.json$"
     },
     "presence": {
       "type": "string",

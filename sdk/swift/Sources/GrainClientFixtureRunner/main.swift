@@ -30,6 +30,7 @@ private struct FixtureInput: Decodable {
     let trustPubB64Ref: String?
     let trustPubB64: String?
     let trustAnchorID: String?
+    let trustAnchorBundleRef: String?
     let acceptAttempts: Int?
     let importAttempts: Int?
     let rootLabel: String?
@@ -40,6 +41,7 @@ private struct FixtureInput: Decodable {
         case trustPubB64Ref = "trust_pub_b64_ref"
         case trustPubB64 = "trust_pub_b64"
         case trustAnchorID = "trust_anchor_id"
+        case trustAnchorBundleRef = "trust_anchor_bundle_ref"
         case acceptAttempts = "accept_attempts"
         case importAttempts = "import_attempts"
         case rootLabel = "root_label"
@@ -413,10 +415,40 @@ private func fixtureTrustProvider(_ input: FixtureInput) throws -> GrainStaticTr
     guard let trustAnchorID = input.trustAnchorID else {
         throw FixtureError.invalidReference("trust_anchor_id is required for provider fixtures")
     }
+    if let bundleRef = input.trustAnchorBundleRef {
+        if input.trustPubB64Ref != nil || input.trustPubB64 != nil {
+            throw FixtureError.invalidReference("trust_anchor_bundle_ref cannot be mixed with direct trust material")
+        }
+        _ = trustAnchorID
+        return try GrainStaticTrustProvider(bundleJSON: resolveTrustAnchorBundleRef(bundleRef))
+    }
     guard let trustPubB64 = try resolveTrustInput(input) else {
         return GrainStaticTrustProvider(anchors: [:])
     }
     return GrainStaticTrustProvider(anchorID: trustAnchorID, trustPubB64: trustPubB64)
+}
+
+private func resolveTrustAnchorBundleRef(_ ref: String) throws -> String {
+    let relativePath = ref
+    let pathComponents = relativePath.split(separator: "/", omittingEmptySubsequences: false)
+    guard
+        !relativePath.isEmpty,
+        !relativePath.hasPrefix("/"),
+        relativePath.hasPrefix("sdk/trust/fixtures/"),
+        relativePath.hasSuffix(".json"),
+        pathComponents.allSatisfy({ $0 != "." && $0 != ".." && !$0.isEmpty })
+    else {
+        throw FixtureError.invalidReference(ref)
+    }
+
+    let root = repoRoot()
+    let bundleRoot = root.appendingPathComponent("sdk/trust/fixtures").standardizedFileURL
+    let fileURL = root.appendingPathComponent(relativePath).standardizedFileURL
+    guard fileURL.path.hasPrefix(bundleRoot.path + "/") else {
+        throw FixtureError.invalidReference(ref)
+    }
+
+    return try String(contentsOf: fileURL, encoding: .utf8)
 }
 
 private func fixtureQRString(_ fixture: WorkflowFixture) throws -> String {

@@ -10,6 +10,7 @@ const SYNC_STATUSES = new Set(["Exported", "Empty", "Imported", "AlreadyImported
 const STORE_SNAPSHOT_STATUSES = new Set(["Exported", "Restored", "Empty", "Rejected"]);
 const SDK_ERR_TRUST_ANCHOR_REQUIRED = "SDK_ERR_TRUST_ANCHOR_REQUIRED";
 const SDK_ERR_TRUST_ANCHOR_NOT_FOUND = "SDK_ERR_TRUST_ANCHOR_NOT_FOUND";
+const SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID = "SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID";
 
 export class GrainStaticTrustProvider {
   #anchors;
@@ -28,6 +29,80 @@ export class GrainStaticTrustProvider {
   trustPubB64(anchorId) {
     return this.#anchors.get(anchorId) ?? null;
   }
+
+  static fromBundleJson(bundleJson) {
+    return new GrainStaticTrustProvider(parseTrustAnchorBundleJson(bundleJson));
+  }
+}
+
+function parseTrustAnchorBundleJson(bundleJson) {
+  if (typeof bundleJson !== "string") {
+    throw new TypeError("GrainStaticTrustProvider.fromBundleJson requires bundleJson");
+  }
+
+  let bundle;
+  try {
+    bundle = JSON.parse(bundleJson);
+  } catch {
+    throwTrustAnchorBundleInvalid();
+  }
+  if (!isPlainObject(bundle) || !sameKeys(bundle, ["bundle_v", "anchors"])) {
+    throwTrustAnchorBundleInvalid();
+  }
+  if (bundle.bundle_v !== 1 || !Array.isArray(bundle.anchors) || bundle.anchors.length === 0) {
+    throwTrustAnchorBundleInvalid();
+  }
+
+  const anchors = new Map();
+  for (const anchor of bundle.anchors) {
+    if (!isPlainObject(anchor) || !sameKeys(anchor, ["id", "trust_pub_b64"])) {
+      throwTrustAnchorBundleInvalid();
+    }
+    if (
+      typeof anchor.id !== "string" ||
+      anchor.id.length === 0 ||
+      anchor.id.trim() !== anchor.id ||
+      anchors.has(anchor.id) ||
+      !isNonEmptyStandardBase64(anchor.trust_pub_b64)
+    ) {
+      throwTrustAnchorBundleInvalid();
+    }
+    anchors.set(anchor.id, anchor.trust_pub_b64);
+  }
+  return anchors;
+}
+
+function sameKeys(value, expectedKeys) {
+  const keys = Object.keys(value);
+  return keys.length === expectedKeys.length && expectedKeys.every((key) => keys.includes(key));
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function isNonEmptyStandardBase64(value) {
+  if (typeof value !== "string" || value.length === 0) {
+    return false;
+  }
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    return false;
+  }
+  try {
+    if (typeof globalThis.atob === "function") {
+      return globalThis.atob(value).length > 0;
+    }
+    if (typeof globalThis.Buffer?.from === "function") {
+      return globalThis.Buffer.from(value, "base64").length > 0;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+function throwTrustAnchorBundleInvalid() {
+  throw new Error(SDK_ERR_TRUST_ANCHOR_BUNDLE_INVALID);
 }
 
 export class GrainClient {

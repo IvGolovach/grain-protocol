@@ -12,8 +12,8 @@ if (externalBuildDir.isPresent) {
 
 dependencies {
     implementation("net.java.dev.jna:jna:5.14.0")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
     testImplementation(kotlin("stdlib"))
-    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
 }
 
 java {

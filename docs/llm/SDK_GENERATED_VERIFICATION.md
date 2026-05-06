@@ -23,6 +23,9 @@ The generated SDK stack is:
      WASM/mobile-web adapter packs behind the same opaque snapshot contract.
 5. `sdk/workflows/**`
    - executable client workflow contract for every generated SDK.
+6. `sdk/trust/**`
+   - local trust anchor bundle schema and fixtures packaged with the workflow
+     contract archive.
 
 Do not claim platform SDK conformance from protocol vectors alone. Protocol
 vectors prove Grain bytes and diagnostics. Workflow fixtures prove the generated
@@ -139,7 +142,8 @@ future release process explicitly names a tracked artifact.
 - Swift client source tarball
 - Kotlin client source tarball
 - WASM/mobile-web source tarball
-- workflow contract/docs tarball
+- workflow contract/docs tarball, including `sdk/trust` bundle schema and
+  fixtures
 - manifest with commit SHA, same-SHA version-matrix hash, SDK component
   versions, artifact byte counts, and SHA-256 checksums
 - SPDX 2.3 JSON SBOM with package checksums for every release artifact

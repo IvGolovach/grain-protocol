@@ -141,6 +141,7 @@ export interface GrainStoreSnapshotResult {
 
 export class GrainStaticTrustProvider implements GrainTrustProvider {
   constructor(anchors?: Record<string, string> | Map<string, string>);
+  static fromBundleJson(bundleJson: string): GrainStaticTrustProvider;
   trustPubB64(anchorId: string): string | null;
 }
 

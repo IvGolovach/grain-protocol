@@ -90,6 +90,10 @@ not have every platform target installed.
   callers should use the explicit `trustAnchorID` + trust-provider APIs so
   unknown anchors fail closed with `SDK_ERR_TRUST_ANCHOR_*`; the SDK does not
   discover trust over the network or use fallback trust.
+- Local trust anchor bundles use the same repo SHA as the wrapper/parser that
+  loads them. The v1 shape is documented under `sdk/trust`; unsupported
+  versions, unknown fields, duplicate IDs, malformed trust material, and blank
+  anchors fail closed.
 - Platform persistence can move to Keychain, Keystore, IndexedDB, robot secure
   elements, or device-management storage. The iOS, Android, and
   WASM/mobile-web adapter packs now provide persistence boundaries: apps persist

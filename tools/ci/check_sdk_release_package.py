@@ -37,6 +37,7 @@ EXPECTED_ARTIFACTS = {
         "kind": "workflow-contract",
         "required_entries": [
             "sdk/workflows/contract/client_workflow_v1.md",
+            "sdk/trust/trust_anchor_bundle_v1.schema.json",
             "sdk/generated/README.md",
             "docs/human/sdk/version-matrix.md",
             "docs/llm/SDK_GENERATED_VERIFICATION.md",

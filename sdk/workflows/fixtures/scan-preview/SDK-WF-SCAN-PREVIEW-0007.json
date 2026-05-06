@@ -4,7 +4,8 @@
   "strict": true,
   "input": {
     "qr_string_ref": "conformance/vectors/qr/POS-QR-001.json#/input/qr_string",
-    "trust_anchor_id": "fixture:missing"
+    "trust_anchor_id": "fixture:missing",
+    "trust_anchor_bundle_ref": "sdk/trust/fixtures/TRUST-ANCHOR-BUNDLE-0001.json"
   },
   "expect": {
     "status": "Rejected",
