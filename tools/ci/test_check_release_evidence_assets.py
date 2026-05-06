@@ -26,7 +26,15 @@ def load_module():
 
 
 def write_evidence_zip(path: Path, *, sdk_failed: int = 0, tag: str = TAG) -> None:
-    sdk_summary = {"total": 3, "passed": 3 - sdk_failed, "failed": sdk_failed}
+    sdk_counts = {"total": 3, "passed": 3 - sdk_failed, "failed": sdk_failed}
+    sdk_summary = {
+        "commit_sha": COMMIT,
+        "strict": True,
+        **sdk_counts,
+        "failures": [],
+        "runner_cmd": ["node", "dist/src/cli.js", "run", "--strict", "--vector"],
+        "timeout_seconds": 120,
+    }
     suite_summary = {
         "commit_sha": COMMIT,
         "strict": True,
@@ -37,7 +45,7 @@ def write_evidence_zip(path: Path, *, sdk_failed: int = 0, tag: str = TAG) -> No
         "ts_suite_runner": {"total": 1, "passed": 1, "failed": 0},
         "divergence_full": {"total": 1, "mismatches": 0},
         "properties_full": {"failed": 0},
-        "sdk_suite": sdk_summary,
+        "sdk_suite": sdk_counts,
         "tag": tag,
     }
     suite_run = {
