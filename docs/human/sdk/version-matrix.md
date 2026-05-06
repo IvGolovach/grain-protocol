@@ -63,9 +63,12 @@ That command proves:
 The `ci` workflow runs the same strict platform SDK gate in the `sdk-platform`
 job on a Swift 6-capable macOS runner, packages the SDK release artifacts after
 that strict gate, and re-checks the release manifest before final evidence
-build. Set `SDK_KOTLIN_GRADLE_OFFLINE=1` only on machines with warmed Gradle
-caches when you need the Kotlin package and Android scanner example checks to
-prove offline dependency resolution.
+build. The `release-evidence` tag workflow runs the same strict SDK gate before
+attaching SDK source package assets to the GitHub release, so tag consumers can
+audit the SDK package, evidence bundle, and manifest against one commit. Set
+`SDK_KOTLIN_GRADLE_OFFLINE=1` only on machines with warmed Gradle caches when
+you need the Kotlin package and Android scanner example checks to prove offline
+dependency resolution.
 
 For a full repository release proof, also run:
 

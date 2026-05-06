@@ -74,12 +74,15 @@ Historical imported milestone tags have GitHub release pages now, but some older
 - CI must generate `evidence-<commit_sha>.zip` on:
   - merges to `main`
   - pushes of `protocol-*`, `repo-*`, `protocol-rc-*`, and `repo-rc-*` tags
+- Tag release evidence must also attach the same-commit SDK source release
+  package assets after the strict platform SDK gate passes.
 - Evidence bundle must include:
   - suite summaries
   - vector manifests plus hashes
   - lock and toolchain hashes
   - Rust versus TS divergence summaries for `C01` and full
   - interop certification summaries (`interop-evidence.json`, `evidence.sha256`)
+  - SDK strict-suite summary when SDK release packaging is part of the workflow
 
 ## 5) Line ending and tracked-noise policy
 

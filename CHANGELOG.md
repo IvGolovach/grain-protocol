@@ -90,6 +90,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - SDK packaging now emits `manifest.json`, `SHA256SUMS`, and SPDX JSON SBOM metadata for generated bindings, Swift, Kotlin, WASM/mobile-web, and workflow-contract artifacts
     - release package checking verifies same-SHA version-matrix hashes, SDK component versions, artifact byte counts, SHA-256 sums, archive cleanliness, and SBOM package checksums
     - CI packages the SDK release artifacts after the strict platform SDK gate and re-checks the package metadata before final evidence build
+    - tag release evidence now runs the strict platform SDK gate, verifies the same-commit SDK package, includes the SDK suite summary in the evidence bundle, and attaches SDK source package assets to GitHub releases
     - forbidden tracked-file checks now reject forced-added release artifacts, build outputs, WASM binaries, and secret-like local files
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
