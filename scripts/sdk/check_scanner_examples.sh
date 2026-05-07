@@ -40,6 +40,7 @@ has_hidden_trust_lookup() {
     examples/ios-scanner \
     examples/ios-reference-app \
     examples/android-scanner \
+    examples/android-reference-app \
     examples/wasm-scanner/src/scanner-shell.mjs \
     examples/wasm-scanner/src/camera-adapter.mjs \
     sdk/wasm/src/browser-storage.mjs \
@@ -64,6 +65,7 @@ has_secret_logging() {
     examples/ios-scanner \
     examples/ios-reference-app \
     examples/android-scanner \
+    examples/android-reference-app \
     examples/wasm-scanner/src/scanner-shell.mjs \
     examples/wasm-scanner/src/camera-adapter.mjs \
     sdk/swift/Sources/GrainClientIOSAdapters \
@@ -88,6 +90,7 @@ fi
 cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
 swift run --package-path examples/ios-scanner --scratch-path "$TMP_DIR/swift" GrainIOSScannerSmoke
 scripts/sdk/check_ios_reference_app.sh
+scripts/sdk/check_android_reference_app.sh
 
 GRADLE_ARGS=()
 if [[ "${SDK_KOTLIN_GRADLE_OFFLINE:-0}" == "1" ]]; then
