@@ -173,6 +173,11 @@ jobs:
             --expected-commit "${expected_commit}" \
             --require-strict \
             --require-clean
+          python3 tools/ci/check_external_sdk_handoff.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}" \
+            --require-strict \
+            --require-clean
 
       - uses: ./.github/actions/build-evidence-bundle
         with:

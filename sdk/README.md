@@ -122,6 +122,21 @@ python3 tools/ci/check_sdk_release_package.py \
   --require-clean
 ```
 
+Check the outside-app consumer boundary independently:
+
+```bash
+python3 tools/ci/check_external_sdk_handoff.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --require-strict \
+  --require-clean
+```
+
+That receiver-side check extracts the source archives into a temporary
+`vendor/grain-sdk/<sha>` layout, validates the public Swift, Kotlin, WASM,
+generated-binding, workflow, and trust inputs, and rejects registry/store or
+monorepo-internal claims.
+
 CI may use `--skip-verify --verified-by sdk-platform` only after the strict
 platform SDK gate has just passed on the same checkout. That package is marked
 as `strict-upstream`; plain skipped verification is not a release certificate.

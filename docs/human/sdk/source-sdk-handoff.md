@@ -17,6 +17,7 @@ Grain commit or release tag:
 GitHub release or artifact location:
 Strict SDK proof:
 SDK package check:
+External app handoff check:
 Issuer QR path checked:
 Known local prerequisites:
 Residual gaps:
@@ -49,12 +50,24 @@ python3 tools/ci/check_sdk_release_package.py \
   --expected-commit "$(git rev-parse HEAD)" \
   --require-strict \
   --require-clean
+python3 tools/ci/check_external_sdk_handoff.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --require-strict \
+  --require-clean
 ```
 
 If the package was produced immediately after a required upstream `sdk-platform`
 gate, the release owner may use the documented `--skip-verify --verified-by`
 path in `scripts/sdk/package_client_sdks.sh`. The manifest must then record
 `strict-upstream`, not plain skipped verification.
+
+`check_sdk_release_package.py` proves the producer metadata, checksums, archive
+contents, and SBOM. `check_external_sdk_handoff.py` adds the receiver view: it
+extracts the same archives into a temporary outside-app `vendor/grain-sdk/<sha>`
+layout, rejects monorepo-only paths, and confirms the current handoff is
+source-only rather than an npm, Maven, Swift package-index, app-store, or
+compiled-WASM channel.
 
 Before calling the packet ready, run:
 
@@ -77,6 +90,11 @@ the handoff packet:
 ```bash
 git checkout <grain-sdk-sha-or-tag>
 python3 tools/ci/check_sdk_release_package.py \
+  --out-dir <path-to-downloaded-sdk-release-dir> \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --require-strict \
+  --require-clean
+python3 tools/ci/check_external_sdk_handoff.py \
   --out-dir <path-to-downloaded-sdk-release-dir> \
   --expected-commit "$(git rev-parse HEAD)" \
   --require-strict \
