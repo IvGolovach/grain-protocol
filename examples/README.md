@@ -11,6 +11,9 @@ semantics.
   using bundled local trust and Keychain/file snapshot persistence.
 - `android-scanner`: Kotlin shell over `sdk/kotlin`, shaped for Android app
   state and unit-testable outside a device.
+- `android-reference-app`: minimal Kotlin app entrypoint over
+  `android-scanner`, using bundled local trust and injected snapshot
+  persistence without Android Studio or Play Store packaging.
 - `wasm-scanner`: browser/mobile-web shell over `sdk/wasm`.
 
 These shells start with paste/string input and now include thin camera adapter
