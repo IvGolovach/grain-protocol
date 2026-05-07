@@ -81,6 +81,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_docs_flow.py
 
+    - name: Real app docs check
+      shell: bash
+      run: python3 tools/ci/check_real_app_docs.py
+
     - name: Maintainer docs front-door check
       shell: bash
       run: python3 tools/ci/check_maintainer_docs.py
