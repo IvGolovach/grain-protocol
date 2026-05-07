@@ -58,6 +58,13 @@ Local trust bundle files are configuration inputs. They should be versioned,
 reviewed, signed or checksummed by the app release process, and loaded without
 network fallback.
 
+The repo-level adapter contract is `sdk/custody/secure_storage_adapter_v1.md`.
+Use it as the baseline when an app team implements Keychain, Keystore,
+IndexedDB, TPM/HSM, MDM, kiosk, or robot storage. The contract requires
+explicit results, fail-closed behavior, and no fallback to cloud backup,
+network recovery, platform CA trust, TOFU, analytics upload, or plain local
+files.
+
 ## Misuse Cases
 
 - App logs `snapshotB64`, identity bundles, sync bundles, pairing envelopes, or
@@ -110,3 +117,4 @@ the app repo:
   network source?
 - Are phone, glasses, browser, and robot clients using the same SDK workflow
   contract rather than separate protocol implementations?
+- Does the app's storage adapter satisfy `sdk/custody/secure_storage_adapter_v1.md`?

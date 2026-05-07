@@ -25,3 +25,19 @@ should package, sign, MDM-provision, or otherwise pin the bundle through an
 app-owned channel and fail closed on missing, unknown, malformed, or unexpected
 anchors. Network lookup, TOFU, platform CA fallback, and default issuers do not
 belong in SDK trust resolution.
+
+Production handoff bundles can add governance metadata in a separate reviewed
+bundle file under `sdk/trust/governed`. The governance guard requires a
+`bundle_id`, `revision`, checksum, signature reference, reviewer, `fail_closed:
+true`, and an explicit anchor `state` such as `active` or `revoked`. The
+checksum is the SHA-256 of the canonical runtime payload containing only
+`bundle_v` and `anchors`.
+
+```bash
+python3 tools/ci/check_trust_bundle_governance.py
+```
+
+Generated SDK trust providers still load the compact runtime v1 shape above.
+If an app uses governed bundles, its app-owned release process should strip or
+adapt governance metadata before passing anchors to the runtime provider, while
+preserving the reviewed checksum/signature record outside the SDK core.

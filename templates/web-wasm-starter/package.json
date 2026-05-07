@@ -1,0 +1,13 @@
+{
+  "name": "@grain/web-wasm-starter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal Grain web starter over the public WASM scanner path",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node --check src/main.mjs"
+  }
+}

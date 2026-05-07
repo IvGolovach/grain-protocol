@@ -1,0 +1,18 @@
+{
+  "bundle_v": 1,
+  "governance": {
+    "bundle_id": "fixture-governed",
+    "revision": "2026-05-07.1",
+    "checksum_sha256": "cb7424f4c40991ca952c19f5d86720616e64e54ad7eff3c5b667fefe0ca8e105",
+    "signature_ref": "signatures/fixture-governed-2026-05-07.sig",
+    "reviewed_by": "sdk-security-review",
+    "fail_closed": true
+  },
+  "anchors": [
+    {
+      "id": "fixture:primary",
+      "state": "active",
+      "trust_pub_b64": "YHqypLfKbLygpiN7hlth/fzXA25wsf2wOp3LCN5uhas="
+    }
+  ]
+}

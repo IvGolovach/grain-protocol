@@ -140,6 +140,14 @@ run_check "SDK trust-provider boundary policy" \
   python3 tools/ci/check_sdk_trust_provider_boundary.py
 run_check "SDK secret logging policy" \
   python3 tools/ci/check_sdk_secret_logging.py
+run_check "public SDK API snapshot" \
+  python3 tools/ci/check_public_sdk_api.py
+run_check "safe diagnostic telemetry policy" \
+  python3 tools/ci/check_no_secret_telemetry.py
+run_check "trust bundle governance policy" \
+  python3 tools/ci/check_trust_bundle_governance.py
+run_check "release train docs policy" \
+  python3 tools/ci/check_release_train_docs.py
 
 if have_cmd cargo && have_cmd rustc && have_cmd npm; then
   if run_check "WASM target ready" ensure_wasm_target_ready; then
@@ -165,8 +173,9 @@ fi
 
 if have_cmd swift && have_cmd java && have_cmd npm && have_cmd cargo && have_cmd rustc; then
   run_check "reference scanner examples" scripts/sdk/check_scanner_examples.sh
+  run_check "starter templates" scripts/sdk/check_starter_templates.sh
 else
-  skip_or_fail "SDK_VERIFY_ERR_SCANNER_PREREQ_MISSING" "scanner example check requires swift, java, npm, cargo, and rustc"
+  skip_or_fail "SDK_VERIFY_ERR_SCANNER_PREREQ_MISSING" "scanner example and starter template checks require swift, java, npm, cargo, and rustc"
 fi
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"

@@ -1,0 +1,124 @@
+{
+  "schema": "grain.public-sdk-api.v0.1",
+  "version": "0.1",
+  "surfaces": {
+    "swift": {
+      "symbols": [
+        {"kind": "method", "name": "GrainClient.scanPreview(qrString:trustPubB64:)"},
+        {"kind": "method", "name": "GrainClient.scanPreview(qrString:trustAnchorID:trustProvider:)"},
+        {"kind": "method", "name": "GrainClient.scanAccept(qrString:trustPubB64:)"},
+        {"kind": "method", "name": "GrainClient.listAcceptedScans()"},
+        {"kind": "method", "name": "GrainClient.createRootIdentity(label:)"},
+        {"kind": "method", "name": "GrainClient.exportIdentityBundle()"},
+        {"kind": "method", "name": "GrainClient.importIdentityBundle(bundleB64:)"},
+        {"kind": "method", "name": "GrainClient.addDeviceKey(label:)"},
+        {"kind": "method", "name": "GrainClient.revokeDeviceKey(ak:)"},
+        {"kind": "method", "name": "GrainClient.setActiveDevice(ak:)"},
+        {"kind": "method", "name": "GrainClient.clientLifecycle()"},
+        {"kind": "method", "name": "GrainClient.createPairingEnvelope()"},
+        {"kind": "method", "name": "GrainClient.previewPairingEnvelope(envelopeB64:)"},
+        {"kind": "method", "name": "GrainClient.acceptPairingEnvelope(envelopeB64:)"},
+        {"kind": "method", "name": "GrainClient.exportSyncBundle()"},
+        {"kind": "method", "name": "GrainClient.importSyncBundle(bundleB64:)"},
+        {"kind": "method", "name": "GrainClient.exportStoreSnapshot()"},
+        {"kind": "method", "name": "GrainClient.restoreStoreSnapshot(snapshotB64:)"},
+        {"kind": "type", "name": "GrainStaticTrustProvider"},
+        {"kind": "type", "name": "GrainCustodyPolicies"}
+      ]
+    },
+    "kotlin": {
+      "symbols": [
+        {"kind": "method", "name": "GrainClient.scanPreview(qrString,trustPubB64)"},
+        {"kind": "method", "name": "GrainClient.scanPreview(qrString,trustAnchorId,trustProvider)"},
+        {"kind": "method", "name": "GrainClient.scanAccept(qrString,trustPubB64)"},
+        {"kind": "method", "name": "GrainClient.listAcceptedScans()"},
+        {"kind": "method", "name": "GrainClient.createRootIdentity(label)"},
+        {"kind": "method", "name": "GrainClient.exportIdentityBundle()"},
+        {"kind": "method", "name": "GrainClient.importIdentityBundle(bundleB64)"},
+        {"kind": "method", "name": "GrainClient.addDeviceKey(label)"},
+        {"kind": "method", "name": "GrainClient.revokeDeviceKey(ak)"},
+        {"kind": "method", "name": "GrainClient.setActiveDevice(ak)"},
+        {"kind": "method", "name": "GrainClient.clientLifecycle()"},
+        {"kind": "method", "name": "GrainClient.createPairingEnvelope()"},
+        {"kind": "method", "name": "GrainClient.previewPairingEnvelope(envelopeB64)"},
+        {"kind": "method", "name": "GrainClient.acceptPairingEnvelope(envelopeB64)"},
+        {"kind": "method", "name": "GrainClient.exportSyncBundle()"},
+        {"kind": "method", "name": "GrainClient.importSyncBundle(bundleB64)"},
+        {"kind": "method", "name": "GrainClient.exportStoreSnapshot()"},
+        {"kind": "method", "name": "GrainClient.restoreStoreSnapshot(snapshotB64)"},
+        {"kind": "type", "name": "GrainStaticTrustProvider"},
+        {"kind": "type", "name": "GrainCustodyPolicies"}
+      ]
+    },
+    "wasm": {
+      "symbols": [
+        {"kind": "method", "name": "GrainClient.scanPreview(input)"},
+        {"kind": "method", "name": "GrainClient.scanPreviewWithTrustProvider(input)"},
+        {"kind": "method", "name": "GrainClient.scanAccept(input)"},
+        {"kind": "method", "name": "GrainClient.scanAcceptWithTrustProvider(input)"},
+        {"kind": "method", "name": "GrainClient.listAcceptedScans()"},
+        {"kind": "method", "name": "GrainClient.createRootIdentity(input)"},
+        {"kind": "method", "name": "GrainClient.exportIdentityBundle()"},
+        {"kind": "method", "name": "GrainClient.importIdentityBundle(input)"},
+        {"kind": "method", "name": "GrainClient.addDeviceKey(input)"},
+        {"kind": "method", "name": "GrainClient.revokeDeviceKey(input)"},
+        {"kind": "method", "name": "GrainClient.setActiveDevice(input)"},
+        {"kind": "method", "name": "GrainClient.clientLifecycle()"},
+        {"kind": "method", "name": "GrainClient.createPairingEnvelope()"},
+        {"kind": "method", "name": "GrainClient.previewPairingEnvelope(input)"},
+        {"kind": "method", "name": "GrainClient.acceptPairingEnvelope(input)"},
+        {"kind": "method", "name": "GrainClient.exportSyncBundle()"},
+        {"kind": "method", "name": "GrainClient.importSyncBundle(input)"},
+        {"kind": "method", "name": "GrainClient.exportStoreSnapshot()"},
+        {"kind": "method", "name": "GrainClient.restoreStoreSnapshot(input)"},
+        {"kind": "function", "name": "createGrainClientFromInstance"},
+        {"kind": "function", "name": "redactGrainClientLogValue"},
+        {"kind": "constant", "name": "GrainCustodyPolicies"}
+      ]
+    },
+    "workflow_contract": {
+      "workflows": [
+        "scan_preview",
+        "scan_accept",
+        "scan_handoff",
+        "device_lifecycle",
+        "pairing",
+        "sync_bundle",
+        "store_snapshot"
+      ],
+      "statuses": [
+        "Verified",
+        "Untrusted",
+        "Accepted",
+        "AlreadyAccepted",
+        "Created",
+        "Valid",
+        "Paired",
+        "AlreadyPaired",
+        "Ready",
+        "Uninitialized",
+        "Exported",
+        "Restored",
+        "Empty",
+        "Imported",
+        "AlreadyImported",
+        "Rejected"
+      ]
+    }
+  },
+  "compatibility_matrix": {
+    "schema": "grain.sdk.compatibility-matrix.v1",
+    "default_rule": "same-repo-sha",
+    "supported": [
+      {
+        "grain_commit": "repo-sha",
+        "workflow_contract": "client_workflow_v1",
+        "swift_client": "repo-sha",
+        "kotlin_client": "0.1.0",
+        "wasm_client": "0.1.0",
+        "grain_client_core": "0.1.0",
+        "grain_client_wasm": "0.1.0"
+      }
+    ]
+  }
+}
