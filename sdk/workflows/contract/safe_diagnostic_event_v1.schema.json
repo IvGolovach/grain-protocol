@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grain.local/sdk/workflows/contract/safe_diagnostic_event_v1.schema.json",
+  "title": "Grain Safe Diagnostic Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_v", "event_name", "workflow", "error_code", "redacted"],
+  "properties": {
+    "event_v": {
+      "const": 1
+    },
+    "event_name": {
+      "type": "string",
+      "pattern": "^grain\\.[a-z0-9_.-]+$"
+    },
+    "workflow": {
+      "type": "string",
+      "enum": [
+        "scan_preview",
+        "scan_accept",
+        "scan_handoff",
+        "device_lifecycle",
+        "pairing",
+        "sync_bundle",
+        "store_snapshot"
+      ]
+    },
+    "error_code": {
+      "type": "string",
+      "pattern": "^[A-Z0-9_:-]+$"
+    },
+    "anchor_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["ios", "android", "web", "robot", "server", "unknown"]
+    },
+    "redacted": {
+      "const": true
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 240
+    }
+  }
+}

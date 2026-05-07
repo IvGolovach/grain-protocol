@@ -15,6 +15,8 @@ Primary implementation:
 - `core/ts/grain-sdk-ai`
 
 Portable client SDK lanes:
+- `sdk/api`: public SDK API snapshot and compatibility matrix
+- `sdk/custody`: app-owned secure storage adapter contract
 - `sdk/workflows`: app-facing scan workflow contracts and fixtures
 - `sdk/trust`: local app-owned trust anchor bundle schema and fixtures
 - `sdk/generated`: documentation for generated Swift/Kotlin binding output and the WASM workflow export boundary
@@ -25,6 +27,9 @@ Portable client SDK lanes:
 Reference scanner shells live under `examples/`. They show paste-first iOS,
 Android/Kotlin, and browser/mobile-web clients that call the public workflow
 SDKs and keep camera or sensor adapters outside protocol-critical logic.
+Starter app shells live under `templates/`. They are source templates for
+outside app teams that need the same trust -> scan/paste -> preview -> accept
+-> persist/restore/list/export path without copying protocol internals.
 The iOS shell now has a Keychain-backed production initializer, local trust
 bundle loading, accepted-scan listing, sync export status, and deterministic
 injected-camera smoke coverage.
@@ -130,12 +135,30 @@ python3 tools/ci/check_external_sdk_handoff.py \
   --expected-commit "$(git rev-parse HEAD)" \
   --require-strict \
   --require-clean
+python3 tools/ci/check_external_consumer_templates.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)"
+python3 tools/ci/check_sdk_compatibility_matrix.py \
+  --manifest artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json
 ```
 
 That receiver-side check extracts the source archives into a temporary
 `vendor/grain-sdk/<sha>` layout, validates the public Swift, Kotlin, WASM,
 generated-binding, workflow, and trust inputs, and rejects registry/store or
-monorepo-internal claims.
+monorepo-internal claims. The external consumer template check also validates
+the public API snapshot, custody docs, safe diagnostic schema, and starter
+template archive.
+
+Check starter templates and registry dry-run metadata:
+
+```bash
+scripts/sdk/check_starter_templates.sh
+scripts/sdk/check_registry_dry_runs.sh
+```
+
+These commands prove template shape and dry-run package metadata only. They do
+not publish to Swift Package Index, Maven Central, npm, app stores, PWA
+channels, robot fleets, or hardware vendor programs.
 
 CI may use `--skip-verify --verified-by sdk-platform` only after the strict
 platform SDK gate has just passed on the same checkout. That package is marked

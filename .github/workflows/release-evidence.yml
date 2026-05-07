@@ -58,11 +58,28 @@ jobs:
             --verified-by release-evidence-sdk-platform \
             --out-dir artifacts/sdk-release
 
+      - name: Verify external developer handoff
+        run: |
+          expected_commit="$(git rev-parse HEAD)"
+          python3 tools/ci/check_sdk_compatibility_matrix.py \
+            --manifest artifacts/sdk-release/manifest.json
+          python3 tools/ci/check_external_consumer_templates.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}"
+          scripts/sdk/check_registry_dry_runs.sh \
+            --out-dir artifacts/sdk-registry-dry-runs
+
       - name: Upload SDK platform results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: sdk-platform-results
           path: artifacts/sdk-platform
+
+      - name: Upload SDK registry dry-run results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: sdk-registry-dry-run-results
+          path: artifacts/sdk-registry-dry-runs
 
       - name: Upload SDK release package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -178,6 +195,11 @@ jobs:
             --expected-commit "${expected_commit}" \
             --require-strict \
             --require-clean
+          python3 tools/ci/check_external_consumer_templates.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}"
+          python3 tools/ci/check_sdk_compatibility_matrix.py \
+            --manifest artifacts/sdk-release/manifest.json
 
       - uses: ./.github/actions/build-evidence-bundle
         with:

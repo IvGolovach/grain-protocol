@@ -20,6 +20,8 @@ and Rust crates that were not reviewed together.
 | WASM client crate | `core/rust/grain-client-wasm` | `0.1.0` | Builds against `grain-client-core` with default features disabled for `wasm32-wasip1`. |
 | WASM/mobile-web package | `sdk/wasm` | `0.1.0` | Use with the matching `grain-client-wasm.wasm` artifact and JavaScript wrapper. |
 | WASM/mobile-web adapter pack | `sdk/wasm/src/browser-storage.mjs`, `examples/wasm-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence, IndexedDB/browser storage boundaries, explicit trust-anchor wiring, and browser camera handoff, not production PWA packaging. |
+| Public SDK API snapshot | `sdk/api/public-sdk-v0.1.json` | v0.1 | Stable app-facing methods, statuses, workflows, and compatibility matrix must stay present unless a future API snapshot intentionally replaces them. |
+| Starter templates | `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter` | repo-SHA versioned | Use with the same commit's source SDK packet; templates prove thin app shells, not store or PWA publication. |
 
 ## Release Rule
 
@@ -33,6 +35,15 @@ exact accepted pair. The safe app-developer instruction is:
 
 ```text
 Use Swift, Kotlin, WASM, generated bindings, and grain-client-core from the same Grain SDK release tag.
+```
+
+The machine-readable v0.1 API snapshot also carries the current compatibility
+matrix. Run:
+
+```bash
+python3 tools/ci/check_public_sdk_api.py
+python3 tools/ci/check_sdk_compatibility_matrix.py \
+  --manifest artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json
 ```
 
 ## Verification Rule
@@ -52,6 +63,11 @@ That command proves:
 - scanner examples use public workflow SDK APIs instead of raw protocol internals
 - the iOS reference app package builds and stays behind the public
   `GrainIOSScanner`/`GrainClientIOSAdapters` surface
+- starter templates keep iOS, Android, and Web/WASM app shells thin and behind
+  public SDK/example APIs
+- the public SDK API snapshot and compatibility matrix match the packaged
+  source artifacts
+- registry dry-runs record no credentials and no publication
 - SDK code stays network/vendor agnostic
 - the SDK release package contains same-commit source artifacts, generated
   bindings, workflow contract/docs, `manifest.json`, `SHA256SUMS`, and

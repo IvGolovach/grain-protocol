@@ -59,7 +59,8 @@ python3 tools/ci/check_sdk_release_package.py \
 ```
 
 The package is a source handoff with manifest, checksums, SBOM, workflow
-contract, trust schema, and SDK source archives. It is not a registry publish.
+contract, trust schema, public API snapshot, custody docs, starter templates,
+and SDK source archives. It is not a registry publish.
 
 ## 2. Generate A Local Issuer QR
 
@@ -142,6 +143,14 @@ platform trust provider and feed `qr-string.txt` through the app paste, camera,
 glasses-frame, or robot-sensor adapter; the platform example READMEs show that
 handoff for iOS, Android, and browser shells. The `examples/ios-reference-app`
 package adds a minimal SwiftUI `App` entrypoint over the same public iOS shell.
+
+For starter code that app teams can copy into a new shell, use
+`templates/ios-starter`, `templates/android-starter`, and
+`templates/web-wasm-starter`. Verify them with:
+
+```bash
+scripts/sdk/check_starter_templates.sh
+```
 
 Use `scripts/sdk/verify_all_sdks.sh --strict` on CI or release machines with
 Swift, Java, Node/npm, Cargo, and the WASM target installed.

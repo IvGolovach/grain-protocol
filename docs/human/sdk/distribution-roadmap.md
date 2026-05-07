@@ -8,8 +8,8 @@ It is developer guidance, not a release announcement.
 
 The current supported channel is source-only. A consumer receives same-SHA
 source archives, manifest metadata, checksums, SBOM data, workflow fixtures,
-generated binding snapshots, and local trust-bundle inputs from one commit or
-release tag.
+generated binding snapshots, starter templates, public API snapshots, custody
+docs, and local trust-bundle inputs from one commit or release tag.
 
 This is the right channel until registry packaging has its own release policy
 and automated proof. It keeps the app team on reviewed source while avoiding
@@ -23,7 +23,11 @@ The source-only packet must include:
 - `manifest.json`, `SHA256SUMS`, and `sbom.spdx.json`
 - strict SDK proof or a recorded upstream strict SDK gate
 - generated Swift/Kotlin binding snapshot
-- Swift, Kotlin, WASM, workflow, and trust-bundle source archives
+- Swift, Kotlin, WASM, workflow, trust-bundle, custody/API, and starter-template
+  source archives
+- public API snapshot and compatibility matrix proof
+- external consumer template proof
+- registry dry-run metadata that records no credentials and no publication
 - known local prerequisites and residual gaps
 
 Do not mix archives from different commits. The SHA in the archive names must
@@ -51,10 +55,15 @@ Before any registry channel is called supported, it needs:
 
 - signed or otherwise auditable release provenance
 - same-SHA source and generated binding proof
-- registry-package integrity checks
+- registry-package dry-run and integrity checks
 - rollback instructions
 - docs that say exactly which runtime and storage adapters are included
 - negative language for channels that are still not published
+
+Registry dry-runs are allowed before publication. They may run SwiftPM package
+description, Maven local publish dry-run, or npm pack dry-run checks, but their
+metadata must say `dry-run-only`, require no credentials, and avoid any registry
+or store publication claim.
 
 ## Not Yet Published
 

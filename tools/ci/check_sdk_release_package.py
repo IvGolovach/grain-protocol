@@ -36,11 +36,30 @@ EXPECTED_ARTIFACTS = {
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
         "required_entries": [
+            "sdk/api/public-sdk-v0.1.json",
+            "sdk/custody/secure_storage_adapter_v1.md",
             "sdk/workflows/contract/client_workflow_v1.md",
+            "sdk/workflows/contract/safe_diagnostic_event_v1.schema.json",
             "sdk/trust/trust_anchor_bundle_v1.schema.json",
             "sdk/generated/README.md",
             "docs/human/sdk/version-matrix.md",
+            "docs/human/sdk/security-review.md",
+            "docs/human/sdk/release-train.md",
             "docs/llm/SDK_GENERATED_VERIFICATION.md",
+        ],
+    },
+    "grain-starter-templates": {
+        "kind": "starter-templates",
+        "required_entries": [
+            "templates/ios-starter/Package.swift",
+            "templates/android-starter/build.gradle.kts",
+            "templates/web-wasm-starter/package.json",
+            "examples/ios-scanner/Package.swift",
+            "examples/android-scanner/build.gradle.kts",
+            "examples/wasm-scanner/package.json",
+            "scripts/sdk/check_starter_templates.sh",
+            "docs/human/sdk/start-here.md",
+            "docs/human/sdk/scan-quickstart.md",
         ],
     },
 }

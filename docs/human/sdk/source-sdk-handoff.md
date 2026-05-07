@@ -18,6 +18,11 @@ GitHub release or artifact location:
 Strict SDK proof:
 SDK package check:
 External app handoff check:
+External consumer template check:
+Public API check:
+Compatibility matrix check:
+Registry dry-run check:
+External client certification:
 Issuer QR path checked:
 Known local prerequisites:
 Residual gaps:
@@ -34,7 +39,8 @@ Attach or point to these same-SHA assets:
 | `grain-swift-client-<sha>.tar.gz` | Swift Package Manager source wrapper over the generated client workflow API. |
 | `grain-kotlin-client-<sha>.tar.gz` | Kotlin/JVM source wrapper over the generated client workflow API. |
 | `grain-wasm-client-<sha>.tar.gz` | WASM/mobile-web source wrapper and Rust WASM crate source. |
-| `grain-sdk-workflow-contract-<sha>.tar.gz` | Client workflow fixtures, trust bundle schema, generated-lane docs, and version matrix. |
+| `grain-sdk-workflow-contract-<sha>.tar.gz` | Client workflow fixtures, public API snapshot, safe diagnostic event schema, trust bundle schema, custody adapter contract, generated-lane docs, release-train docs, and version matrix. |
+| `grain-starter-templates-<sha>.tar.gz` | iOS, Android, and Web/WASM starter templates, reusable scanner-shell examples they depend on, and the starter-template smoke command. |
 
 The SHA in every archive name must match the commit in `manifest.json`. Do not
 mix archives from different commits.
@@ -55,6 +61,14 @@ python3 tools/ci/check_external_sdk_handoff.py \
   --expected-commit "$(git rev-parse HEAD)" \
   --require-strict \
   --require-clean
+python3 tools/ci/check_external_consumer_templates.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)"
+python3 tools/ci/check_sdk_compatibility_matrix.py \
+  --manifest artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json
+python3 tools/ci/check_public_sdk_api.py
+scripts/sdk/check_registry_dry_runs.sh
+scripts/sdk/check_starter_templates.sh
 ```
 
 If the package was produced immediately after a required upstream `sdk-platform`
@@ -67,7 +81,9 @@ contents, and SBOM. `check_external_sdk_handoff.py` adds the receiver view: it
 extracts the same archives into a temporary outside-app `vendor/grain-sdk/<sha>`
 layout, rejects monorepo-only paths, and confirms the current handoff is
 source-only rather than an npm, Maven, Swift package-index, app-store, or
-compiled-WASM channel.
+compiled-WASM channel. `check_external_consumer_templates.py` proves the same
+packet also contains the public API snapshot, custody docs, safe diagnostic
+schema, and starter-template inputs that an outside app team needs.
 
 Before calling the packet ready, run:
 
@@ -112,6 +128,7 @@ tar -xzf grain-kotlin-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-wasm-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-generated-bindings-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-sdk-workflow-contract-<sha>.tar.gz -C vendor/grain-sdk/<sha>
+tar -xzf grain-starter-templates-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 ```
 
 The generated binding snapshot is a proof and wrapper-development input. Normal
@@ -172,18 +189,22 @@ The expected app path is:
    app channel
 
 For platform-specific smoke commands, use [Scanner app quickstart](./scan-quickstart.md).
+For minimal app shells, start from `templates/ios-starter`,
+`templates/android-starter`, or `templates/web-wasm-starter`.
 
 ## What Is Published
 
 This handoff can claim:
 
 - same-SHA source archives for Swift, Kotlin, WASM, generated bindings,
-  workflow contracts, and trust schema
+  workflow contracts, trust schema, custody/API docs, and starter templates
 - manifest, checksums, and SBOM metadata for those source archives
 - strict local SDK proof or a recorded upstream strict SDK gate
 - local issuer QR generation and app-owned trust bundle setup
 - deterministic scanner example smokes when the local platform prerequisites
   are present
+- registry dry-run metadata for SwiftPM, Maven local, and npm pack, without
+  registry credentials or publication
 
 ## What Is Not Published
 

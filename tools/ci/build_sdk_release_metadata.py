@@ -40,10 +40,28 @@ ARTIFACT_KINDS = {
         "kind": "workflow-contract",
         "name": "Grain client workflow contract package",
         "source_paths": [
+            "sdk/api",
+            "sdk/custody",
             "sdk/workflows",
+            "sdk/trust",
             "sdk/generated",
             "docs/human/sdk/version-matrix.md",
+            "docs/human/sdk/security-review.md",
+            "docs/human/sdk/release-train.md",
             "docs/llm/SDK_GENERATED_VERIFICATION.md",
+        ],
+    },
+    "grain-starter-templates": {
+        "kind": "starter-templates",
+        "name": "Grain starter template source package",
+        "source_paths": [
+            "templates",
+            "examples/ios-scanner",
+            "examples/android-scanner",
+            "examples/wasm-scanner",
+            "scripts/sdk/check_starter_templates.sh",
+            "docs/human/sdk/start-here.md",
+            "docs/human/sdk/scan-quickstart.md",
         ],
     },
 }

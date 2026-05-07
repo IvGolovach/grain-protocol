@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export COPYFILE_DISABLE=1
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 cd "$ROOT"
@@ -112,7 +113,7 @@ scripts/sdk/generate_client_bindings.sh --out-dir "$STAGING/generated-bindings" 
 tar_gz() {
   local artifact="$1"
   shift
-  tar -czf "$OUT_DIR_ABS/$artifact" "$@"
+  tar --exclude '._*' --exclude '.DS_Store' -czf "$OUT_DIR_ABS/$artifact" "$@"
 }
 
 assert_archive_clean() {
@@ -146,11 +147,36 @@ tar_gz "grain-wasm-client-$COMMIT_SHA.tar.gz" \
   core/rust/grain-client-wasm
 tar_gz "grain-sdk-workflow-contract-$COMMIT_SHA.tar.gz" \
   -C "$ROOT" \
+  sdk/api \
+  sdk/custody \
   sdk/workflows \
   sdk/trust \
   sdk/generated \
   docs/human/sdk/version-matrix.md \
+  docs/human/sdk/security-review.md \
+  docs/human/sdk/release-train.md \
   docs/llm/SDK_GENERATED_VERIFICATION.md
+tar_gz "grain-starter-templates-$COMMIT_SHA.tar.gz" \
+  --exclude 'templates/ios-starter/.build' \
+  --exclude 'templates/android-starter/.gradle' \
+  --exclude 'templates/android-starter/.kotlin' \
+  --exclude 'templates/android-starter/build' \
+  --exclude 'templates/web-wasm-starter/node_modules' \
+  --exclude 'templates/web-wasm-starter/dist' \
+  --exclude 'examples/ios-scanner/.build' \
+  --exclude 'examples/android-scanner/.gradle' \
+  --exclude 'examples/android-scanner/.kotlin' \
+  --exclude 'examples/android-scanner/build' \
+  --exclude 'examples/wasm-scanner/node_modules' \
+  --exclude 'examples/wasm-scanner/dist' \
+  -C "$ROOT" \
+  templates \
+  examples/ios-scanner \
+  examples/android-scanner \
+  examples/wasm-scanner \
+  scripts/sdk/check_starter_templates.sh \
+  docs/human/sdk/start-here.md \
+  docs/human/sdk/scan-quickstart.md
 
 while IFS= read -r artifact_path; do
   assert_archive_clean "$(basename "$artifact_path")"

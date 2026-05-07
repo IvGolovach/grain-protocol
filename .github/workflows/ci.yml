@@ -27,6 +27,14 @@ jobs:
           python3 -m unittest tools.ci.test_check_sdk_release_package
           python3 -m unittest tools.ci.test_check_external_sdk_handoff
           python3 -m unittest tools.ci.test_check_release_evidence_assets
+          python3 -m unittest tools.ci.test_check_external_consumer_templates
+          python3 -m unittest tools.ci.test_check_public_sdk_api
+          python3 -m unittest tools.ci.test_check_sdk_compatibility_matrix
+          python3 -m unittest tools.ci.test_check_registry_dry_run_metadata
+          python3 -m unittest tools.ci.test_check_external_client_certification
+          python3 -m unittest tools.ci.test_check_no_secret_telemetry
+          python3 -m unittest tools.ci.test_check_trust_bundle_governance
+          python3 -m unittest tools.ci.test_check_release_train_docs
 
   capid-csprng-audit:
     runs-on: ubuntu-latest
@@ -261,6 +269,17 @@ jobs:
             --skip-verify \
             --verified-by sdk-platform \
             --out-dir artifacts/sdk-release
+
+      - name: Verify external developer handoff
+        run: |
+          expected_commit="$(git rev-parse HEAD)"
+          python3 tools/ci/check_sdk_compatibility_matrix.py \
+            --manifest artifacts/sdk-release/manifest.json
+          python3 tools/ci/check_external_consumer_templates.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}"
+          scripts/sdk/check_registry_dry_runs.sh \
+            --out-dir artifacts/sdk-registry-dry-runs
 
       - name: Upload platform SDK verification summary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

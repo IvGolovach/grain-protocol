@@ -85,6 +85,22 @@ runs:
       shell: bash
       run: python3 tools/ci/check_real_app_docs.py
 
+    - name: Check public SDK API snapshot
+      shell: bash
+      run: python3 tools/ci/check_public_sdk_api.py
+
+    - name: Check no-secret telemetry policy
+      shell: bash
+      run: python3 tools/ci/check_no_secret_telemetry.py
+
+    - name: Check trust bundle governance
+      shell: bash
+      run: python3 tools/ci/check_trust_bundle_governance.py
+
+    - name: Check SDK release-train docs
+      shell: bash
+      run: python3 tools/ci/check_release_train_docs.py
+
     - name: Maintainer docs front-door check
       shell: bash
       run: python3 tools/ci/check_maintainer_docs.py

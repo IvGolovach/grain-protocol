@@ -109,6 +109,13 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `core/rust/grain-issuer-kit` generates signed `GR1:` scanner examples and public trust material for app development
     - issuer payloads are strict DAG-CBOR `ServingOffer` records signed under the existing untagged COSE_Sign1 profile
     - issuer tests prove generated QR strings verify through `grain-client-core` and reject under wrong trust
+  - added the external developer platform handoff layer:
+    - public SDK API v0.1 snapshot and compatibility matrix guard for Swift, Kotlin, WASM, and workflow fixtures
+    - source release packages now include custody/API docs, safe diagnostic event schema, and starter-template archives
+    - external consumer template checks prove the release packet can be unpacked into an outside-app `vendor/grain-sdk` layout
+    - iOS, Android, and Web/WASM starter templates show thin app shells for trust, scan/paste, preview, accept, persist, restore, list, and export
+    - registry dry-run metadata proves SwiftPM, Maven local, and npm pack readiness without credentials or publication
+    - external client certification, no-secret telemetry, trust governance, secure storage adapter, security review, and release-train guards document the app boundary
   - updated SDK docs (human + LLM) for generated Swift/Kotlin/WASM/device SDK direction.
 - TOR-SDK-A03 (AI boundary deterministic ingestion firewall):
   - moved AI into optional sidecar package `core/ts/grain-sdk-ai`
