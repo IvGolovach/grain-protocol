@@ -143,6 +143,12 @@ METADATA="$OUT_DIR_ABS/registry-dry-runs.json"
     printf '  "dirty": false,\n'
   fi
   printf '  "credentials": "not_required",\n'
+  printf '  "external_credentials": "not_required",\n'
+  printf '  "publication_boundary": "local-source-validation-only",\n'
+  printf '  "registry_publication": "not_included",\n'
+  printf '  "package_registry_publication": "not_included",\n'
+  printf '  "store_publication": "not_included",\n'
+  printf '  "platform_store_publication": "not_included",\n'
   printf '  "channels": [\n'
   printf '    {\n'
   printf '      "name": "swiftpm",\n'
@@ -151,6 +157,7 @@ METADATA="$OUT_DIR_ABS/registry-dry-runs.json"
   printf '      "publication": "none",\n'
   printf '      "store_publication": "none",\n'
   printf '      "credentials": "not_required",\n'
+  printf '      "external_credentials": "not_required",\n'
   printf '      "status": %s,\n' "$(json_quote "$SWIFTPM_STATUS")"
   if [[ -n "$SWIFTPM_REASON" ]]; then
     printf '      "reason": %s,\n' "$(json_quote "$SWIFTPM_REASON")"
@@ -165,6 +172,7 @@ METADATA="$OUT_DIR_ABS/registry-dry-runs.json"
   printf '      "publication": "local-dry-run",\n'
   printf '      "store_publication": "none",\n'
   printf '      "credentials": "not_required",\n'
+  printf '      "external_credentials": "not_required",\n'
   printf '      "status": %s,\n' "$(json_quote "$MAVEN_STATUS")"
   if [[ -n "$MAVEN_REASON" ]]; then
     printf '      "reason": %s,\n' "$(json_quote "$MAVEN_REASON")"
@@ -179,6 +187,7 @@ METADATA="$OUT_DIR_ABS/registry-dry-runs.json"
   printf '      "publication": "pack-only",\n'
   printf '      "store_publication": "none",\n'
   printf '      "credentials": "not_required",\n'
+  printf '      "external_credentials": "not_required",\n'
   printf '      "status": %s,\n' "$(json_quote "$NPM_STATUS")"
   if [[ -n "$NPM_REASON" ]]; then
     printf '      "reason": %s,\n' "$(json_quote "$NPM_REASON")"

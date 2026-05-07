@@ -89,6 +89,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_public_sdk_api.py
 
+    - name: Check device adapter contract
+      shell: bash
+      run: python3 tools/ci/check_device_adapter_contract.py
+
     - name: Check no-secret telemetry policy
       shell: bash
       run: python3 tools/ci/check_no_secret_telemetry.py

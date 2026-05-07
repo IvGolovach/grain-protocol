@@ -7,12 +7,12 @@ cd "$ROOT"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grain-scanner-examples.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+RUST_TARGET=""
 if [[ "$(uname -s)" == "Darwin" ]]; then
   HOST_ARCH="$(uname -m)"
   JVM_ARCH="$(java -XshowSettings:properties -version 2>&1 | awk -F= '/os.arch/ {gsub(/[[:space:]]/, "", $2); print $2; exit}')"
   if [[ "$HOST_ARCH" == "arm64" && "$JVM_ARCH" == "x86_64" ]]; then
-    echo "SDK_SCANNER_ERR_JVM_ARCH_MISMATCH: arm64 Rust dylib requires an arm64 JVM; set JAVA_HOME to an arm64 JDK" >&2
-    exit 1
+    RUST_TARGET="x86_64-apple-darwin"
   fi
 fi
 
@@ -87,7 +87,26 @@ else
   fi
 fi
 
-cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
+if [[ -n "$RUST_TARGET" ]]; then
+  if ! command -v rustup >/dev/null 2>&1; then
+    echo "SDK_SCANNER_ERR_RUSTUP_REQUIRED: rustup is required to build the JVM-matching Rust target" >&2
+    exit 1
+  fi
+  RUSTUP_TOOLCHAIN="$(rustup show active-toolchain | awk '{print $1}')"
+  rustup run "$RUSTUP_TOOLCHAIN" cargo build \
+    --manifest-path core/rust/Cargo.toml \
+    -p grain-client-core \
+    --target "$RUST_TARGET"
+  RUST_DEBUG_LIBRARY="core/rust/target/$RUST_TARGET/debug/libgrain_client_core.dylib"
+else
+  cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
+  case "$(uname -s)" in
+    Darwin) RUST_DEBUG_LIBRARY="core/rust/target/debug/libgrain_client_core.dylib" ;;
+    Linux) RUST_DEBUG_LIBRARY="core/rust/target/debug/libgrain_client_core.so" ;;
+    MINGW*|MSYS*|CYGWIN*) RUST_DEBUG_LIBRARY="core/rust/target/debug/grain_client_core.dll" ;;
+    *) RUST_DEBUG_LIBRARY="" ;;
+  esac
+fi
 swift run --package-path examples/ios-scanner --scratch-path "$TMP_DIR/swift" GrainIOSScannerSmoke
 scripts/sdk/check_ios_reference_app.sh
 scripts/sdk/check_android_reference_app.sh
@@ -104,6 +123,9 @@ GRADLE_CMD=(
   --no-daemon
   -Dgrain.kotlin.buildDir="$TMP_DIR/android-build"
 )
+if [[ -n "$RUST_DEBUG_LIBRARY" ]]; then
+  GRADLE_CMD+=("-Dgrain.kotlin.rustDebugLibrary=$ROOT/$RUST_DEBUG_LIBRARY")
+fi
 if [[ ${#GRADLE_ARGS[@]} -gt 0 ]]; then
   GRADLE_CMD+=("${GRADLE_ARGS[@]}")
 fi

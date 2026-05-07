@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grain.dev/sdk/device/device_adapter_v1.schema.json",
+  "title": "Grain Device Adapter Contract v1",
+  "description": "Source-level contract for thin platform adapters. Grain owns trust verification, accept/idempotency, diagnostics, snapshot format, and export; apps own platform input, local persistence, and display state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "adapter",
+    "capabilities",
+    "edges",
+    "prohibitions"
+  ],
+  "properties": {
+    "schema": {
+      "const": "grain.device-adapter.v1"
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "platform",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "description": "Examples include iPhone, Android, glasses, robot, and browser edges. This is an edge label, not a store or distribution channel."
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "capabilities": {
+      "$ref": "#/$defs/DeviceCapabilities"
+    },
+    "edges": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ScanInput",
+        "DeviceCapabilities",
+        "SecureLocalStore",
+        "ExportSink",
+        "DiagnosticSink",
+        "TrustProvider"
+      ],
+      "properties": {
+        "ScanInput": {
+          "$ref": "#/$defs/ScanInput"
+        },
+        "DeviceCapabilities": {
+          "$ref": "#/$defs/DeviceCapabilities"
+        },
+        "SecureLocalStore": {
+          "$ref": "#/$defs/SecureLocalStore"
+        },
+        "ExportSink": {
+          "$ref": "#/$defs/ExportSink"
+        },
+        "DiagnosticSink": {
+          "$ref": "#/$defs/DiagnosticSink"
+        },
+        "TrustProvider": {
+          "$ref": "#/$defs/TrustProvider"
+        }
+      }
+    },
+    "prohibitions": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 4,
+      "items": {
+        "enum": [
+          "no_network_trust_discovery",
+          "no_secret_export_fields",
+          "no_platform_store_or_account_assumptions",
+          "no_publication_credentials"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "ScanInput": {
+      "description": "Platform-owned scan or paste input handed to the public SDK. The SDK receives the payload; the adapter owns camera, paste, or local handoff UI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "payload"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "cameraQr",
+            "manualPaste",
+            "handoffPayload"
+          ]
+        },
+        "payload": {
+          "type": "string",
+          "minLength": 1
+        },
+        "receivedAtUnixMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "DeviceCapabilities": {
+      "description": "Capabilities the adapter must declare before it can be certified as a local reference edge.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cameraScan",
+        "manualPaste",
+        "secureLocalPersistence",
+        "safeExport",
+        "safeDiagnostics",
+        "localTrustAnchors"
+      ],
+      "properties": {
+        "cameraScan": {
+          "type": "boolean"
+        },
+        "manualPaste": {
+          "type": "boolean"
+        },
+        "secureLocalPersistence": {
+          "type": "boolean"
+        },
+        "safeExport": {
+          "type": "boolean"
+        },
+        "safeDiagnostics": {
+          "type": "boolean"
+        },
+        "localTrustAnchors": {
+          "type": "boolean"
+        }
+      }
+    },
+    "SecureLocalStore": {
+      "description": "Adapter-owned local persistence. It stores SDK state locally and does not imply a hosted account model.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "persistence"
+      ],
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "minLength": 1
+        },
+        "persistence": {
+          "enum": [
+            "localEncryptedFile",
+            "localKeychain",
+            "localKeystore",
+            "localIndexedDb"
+          ]
+        },
+        "backupPolicy": {
+          "enum": [
+            "localOnly",
+            "userControlled"
+          ]
+        }
+      }
+    },
+    "ExportSink": {
+      "description": "Adapter-owned safe export/debug target. It may expose counts and redacted diagnostics only.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "format",
+        "safeFieldNames"
+      ],
+      "properties": {
+        "format": {
+          "enum": [
+            "json",
+            "text"
+          ]
+        },
+        "safeFieldNames": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "acceptedScanCount",
+              "diagnosticEventCount",
+              "capabilitySummary",
+              "lastAcceptedStatus",
+              "adapterVersion"
+            ]
+          }
+        }
+      }
+    },
+    "DiagnosticSink": {
+      "description": "Adapter-owned diagnostic target for safe SDK events. Raw payloads, snapshots, trust material, and local state are not diagnostic fields.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eventSchema",
+        "redaction"
+      ],
+      "properties": {
+        "eventSchema": {
+          "const": "safe_diagnostic_event_v1"
+        },
+        "redaction": {
+          "const": "required"
+        },
+        "delivery": {
+          "enum": [
+            "localConsole",
+            "localFile",
+            "inMemory"
+          ]
+        }
+      }
+    },
+    "TrustProvider": {
+      "description": "Adapter-provided local trust anchors. No lookup or fallback is allowed at scan time.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "anchorSource"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "staticBundle",
+            "injectedAnchor"
+          ]
+        },
+        "anchorSource": {
+          "enum": [
+            "bundledFixture",
+            "developerProvided"
+          ]
+        }
+      }
+    }
+  }
+}

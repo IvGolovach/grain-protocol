@@ -43,10 +43,14 @@ val nativeLibraryName = when {
     else -> error("Unsupported host OS for Grain scanner example")
 }
 val rustDebugLibrary = repoRoot.resolve("core/rust/target/debug/$nativeLibraryName")
+val rustDebugLibraryOverride = providers
+    .systemProperty("grain.kotlin.rustDebugLibrary")
+    .map { file(it) }
+    .orElse(rustDebugLibrary)
 
 tasks.withType<Test>().configureEach {
     systemProperty("grain.repoRoot", repoRoot.path)
-    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibrary.path)
+    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibraryOverride.get().path)
 }
 
 tasks.register<JavaExec>("runScannerShellSmoke") {
@@ -55,7 +59,7 @@ tasks.register<JavaExec>("runScannerShellSmoke") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("dev.grain.examples.androidscanner.ScannerShellTestKt")
     systemProperty("grain.repoRoot", repoRoot.path)
-    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibrary.path)
+    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibraryOverride.get().path)
     dependsOn("testClasses")
 }
 

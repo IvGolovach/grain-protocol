@@ -38,6 +38,8 @@ EXPECTED_ARTIFACTS = {
         "required_entries": [
             "sdk/api/public-sdk-v0.1.json",
             "sdk/custody/secure_storage_adapter_v1.md",
+            "sdk/device/device_adapter_v1.schema.json",
+            "sdk/device/README.md",
             "sdk/workflows/contract/client_workflow_v1.md",
             "sdk/workflows/contract/safe_diagnostic_event_v1.schema.json",
             "sdk/trust/trust_anchor_bundle_v1.schema.json",
@@ -57,6 +59,8 @@ EXPECTED_ARTIFACTS = {
             "examples/ios-scanner/Package.swift",
             "examples/android-scanner/build.gradle.kts",
             "examples/wasm-scanner/package.json",
+            "examples/ios-reference-app/Package.swift",
+            "examples/android-reference-app/build.gradle.kts",
             "scripts/sdk/check_starter_templates.sh",
             "docs/human/sdk/start-here.md",
             "docs/human/sdk/scan-quickstart.md",
@@ -67,6 +71,12 @@ FORBIDDEN_ARCHIVE_RE = re.compile(
     r"(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|\.wasm$"
 )
 SECRET_ARCHIVE_RE = re.compile(r"(^|/)(\.env(?:[._-][^/]*)?|secrets?)(/|$)|\.(pem|key|p12|pfx)$")
+FORBIDDEN_POLICY_CLAIM_RE = re.compile(
+    r"(app[-\s]*store|testflight|play[-\s]*console|play[-\s]*store|npm[-\s]*publish|"
+    r"maven[-\s]*central|sonatype|ossrh|required[-\s]*credentials?|credentials?[-\s]*required|"
+    r"external[-\s]*credentials?)",
+    re.IGNORECASE,
+)
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 
@@ -130,6 +140,20 @@ def expected_versions() -> dict[str, str]:
         "wasm_client": str(wasm["version"]),
         "swift_client": "repo-sha",
     }
+
+
+def validate_artifact_policy(policy: object, error_prefix: str = "SDK_RELEASE_CHECK_ERR") -> None:
+    require(isinstance(policy, dict), f"{error_prefix}_ARTIFACT_POLICY")
+    require(policy.get("release_kind") == "source-archive", f"{error_prefix}_RELEASE_KIND")
+    require(policy.get("wasm_binary") == "not_included_source_only", f"{error_prefix}_WASM_BINARY_POLICY")
+    require(policy.get("platform_store_packages") == "not_included", f"{error_prefix}_STORE_PACKAGE_POLICY")
+    require(policy.get("registry_publication") == "not_included", f"{error_prefix}_REGISTRY_POLICY")
+    for key, value in policy.items():
+        if isinstance(value, str):
+            require(
+                FORBIDDEN_POLICY_CLAIM_RE.search(value) is None,
+                f"{error_prefix}_PUBLICATION_CLAIM: {key}",
+            )
 
 
 def validate_archive(path: Path, expected: dict[str, object]) -> None:
@@ -236,12 +260,7 @@ def validate_manifest(out_dir: Path, args: argparse.Namespace) -> dict[str, obje
         require(mode in {"strict", "strict-upstream"}, "SDK_RELEASE_CHECK_ERR_VERIFICATION_NOT_STRICT")
 
     require(manifest.get("workflow_contract") == "client_workflow_v1", "SDK_RELEASE_CHECK_ERR_WORKFLOW_CONTRACT")
-    policy = manifest.get("artifact_policy")
-    require(isinstance(policy, dict), "SDK_RELEASE_CHECK_ERR_ARTIFACT_POLICY")
-    require(policy.get("release_kind") == "source-archive", "SDK_RELEASE_CHECK_ERR_RELEASE_KIND")
-    require(policy.get("wasm_binary") == "not_included_source_only", "SDK_RELEASE_CHECK_ERR_WASM_BINARY_POLICY")
-    require(policy.get("platform_store_packages") == "not_included", "SDK_RELEASE_CHECK_ERR_STORE_PACKAGE_POLICY")
-    require(policy.get("registry_publication") == "not_included", "SDK_RELEASE_CHECK_ERR_REGISTRY_POLICY")
+    validate_artifact_policy(manifest.get("artifact_policy"))
 
     matrix = manifest.get("version_matrix")
     require(isinstance(matrix, dict), "SDK_RELEASE_CHECK_ERR_VERSION_MATRIX")

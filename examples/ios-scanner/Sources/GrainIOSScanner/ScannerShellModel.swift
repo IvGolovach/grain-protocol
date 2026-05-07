@@ -36,6 +36,28 @@ public struct ScannerAcceptedScanSummary: Equatable, Identifiable, Sendable {
     }
 }
 
+public struct ScannerExportDebugSummary: Equatable, Sendable {
+    public let status: String
+    public let acceptedRecordCount: UInt64
+    public let deviceCount: UInt64
+    public let lifecycleEventCount: UInt64
+    public let diagnostics: [String]
+
+    public init(
+        status: String,
+        acceptedRecordCount: UInt64,
+        deviceCount: UInt64,
+        lifecycleEventCount: UInt64,
+        diagnostics: [String]
+    ) {
+        self.status = status
+        self.acceptedRecordCount = acceptedRecordCount
+        self.deviceCount = deviceCount
+        self.lifecycleEventCount = lifecycleEventCount
+        self.diagnostics = diagnostics
+    }
+}
+
 public struct ScannerShellState: Equatable, Sendable {
     public var qrString: String
     public var trustAnchorID: String
@@ -152,6 +174,12 @@ public final class ScannerShellModel: ObservableObject {
         resetDecisionState()
     }
 
+    public func clearScanInput() {
+        state.qrString = ""
+        state.scanSource = nil
+        resetDecisionState()
+    }
+
     public func updateTrustAnchorID(_ value: String) {
         state.trustAnchorID = value
         resetDecisionState()
@@ -244,12 +272,21 @@ public final class ScannerShellModel: ObservableObject {
     @discardableResult
     public func exportSyncBundleForShare() -> GrainSyncResult {
         let exported = client.exportSyncBundle()
-        state.exportStatus = exported.status
-        state.exportAcceptedCount = exported.acceptedRecordCount
-        state.exportDeviceCount = exported.deviceCount
-        state.exportLifecycleEventCount = exported.lifecycleEventCount
-        state.diagnostics = exported.diag
+        applyExportDebugState(exported)
         return exported
+    }
+
+    @discardableResult
+    public func exportDebugSummary() -> ScannerExportDebugSummary {
+        let exported = client.exportSyncBundle()
+        applyExportDebugState(exported)
+        return ScannerExportDebugSummary(
+            status: exported.status,
+            acceptedRecordCount: exported.acceptedRecordCount,
+            deviceCount: exported.deviceCount,
+            lifecycleEventCount: exported.lifecycleEventCount,
+            diagnostics: exported.diag
+        )
     }
 
     public func restorePersistedSnapshot() {
@@ -321,6 +358,14 @@ public final class ScannerShellModel: ObservableObject {
         state.lifecycleStatus = lifecycle.status
         state.deviceCount = lifecycle.deviceCount
         state.lifecycleEventCount = lifecycle.lifecycleEventCount
+    }
+
+    private func applyExportDebugState(_ exported: GrainSyncResult) {
+        state.exportStatus = exported.status
+        state.exportAcceptedCount = exported.acceptedRecordCount
+        state.exportDeviceCount = exported.deviceCount
+        state.exportLifecycleEventCount = exported.lifecycleEventCount
+        state.diagnostics = exported.diag
     }
 
     private func resetDecisionState() {

@@ -29,6 +29,7 @@ jobs:
           python3 -m unittest tools.ci.test_check_release_evidence_assets
           python3 -m unittest tools.ci.test_check_external_consumer_templates
           python3 -m unittest tools.ci.test_check_public_sdk_api
+          python3 -m unittest tools.ci.test_check_device_adapter_contract
           python3 -m unittest tools.ci.test_check_sdk_compatibility_matrix
           python3 -m unittest tools.ci.test_check_registry_dry_run_metadata
           python3 -m unittest tools.ci.test_check_external_client_certification
@@ -292,6 +293,18 @@ jobs:
         with:
           name: sdk-release-package
           path: artifacts/sdk-release/*
+
+      - name: Upload SDK registry dry-run results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: sdk-registry-dry-run-results
+          path: artifacts/sdk-registry-dry-runs
+
+      - name: Upload external client certification
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: external-client-certification
+          path: artifacts/sdk-platform/external-client-certification
 
   fuzz-smoke:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

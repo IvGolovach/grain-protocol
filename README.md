@@ -16,6 +16,7 @@ Pick one path and get a quick win first:
 - See the repo quickly: `docs/human/start-here.md`
 - Run one happy-path demo: `docs/human/quickstart.md`
 - Build the smallest possible app: `docs/human/sdk/minimal-app-example.md`
+- Run local reference apps without paid accounts: `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`
 - Build a scanner app: `docs/human/sdk/scan-quickstart.md`
 - Start from app templates: `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`
 - Hand one SDK SHA to another team: `docs/human/sdk/source-sdk-handoff.md`
@@ -28,7 +29,7 @@ Pick one path and get a quick win first:
 ## Project areas
 
 - Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`
-- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `sdk/README.md`, `examples/README.md`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
+- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`, `docs/human/sdk/device-abstraction.md`, `docs/human/sdk/local-publication.md`, `docs/human/sdk/certification.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `sdk/README.md`, `examples/README.md`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
 - Implement: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
 - Operate: `docs/human/portability-pack.md`, `docs/human/repro-checklist.md`, `docs/human/release-process.md`
 - Maintain: `docs/human/maintainer-start-here.md`, `CONTRIBUTING.md`, `docs/human/repository-settings.md`, `docs/human/maintainer-writing.md`

@@ -18,9 +18,21 @@ REQUIRED_CHECKS = (
     "trust_provider",
     "secret_logging",
     "api_compatibility",
-    "template_smoke",
+    "starter_templates",
+    "ios_reference_app",
+    "android_reference_app",
+    "device_contract",
     "no_secret_telemetry",
     "trust_governance",
+    "registry_dry_runs",
+    "sdk_release_package",
+    "release_consumer",
+)
+FORBIDDEN_PUBLICATION_RE = re.compile(
+    r"(app[-\s]*store|testflight|play[-\s]*console|play[-\s]*store|npm[-\s]*publish|"
+    r"maven[-\s]*central|sonatype|ossrh|required[-\s]*credentials?|credentials?[-\s]*required|"
+    r"external[-\s]*credentials?)",
+    re.IGNORECASE,
 )
 
 
@@ -46,12 +58,48 @@ def load_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def reject_forbidden_claims(value: Any, context: str = "report") -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            reject_forbidden_claims(item, f"{context}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            reject_forbidden_claims(item, f"{context}[{index}]")
+    elif isinstance(value, str):
+        require(
+            FORBIDDEN_PUBLICATION_RE.search(value) is None,
+            f"EXTERNAL_CLIENT_CERT_ERR_PUBLICATION_CLAIM: {context}",
+        )
+
+
+def validate_scope(report: dict[str, Any]) -> None:
+    scope = report.get("certification_scope")
+    require(isinstance(scope, dict), "EXTERNAL_CLIENT_CERT_ERR_SCOPE")
+    require(scope.get("mode") == "local-source-validation", "EXTERNAL_CLIENT_CERT_ERR_SCOPE_MODE")
+    require(
+        scope.get("publication_boundary") == "source-validation-only",
+        "EXTERNAL_CLIENT_CERT_ERR_PUBLICATION_BOUNDARY",
+    )
+    for key in (
+        "registry_publication",
+        "app_store_publication",
+        "play_console_publication",
+        "npm_publication",
+        "maven_central_publication",
+    ):
+        require(scope.get(key) == "not_included", f"EXTERNAL_CLIENT_CERT_ERR_PUBLICATION_CLAIM: {key}")
+    require(scope.get("external_credentials") == "not_required", "EXTERNAL_CLIENT_CERT_ERR_CREDENTIAL_CLAIM")
+    require(scope.get("paid_developer_accounts") == "not_required", "EXTERNAL_CLIENT_CERT_ERR_CREDENTIAL_CLAIM")
+
+
 def validate_report(path: Path) -> CertificationResult:
     report = load_json(path)
     require(
         report.get("schema") == "grain.external_client.certification.v1",
         "EXTERNAL_CLIENT_CERT_ERR_SCHEMA",
     )
+    validate_scope(report)
+    reject_forbidden_claims(report)
     client = report.get("client")
     require(isinstance(client, dict), "EXTERNAL_CLIENT_CERT_ERR_CLIENT")
     client_name = client.get("name")
@@ -81,6 +129,16 @@ def validate_report(path: Path) -> CertificationResult:
             isinstance(command, str) and command.strip(),
             f"EXTERNAL_CLIENT_CERT_ERR_CHECK_COMMAND: {name}",
         )
+        output = check.get("output")
+        require(isinstance(output, str) and output.strip(), f"EXTERNAL_CLIENT_CERT_ERR_CHECK_OUTPUT: {name}")
+
+    artifacts = report.get("artifacts")
+    require(isinstance(artifacts, dict), "EXTERNAL_CLIENT_CERT_ERR_ARTIFACTS")
+    source_handoff = artifacts.get("source_handoff")
+    require(
+        isinstance(source_handoff, str) and source_handoff.strip(),
+        "EXTERNAL_CLIENT_CERT_ERR_SOURCE_HANDOFF",
+    )
 
     gaps = report.get("residual_gaps")
     require(isinstance(gaps, list), "EXTERNAL_CLIENT_CERT_ERR_RESIDUAL_GAPS")

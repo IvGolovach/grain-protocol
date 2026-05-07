@@ -104,6 +104,18 @@
         "AlreadyImported",
         "Rejected"
       ]
+    },
+    "device_adapter_contract": {
+      "schema": "grain.device-adapter.v1",
+      "path": "sdk/device/device_adapter_v1.schema.json",
+      "edges": [
+        "ScanInput",
+        "DeviceCapabilities",
+        "SecureLocalStore",
+        "ExportSink",
+        "DiagnosticSink",
+        "TrustProvider"
+      ]
     }
   },
   "compatibility_matrix": {

@@ -20,13 +20,6 @@ public struct GrainReferenceScannerRootView: View {
                             Label("Restore", systemImage: "arrow.clockwise")
                         }
                         .disabled(session.model == nil)
-
-                        Button {
-                            session.loadDemoScanAndPreview()
-                        } label: {
-                            Label("Demo QR", systemImage: "qrcode.viewfinder")
-                        }
-                        .disabled(session.model == nil || session.configuration.demoQRCode == nil)
                     }
                 }
         }
@@ -38,7 +31,12 @@ public struct GrainReferenceScannerRootView: View {
     @ViewBuilder
     private var content: some View {
         if let model = session.model {
-            ScannerView(model: model)
+            ScannerView(
+                model: model,
+                loadDemoScan: session.configuration.demoQRCode == nil ? nil : {
+                    session.loadDemoScanAndPreview()
+                }
+            )
         } else {
             VStack(spacing: 12) {
                 Image(systemName: "qrcode.viewfinder")
