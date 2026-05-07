@@ -1,6 +1,5 @@
 package dev.grain.examples.androidreferenceapp
 
-import dev.grain.GrainSyncResult
 import dev.grain.examples.androidscanner.CameraScanPayload
 import dev.grain.examples.androidscanner.CameraScanSource
 import dev.grain.examples.androidscanner.ScannerController
@@ -9,6 +8,8 @@ const val ANDROID_REFERENCE_START_FAILED_DIAG =
     "SDK_ERR_ANDROID_REFERENCE_START_FAILED"
 const val ANDROID_REFERENCE_DEMO_QR_MISSING_DIAG =
     "SDK_ERR_ANDROID_REFERENCE_DEMO_QR_MISSING"
+const val ANDROID_REFERENCE_MANUAL_QR_MISSING_DIAG =
+    "SDK_ERR_ANDROID_REFERENCE_MANUAL_QR_MISSING"
 
 class GrainReferenceScannerSession(
     val configuration: GrainReferenceAppConfiguration,
@@ -63,12 +64,24 @@ class GrainReferenceScannerSession(
         launchDiagnostic = null
     }
 
+    fun loadManualScanAndPreview(qrString: String) {
+        val normalizedQrString = qrString.trim()
+        if (normalizedQrString.isEmpty()) {
+            launchDiagnostic = ANDROID_REFERENCE_MANUAL_QR_MISSING_DIAG
+            return
+        }
+
+        controller?.updateQrString(normalizedQrString)
+        controller?.preview()
+        launchDiagnostic = null
+    }
+
     fun acceptVerifiedPreview() {
         controller?.accept()
     }
 
-    fun exportAcceptedScansForShare(): GrainSyncResult? =
-        controller?.exportSyncBundleForShare()
+    fun exportAcceptedScansForShare(): GrainAndroidReferenceExportSummary? =
+        controller?.exportSyncBundleForShare()?.let(GrainAndroidReferenceExportSummary::fromSyncResult)
 
     override fun close() {
         handle?.close()

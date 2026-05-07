@@ -25,6 +25,12 @@ For a checkout-to-scan walkthrough, use
 issuer QR, wrap the emitted public trust key in a local trust anchor bundle, and
 feed a stable trust anchor ID into these shells.
 
+For the no-paid-account reference app path, use
+`docs/human/sdk/quickstart-ios-reference-app.md` for local Xcode plus an
+ordinary Apple ID, or `docs/human/sdk/quickstart-android-reference-app.md` for
+the local Gradle/JVM smoke. Those paths prove source-level reference apps. They
+do not publish TestFlight, App Store, Play Console, npm, or Maven artifacts.
+
 For source SDK artifacts handed to another developer, use
 `docs/human/sdk/source-sdk-handoff.md` before running the scanner shells. It
 keeps the Swift, Kotlin, WASM, generated binding snapshot, workflow contract,
@@ -39,6 +45,8 @@ identity, pairing, and sync artifacts.
 
 ```bash
 scripts/sdk/check_scanner_examples.sh
+scripts/sdk/check_ios_reference_app.sh
+scripts/sdk/check_android_reference_app.sh
 ```
 
 The check builds the scanner shells with the platform SDK wrappers and rejects

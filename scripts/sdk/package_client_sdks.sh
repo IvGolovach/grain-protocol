@@ -101,6 +101,19 @@ fi
 
 mkdir -p "$OUT_DIR_ABS"
 
+require_source_path() {
+  local path="$1"
+  if [[ ! -e "$path" ]]; then
+    echo "SDK_PACKAGE_ERR_REQUIRED_SOURCE_MISSING: $path" >&2
+    exit 1
+  fi
+}
+
+require_source_path sdk/device/device_adapter_v1.schema.json
+require_source_path sdk/device/README.md
+require_source_path examples/ios-reference-app/Package.swift
+require_source_path examples/android-reference-app/build.gradle.kts
+
 if [[ "$RUN_VERIFY" -eq 1 ]]; then
   scripts/sdk/verify_all_sdks.sh --strict --out-dir "$OUT_DIR_ABS/verify"
 fi
@@ -149,6 +162,7 @@ tar_gz "grain-sdk-workflow-contract-$COMMIT_SHA.tar.gz" \
   -C "$ROOT" \
   sdk/api \
   sdk/custody \
+  sdk/device \
   sdk/workflows \
   sdk/trust \
   sdk/generated \
@@ -169,11 +183,17 @@ tar_gz "grain-starter-templates-$COMMIT_SHA.tar.gz" \
   --exclude 'examples/android-scanner/build' \
   --exclude 'examples/wasm-scanner/node_modules' \
   --exclude 'examples/wasm-scanner/dist' \
+  --exclude 'examples/ios-reference-app/.build' \
+  --exclude 'examples/android-reference-app/.gradle' \
+  --exclude 'examples/android-reference-app/.kotlin' \
+  --exclude 'examples/android-reference-app/build' \
   -C "$ROOT" \
   templates \
   examples/ios-scanner \
   examples/android-scanner \
   examples/wasm-scanner \
+  examples/ios-reference-app \
+  examples/android-reference-app \
   scripts/sdk/check_starter_templates.sh \
   docs/human/sdk/start-here.md \
   docs/human/sdk/scan-quickstart.md
@@ -198,7 +218,7 @@ elif [[ -n "$VERIFIED_BY" ]]; then
   VERIFICATION_SOURCE="$VERIFIED_BY"
 else
   VERIFICATION_MODE="skipped"
-  VERIFICATION_SOURCE="--skip-verify"
+  VERIFICATION_SOURCE="skip-verify"
 fi
 
 python3 tools/ci/build_sdk_release_metadata.py \

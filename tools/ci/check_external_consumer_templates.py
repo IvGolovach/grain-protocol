@@ -44,6 +44,8 @@ EXPECTED_ARTIFACTS = {
         "required_entries": [
             "sdk/api/public-sdk-v0.1.json",
             "sdk/custody/secure_storage_adapter_v1.md",
+            "sdk/device/device_adapter_v1.schema.json",
+            "sdk/device/README.md",
             "sdk/workflows/contract/client_workflow_v1.md",
             "sdk/workflows/contract/safe_diagnostic_event_v1.schema.json",
             "sdk/trust/trust_anchor_bundle_v1.schema.json",
@@ -63,6 +65,8 @@ EXPECTED_ARTIFACTS = {
             "examples/ios-scanner/Package.swift",
             "examples/android-scanner/build.gradle.kts",
             "examples/wasm-scanner/package.json",
+            "examples/ios-reference-app/Package.swift",
+            "examples/android-reference-app/build.gradle.kts",
             "scripts/sdk/check_starter_templates.sh",
         ],
     },
@@ -106,20 +110,9 @@ def load_manifest(release_dir: Path) -> dict[str, object]:
 
 
 def validate_policy(manifest: dict[str, object]) -> None:
-    policy = manifest.get("artifact_policy")
-    require(isinstance(policy, dict), "EXTERNAL_CONSUMER_TEMPLATES_ERR_ARTIFACT_POLICY")
-    require(policy.get("release_kind") == "source-archive", "EXTERNAL_CONSUMER_TEMPLATES_ERR_RELEASE_KIND")
-    require(
-        policy.get("wasm_binary") == "not_included_source_only",
-        "EXTERNAL_CONSUMER_TEMPLATES_ERR_WASM_BINARY_POLICY",
-    )
-    require(
-        policy.get("platform_store_packages") == "not_included",
-        "EXTERNAL_CONSUMER_TEMPLATES_ERR_STORE_PACKAGE_POLICY",
-    )
-    require(
-        policy.get("registry_publication") == "not_included",
-        "EXTERNAL_CONSUMER_TEMPLATES_ERR_REGISTRY_POLICY",
+    release_check.validate_artifact_policy(
+        manifest.get("artifact_policy"),
+        error_prefix="EXTERNAL_CONSUMER_TEMPLATES_ERR",
     )
 
 
@@ -204,6 +197,8 @@ def validate_consumer_inputs(consumer_root: Path) -> None:
         "vendor/grain-sdk/sdk/wasm/package.json",
         "vendor/grain-sdk/sdk/api/public-sdk-v0.1.json",
         "vendor/grain-sdk/sdk/custody/secure_storage_adapter_v1.md",
+        "vendor/grain-sdk/sdk/device/device_adapter_v1.schema.json",
+        "vendor/grain-sdk/sdk/device/README.md",
         "vendor/grain-sdk/sdk/workflows/contract/client_workflow_v1.md",
         "vendor/grain-sdk/sdk/workflows/contract/safe_diagnostic_event_v1.schema.json",
         "vendor/grain-sdk/sdk/trust/trust_anchor_bundle_v1.schema.json",
@@ -213,6 +208,8 @@ def validate_consumer_inputs(consumer_root: Path) -> None:
         "vendor/grain-sdk/examples/ios-scanner/Package.swift",
         "vendor/grain-sdk/examples/android-scanner/build.gradle.kts",
         "vendor/grain-sdk/examples/wasm-scanner/package.json",
+        "vendor/grain-sdk/examples/ios-reference-app/Package.swift",
+        "vendor/grain-sdk/examples/android-reference-app/build.gradle.kts",
         "vendor/grain-sdk/scripts/sdk/check_starter_templates.sh",
         "vendor/grain-sdk/generated-bindings/swift",
         "vendor/grain-sdk/generated-bindings/kotlin",

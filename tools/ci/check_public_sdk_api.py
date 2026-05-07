@@ -19,6 +19,17 @@ class PublicSdkApiResult:
     checked_symbols: int
     checked_workflows: int
     checked_statuses: int
+    checked_device_edges: int
+
+
+REQUIRED_DEVICE_EDGES = (
+    "ScanInput",
+    "DeviceCapabilities",
+    "SecureLocalStore",
+    "ExportSink",
+    "DiagnosticSink",
+    "TrustProvider",
+)
 
 
 def require(condition: bool, message: str) -> None:
@@ -107,6 +118,30 @@ def validate_workflow_contract(root: Path, expected: dict[str, object]) -> tuple
     return len(workflows), len(statuses)
 
 
+def validate_device_adapter_contract(root: Path, expected: object) -> int:
+    require(isinstance(expected, dict), "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_CONTRACT")
+    require(expected.get("schema") == "grain.device-adapter.v1", "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_SCHEMA")
+    path = expected.get("path")
+    require(path == "sdk/device/device_adapter_v1.schema.json", "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_PATH")
+    edges = expected.get("edges")
+    require(isinstance(edges, list), "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_EDGES")
+    for edge in REQUIRED_DEVICE_EDGES:
+        require(edge in edges, f"PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_EDGE: {edge}")
+
+    contract = load_json(root / path)
+    properties = contract.get("properties", {})
+    require(isinstance(properties, dict), "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_PROPERTIES")
+    schema_property = properties.get("schema", {})
+    require(isinstance(schema_property, dict), "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_SCHEMA_FIELD")
+    require(schema_property.get("const") == "grain.device-adapter.v1", "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_SCHEMA")
+    defs = contract.get("$defs", {})
+    require(isinstance(defs, dict), "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_DEFS")
+    for edge in edges:
+        require(isinstance(edge, str) and edge, "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_EDGE_TYPE")
+        require(edge in defs, f"PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_EDGE_MISSING: {edge}")
+    return len(edges)
+
+
 def check_public_sdk_api(*, root: Path = ROOT, snapshot_path: Path | None = None) -> PublicSdkApiResult:
     root = root.resolve()
     snapshot_path = snapshot_path or root / "sdk/api/public-sdk-v0.1.json"
@@ -130,11 +165,13 @@ def check_public_sdk_api(*, root: Path = ROOT, snapshot_path: Path | None = None
     workflow_data = surfaces.get("workflow_contract")
     require(isinstance(workflow_data, dict), "PUBLIC_SDK_API_ERR_WORKFLOW_CONTRACT")
     checked_workflows, checked_statuses = validate_workflow_contract(root, workflow_data)
+    checked_device_edges = validate_device_adapter_contract(root, surfaces.get("device_adapter_contract"))
     return PublicSdkApiResult(
         snapshot_schema=str(schema),
         checked_symbols=checked_symbols,
         checked_workflows=checked_workflows,
         checked_statuses=checked_statuses,
+        checked_device_edges=checked_device_edges,
     )
 
 
@@ -147,7 +184,8 @@ def main() -> int:
     )
     print(
         "Public SDK API v0.1 check: OK "
-        f"({result.checked_symbols} symbols, {result.checked_workflows} workflows, {result.checked_statuses} statuses)"
+        f"({result.checked_symbols} symbols, {result.checked_workflows} workflows, "
+        f"{result.checked_statuses} statuses, {result.checked_device_edges} device edges)"
     )
     return 0
 

@@ -11,7 +11,9 @@ usage() {
   cat <<'EOF'
 Usage: scripts/sdk/verify_all_sdks.sh [options]
 
-Checks generated SDK lanes through the repo's public workflow surfaces.
+Checks generated SDK lanes through the repo's public workflow surfaces:
+public API policy, device adapter contract, reference apps, starter templates,
+local registry dry-runs, and external-client certification.
 
 Options:
   --out-dir <path>  Write an ignored summary log to this directory
@@ -142,6 +144,8 @@ run_check "SDK secret logging policy" \
   python3 tools/ci/check_sdk_secret_logging.py
 run_check "public SDK API snapshot" \
   python3 tools/ci/check_public_sdk_api.py
+run_check "device adapter contract" \
+  python3 tools/ci/check_device_adapter_contract.py
 run_check "safe diagnostic telemetry policy" \
   python3 tools/ci/check_no_secret_telemetry.py
 run_check "trust bundle governance policy" \
@@ -177,6 +181,15 @@ if have_cmd swift && have_cmd java && have_cmd npm && have_cmd cargo && have_cmd
 else
   skip_or_fail "SDK_VERIFY_ERR_SCANNER_PREREQ_MISSING" "scanner example and starter template checks require swift, java, npm, cargo, and rustc"
 fi
+
+run_check "local registry dry-runs" \
+  scripts/sdk/check_registry_dry_runs.sh --out-dir "$OUT_DIR_ABS/registry-dry-runs"
+run_check "external client certification" \
+  env \
+    CLIENT_NAME=grain-local-reference-apps \
+    CLIENT_OWNER=grain-maintainers \
+    OUT_DIR="$OUT_DIR_ABS/external-client-certification" \
+    scripts/sdk/certify_external_client.sh
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then

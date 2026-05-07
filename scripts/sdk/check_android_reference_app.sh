@@ -43,6 +43,25 @@ else
   fi
 fi
 
+has_export_payload_surface() {
+  local pattern='snapshotB64|snapshot_b64|bundleB64|bundle_b64|identity_bundle|sync_bundle|syncSecret|sync_secret_b64|envelopeB64|envelope_b64|coseB64|cose_b64|trustPubB64|trust_pub_b64|trustMaterial|trust_material'
+  python3 tools/ci/find_regex_match.py \
+    --ignore-case "$pattern" \
+    "$APP_DIR/src/main/kotlin/dev/grain/examples/androidreferenceapp" \
+    "$APP_DIR/README.md" \
+    >/dev/null
+}
+
+if has_export_payload_surface; then
+  echo "SDK_ANDROID_APP_ERR_EXPORT_PAYLOAD_SURFACE: Android reference app must expose export summaries, not raw snapshot, sync, or trust payloads" >&2
+  exit 1
+else
+  EXPORT_PAYLOAD_STATUS=$?
+  if [[ "$EXPORT_PAYLOAD_STATUS" -ne 1 ]]; then
+    exit "$EXPORT_PAYLOAD_STATUS"
+  fi
+fi
+
 has_hidden_trust_lookup() {
   local pattern='OkHttp\b|HttpURLConnection\b|HttpsURLConnection\b|java\.net|Retrofit\b|Ktor\b|HttpClient\b|Socket\b|SSLSocket\b|X509TrustManager\b|TrustManagerFactory\b|AndroidCAStore|fetch\(|XMLHttpRequest|WebSocket|defaultTrust|fallbackTrust|autoDiscover|wellKnown|TOFU|allowAnyIssuer|allowAllIssuers'
   python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "$APP_DIR" >/dev/null
@@ -71,6 +90,26 @@ else
   SECRET_LOGGING_STATUS=$?
   if [[ "$SECRET_LOGGING_STATUS" -ne 1 ]]; then
     exit "$SECRET_LOGGING_STATUS"
+  fi
+fi
+
+has_publication_or_signing_wiring() {
+  local pattern='com\.android\.(application|library)|signingConfig|storeFile|storePassword|keyAlias|keyPassword|com\.github\.triplet\.play|play-publisher|playConsole|publishBundle|bundleRelease|assembleRelease|maven-publish|publishToMavenCentral|ossrh|sonatype'
+  python3 tools/ci/find_regex_match.py \
+    --ignore-case "$pattern" \
+    "$APP_DIR/build.gradle.kts" \
+    "$APP_DIR/settings.gradle.kts" \
+    "$APP_DIR/src/main/kotlin/dev/grain/examples/androidreferenceapp" \
+    >/dev/null
+}
+
+if has_publication_or_signing_wiring; then
+  echo "SDK_ANDROID_APP_ERR_PUBLICATION_SIGNING_WIRING: Android reference app must remain a local JVM smoke without Play Console, Android signing, or registry publishing wiring" >&2
+  exit 1
+else
+  PUBLICATION_SIGNING_STATUS=$?
+  if [[ "$PUBLICATION_SIGNING_STATUS" -ne 1 ]]; then
+    exit "$PUBLICATION_SIGNING_STATUS"
   fi
 fi
 

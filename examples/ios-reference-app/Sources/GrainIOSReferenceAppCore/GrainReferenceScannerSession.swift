@@ -47,4 +47,10 @@ public final class GrainReferenceScannerSession: ObservableObject {
         model?.preview()
         launchDiagnostic = nil
     }
+
+    public func previewManualQRCode(_ qrString: String) {
+        model?.updateQrString(qrString)
+        model?.preview()
+        launchDiagnostic = nil
+    }
 }

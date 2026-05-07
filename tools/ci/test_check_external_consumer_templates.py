@@ -86,6 +86,8 @@ def write_release(release_dir: Path, *, wasm_commit: str = COMMIT) -> None:
             {
                 "sdk/api/public-sdk-v0.1.json": "{}\n",
                 "sdk/custody/secure_storage_adapter_v1.md": "# storage\n",
+                "sdk/device/device_adapter_v1.schema.json": "{}\n",
+                "sdk/device/README.md": "# device\n",
                 "sdk/workflows/contract/client_workflow_v1.md": "# contract\n",
                 "sdk/workflows/contract/safe_diagnostic_event_v1.schema.json": "{}\n",
                 "sdk/trust/trust_anchor_bundle_v1.schema.json": "{}\n",
@@ -107,6 +109,8 @@ def write_release(release_dir: Path, *, wasm_commit: str = COMMIT) -> None:
                 "examples/ios-scanner/Package.swift": "// swift\n",
                 "examples/android-scanner/build.gradle.kts": "plugins {}\n",
                 "examples/wasm-scanner/package.json": "{}\n",
+                "examples/ios-reference-app/Package.swift": "// swift reference app\n",
+                "examples/android-reference-app/build.gradle.kts": "plugins {}\n",
                 "scripts/sdk/check_starter_templates.sh": "#!/usr/bin/env bash\n",
             },
         ),
@@ -155,8 +159,15 @@ class ExternalConsumerTemplateTests(unittest.TestCase):
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/sdk/swift/Package.swift").is_file())
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/sdk/kotlin/build.gradle.kts").is_file())
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/sdk/wasm/package.json").is_file())
+            self.assertTrue(
+                (result.consumer_root / "vendor/grain-sdk/sdk/device/device_adapter_v1.schema.json").is_file()
+            )
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/templates/ios-starter/Package.swift").is_file())
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/examples/ios-scanner/Package.swift").is_file())
+            self.assertTrue((result.consumer_root / "vendor/grain-sdk/examples/ios-reference-app/Package.swift").is_file())
+            self.assertTrue(
+                (result.consumer_root / "vendor/grain-sdk/examples/android-reference-app/build.gradle.kts").is_file()
+            )
 
     def test_mixed_sha_release_artifact_is_rejected(self) -> None:
         module = load_module()
@@ -166,6 +177,23 @@ class ExternalConsumerTemplateTests(unittest.TestCase):
             write_release(release_dir, wasm_commit="fedcba9876543210fedcba9876543210fedcba98")
 
             with self.assertRaisesRegex(SystemExit, "EXTERNAL_CONSUMER_TEMPLATES_ERR_ARTIFACT_COMMIT"):
+                module.check_external_consumer_templates(
+                    release_dir=release_dir,
+                    expected_commit=COMMIT,
+                )
+
+    def test_publication_policy_claim_is_rejected(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            release_dir = Path(tmp) / "release"
+            release_dir.mkdir()
+            write_release(release_dir)
+            manifest_path = release_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["artifact_policy"]["notes"] = "Ready for Play Console"
+            manifest_path.write_text(json.dumps(manifest) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(SystemExit, "EXTERNAL_CONSUMER_TEMPLATES_ERR_PUBLICATION_CLAIM"):
                 module.check_external_consumer_templates(
                     release_dir=release_dir,
                     expected_commit=COMMIT,

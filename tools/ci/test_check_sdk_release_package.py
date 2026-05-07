@@ -42,6 +42,30 @@ class SdkReleasePackageArchivePolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "SDK_RELEASE_CHECK_ERR_SECRET_ARCHIVE_ENTRY"):
                 module.validate_archive(archive_path, {"required_entries": []})
 
+    def test_release_policy_rejects_store_and_registry_publication_claims(self) -> None:
+        module = load_module()
+        policy = {
+            "release_kind": "source-archive",
+            "wasm_binary": "not_included_source_only",
+            "platform_store_packages": "not_included",
+            "registry_publication": "not_included",
+            "notes": "Ready for TestFlight and npm publish",
+        }
+
+        with self.assertRaisesRegex(SystemExit, "SDK_RELEASE_CHECK_ERR_PUBLICATION_CLAIM"):
+            module.validate_artifact_policy(policy)
+
+    def test_reference_apps_and_device_contract_are_required_entries(self) -> None:
+        module = load_module()
+
+        workflow = module.EXPECTED_ARTIFACTS["grain-sdk-workflow-contract"]["required_entries"]
+        starters = module.EXPECTED_ARTIFACTS["grain-starter-templates"]["required_entries"]
+
+        self.assertIn("sdk/device/device_adapter_v1.schema.json", workflow)
+        self.assertIn("sdk/device/README.md", workflow)
+        self.assertIn("examples/ios-reference-app/Package.swift", starters)
+        self.assertIn("examples/android-reference-app/build.gradle.kts", starters)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -54,6 +54,24 @@ def write_fixture(root: Path, snapshot: dict[str, object]) -> None:
         + "\n",
         encoding="utf-8",
     )
+    (root / "sdk/device").mkdir(parents=True)
+    (root / "sdk/device/device_adapter_v1.schema.json").write_text(
+        json.dumps(
+            {
+                "properties": {"schema": {"const": "grain.device-adapter.v1"}},
+                "$defs": {
+                    "ScanInput": {},
+                    "DeviceCapabilities": {},
+                    "SecureLocalStore": {},
+                    "ExportSink": {},
+                    "DiagnosticSink": {},
+                    "TrustProvider": {},
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 class PublicSdkApiTests(unittest.TestCase):
@@ -73,6 +91,18 @@ class PublicSdkApiTests(unittest.TestCase):
                             "workflows": ["scan_preview"],
                             "statuses": ["Verified"],
                         },
+                        "device_adapter_contract": {
+                            "schema": "grain.device-adapter.v1",
+                            "path": "sdk/device/device_adapter_v1.schema.json",
+                            "edges": [
+                                "ScanInput",
+                                "DeviceCapabilities",
+                                "SecureLocalStore",
+                                "ExportSink",
+                                "DiagnosticSink",
+                                "TrustProvider",
+                            ],
+                        },
                     },
                 },
             )
@@ -81,6 +111,7 @@ class PublicSdkApiTests(unittest.TestCase):
 
             self.assertEqual(result.snapshot_schema, "grain.public-sdk-api.v0.1")
             self.assertEqual(result.checked_symbols, 3)
+            self.assertEqual(result.checked_device_edges, 6)
 
     def test_missing_stable_symbol_fails_api_freeze(self) -> None:
         module = load_module()
@@ -95,11 +126,43 @@ class PublicSdkApiTests(unittest.TestCase):
                         "kotlin": {"symbols": []},
                         "wasm": {"symbols": []},
                         "workflow_contract": {"workflows": [], "statuses": []},
+                        "device_adapter_contract": {
+                            "schema": "grain.device-adapter.v1",
+                            "path": "sdk/device/device_adapter_v1.schema.json",
+                            "edges": [
+                                "ScanInput",
+                                "DeviceCapabilities",
+                                "SecureLocalStore",
+                                "ExportSink",
+                                "DiagnosticSink",
+                                "TrustProvider",
+                            ],
+                        },
                     },
                 },
             )
 
             with self.assertRaisesRegex(SystemExit, "PUBLIC_SDK_API_ERR_SYMBOL_MISSING"):
+                module.check_public_sdk_api(root=root)
+
+    def test_missing_device_adapter_reference_fails_api_freeze(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_fixture(
+                root,
+                {
+                    "schema": "grain.public-sdk-api.v0.1",
+                    "surfaces": {
+                        "swift": {"symbols": [{"kind": "method", "name": "GrainClient.scanPreview(qrString:trustPubB64:)"}]},
+                        "kotlin": {"symbols": []},
+                        "wasm": {"symbols": []},
+                        "workflow_contract": {"workflows": [], "statuses": []},
+                    },
+                },
+            )
+
+            with self.assertRaisesRegex(SystemExit, "PUBLIC_SDK_API_ERR_DEVICE_ADAPTER_CONTRACT"):
                 module.check_public_sdk_api(root=root)
 
 

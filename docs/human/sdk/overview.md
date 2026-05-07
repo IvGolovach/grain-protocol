@@ -17,6 +17,8 @@ This page is the capability map after that first run.
 - For a first app, append one event and reduce it before reaching for device keys, manifests, or AI helpers.
 - In that first app, `payload_cid` can be a stable app-level identifier.
 - If you later store the payload as its own canonical Grain object, then using that real CID is the stronger pattern.
+- For a first scanner app, use the local reference app path before creating
+  store or registry release work.
 
 ## Modules
 
@@ -33,6 +35,9 @@ This page is the capability map after that first run.
   - `scan_preview()` returns `Verified`, `Untrusted`, or `Rejected` without exposing raw protocol runner operations
   - `scan_accept()` atomically persists verified scans and stays idempotent for duplicate scans
   - identity/device/pairing/sync workflows expose portable lifecycle state without making platform apps own bundle parsing or rollback semantics
+- device abstraction contract (`sdk/device`): names app-owned platform edges
+  for scan input, capabilities, local storage, export sinks, diagnostics, and
+  trust providers without adding account, registry, or store assumptions
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
@@ -63,6 +68,11 @@ This page is the capability map after that first run.
 - AI ingestion contract: `docs/human/sdk/ai-ingestion.md`
 - AI explain contract: `docs/human/sdk/ai-error-explain.md`
 - AI privacy boundary: `docs/human/sdk/ai-privacy.md`
+- iOS reference app quickstart: `docs/human/sdk/quickstart-ios-reference-app.md`
+- Android reference app quickstart: `docs/human/sdk/quickstart-android-reference-app.md`
+- device abstraction: `docs/human/sdk/device-abstraction.md`
+- local publication dry-runs: `docs/human/sdk/local-publication.md`
+- external client certification: `docs/human/sdk/certification.md`
 
 ## Quick commands
 

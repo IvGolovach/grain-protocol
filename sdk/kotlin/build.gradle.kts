@@ -37,6 +37,10 @@ val nativeLibraryName = when {
     else -> error("Unsupported host OS for Grain Kotlin fixture runner")
 }
 val rustDebugLibrary = repoRoot.resolve("core/rust/target/debug/$nativeLibraryName")
+val rustDebugLibraryOverride = providers
+    .systemProperty("grain.kotlin.rustDebugLibrary")
+    .map { file(it) }
+    .orElse(rustDebugLibrary)
 
 tasks.register<JavaExec>("runFixtureRunner") {
     group = LifecycleBasePlugin.VERIFICATION_GROUP
@@ -44,7 +48,7 @@ tasks.register<JavaExec>("runFixtureRunner") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("dev.grain.fixture.GrainClientFixtureRunnerKt")
     systemProperty("grain.repoRoot", repoRoot.path)
-    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibrary.path)
+    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibraryOverride.get().path)
     dependsOn("testClasses")
 }
 

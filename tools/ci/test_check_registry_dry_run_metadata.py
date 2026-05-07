@@ -31,6 +31,12 @@ def valid_metadata() -> dict[str, object]:
         "commit": COMMIT,
         "dirty": False,
         "credentials": "not_required",
+        "external_credentials": "not_required",
+        "publication_boundary": "local-source-validation-only",
+        "registry_publication": "not_included",
+        "package_registry_publication": "not_included",
+        "store_publication": "not_included",
+        "platform_store_publication": "not_included",
         "channels": [
             {
                 "name": "swiftpm",
@@ -39,6 +45,7 @@ def valid_metadata() -> dict[str, object]:
                 "publication": "none",
                 "store_publication": "none",
                 "credentials": "not_required",
+                "external_credentials": "not_required",
                 "command": ["swift", "package", "--package-path", "sdk/swift", "describe", "--type", "json"],
                 "output": "swiftpm-package-describe.json",
             },
@@ -49,6 +56,7 @@ def valid_metadata() -> dict[str, object]:
                 "publication": "local-dry-run",
                 "store_publication": "none",
                 "credentials": "not_required",
+                "external_credentials": "not_required",
                 "command": ["sdk/kotlin/gradlew", "-p", "sdk/kotlin", "publishToMavenLocal", "--dry-run"],
                 "output": "maven-local-publish-dry-run.txt",
             },
@@ -59,6 +67,7 @@ def valid_metadata() -> dict[str, object]:
                 "publication": "pack-only",
                 "store_publication": "none",
                 "credentials": "not_required",
+                "external_credentials": "not_required",
                 "command": ["npm", "pack", "--dry-run", "--json"],
                 "output": "npm-pack-dry-run.json",
             },
@@ -123,6 +132,39 @@ class RegistryDryRunMetadataTests(unittest.TestCase):
             write_metadata(path, data)
 
             with self.assertRaisesRegex(SystemExit, "REGISTRY_DRY_RUN_ERR_PUBLICATION_CLAIM"):
+                module.validate_metadata(path)
+
+    def test_rejects_publication_claim_in_freeform_metadata(self) -> None:
+        module = load_module()
+        forbidden_values = [
+            "Ready for App Store review",
+            "TestFlight upload completed",
+            "Play Console release is configured",
+            "npm publish is available",
+            "Maven Central credentials are required",
+        ]
+        for value in forbidden_values:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as tmp:
+                path = Path(tmp) / "registry-dry-runs.json"
+                data = valid_metadata()
+                data["notes"] = value
+                write_metadata(path, data)
+
+                with self.assertRaisesRegex(
+                    SystemExit,
+                    "REGISTRY_DRY_RUN_ERR_FORBIDDEN_PUBLICATION_CLAIM",
+                ):
+                    module.validate_metadata(path)
+
+    def test_rejects_required_external_credentials(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "registry-dry-runs.json"
+            data = valid_metadata()
+            data["external_credentials"] = "required"
+            write_metadata(path, data)
+
+            with self.assertRaisesRegex(SystemExit, "REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM"):
                 module.validate_metadata(path)
 
 

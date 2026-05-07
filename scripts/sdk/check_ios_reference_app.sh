@@ -5,6 +5,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
 APP_DIR="examples/ios-reference-app"
+SCANNER_DIR="examples/ios-scanner"
+REFERENCE_APP_PATHS=("$APP_DIR" "$SCANNER_DIR")
+REFERENCE_UI_PATHS=(
+  "$APP_DIR/Sources/GrainIOSReferenceAppCore/GrainReferenceScannerRootView.swift"
+  "$SCANNER_DIR/Sources/GrainIOSScanner/ScannerView.swift"
+)
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/grain-ios-reference-app.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -13,11 +19,16 @@ if [[ ! -d "$APP_DIR" ]]; then
   exit 1
 fi
 
+if [[ ! -d "$SCANNER_DIR" ]]; then
+  echo "SDK_IOS_APP_ERR_SCANNER_MISSING: examples/ios-scanner is required" >&2
+  exit 1
+fi
+
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 
 has_raw_protocol_api() {
   local pattern='GrainClientFFI|grain_client_core|uniffi\.grain_client_core|grain_run_vector\b|runvector\b|qrdecode\b|qr_decode(_gr1)?\b|coseverify\b|cose_verify\b|dagcbor\b|dag_cbor\b|dagcbor_validate\b|protocolrunner\b|executeoperation\b|execute_operation\b'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "$APP_DIR" >/dev/null
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "${REFERENCE_APP_PATHS[@]}" >/dev/null
 }
 
 if has_raw_protocol_api; then
@@ -32,7 +43,7 @@ fi
 
 has_hidden_trust_lookup() {
   local pattern='URLSession\b|fetch\(|XMLHttpRequest|WebSocket|Socket\b|SSLSocket\b|SecTrustEvaluate|X509TrustManager\b|TrustManagerFactory\b|defaultTrust|fallbackTrust|autoDiscover|wellKnown|TOFU|allowAnyIssuer|allowAllIssuers'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "$APP_DIR" >/dev/null
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "${REFERENCE_APP_PATHS[@]}" >/dev/null
 }
 
 if has_hidden_trust_lookup; then
@@ -48,7 +59,7 @@ fi
 has_secret_logging() {
   local sensitive='snapshotB64|snapshot_b64|bundleB64|bundle_b64|identityBundle|identity_bundle|syncBundle|sync_bundle|syncSecret|sync_secret_b64|envelopeB64|envelope_b64|coseB64|cose_b64|trustPubB64|trust_pub_b64|trustMaterial|trust_material'
   local pattern="(print|debugPrint|NSLog|os_log|Logger\\.[a-z]+)\\s*\\([^)]*(${sensitive})"
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "$APP_DIR" >/dev/null
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "${REFERENCE_APP_PATHS[@]}" >/dev/null
 }
 
 if has_secret_logging; then
@@ -58,6 +69,22 @@ else
   SECRET_LOGGING_STATUS=$?
   if [[ "$SECRET_LOGGING_STATUS" -ne 1 ]]; then
     exit "$SECRET_LOGGING_STATUS"
+  fi
+fi
+
+has_export_or_secret_material_display() {
+  local material='acceptedScanID|acceptedScans|snapshotB64|snapshot_b64|bundleB64|bundle_b64|identityBundle|identity_bundle|syncBundle|sync_bundle|envelopeB64|envelope_b64|coseB64|cose_b64|trustPubB64|trust_pub_b64|trustMaterial|trust_material|trustAnchorBundle'
+  local pattern="(Text|TextField|LabeledContent)\\s*\\([^)]*(${material})"
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" "${REFERENCE_UI_PATHS[@]}" >/dev/null
+}
+
+if has_export_or_secret_material_display; then
+  echo "SDK_IOS_APP_ERR_EXPORT_DEBUG_MATERIAL_DISPLAY: iOS reference app UI must show counts and diagnostics only" >&2
+  exit 1
+else
+  MATERIAL_DISPLAY_STATUS=$?
+  if [[ "$MATERIAL_DISPLAY_STATUS" -ne 1 ]]; then
+    exit "$MATERIAL_DISPLAY_STATUS"
   fi
 fi
 

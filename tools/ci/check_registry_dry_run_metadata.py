@@ -30,8 +30,10 @@ EXPECTED_CHANNELS = {
 }
 ALLOWED_STATUS = {"pass", "unsupported_prereq", "unsupported_channel"}
 FORBIDDEN_PUBLICATION_RE = re.compile(
-    r"(registry|npm-registry|maven-central|sonatype|ossrh|github-packages|"
-    r"app-store|app-store-connect|play-store|store-connect|publish)",
+    r"(npm[-\s]*publish|npm[-\s]*registry|maven[-\s]*central|sonatype|ossrh|github[-\s]*packages|"
+    r"app[-\s]*store|app[-\s]*store[-\s]*connect|testflight|play[-\s]*console|play[-\s]*store|"
+    r"store[-\s]*connect|registry[-\s]*publish|required[-\s]*credentials?|credentials?[-\s]*required|"
+    r"external[-\s]*credentials?)",
     re.IGNORECASE,
 )
 
@@ -69,6 +71,11 @@ def command_tokens(command: object) -> set[str]:
 
 def reject_credential_claim(channel: dict[str, object]) -> None:
     require(channel.get("credentials") == "not_required", "REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM")
+    if "external_credentials" in channel:
+        require(
+            channel.get("external_credentials") == "not_required",
+            "REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM",
+        )
     for key in ("credential_env", "credential_file", "token_env", "secret_env"):
         require(key not in channel, "REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM")
 
@@ -92,6 +99,23 @@ def reject_top_level_publication_claims(metadata: dict[str, object]) -> None:
                 value in (None, "none", "not_included"),
                 f"REGISTRY_DRY_RUN_ERR_STORE_PUBLICATION_CLAIM: {key}",
             )
+    for key in ("external_credentials", "registry_credentials", "store_credentials"):
+        if key in metadata:
+            require(metadata[key] == "not_required", f"REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM: {key}")
+
+
+def reject_forbidden_claims(value: object, context: str = "metadata") -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            reject_forbidden_claims(item, f"{context}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            reject_forbidden_claims(item, f"{context}[{index}]")
+    elif isinstance(value, str):
+        require(
+            FORBIDDEN_PUBLICATION_RE.search(value) is None,
+            f"REGISTRY_DRY_RUN_ERR_FORBIDDEN_PUBLICATION_CLAIM: {context}",
+        )
 
 
 def validate_channel(channel: object) -> str:
@@ -138,12 +162,18 @@ def validate_metadata(path: Path | str, expected_commit: str | None = None) -> d
         require(commit == expected_commit, "REGISTRY_DRY_RUN_ERR_COMMIT_MISMATCH")
     require(isinstance(metadata.get("dirty"), bool), "REGISTRY_DRY_RUN_ERR_DIRTY")
     require(metadata.get("credentials") == "not_required", "REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM")
+    require(metadata.get("external_credentials") == "not_required", "REGISTRY_DRY_RUN_ERR_CREDENTIAL_CLAIM")
+    require(
+        metadata.get("publication_boundary") == "local-source-validation-only",
+        "REGISTRY_DRY_RUN_ERR_PUBLICATION_BOUNDARY",
+    )
     reject_top_level_publication_claims(metadata)
 
     channels = metadata.get("channels")
     require(isinstance(channels, list), "REGISTRY_DRY_RUN_ERR_CHANNELS")
     seen = {validate_channel(channel) for channel in channels}
     require(seen == set(EXPECTED_CHANNELS), "REGISTRY_DRY_RUN_ERR_CHANNEL_SET")
+    reject_forbidden_claims(metadata)
     return metadata
 
 
