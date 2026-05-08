@@ -2,15 +2,18 @@ import { createHash } from "node:crypto";
 
 import { GrainDiagError } from "./types.js";
 
-export function decodeB64(value: unknown): Uint8Array {
+type DecodeB64Options = {
+  allowEmpty?: boolean;
+};
+
+export function decodeB64(value: unknown, options: DecodeB64Options = {}): Uint8Array {
   if (typeof value !== "string") {
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
-  try {
-    return new Uint8Array(Buffer.from(value, "base64"));
-  } catch {
+  if (!isBase64Standard(value) || (options.allowEmpty === false && value.length === 0)) {
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
+  return new Uint8Array(Buffer.from(value, "base64"));
 }
 
 export function encodeB64(bytes: Uint8Array): string {
@@ -61,4 +64,13 @@ export function bytesEq(a: Uint8Array, b: Uint8Array): boolean {
     if (a[i] !== b[i]) return false;
   }
   return true;
+}
+
+function isBase64Standard(value: string): boolean {
+  if (value.length === 0) return true;
+  if (value.length % 4 !== 0) return false;
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    return false;
+  }
+  return Buffer.from(value, "base64").toString("base64") === value;
 }

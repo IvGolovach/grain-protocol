@@ -7,6 +7,8 @@ import {
   GrainCustodyBinding,
   GrainCustodyMaterial,
   GrainCustodyPolicies,
+  GrainMemorySnapshotPersistence,
+  GrainSnapshotCoordinator,
   GrainStaticTrustProvider,
   createNodeGrainClient,
   redactGrainClientLogValue,
@@ -27,6 +29,7 @@ await runDeviceLifecycleFixtures();
 await runPairingFixtures();
 await runSyncBundleFixtures();
 await runStoreSnapshotFixtures();
+await runSnapshotCoordinatorSmoke();
 await runCustodyAndRedactionChecks();
 console.log("WASM client workflow fixtures: PASS");
 
@@ -321,6 +324,32 @@ async function runStoreSnapshotFixtures() {
       source.close();
       target.close();
     }
+  }
+}
+
+async function runSnapshotCoordinatorSmoke() {
+  const persistence = new GrainMemorySnapshotPersistence();
+  const coordinator = new GrainSnapshotCoordinator(persistence);
+  const source = await createNodeGrainClient({ wasmPath });
+  const target = await createNodeGrainClient({ wasmPath });
+  try {
+    requireFixture(source.createRootIdentity({ label: "phone" }).status === "Created", "snapshot coordinator root create mismatch");
+    requireFixture(source.addDeviceKey({ label: "scanner" }).status === "Added", "snapshot coordinator device add mismatch");
+
+    const exported = await coordinator.persist(source);
+    requireFixture(exported.status === "Exported", "snapshot coordinator export status mismatch");
+    requireFixture(await persistence.loadSnapshotB64() !== null, "snapshot coordinator did not persist snapshot");
+
+    const restored = await coordinator.restore(target);
+    requireFixture(restored?.status === "Restored", "snapshot coordinator restore status mismatch");
+
+    const lifecycle = target.clientLifecycle();
+    requireFixture(lifecycle.status === "Ready", "snapshot coordinator lifecycle status mismatch");
+    requireCount(lifecycle.deviceCount, 2, "device_count", "snapshot coordinator");
+    requireCount(lifecycle.lifecycleEventCount, 1, "lifecycle_event_count", "snapshot coordinator");
+  } finally {
+    source.close();
+    target.close();
   }
 }
 

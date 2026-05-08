@@ -171,4 +171,8 @@ runs:
 
     - name: Compile Python tooling
       shell: bash
-      run: python3 -m py_compile tools/*.py tools/ci/*.py
+      run: |
+        set -euo pipefail
+        pycache_dir="$(mktemp -d)"
+        trap 'rm -rf "$pycache_dir"' EXIT
+        PYTHONPYCACHEPREFIX="$pycache_dir" python3 -m py_compile tools/*.py tools/ci/*.py

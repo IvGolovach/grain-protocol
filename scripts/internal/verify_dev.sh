@@ -187,6 +187,8 @@ GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/ty
 npm --prefix runner/typescript run run:full
 GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:full
 npm --prefix runner/typescript run test:cborseq-contract
+npm --prefix runner/typescript run test:base64-contract
+npm --prefix runner/typescript run test:e2e-contract
 npm --prefix runner/typescript run test:properties
 npm --prefix runner/typescript run test:integer-precision
 npm --prefix core/ts/grain-sdk run run:protocol-suite

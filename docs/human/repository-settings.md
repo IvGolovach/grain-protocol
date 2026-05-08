@@ -64,6 +64,14 @@ Historical milestone tags currently present:
 - `repo-v0.3.0`
 - `repo-v0.3.1`
 - `repo-rc-v0.4.0-rc1`
+- `repo-rc-v0.4.0-rc2`
+- `repo-rc-v0.4.0-rc3`
+- `repo-rc-v0.4.0-rc4`
+- `repo-rc-v0.4.0-rc5`
+- `repo-v0.4.0`
+- `repo-v0.4.1`
+- `repo-v0.4.2`
+- `repo-v0.4.3`
 
 Future public release tags should be signed.
 Historical imported milestone tags have GitHub release pages now, but some older ones still rely on reconstructed notes or partial assets.

@@ -27,7 +27,7 @@ jobs:
 
       - name: Configure Docker buildx and QEMU
         run: |
-          docker run --privileged --rm tonistiigi/binfmt --install all
+          docker run --privileged --rm tonistiigi/binfmt@sha256:d3b963f787999e6c0219a48dba02978769286ff61a5f4d26245cb6a6e5567ea3 --install all
           docker buildx create --name ci-builder --driver docker-container --use || docker buildx use ci-builder
           docker buildx inspect --bootstrap
 

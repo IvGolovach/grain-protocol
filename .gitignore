@@ -4,8 +4,10 @@
 /dist/
 /build/
 /.build/
+**/.build/
 /sdk/swift/.build/
 /sdk/kotlin/.gradle/
+**/.gradle/
 /sdk/kotlin/.kotlin/
 /sdk/kotlin/build/
 /sdk/wasm/dist/
@@ -19,6 +21,16 @@
 *.log
 __pycache__/
 *.pyc
+
+# local env/secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
 runner/typescript/.c01-*.json
 runner/typescript/.c01-vectors.txt
 runner/typescript/.divergence-c01.json

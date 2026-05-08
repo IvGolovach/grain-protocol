@@ -22,6 +22,10 @@ export function createScannerShell(client, { trustProvider, snapshotPersistence 
     deviceCount: 0,
     lifecycleEventCount: 0,
     snapshotStatus: null,
+    exportStatus: null,
+    exportAcceptedCount: 0,
+    exportDeviceCount: 0,
+    exportLifecycleEventCount: 0,
   };
 
   return {
@@ -134,6 +138,16 @@ export function createScannerShell(client, { trustProvider, snapshotPersistence 
       }
       return this.state;
     },
+
+    exportSyncBundleForShare() {
+      const exported = client.exportSyncBundle();
+      state.exportStatus = exported.status;
+      state.exportAcceptedCount = exported.acceptedRecordCount;
+      state.exportDeviceCount = exported.deviceCount;
+      state.exportLifecycleEventCount = exported.lifecycleEventCount;
+      state.diagnostics = exported.diag;
+      return exported;
+    },
   };
 }
 
@@ -196,6 +210,7 @@ export function mountScannerShell(root, client, {
       current.lifecycleStatus ? `Lifecycle: ${current.lifecycleStatus}` : null,
       current.lifecycleStatus ? `Devices: ${current.deviceCount}` : null,
       current.snapshotStatus ? `Snapshot: ${current.snapshotStatus}` : null,
+      current.exportStatus ? `Export: ${current.exportStatus}` : null,
       `Saved: ${current.acceptedCount}`,
     ].filter(Boolean).join(" | ");
     diagnostics.replaceChildren(...current.diagnostics.map((diagnostic) => {
@@ -263,6 +278,7 @@ function requireClient(client) {
     "createRootIdentity",
     "addDeviceKey",
     "clientLifecycle",
+    "exportSyncBundle",
   ]) {
     if (!client || typeof client[method] !== "function") {
       throw new TypeError(`SDK_ERR_EXAMPLE_CLIENT_METHOD_MISSING:${method}`);
@@ -320,4 +336,8 @@ function resetDecisionState(state) {
   state.diagnostics = [];
   state.canAccept = false;
   state.acceptedScanId = null;
+  state.exportStatus = null;
+  state.exportAcceptedCount = 0;
+  state.exportDeviceCount = 0;
+  state.exportLifecycleEventCount = 0;
 }

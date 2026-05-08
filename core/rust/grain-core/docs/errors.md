@@ -66,8 +66,8 @@ Operation precedence order:
 - `e2e_decrypt`
   1. `manifest_chash` mismatch (`CHASH_MISMATCH`)
   2. Envelope/schema errors (`GRAIN_ERR_SCHEMA`)
-  3. AEAD decrypt/auth failure (`GRAIN_ERR_AEAD_AUTH`)
-  4. Envelope nonce differs from derived nonce (`NONCE_PROFILE_MISMATCH`)
+  3. Envelope nonce differs from derived nonce (`NONCE_PROFILE_MISMATCH`)
+  4. AEAD decrypt/auth failure (`GRAIN_ERR_AEAD_AUTH`)
 
 - `manifest_resolve`
   1. Manifest op-shape validation (`GRAIN_ERR_MANIFEST_OP`)

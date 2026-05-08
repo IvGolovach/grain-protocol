@@ -24,7 +24,7 @@ Give people a small, portable protocol for real-world events that can be verifie
 - Conformance vectors check those rules.
 - Rust Core is the reference executor.
 - TypeScript full engine is the independent strict implementation.
-- The SDK is the friendly layer for apps.
+- The SDK layers are the friendly app surfaces: TypeScript primitives, portable client workflows, Swift/Kotlin/WASM wrappers, templates, and local reference apps.
 
 ## Change rule
 

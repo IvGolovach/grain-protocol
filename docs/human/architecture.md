@@ -8,7 +8,7 @@ flowchart TB
     C["Conformance checks\nVectors + SPEC + strict mode"]
     R["Rust Core\nReference strict interpreter"]
     T["TypeScript Full Engine\nIndependent strict interpreter"]
-    A["Applications / SDK"]
+    A["Applications / SDKs"]
     E["Additive Extensions\nnew t / new QR prefix"]
 
     P --> C
@@ -31,7 +31,7 @@ Diagram source: `docs/human/diagrams/architecture.mmd`.
 - Conformance checks: vectors plus the strict runner contract. If docs and implementations disagree, this layer decides release behavior.
 - Rust Core: the reference executor.
 - TypeScript full engine: an independent implementation used to catch drift.
-- Applications / SDK: safer builders and orchestration on top of the same protocol rules.
+- Applications / SDKs: safer builders, generated platform wrappers, templates, and reference apps on top of the same protocol rules.
 - Additive extensions: new event types or transport prefixes that do not rewrite frozen-core behavior.
 
 ## Layer map
@@ -54,4 +54,5 @@ Diagram source: `docs/human/diagrams/architecture.mmd`.
 
 - Rust Core is the reference executor.
 - TS full engine passes full strict suite; C01 remains a focused byte-path smoke profile.
+- Portable SDK wrappers and local reference apps sit above `grain-client-core`; they must use public workflow APIs rather than raw protocol internals.
 - Conformance vectors remain the final release check for behavior.

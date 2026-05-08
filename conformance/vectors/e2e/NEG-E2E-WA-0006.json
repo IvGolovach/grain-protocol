@@ -10,10 +10,10 @@
   "expect": {
     "pass": false,
     "diag_contains": [
-      "GRAIN_ERR_AEAD_AUTH"
+      "NONCE_PROFILE_MISMATCH"
     ]
   },
   "meta": {
-    "desc": "Tampered cap_id changes AAD binding; AEAD auth MUST fail."
+    "desc": "Tampered cap_id changes nonce derivation; nonce profile mismatch MUST fail before AEAD."
   }
 }

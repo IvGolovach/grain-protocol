@@ -41,6 +41,10 @@ fi
 existing_ruleset_id="${existing_ruleset_ids[0]:-}"
 
 payload_file="$(mktemp)"
+cleanup() {
+  rm -f "${payload_file}"
+}
+trap cleanup EXIT
 cat >"${payload_file}" <<JSON
 {
   "name": "${RULESET_NAME}",
@@ -101,5 +105,4 @@ else
     --input "${payload_file}" >/dev/null
 fi
 
-rm -f "${payload_file}"
 echo "Ruleset applied for ${REPO}: ${RULESET_NAME} (${PROTECTION_PROFILE})"

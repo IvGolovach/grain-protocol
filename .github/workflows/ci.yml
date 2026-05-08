@@ -36,6 +36,7 @@ jobs:
           python3 -m unittest tools.ci.test_check_no_secret_telemetry
           python3 -m unittest tools.ci.test_check_trust_bundle_governance
           python3 -m unittest tools.ci.test_check_release_train_docs
+          python3 -m unittest tools.ci.test_check_workflow_action_pinning
 
   capid-csprng-audit:
     runs-on: ubuntu-latest
@@ -162,6 +163,16 @@ jobs:
         with:
           prefix: runner/typescript
           script: test:cborseq-contract
+
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: test:base64-contract
+
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: test:e2e-contract
 
       - uses: ./.github/actions/run-node-package-script
         with:

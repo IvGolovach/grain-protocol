@@ -20,6 +20,8 @@
     "divergence:full": "npm run build --silent && node dist/scripts/divergence-full.js",
     "run:wasm-subset": "npm run build --silent && node dist/scripts/run-wasm-subset.js",
     "test:cborseq-contract": "npm run build --silent && node dist/scripts/test-cborseq-contract.js",
+    "test:base64-contract": "npm run build --silent && node dist/scripts/test-base64-contract.js",
+    "test:e2e-contract": "npm run build --silent && node dist/scripts/test-e2e-contract.js",
     "test:properties": "npm run build --silent && node dist/scripts/properties-full.js",
     "test:integer-precision": "npm run build --silent && node dist/scripts/test-integer-precision.js"
   },

@@ -2,8 +2,6 @@ package dev.grain.templates.androidstarter
 
 import dev.grain.GrainSyncResult
 import dev.grain.android.GrainSnapshotPersistence
-import dev.grain.examples.androidscanner.CameraScanPayload
-import dev.grain.examples.androidscanner.CameraScanSource
 import dev.grain.examples.androidscanner.GrainScannerWorkflowClient
 import dev.grain.examples.androidscanner.ScannerController
 import dev.grain.examples.androidscanner.scannerTrustProviderFromBundleStream
@@ -40,7 +38,7 @@ class GrainAndroidStarter(
     }
 
     fun paste(qrString: String): GrainAndroidStarterState {
-        controller.receiveCameraPayload(CameraScanPayload(qrString = qrString, source = CameraScanSource.Injected))
+        controller.updateQrString(qrString)
         return state()
     }
 

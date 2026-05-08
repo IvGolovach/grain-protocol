@@ -57,6 +57,7 @@ tasks.register<JavaExec>("runAndroidAdaptersSmoke") {
     description = "Run Android adapter snapshot persistence smoke tests."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("dev.grain.android.GrainAndroidAdaptersSmokeKt")
+    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibraryOverride.get().path)
     dependsOn("testClasses")
 }
 

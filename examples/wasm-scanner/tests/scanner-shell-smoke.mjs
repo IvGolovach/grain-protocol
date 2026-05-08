@@ -71,6 +71,14 @@ async function verifiedPreviewEnablesAcceptAndPersistsSnapshot() {
   assert.equal(state.acceptStatus, "AlreadyAccepted");
   assert.equal(state.acceptedCount, 1);
 
+  const exported = shell.exportSyncBundleForShare();
+  assert.equal(exported.status, "Exported");
+  state = shell.state;
+  assert.equal(state.exportStatus, "Exported");
+  assert.equal(state.exportAcceptedCount, 1);
+  assert.equal(state.exportDeviceCount, 2);
+  assert.equal(state.exportLifecycleEventCount, 1);
+
   const restartedClient = createWorkflowClient({ records: [] });
   const restarted = createScannerShell(restartedClient, {
     trustProvider: trustProvider(),
@@ -246,6 +254,16 @@ function createWorkflowClient({ records = [] } = {}) {
         status: "Exported",
         diag: [],
         snapshotB64,
+        acceptedRecordCount: records.length,
+        deviceCount: lifecycle.deviceCount,
+        lifecycleEventCount: lifecycle.lifecycleEventCount,
+      };
+    },
+    exportSyncBundle() {
+      return {
+        status: "Exported",
+        diag: [],
+        bundleB64: "sync-demo",
         acceptedRecordCount: records.length,
         deviceCount: lifecycle.deviceCount,
         lifecycleEventCount: lifecycle.lifecycleEventCount,

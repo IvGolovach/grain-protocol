@@ -68,7 +68,7 @@ public struct StarterScannerView: View {
         VStack(alignment: .leading, spacing: 12) {
             TextEditor(text: $pastedScan)
                 .frame(minHeight: 120)
-                .onChange(of: pastedScan) { _, value in
+                .onChange(of: pastedScan) { value in
                     session.paste(value)
                 }
             HStack {

@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     kotlin("jvm") version "1.8.22"
 }
@@ -14,13 +16,13 @@ sourceSets {
     main {
         kotlin.srcDir("../../sdk/kotlin/src/main/kotlin")
         kotlin.srcDir("../../examples/android-scanner/src/main/kotlin")
-        resources.srcDir("src/main/resources")
     }
 }
 
 dependencies {
     implementation("net.java.dev.jna:jna:5.14.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
+    testImplementation(kotlin("stdlib"))
 }
 
 java {
@@ -33,4 +35,37 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
         jvmTarget = "11"
         freeCompilerArgs += "-Xjsr305=strict"
     }
+}
+
+val repoRoot = rootProject.layout.projectDirectory.dir("../..").asFile.canonicalFile
+val osName = System.getProperty("os.name").toLowerCase(Locale.ROOT)
+val nativeLibraryName = when {
+    osName.contains("mac") -> "libgrain_client_core.dylib"
+    osName.contains("linux") -> "libgrain_client_core.so"
+    osName.contains("windows") -> "grain_client_core.dll"
+    else -> error("Unsupported host OS for Grain Android starter")
+}
+val rustDebugLibrary = repoRoot.resolve("core/rust/target/debug/$nativeLibraryName")
+val rustDebugLibraryOverride = providers
+    .systemProperty("grain.kotlin.rustDebugLibrary")
+    .map { file(it) }
+    .orElse(rustDebugLibrary)
+
+tasks.withType<Test>().configureEach {
+    systemProperty("grain.repoRoot", repoRoot.path)
+    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibraryOverride.get().path)
+}
+
+tasks.register<JavaExec>("runAndroidStarterSmoke") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Run the Android starter through the public scanner path."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("dev.grain.templates.androidstarter.GrainAndroidStarterSmokeKt")
+    systemProperty("grain.repoRoot", repoRoot.path)
+    systemProperty("uniffi.component.grain_client_core.libraryOverride", rustDebugLibraryOverride.get().path)
+    dependsOn("testClasses")
+}
+
+tasks.named("check") {
+    dependsOn("runAndroidStarterSmoke")
 }

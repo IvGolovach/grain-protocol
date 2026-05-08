@@ -15,9 +15,21 @@ export {
 export type {
   AcceptedScan,
   GrainAcceptedScan,
+  GrainClientLifecycle,
+  GrainClientLifecycleStatus,
   GrainCustodyBinding,
   GrainCustodyDescriptor,
   GrainCustodyMaterial,
+  GrainDeviceAkInput,
+  GrainDeviceResult,
+  GrainDeviceStatus,
+  GrainIdentityBundleInput,
+  GrainIdentityResult,
+  GrainIdentityStatus,
+  GrainLabelInput,
+  GrainPairingEnvelopeInput,
+  GrainPairingResult,
+  GrainPairingStatus,
   GrainScanAccept,
   GrainScanAcceptInput,
   GrainScanAcceptStatus,
@@ -29,6 +41,9 @@ export type {
   GrainStoreSnapshotInput,
   GrainStoreSnapshotResult,
   GrainStoreSnapshotStatus,
+  GrainSyncBundleInput,
+  GrainSyncResult,
+  GrainSyncStatus,
 } from "./index.mjs";
 
 export function createNodeGrainClient(options: { wasmPath: string }): Promise<GrainClient>;

@@ -15,8 +15,17 @@ REQUIRED_PATTERNS = (
     "/examples/**",
     "/docs/human/**",
     "/docs/superpowers/**",
-    "/.github/CODEOWNERS",
     "/tools/**",
+    "/.github/**",
+    "/.githooks/**",
+    "/scripts/**",
+    "/docker/**",
+    "/.dockerignore",
+    "/.editorconfig",
+    "/.gitattributes",
+    "/.gitignore",
+    "/.nvmrc",
+    "/mise.toml",
 )
 
 

@@ -8,7 +8,7 @@ The protocol is meant to outlive any single author or team.
 - **Protocol (`spec/`)**: the rules
 - **Conformance suite (`conformance/`)**: the release gate
 - **Core (`core/`)**: the reference implementation
-- **SDK (`core/ts/grain-sdk/`)**: the app-facing layer built on the same protocol rules
+- **SDK (`core/ts/grain-sdk/`, `sdk/`, `templates/`, `examples/`)**: app-facing layers, generated platform wrappers, templates, and local reference apps built on the same protocol rules
 
 ## Decision process
 
