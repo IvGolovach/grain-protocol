@@ -44,7 +44,9 @@ python3 tools/ci/check_prohibition_coverage.py
 python3 tools/ci/check_capid_csprng.py
 python3 tools/ci/check_sdk_no_network.py
 python3 tools/ci/check_sdk_ai_boundary.py
-python3 -m py_compile tools/*.py tools/ci/*.py
+pycache_dir="$(mktemp -d)"
+trap 'rm -rf "$pycache_dir"' EXIT
+PYTHONPYCACHEPREFIX="$pycache_dir" python3 -m py_compile tools/*.py tools/ci/*.py
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required for divergence checks and rust fallback execution." >&2

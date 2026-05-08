@@ -11,6 +11,10 @@ import sys
 FORBIDDEN_FILE_PATTERNS = (
     ".DS_Store",
     ".coverage",
+    ".env",
+    ".env.*",
+    "*.env",
+    "*.env.*",
     "*.pyc",
     "*.log",
     "*.tmp",
@@ -23,6 +27,16 @@ FORBIDDEN_FILE_PATTERNS = (
     "*.key",
     "*.p12",
     "*.pfx",
+    "*.sqlite",
+    "*.sqlite3",
+    "*.db",
+    "*.dump",
+)
+
+ALLOWED_FILE_PATTERNS = (
+    ".env.example",
+    ".env.*.example",
+    "*.env.example",
 )
 
 FORBIDDEN_DIR_NAMES = (
@@ -55,6 +69,8 @@ def is_forbidden(path: str) -> bool:
     if any(d in parts for d in FORBIDDEN_DIR_NAMES):
         return True
     base = parts[-1]
+    if any(fnmatch.fnmatch(base, pat) for pat in ALLOWED_FILE_PATTERNS):
+        return False
     return any(fnmatch.fnmatch(base, pat) for pat in FORBIDDEN_FILE_PATTERNS)
 
 

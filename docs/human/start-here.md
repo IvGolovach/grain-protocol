@@ -63,7 +63,7 @@ Compatibility alias:
 - Conformance: vectors are the execution gate
 - Reference implementation: Rust Core passes the strict suite
 - TypeScript: the full strict engine is available; `C01` is the smaller smoke profile for byte-path regressions
-- SDK: the TypeScript primitives layer lives in `core/ts/grain-sdk`
+- SDK: the TypeScript primitives layer lives in `core/ts/grain-sdk`; portable Swift/Kotlin/WASM wrappers, workflow contracts, templates, and local reference apps live under `sdk/`, `templates/`, and `examples/`
 
 Repo shorthand you may see later:
 

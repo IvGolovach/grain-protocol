@@ -5,6 +5,7 @@ import { GrainClient, GrainStaticTrustProvider } from "../../../sdk/wasm/src/ind
 
 export async function bootGrainWebStarter({
   root,
+  client = null,
   wasmExports,
   trustBundleJson,
   snapshotPersistence = new GrainIndexedDBSnapshotPersistence(),
@@ -13,10 +14,10 @@ export async function bootGrainWebStarter({
   if (!root) {
     throw new TypeError("SDK_ERR_WEB_STARTER_ROOT_REQUIRED");
   }
-  const client = new GrainClient(wasmExports);
+  const grainClient = client ?? new GrainClient(wasmExports);
   const trustProvider = GrainStaticTrustProvider.fromBundleJson(trustBundleJson);
-  const cameraAdapter = createInjectedCameraAdapter(sampleQrString ? [sampleQrString] : []);
-  const shell = createScannerShell(client, {
+  const cameraAdapter = sampleQrString ? createInjectedCameraAdapter([sampleQrString]) : null;
+  const shell = createScannerShell(grainClient, {
     trustProvider,
     snapshotPersistence,
   });
@@ -40,6 +41,8 @@ function mountControls(root, shell, cameraAdapter) {
   const scanButton = document.createElement("button");
   scanButton.type = "button";
   scanButton.textContent = "Scan";
+  scanButton.hidden = cameraAdapter === null;
+  scanButton.disabled = cameraAdapter === null;
 
   const previewButton = document.createElement("button");
   previewButton.type = "button";
@@ -70,6 +73,7 @@ function mountControls(root, shell, cameraAdapter) {
       current.previewStatus ? `Preview: ${current.previewStatus}` : null,
       current.acceptStatus ? `Accept: ${current.acceptStatus}` : null,
       current.snapshotStatus ? `Snapshot: ${current.snapshotStatus}` : null,
+      current.exportStatus ? `Export: ${current.exportStatus}` : null,
       `Saved: ${current.acceptedCount}`,
     ].filter(Boolean).join(" | ");
   }
@@ -83,6 +87,9 @@ function mountControls(root, shell, cameraAdapter) {
     render();
   });
   scanButton.addEventListener("click", async () => {
+    if (cameraAdapter === null) {
+      return;
+    }
     const payload = await cameraAdapter.scanOnce();
     shell.receiveCameraPayload(payload);
     pasteInput.value = payload.qrString;
@@ -104,8 +111,11 @@ function mountControls(root, shell, cameraAdapter) {
     render();
   });
   exportButton.addEventListener("click", () => {
-    status.value = "Export boundary: call client export from the app-owned share flow";
+    shell.exportSyncBundleForShare();
+    render();
   });
+
+  shell.setTrustAnchorId(trustInput.value);
 
   root.replaceChildren(
     pasteInput,

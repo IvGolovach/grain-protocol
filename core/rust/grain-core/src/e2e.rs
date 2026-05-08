@@ -90,6 +90,9 @@ pub fn decrypt_encrypted_object(
     let ct = map_find_bytes(map, "ct").ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
 
     let derived = derive_key_nonce(sync_secret, &cap_id, cid_link_bstr)?;
+    if nonce_env.as_slice() != derived.nonce.as_slice() {
+        return Err(GrainError::from_diag(Diag::NonceProfileMismatch));
+    }
 
     let cipher = Aes256Gcm::new_from_slice(&derived.key).map_err(|e| GrainError::Internal(e.to_string()))?;
     let nonce = Nonce::from_slice(&derived.nonce);
@@ -103,10 +106,6 @@ pub fn decrypt_encrypted_object(
             },
         )
         .map_err(|_| GrainError::from_diag(Diag::AeadAuth))?;
-
-    if nonce_env.as_slice() != derived.nonce.as_slice() {
-        return Err(GrainError::from_diag(Diag::NonceProfileMismatch));
-    }
 
     Ok(pt)
 }
@@ -138,6 +137,9 @@ fn map_find_bytes(map: &[(crate::cbor::CborValue, crate::cbor::CborValue)], key:
 
 #[cfg(test)]
 mod tests {
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+
     use super::*;
 
     #[test]
@@ -173,5 +175,98 @@ mod tests {
         .unwrap_err();
 
         assert_eq!(err.diag(), Diag::ChashMismatch);
+    }
+
+    #[test]
+    fn decrypt_encrypted_object_reports_nonce_mismatch_before_aead_auth() {
+        let vector: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../conformance/vectors/e2e/NEG-E2E-WA-0004.json"
+        ))
+        .unwrap();
+        let input = vector.get("input").and_then(|v| v.as_object()).unwrap();
+        let mut encrypted = STANDARD
+            .decode(
+                input
+                    .get("encrypted_object_b64")
+                    .and_then(|v| v.as_str())
+                    .unwrap(),
+            )
+            .unwrap();
+        let sync_secret = STANDARD
+            .decode(
+                input
+                    .get("sync_secret_b64")
+                    .and_then(|v| v.as_str())
+                    .unwrap(),
+            )
+            .unwrap();
+        let cid_link = STANDARD
+            .decode(input.get("cid_link_b64").and_then(|v| v.as_str()).unwrap())
+            .unwrap();
+
+        tamper_ct_bstr_payload(&mut encrypted);
+
+        let err = decrypt_encrypted_object(&encrypted, &sync_secret, &cid_link, None).unwrap_err();
+        assert_eq!(err.diag(), Diag::NonceProfileMismatch);
+    }
+
+    fn tamper_ct_bstr_payload(bytes: &mut [u8]) {
+        let key = b"\x62ct";
+        let key_pos = bytes
+            .windows(key.len())
+            .position(|window| window == key)
+            .unwrap();
+        let header_pos = key_pos + key.len();
+        let (payload_pos, len) = read_bstr_payload(bytes, header_pos);
+        assert!(len > 0);
+        bytes[payload_pos] ^= 0x01;
+    }
+
+    fn read_bstr_payload(bytes: &[u8], header_pos: usize) -> (usize, usize) {
+        let header = bytes[header_pos];
+        assert_eq!(header & 0xe0, 0x40, "ct value is not a byte string");
+
+        let additional = header & 0x1f;
+        match additional {
+            0..=23 => checked_bstr_payload(bytes, header_pos + 1, additional as usize),
+            24 => checked_bstr_payload(bytes, header_pos + 2, bytes[header_pos + 1] as usize),
+            25 => {
+                let len =
+                    u16::from_be_bytes([bytes[header_pos + 1], bytes[header_pos + 2]]) as usize;
+                checked_bstr_payload(bytes, header_pos + 3, len)
+            }
+            26 => {
+                let len = u32::from_be_bytes([
+                    bytes[header_pos + 1],
+                    bytes[header_pos + 2],
+                    bytes[header_pos + 3],
+                    bytes[header_pos + 4],
+                ]) as usize;
+                checked_bstr_payload(bytes, header_pos + 5, len)
+            }
+            27 => {
+                let len = u64::from_be_bytes([
+                    bytes[header_pos + 1],
+                    bytes[header_pos + 2],
+                    bytes[header_pos + 3],
+                    bytes[header_pos + 4],
+                    bytes[header_pos + 5],
+                    bytes[header_pos + 6],
+                    bytes[header_pos + 7],
+                    bytes[header_pos + 8],
+                ]);
+                let len = usize::try_from(len).expect("ct bstr length exceeds usize");
+                checked_bstr_payload(bytes, header_pos + 9, len)
+            }
+            _ => panic!("unsupported ct bstr additional info {additional}"),
+        }
+    }
+
+    fn checked_bstr_payload(bytes: &[u8], payload_pos: usize, len: usize) -> (usize, usize) {
+        assert!(
+            payload_pos + len <= bytes.len(),
+            "ct bstr length exceeds envelope"
+        );
+        (payload_pos, len)
     }
 }

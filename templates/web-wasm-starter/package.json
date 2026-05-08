@@ -8,6 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "check": "node --check src/main.mjs"
+    "check": "node --check src/main.mjs && node --check tests/starter-smoke.mjs && node tests/starter-smoke.mjs",
+    "test:smoke": "node tests/starter-smoke.mjs"
   }
 }

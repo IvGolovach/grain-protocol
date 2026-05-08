@@ -1,5 +1,6 @@
 package dev.grain.android
 
+import dev.grain.GrainClient
 import dev.grain.GrainStoreSnapshotResult
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -8,6 +9,7 @@ import javax.crypto.spec.SecretKeySpec
 fun main() {
     fileSnapshotRoundTripAndClear()
     coordinatorPersistsRestoresAndClears()
+    grainClientSnapshotBridgePersistsAndRestores()
     localSnapshotStoreSavesRestoresAndClears()
     keystoreBoundaryRoundTrip()
     aesGcmSnapshotCipherRoundTripAndTamperRejects()
@@ -46,6 +48,30 @@ private fun coordinatorPersistsRestoresAndClears() {
     val empty = coordinator.persist(client = client)
     requireSmoke(empty.status == "Empty", "coordinator empty status mismatch")
     requireSmoke(persistence.savedSnapshotB64 == null, "coordinator did not clear empty snapshot")
+}
+
+private fun grainClientSnapshotBridgePersistsAndRestores() {
+    val persistence = RecordingSnapshotPersistence()
+    val coordinator = GrainSnapshotCoordinator(persistence)
+
+    GrainClient().use { source ->
+        requireSmoke(source.createRootIdentity(label = "phone").status == "Created", "bridge root create mismatch")
+        requireSmoke(source.addDeviceKey(label = "scanner").status == "Added", "bridge device add mismatch")
+
+        val exported = coordinator.persist(client = GrainClientSnapshotClient(source))
+        requireSmoke(exported.status == "Exported", "bridge export status mismatch")
+        requireSmoke(persistence.savedSnapshotB64 != null, "bridge did not persist snapshot")
+
+        GrainClient().use { restoredClient ->
+            val restored = coordinator.restore(client = GrainClientSnapshotClient(restoredClient))
+            requireSmoke(restored?.status == "Restored", "bridge restore status mismatch")
+
+            val lifecycle = restoredClient.clientLifecycle()
+            requireSmoke(lifecycle.status == "Ready", "bridge lifecycle status mismatch")
+            requireSmoke(lifecycle.deviceCount == 2UL, "bridge restored device count mismatch")
+            requireSmoke(lifecycle.lifecycleEventCount == 1UL, "bridge restored lifecycle count mismatch")
+        }
+    }
 }
 
 private fun localSnapshotStoreSavesRestoresAndClears() {

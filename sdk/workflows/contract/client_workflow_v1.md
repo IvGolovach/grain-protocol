@@ -13,7 +13,7 @@ Workflow fixtures can reference protocol vectors as input material. A generated 
 Each fixture is a JSON object with:
 
 - `fixture_id`: stable `SDK-WF-*` identifier.
-- `workflow`: workflow name: `scan_preview`, `scan_accept`, `device_lifecycle`, `pairing`, `sync_bundle`, or `store_snapshot`.
+- `workflow`: workflow name: `scan_preview`, `scan_accept`, `scan_handoff`, `device_lifecycle`, `pairing`, `sync_bundle`, or `store_snapshot`.
 - `strict`: must be `true`.
 - `input`: workflow input references or inline values.
 - `expect`: expected workflow status, diagnostics, output presence, counts, and storage mutation result where applicable.

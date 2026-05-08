@@ -15,11 +15,12 @@ import { schemaChecks } from "./dagcbor.js";
 
 const KEY_INFO = Buffer.from("GrainE2E\0v0.1\0A256GCM\0key", "ascii");
 const NONCE_INFO_PREFIX = Buffer.from("GrainE2E\0v0.1\0A256GCM\0nonce\0", "ascii");
+const NON_EMPTY_B64 = { allowEmpty: false } as const;
 
 export function opE2eDerive(input: Record<string, Json>): OperationActual {
-  const syncSecret = decodeB64(input.sync_secret_b64);
-  const capId = decodeB64(input.cap_id_b64);
-  const cidLinkBstr = decodeB64(input.cid_link_bstr_b64);
+  const syncSecret = decodeB64(input.sync_secret_b64, NON_EMPTY_B64);
+  const capId = decodeB64(input.cap_id_b64, NON_EMPTY_B64);
+  const cidLinkBstr = decodeB64(input.cid_link_bstr_b64, NON_EMPTY_B64);
 
   const derived = deriveKeyNonce(syncSecret, capId, cidLinkBstr);
   return {
@@ -33,16 +34,16 @@ export function opE2eDerive(input: Record<string, Json>): OperationActual {
 }
 
 export function opE2eDecrypt(input: Record<string, Json>): OperationActual {
-  const encryptedObjectBytes = decodeB64(input.encrypted_object_b64);
-  const syncSecret = decodeB64(input.sync_secret_b64);
-  const cidLink = decodeB64(input.cid_link_b64);
+  const encryptedObjectBytes = decodeB64(input.encrypted_object_b64, NON_EMPTY_B64);
+  const syncSecret = decodeB64(input.sync_secret_b64, NON_EMPTY_B64);
+  const cidLink = decodeB64(input.cid_link_b64, NON_EMPTY_B64);
 
   if (encryptedObjectBytes.length > LIMITS.CBL_MAX_E2E_CIPHERTEXT_BYTES) {
     throw new GrainDiagError("GRAIN_ERR_LIMIT");
   }
 
   if (input.manifest_chash_b64 !== undefined) {
-    const expected = decodeB64(input.manifest_chash_b64);
+    const expected = decodeB64(input.manifest_chash_b64, NON_EMPTY_B64);
     const actual = sha256(encryptedObjectBytes);
     if (!bytesEq(expected, actual)) {
       throw new GrainDiagError("CHASH_MISMATCH");
@@ -73,6 +74,10 @@ export function opE2eDecrypt(input: Record<string, Json>): OperationActual {
 
   const derived = deriveKeyNonce(syncSecret, capId, cidLink);
 
+  if (!bytesEq(nonceEnv, derived.nonce)) {
+    throw new GrainDiagError("NONCE_PROFILE_MISMATCH");
+  }
+
   let pt: Uint8Array;
   try {
     const decipher = createDecipheriv("aes-256-gcm", Buffer.from(derived.key), Buffer.from(derived.nonce), {
@@ -91,10 +96,6 @@ export function opE2eDecrypt(input: Record<string, Json>): OperationActual {
     pt = new Uint8Array(plain);
   } catch {
     throw new GrainDiagError("GRAIN_ERR_AEAD_AUTH");
-  }
-
-  if (!bytesEq(nonceEnv, derived.nonce)) {
-    throw new GrainDiagError("NONCE_PROFILE_MISMATCH");
   }
 
   return {

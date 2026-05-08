@@ -3,6 +3,16 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Repository-wide audit hardening:
+  - made TypeScript base64 decoding strict so malformed standard-base64 fields reject with `GRAIN_ERR_SCHEMA` instead of being silently decoded by Node.
+  - aligned Rust and TypeScript E2E decrypt precedence so nonce profile mismatches are reported before AEAD authentication, and added a separate AEAD tamper vector.
+  - added regression scripts for base64 and E2E diagnostic contracts to developer verify, CI, and release-evidence paths.
+  - hardened starter/reference app smoke coverage for safe export summaries, snapshot restore, default trust anchors, and Android/iOS/Web starter flows.
+  - expanded CI/release hygiene checks for workflow action pinning, CODEOWNERS coverage, forbidden local artifacts, and generated cache cleanup.
+- Local reference app platform:
+  - added no-paid-account local quickstarts for iOS and Android reference apps.
+  - added local reference app smoke coverage for saved-list restore, export/debug status, explicit trust-anchor wiring, and raw protocol/FFI exposure guards.
+  - expanded SDK docs and front-door links for `sdk/`, `templates/`, and `examples/` so app builders can find the current platform paths.
 - TOR-SDK-A04 (portable client core for generated platform SDKs):
   - added Rust client workflow crate:
     - `core/rust/grain-client-core`

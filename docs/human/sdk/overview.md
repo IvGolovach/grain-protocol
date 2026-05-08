@@ -52,10 +52,19 @@ This page is the capability map after that first run.
 - no vendor model clients or outbound network calls in SDK core
 - no partial success on multi-step SDK writes; failed import/correction paths roll back
 
-## Package path
+## Package paths
 
 - `core/ts/grain-sdk`
 - `core/ts/grain-sdk-ai`
+- `core/rust/grain-client-core`
+- `sdk/swift`
+- `sdk/kotlin`
+- `sdk/wasm`
+- `sdk/workflows`
+- `sdk/trust`
+- `sdk/device`
+- `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`
+- `examples/ios-scanner`, `examples/android-scanner`, `examples/wasm-scanner`, `examples/ios-reference-app`, `examples/android-reference-app`
 - compatibility matrix:
   - SDK `0.2.x` -> Protocol major `1`
 - domain adapter example: `core/ts/grain-sdk/examples/sensor-event-v1.ts`

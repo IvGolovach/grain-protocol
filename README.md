@@ -57,7 +57,8 @@ Pick one path and get a quick win first:
 - Rust Core in `core/rust` passes the strict suite.
 - The full TypeScript engine in `runner/typescript` is checked against the same suite plus drift checks.
 - The shared TypeScript protocol core in `core/ts/grain-ts-core` keeps the runner and SDK on the same execution logic.
-- The SDK in `core/ts/grain-sdk` gives app builders a safer layer on top of the same protocol rules.
+- The TypeScript SDK in `core/ts/grain-sdk` gives app builders a safer layer on top of the same protocol rules.
+- Portable client SDKs, workflow contracts, templates, and local reference apps live under `sdk/`, `templates/`, and `examples/`.
 - The optional AI sidecar in `core/ts/grain-sdk-ai` stays outside the core SDK surface and is wired in explicitly.
 - CI evidence is tied to commit SHA on `main` and on release tags.
 - Release-grade verification is available through `./scripts/certify`.

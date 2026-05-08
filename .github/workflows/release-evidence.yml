@@ -137,6 +137,16 @@ jobs:
 
       - uses: ./.github/actions/run-node-package-script
         with:
+          prefix: runner/typescript
+          script: test:base64-contract
+
+      - uses: ./.github/actions/run-node-package-script
+        with:
+          prefix: runner/typescript
+          script: test:e2e-contract
+
+      - uses: ./.github/actions/run-node-package-script
+        with:
           prefix: core/ts/grain-sdk
           script: run:protocol-suite
 

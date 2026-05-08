@@ -13,5 +13,15 @@
 
 # CI and governance
 /tools/** @IvGolovach
+/.github/** @IvGolovach
+/.githooks/** @IvGolovach
+/scripts/** @IvGolovach
+/docker/** @IvGolovach
+/.dockerignore @IvGolovach
+/.editorconfig @IvGolovach
+/.gitattributes @IvGolovach
+/.gitignore @IvGolovach
+/.nvmrc @IvGolovach
+/mise.toml @IvGolovach
 /.github/CODEOWNERS @IvGolovach
 /adr/** @IvGolovach

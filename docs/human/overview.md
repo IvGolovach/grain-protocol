@@ -21,6 +21,8 @@ The shipped schema profile is food-first.
 - `core/rust/*`: reference executor
 - `runner/typescript/*`: independent strict implementation used for drift detection
 - `core/ts/grain-sdk/*`: safer app-facing orchestration layer
+- `sdk/*`: portable client workflow contracts plus Swift, Kotlin, WASM, trust, custody, and device adapter surfaces
+- `templates/*` and `examples/*`: starter app shells and local reference apps built on the public SDK workflows
 
 ## What Grain gives you
 

@@ -11,6 +11,7 @@ let package = Package(
     products: [
         .library(name: "GrainIOSStarterCore", targets: ["GrainIOSStarterCore"]),
         .executable(name: "GrainIOSStarterApp", targets: ["GrainIOSStarterApp"]),
+        .executable(name: "GrainIOSStarterSmoke", targets: ["GrainIOSStarterSmoke"]),
     ],
     dependencies: [
         .package(name: "GrainClient", path: "../../sdk/swift"),
@@ -32,6 +33,15 @@ let package = Package(
             name: "GrainIOSStarterApp",
             dependencies: ["GrainIOSStarterCore"],
             path: "Sources/GrainIOSStarterApp"
+        ),
+        .executableTarget(
+            name: "GrainIOSStarterSmoke",
+            dependencies: [
+                "GrainIOSStarterCore",
+                .product(name: "GrainClientIOSAdapters", package: "GrainClient"),
+                .product(name: "GrainIOSScanner", package: "GrainIOSScannerExample"),
+            ],
+            path: "Sources/GrainIOSStarterSmoke"
         ),
     ]
 )
