@@ -100,6 +100,12 @@ if [[ "$ALLOW_DIRTY" -ne 1 && -n "$DIRTY_STATUS" ]]; then
 fi
 
 mkdir -p "$OUT_DIR_ABS"
+find "$OUT_DIR_ABS" -maxdepth 1 -type f \( \
+  -name 'grain-*.tar.gz' \
+  -o -name 'manifest.json' \
+  -o -name 'SHA256SUMS' \
+  -o -name 'sbom.spdx.json' \
+\) -delete
 
 require_source_path() {
   local path="$1"
