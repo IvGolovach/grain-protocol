@@ -23,7 +23,7 @@ Public API check:
 Compatibility matrix check:
 Registry dry-run check:
 External client certification:
-Issuer QR path checked:
+Local scanner DevKit flow:
 Known local prerequisites:
 Residual gaps:
 ```
@@ -69,6 +69,7 @@ python3 tools/ci/check_sdk_compatibility_matrix.py \
 python3 tools/ci/check_public_sdk_api.py
 scripts/sdk/check_registry_dry_runs.sh
 scripts/sdk/check_starter_templates.sh
+scripts/sdk/run_local_scanner_flow.sh --strict
 ```
 
 If the package was produced immediately after a required upstream `sdk-platform`
@@ -135,10 +136,21 @@ The generated binding snapshot is a proof and wrapper-development input. Normal
 app code should start from the Swift, Kotlin, or WASM package wrapper, not from
 raw generated FFI calls.
 
-## Issuer QR Smoke
+## Local Scanner Flow
 
 Use a repo checkout at the same SHA for the local scanner path. The source SDK
 package is the app handoff; it does not include the reference issuer kit source.
+
+Fast path:
+
+```bash
+scripts/sdk/run_local_scanner_flow.sh --strict
+```
+
+That writes the issuer output, QR string, local trust bundle, logs, and
+`local-scanner-flow.json` under ignored `artifacts/`.
+
+Manual issuer QR smoke:
 
 ```bash
 cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty \

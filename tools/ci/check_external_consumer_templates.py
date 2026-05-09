@@ -68,6 +68,8 @@ EXPECTED_ARTIFACTS = {
             "examples/ios-reference-app/Package.swift",
             "examples/android-reference-app/build.gradle.kts",
             "scripts/sdk/check_starter_templates.sh",
+            "scripts/sdk/run_local_scanner_flow.sh",
+            "tools/ci/check_local_scanner_flow_report.py",
         ],
     },
 }
@@ -211,6 +213,8 @@ def validate_consumer_inputs(consumer_root: Path) -> None:
         "vendor/grain-sdk/examples/ios-reference-app/Package.swift",
         "vendor/grain-sdk/examples/android-reference-app/build.gradle.kts",
         "vendor/grain-sdk/scripts/sdk/check_starter_templates.sh",
+        "vendor/grain-sdk/scripts/sdk/run_local_scanner_flow.sh",
+        "vendor/grain-sdk/tools/ci/check_local_scanner_flow_report.py",
         "vendor/grain-sdk/generated-bindings/swift",
         "vendor/grain-sdk/generated-bindings/kotlin",
     ]

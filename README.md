@@ -17,7 +17,7 @@ Pick one path and get a quick win first:
 - Run one happy-path demo: `docs/human/quickstart.md`
 - Build the smallest possible app: `docs/human/sdk/minimal-app-example.md`
 - Run local reference apps without paid accounts: `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`
-- Build a scanner app: `docs/human/sdk/scan-quickstart.md`
+- Run a local scanner flow: `scripts/sdk/run_local_scanner_flow.sh`, then `docs/human/sdk/scan-quickstart.md`
 - Start from app templates: `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`
 - Hand one SDK SHA to another team: `docs/human/sdk/source-sdk-handoff.md`
 - Build an app on top of Grain: `docs/human/building-on-grain.md`

@@ -55,5 +55,9 @@ They should not mix Swift, Kotlin, WASM, generated bindings, workflow contracts,
 device contracts, starter templates, or reference examples from different
 commits.
 
+From a checkout at that same SHA, scanner developers can run
+`scripts/sdk/run_local_scanner_flow.sh` to generate a local QR/trust bundle and
+prove the source-level scanner path without registry or store publication.
+
 Real registry publication is later work. It needs separate release policy,
 credentials, rollback instructions, and evidence for each channel.

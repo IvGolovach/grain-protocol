@@ -33,6 +33,7 @@ jobs:
           python3 -m unittest tools.ci.test_check_sdk_compatibility_matrix
           python3 -m unittest tools.ci.test_check_registry_dry_run_metadata
           python3 -m unittest tools.ci.test_check_external_client_certification
+          python3 -m unittest tools.ci.test_check_local_scanner_flow_report
           python3 -m unittest tools.ci.test_check_no_secret_telemetry
           python3 -m unittest tools.ci.test_check_trust_bundle_governance
           python3 -m unittest tools.ci.test_check_release_train_docs
@@ -274,6 +275,9 @@ jobs:
 
       - name: Verify generated platform SDKs
         run: scripts/sdk/verify_all_sdks.sh --strict --out-dir artifacts/sdk-platform
+
+      - name: Verify local scanner DevKit flow
+        run: scripts/sdk/run_local_scanner_flow.sh --strict --out-dir artifacts/sdk-local-scanner-flow
 
       - name: Package client SDK release artifacts
         run: |

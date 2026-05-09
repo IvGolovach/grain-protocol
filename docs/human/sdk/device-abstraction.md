@@ -52,6 +52,7 @@ or silently accepting a record.
 Run the local reference app and SDK checks:
 
 ```bash
+scripts/sdk/run_local_scanner_flow.sh --strict
 python3 tools/ci/check_device_adapter_contract.py
 scripts/sdk/check_ios_reference_app.sh
 scripts/sdk/check_android_reference_app.sh

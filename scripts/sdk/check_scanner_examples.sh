@@ -92,6 +92,7 @@ if [[ -n "$RUST_TARGET" ]]; then
     echo "SDK_SCANNER_ERR_RUSTUP_REQUIRED: rustup is required to build the JVM-matching Rust target" >&2
     exit 1
   fi
+  cargo build --manifest-path core/rust/Cargo.toml -p grain-client-core
   RUSTUP_TOOLCHAIN="$(rustup show active-toolchain | awk '{print $1}')"
   rustup run "$RUSTUP_TOOLCHAIN" cargo build \
     --manifest-path core/rust/Cargo.toml \
