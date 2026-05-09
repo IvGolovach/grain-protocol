@@ -113,7 +113,7 @@ def validate_report(path: Path, *, expected_commit: str | None = None, require_s
 
     flow = report.get("flow")
     require(isinstance(flow, list) and all(isinstance(item, str) for item in flow), "SDK_LOCAL_FLOW_REPORT_ERR_FLOW")
-    for required in ("issuer_qr", "local_trust_bundle", "scanner_examples"):
+    for required in REQUIRED_CHECKS:
         require(required in flow, f"SDK_LOCAL_FLOW_REPORT_ERR_FLOW: {required}")
 
     artifacts = require_object(report.get("artifacts"), "SDK_LOCAL_FLOW_REPORT_ERR_ARTIFACTS")

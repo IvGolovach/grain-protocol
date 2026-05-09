@@ -122,6 +122,17 @@ class LocalScannerFlowReportTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "SDK_LOCAL_FLOW_REPORT_ERR_CHECK_STATUS"):
             module.validate_report(path, expected_commit="a" * 40, require_strict=True)
 
+    def test_report_requires_sdk_doctor_in_flow(self) -> None:
+        module = load_module()
+        report = valid_report()
+        flow = report["flow"]
+        assert isinstance(flow, list)
+        flow.remove("sdk_doctor")
+        path = self.write_report(report)
+
+        with self.assertRaisesRegex(SystemExit, "SDK_LOCAL_FLOW_REPORT_ERR_FLOW: sdk_doctor"):
+            module.validate_report(path, expected_commit="a" * 40, require_strict=True)
+
     def test_report_rejects_inline_qr_as_artifact_path(self) -> None:
         module = load_module()
         report = valid_report()
