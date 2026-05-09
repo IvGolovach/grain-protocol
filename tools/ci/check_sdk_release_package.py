@@ -33,6 +33,17 @@ EXPECTED_ARTIFACTS = {
             "core/rust/grain-client-wasm/Cargo.toml",
         ],
     },
+    "grain-rust-client-core": {
+        "kind": "rust-client-core",
+        "required_entries": [
+            "core/rust/Cargo.toml",
+            "core/rust/Cargo.lock",
+            "core/rust/rust-toolchain.toml",
+            "core/rust/grain-core/Cargo.toml",
+            "core/rust/grain-client-core/Cargo.toml",
+            "core/rust/grain-client-wasm/Cargo.toml",
+        ],
+    },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
         "required_entries": [

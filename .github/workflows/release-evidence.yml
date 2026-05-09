@@ -66,6 +66,11 @@ jobs:
           python3 tools/ci/check_external_consumer_templates.py \
             --out-dir artifacts/sdk-release \
             --expected-commit "${expected_commit}"
+          python3 tools/ci/check_external_release_consumer_smoke.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}" \
+            --strict \
+            --consumer-root artifacts/external-release-consumer-smoke
           scripts/sdk/check_registry_dry_runs.sh \
             --out-dir artifacts/sdk-registry-dry-runs
 
@@ -208,6 +213,11 @@ jobs:
           python3 tools/ci/check_external_consumer_templates.py \
             --out-dir artifacts/sdk-release \
             --expected-commit "${expected_commit}"
+          python3 tools/ci/check_external_release_consumer_smoke.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}" \
+            --layout-only \
+            --consumer-root artifacts/external-release-consumer-smoke
           python3 tools/ci/check_sdk_compatibility_matrix.py \
             --manifest artifacts/sdk-release/manifest.json
 

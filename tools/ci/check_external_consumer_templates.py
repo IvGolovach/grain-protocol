@@ -39,6 +39,17 @@ EXPECTED_ARTIFACTS = {
             "core/rust/grain-client-wasm/Cargo.toml",
         ],
     },
+    "grain-rust-client-core": {
+        "kind": "rust-client-core",
+        "required_entries": [
+            "core/rust/Cargo.toml",
+            "core/rust/Cargo.lock",
+            "core/rust/rust-toolchain.toml",
+            "core/rust/grain-core/Cargo.toml",
+            "core/rust/grain-client-core/Cargo.toml",
+            "core/rust/grain-client-wasm/Cargo.toml",
+        ],
+    },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
         "required_entries": [
@@ -197,6 +208,12 @@ def validate_consumer_inputs(consumer_root: Path) -> None:
         "vendor/grain-sdk/sdk/swift/Package.swift",
         "vendor/grain-sdk/sdk/kotlin/build.gradle.kts",
         "vendor/grain-sdk/sdk/wasm/package.json",
+        "vendor/grain-sdk/core/rust/Cargo.toml",
+        "vendor/grain-sdk/core/rust/Cargo.lock",
+        "vendor/grain-sdk/core/rust/rust-toolchain.toml",
+        "vendor/grain-sdk/core/rust/grain-core/Cargo.toml",
+        "vendor/grain-sdk/core/rust/grain-client-core/Cargo.toml",
+        "vendor/grain-sdk/core/rust/grain-client-wasm/Cargo.toml",
         "vendor/grain-sdk/sdk/api/public-sdk-v0.1.json",
         "vendor/grain-sdk/sdk/custody/secure_storage_adapter_v1.md",
         "vendor/grain-sdk/sdk/device/device_adapter_v1.schema.json",
