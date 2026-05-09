@@ -45,7 +45,17 @@ static trust providers can load without network discovery or fallback trust.
 ## One scanner path
 
 For the fastest end-to-end scanner bring-up, use
-`docs/human/sdk/scan-quickstart.md`.
+`scripts/sdk/run_local_scanner_flow.sh`:
+
+```bash
+scripts/sdk/run_local_scanner_flow.sh
+```
+
+It runs SDK doctor, creates a local issuer QR and trust bundle under ignored
+`artifacts/`, runs the scanner/reference app smokes when platform prerequisites
+are available, and writes a machine-readable report. Use
+`docs/human/sdk/scan-quickstart.md` for the same path broken into manual steps
+and troubleshooting detail.
 
 For a release owner or app team handoff, use
 `docs/human/sdk/source-sdk-handoff.md`. It names the same-SHA source archives,

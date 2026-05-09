@@ -21,9 +21,11 @@ boundaries. The adapter turns a camera frame into a GR1 string, then the same
 SDK workflow validates, previews, accepts, and lists saved scans.
 
 For a checkout-to-scan walkthrough, use
-`docs/human/sdk/scan-quickstart.md`. It shows how to generate a signed local
-issuer QR, wrap the emitted public trust key in a local trust anchor bundle, and
-feed a stable trust anchor ID into these shells.
+`scripts/sdk/run_local_scanner_flow.sh`, then
+`docs/human/sdk/scan-quickstart.md` for the manual steps. The script generates a
+signed local issuer QR, wraps the emitted public trust key in a local trust
+anchor bundle, runs the scanner/reference app checks when platform prerequisites
+are available, and writes a local report under ignored `artifacts/`.
 
 For the no-paid-account reference app path, use
 `docs/human/sdk/quickstart-ios-reference-app.md` for local Xcode plus an
@@ -44,6 +46,7 @@ identity, pairing, and sync artifacts.
 ## Check
 
 ```bash
+scripts/sdk/run_local_scanner_flow.sh --strict
 scripts/sdk/check_scanner_examples.sh
 scripts/sdk/check_ios_reference_app.sh
 scripts/sdk/check_android_reference_app.sh

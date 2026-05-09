@@ -112,6 +112,8 @@ def write_release(release_dir: Path, *, wasm_commit: str = COMMIT) -> None:
                 "examples/ios-reference-app/Package.swift": "// swift reference app\n",
                 "examples/android-reference-app/build.gradle.kts": "plugins {}\n",
                 "scripts/sdk/check_starter_templates.sh": "#!/usr/bin/env bash\n",
+                "scripts/sdk/run_local_scanner_flow.sh": "#!/usr/bin/env bash\n",
+                "tools/ci/check_local_scanner_flow_report.py": "#!/usr/bin/env python3\n",
             },
         ),
     ]
@@ -167,6 +169,12 @@ class ExternalConsumerTemplateTests(unittest.TestCase):
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/examples/ios-reference-app/Package.swift").is_file())
             self.assertTrue(
                 (result.consumer_root / "vendor/grain-sdk/examples/android-reference-app/build.gradle.kts").is_file()
+            )
+            self.assertTrue(
+                (result.consumer_root / "vendor/grain-sdk/scripts/sdk/run_local_scanner_flow.sh").is_file()
+            )
+            self.assertTrue(
+                (result.consumer_root / "vendor/grain-sdk/tools/ci/check_local_scanner_flow_report.py").is_file()
             )
 
     def test_mixed_sha_release_artifact_is_rejected(self) -> None:

@@ -60,6 +60,8 @@ ARTIFACT_KINDS = {
             "examples/android-scanner",
             "examples/wasm-scanner",
             "scripts/sdk/check_starter_templates.sh",
+            "scripts/sdk/run_local_scanner_flow.sh",
+            "tools/ci/check_local_scanner_flow_report.py",
             "docs/human/sdk/start-here.md",
             "docs/human/sdk/scan-quickstart.md",
         ],

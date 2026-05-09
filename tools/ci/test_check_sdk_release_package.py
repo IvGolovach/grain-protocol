@@ -65,6 +65,8 @@ class SdkReleasePackageArchivePolicyTests(unittest.TestCase):
         self.assertIn("sdk/device/README.md", workflow)
         self.assertIn("examples/ios-reference-app/Package.swift", starters)
         self.assertIn("examples/android-reference-app/build.gradle.kts", starters)
+        self.assertIn("scripts/sdk/run_local_scanner_flow.sh", starters)
+        self.assertIn("tools/ci/check_local_scanner_flow_report.py", starters)
 
 
 if __name__ == "__main__":

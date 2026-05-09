@@ -24,6 +24,23 @@ It does not publish npm, Maven, Swift Package Index, App Store, Play Store, PWA,
 or robot-device packages. It also does not certify hardware key custody by
 itself.
 
+## Fast Path
+
+Run the local scanner DevKit flow:
+
+```bash
+scripts/sdk/run_local_scanner_flow.sh
+```
+
+The script runs SDK doctor, generates `issuer-output.json`, writes
+`qr-string.txt` and `local-trust-bundle.json` under ignored `artifacts/`, runs
+the scanner/reference app smokes when local platform prerequisites are
+available, and writes `local-scanner-flow.json`. Use `--strict` when missing
+Swift, Java, npm, Cargo, or rustc should fail the run instead of being reported
+as an unsupported local prerequisite.
+
+The sections below are the same flow split into manual steps.
+
 ## 1. Start From One SDK SHA
 
 Use one checkout, release tag, or SDK source package for all platforms. Do not
