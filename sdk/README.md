@@ -119,9 +119,10 @@ scripts/sdk/package_client_sdks.sh
 ```
 
 Artifacts are written under `artifacts/sdk-release/<commit>/`, which is ignored
-by git. The script packages source SDKs, generated binding snapshots, workflow
-fixtures, a manifest, `SHA256SUMS`, and an SPDX JSON SBOM. Build caches and
-local package-manager directories are excluded from the archives. By default it
+by git. The script packages source SDKs, the Rust client-core source bundle
+used by native wrappers, generated binding snapshots, workflow fixtures, a
+manifest, `SHA256SUMS`, and an SPDX JSON SBOM. Build caches and local
+package-manager directories are excluded from the archives. By default it
 refuses a dirty working tree and runs strict SDK verification before packaging.
 This is source-artifact certification for the same repo SHA. It does not publish
 to npm, Maven, Swift Package indexes, app stores, or PWA distribution channels,
@@ -148,16 +149,22 @@ python3 tools/ci/check_external_sdk_handoff.py \
 python3 tools/ci/check_external_consumer_templates.py \
   --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
   --expected-commit "$(git rev-parse HEAD)"
+python3 tools/ci/check_external_release_consumer_smoke.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --strict
 python3 tools/ci/check_sdk_compatibility_matrix.py \
   --manifest artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json
 ```
 
 That receiver-side check extracts the source archives into a temporary
 `vendor/grain-sdk/<sha>` layout, validates the public Swift, Kotlin, WASM,
-generated-binding, workflow, and trust inputs, and rejects registry/store or
-monorepo-internal claims. The external consumer template check also validates
-the public API snapshot, custody docs, safe diagnostic schema, and starter
-template archive.
+generated-binding, workflow, device, Rust client-core, and trust inputs, and
+rejects registry/store or monorepo-internal claims. The external consumer
+template check also validates the public API snapshot, custody docs, safe
+diagnostic schema, and starter-template archive. The external release consumer
+smoke then builds from that extracted layout so native and web consumers prove
+the package works without relying on the original repo checkout.
 
 Check starter templates and registry dry-run metadata:
 

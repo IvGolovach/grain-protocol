@@ -11,6 +11,7 @@ and Rust crates that were not reviewed together.
 | Frozen protocol contract | `spec/NES-v0.1.md`, `conformance/**` | v0.1 semantics | Protocol semantics remain frozen; SDK changes must preserve protocol verdicts and diagnostics. |
 | Rust protocol core | `core/rust/grain-core` | `0.2.0` | Client workflows must consume this through `grain-client-core`, not through app wrappers. |
 | Rust client workflow core | `core/rust/grain-client-core` | `0.1.0` | Swift, Kotlin, WASM, and future device SDKs must be generated/wrapped from the same repo SHA or release tag. |
+| Rust client-core source release | `grain-rust-client-core-<sha>.tar.gz` | repo-SHA versioned | Source handoffs include the trimmed Rust workspace needed to build the native client library from release assets without cloning the monorepo. |
 | Client workflow contract | `sdk/workflows/contract/client_workflow_v1.md` | v1 | Platform SDKs are conformant only after their public APIs pass the v1 workflow fixtures. |
 | UniFFI binding generator | `core/rust/uniffi-bindgen`, workspace `uniffi` | `0.31.1` | Regenerate Swift/Kotlin bindings with repo scripts; do not patch generated files by hand. |
 | Swift client package | `sdk/swift` | repo-SHA versioned | Use with the matching `grain-client-core` native library and checked-in generated Swift sources. |
@@ -70,13 +71,15 @@ That command proves:
 - registry dry-runs record no credentials and no publication
 - SDK code stays network/vendor agnostic
 - the SDK release package contains same-commit source artifacts, generated
-  bindings, workflow contract/docs, `manifest.json`, `SHA256SUMS`, and
-  `sbom.spdx.json`
+  bindings, Rust client-core source, workflow contract/docs, `manifest.json`,
+  `SHA256SUMS`, and `sbom.spdx.json`
 - the release package checker verifies artifact checksums, archive cleanliness,
   SDK component versions, the version-matrix hash, and SBOM package checksums
 - the release package is source-only: registry publication, compiled WASM
   binaries, PWA packaging, app-store packaging, and device custody policy stay
   outside this certificate
+- the external release consumer smoke builds from extracted release assets
+  rather than from the original repo checkout
 
 The `ci` workflow runs the same strict platform SDK gate in the `sdk-platform`
 job on a Swift 6-capable macOS runner, packages the SDK release artifacts after

@@ -28,6 +28,7 @@ jobs:
           python3 -m unittest tools.ci.test_check_external_sdk_handoff
           python3 -m unittest tools.ci.test_check_release_evidence_assets
           python3 -m unittest tools.ci.test_check_external_consumer_templates
+          python3 -m unittest tools.ci.test_check_external_release_consumer_smoke
           python3 -m unittest tools.ci.test_check_public_sdk_api
           python3 -m unittest tools.ci.test_check_device_adapter_contract
           python3 -m unittest tools.ci.test_check_sdk_compatibility_matrix
@@ -294,6 +295,11 @@ jobs:
           python3 tools/ci/check_external_consumer_templates.py \
             --out-dir artifacts/sdk-release \
             --expected-commit "${expected_commit}"
+          python3 tools/ci/check_external_release_consumer_smoke.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}" \
+            --strict \
+            --consumer-root artifacts/external-release-consumer-smoke
           scripts/sdk/check_registry_dry_runs.sh \
             --out-dir artifacts/sdk-registry-dry-runs
 
@@ -396,6 +402,11 @@ jobs:
             --expected-commit "${expected_commit}" \
             --require-strict \
             --require-clean
+          python3 tools/ci/check_external_release_consumer_smoke.py \
+            --out-dir artifacts/sdk-release \
+            --expected-commit "${expected_commit}" \
+            --layout-only \
+            --consumer-root artifacts/external-release-consumer-smoke
 
       - uses: ./.github/actions/build-evidence-bundle
         with:

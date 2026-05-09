@@ -6,7 +6,7 @@ snapshots, scanner examples, and the local issuer QR path.
 
 This is not a registry or store release. It is a same-SHA source handoff that
 lets a developer build against reviewed Swift, Kotlin, WASM, generated binding,
-workflow, and trust-bundle inputs from one commit.
+Rust client-core, workflow, and trust-bundle inputs from one commit.
 
 ## Handoff Packet
 
@@ -19,6 +19,7 @@ Strict SDK proof:
 SDK package check:
 External app handoff check:
 External consumer template check:
+External release consumer smoke:
 Public API check:
 Compatibility matrix check:
 Registry dry-run check:
@@ -39,6 +40,7 @@ Attach or point to these same-SHA assets:
 | `grain-swift-client-<sha>.tar.gz` | Swift Package Manager source wrapper over the generated client workflow API. |
 | `grain-kotlin-client-<sha>.tar.gz` | Kotlin/JVM source wrapper over the generated client workflow API. |
 | `grain-wasm-client-<sha>.tar.gz` | WASM/mobile-web source wrapper and Rust WASM crate source. |
+| `grain-rust-client-core-<sha>.tar.gz` | Trimmed Rust workspace source required to build the native `grain-client-core` library for Swift/Kotlin consumers without cloning the monorepo. |
 | `grain-sdk-workflow-contract-<sha>.tar.gz` | Client workflow fixtures, public API snapshot, safe diagnostic event schema, trust bundle schema, custody adapter contract, generated-lane docs, release-train docs, and version matrix. |
 | `grain-starter-templates-<sha>.tar.gz` | iOS, Android, and Web/WASM starter templates, reusable scanner-shell examples they depend on, and the starter-template smoke command. |
 
@@ -64,6 +66,10 @@ python3 tools/ci/check_external_sdk_handoff.py \
 python3 tools/ci/check_external_consumer_templates.py \
   --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
   --expected-commit "$(git rev-parse HEAD)"
+python3 tools/ci/check_external_release_consumer_smoke.py \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
+  --expected-commit "$(git rev-parse HEAD)" \
+  --strict
 python3 tools/ci/check_sdk_compatibility_matrix.py \
   --manifest artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json
 python3 tools/ci/check_public_sdk_api.py
@@ -85,6 +91,9 @@ source-only rather than an npm, Maven, Swift package-index, app-store, or
 compiled-WASM channel. `check_external_consumer_templates.py` proves the same
 packet also contains the public API snapshot, custody docs, safe diagnostic
 schema, and starter-template inputs that an outside app team needs.
+`check_external_release_consumer_smoke.py` extracts the source packet into an
+outside-app layout, validates that the Rust workspace is limited to client
+crates, and builds/smokes the public starter paths from that layout.
 
 Before calling the packet ready, run:
 
@@ -127,6 +136,7 @@ mkdir -p vendor/grain-sdk/<sha>
 tar -xzf grain-swift-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-kotlin-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-wasm-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
+tar -xzf grain-rust-client-core-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-generated-bindings-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-sdk-workflow-contract-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-starter-templates-<sha>.tar.gz -C vendor/grain-sdk/<sha>

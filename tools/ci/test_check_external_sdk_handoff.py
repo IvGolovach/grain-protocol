@@ -46,6 +46,19 @@ def write_archive(path: Path, entries: dict[str, str]) -> None:
 def write_minimal_release(out_dir: Path) -> None:
     artifacts = [
         (
+            "grain-rust-client-core",
+            "rust-client-core",
+            {
+                "core/rust/Cargo.toml": "[workspace]\nmembers = ['grain-core', 'grain-client-core']\n",
+                "core/rust/Cargo.lock": "# lock\n",
+                "core/rust/rust-toolchain.toml": "[toolchain]\n",
+                "core/rust/grain-core/Cargo.toml": "[package]\nname='grain-core'\n",
+                "core/rust/grain-client-core/Cargo.toml": "[package]\nname='grain-client-core'\n",
+                "core/rust/grain-client-core/src/lib.rs": "pub fn smoke() {}\n",
+                "core/rust/grain-client-wasm/Cargo.toml": "[package]\nname='grain-client-wasm'\n",
+            },
+        ),
+        (
             "grain-swift-client",
             "swift-client",
             {"sdk/swift/Package.swift": "// swift package\n", "sdk/swift/Sources/GrainClient/GrainClient.swift": "// api\n"},
@@ -81,6 +94,8 @@ def write_minimal_release(out_dir: Path) -> None:
             {
                 "sdk/api/public-sdk-v0.1.json": "{}\n",
                 "sdk/custody/secure_storage_adapter_v1.md": "# storage\n",
+                "sdk/device/device_adapter_v1.schema.json": "{}\n",
+                "sdk/device/README.md": "# device\n",
                 "sdk/workflows/contract/client_workflow_v1.md": "# contract\n",
                 "sdk/workflows/contract/safe_diagnostic_event_v1.schema.json": "{}\n",
                 "sdk/trust/trust_anchor_bundle_v1.schema.json": "{}\n",
@@ -101,7 +116,11 @@ def write_minimal_release(out_dir: Path) -> None:
                 "examples/ios-scanner/Package.swift": "// swift\n",
                 "examples/android-scanner/build.gradle.kts": "plugins {}\n",
                 "examples/wasm-scanner/package.json": "{}\n",
+                "examples/ios-reference-app/Package.swift": "// swift reference app\n",
+                "examples/android-reference-app/build.gradle.kts": "plugins {}\n",
                 "scripts/sdk/check_starter_templates.sh": "#!/usr/bin/env bash\n",
+                "scripts/sdk/run_local_scanner_flow.sh": "#!/usr/bin/env bash\n",
+                "tools/ci/check_local_scanner_flow_report.py": "#!/usr/bin/env python3\n",
             },
         ),
     ]
@@ -148,9 +167,13 @@ class ExternalSdkHandoffTests(unittest.TestCase):
 
             self.assertEqual(result.commit, COMMIT)
             self.assertEqual(result.registry_channel, "source-only")
+            self.assertTrue((vendor_dir / COMMIT / "core/rust/Cargo.toml").is_file())
+            self.assertTrue((vendor_dir / COMMIT / "core/rust/grain-client-core/Cargo.toml").is_file())
             self.assertTrue((vendor_dir / COMMIT / "sdk/swift/Package.swift").is_file())
             self.assertTrue((vendor_dir / COMMIT / "sdk/kotlin/build.gradle.kts").is_file())
             self.assertTrue((vendor_dir / COMMIT / "sdk/wasm/package.json").is_file())
+            self.assertTrue((vendor_dir / COMMIT / "sdk/device/device_adapter_v1.schema.json").is_file())
+            self.assertTrue((vendor_dir / COMMIT / "scripts/sdk/run_local_scanner_flow.sh").is_file())
 
     def test_registry_publication_claim_is_rejected_for_source_handoff(self) -> None:
         module = load_module()

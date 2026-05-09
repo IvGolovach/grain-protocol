@@ -9,7 +9,8 @@ It is developer guidance, not a release announcement.
 The current supported channel is source-only. A consumer receives same-SHA
 source archives, manifest metadata, checksums, SBOM data, workflow fixtures,
 generated binding snapshots, starter templates, public API snapshots, custody
-docs, and local trust-bundle inputs from one commit or release tag.
+docs, Rust client-core source, and local trust-bundle inputs from one commit or
+release tag.
 
 This is the right channel until registry packaging has its own release policy
 and automated proof. It keeps the app team on reviewed source while avoiding
@@ -23,10 +24,11 @@ The source-only packet must include:
 - `manifest.json`, `SHA256SUMS`, and `sbom.spdx.json`
 - strict SDK proof or a recorded upstream strict SDK gate
 - generated Swift/Kotlin binding snapshot
-- Swift, Kotlin, WASM, workflow, trust-bundle, custody/API, and starter-template
-  source archives
+- Swift, Kotlin, WASM, Rust client-core, workflow, trust-bundle, custody/API,
+  and starter-template source archives
 - public API snapshot and compatibility matrix proof
 - external consumer template proof
+- external release consumer smoke proof
 - registry dry-run metadata that records no credentials and no publication
 - known local prerequisites and residual gaps
 

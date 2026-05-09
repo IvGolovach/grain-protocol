@@ -58,9 +58,13 @@ class SdkReleasePackageArchivePolicyTests(unittest.TestCase):
     def test_reference_apps_and_device_contract_are_required_entries(self) -> None:
         module = load_module()
 
+        rust_core = module.EXPECTED_ARTIFACTS["grain-rust-client-core"]["required_entries"]
         workflow = module.EXPECTED_ARTIFACTS["grain-sdk-workflow-contract"]["required_entries"]
         starters = module.EXPECTED_ARTIFACTS["grain-starter-templates"]["required_entries"]
 
+        self.assertIn("core/rust/Cargo.toml", rust_core)
+        self.assertIn("core/rust/grain-core/Cargo.toml", rust_core)
+        self.assertIn("core/rust/grain-client-core/Cargo.toml", rust_core)
         self.assertIn("sdk/device/device_adapter_v1.schema.json", workflow)
         self.assertIn("sdk/device/README.md", workflow)
         self.assertIn("examples/ios-reference-app/Package.swift", starters)

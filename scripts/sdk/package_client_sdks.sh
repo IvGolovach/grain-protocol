@@ -123,6 +123,35 @@ trap 'rm -rf "$STAGING"' EXIT
 
 scripts/sdk/generate_client_bindings.sh --out-dir "$STAGING/generated-bindings" --language all
 
+RUST_CLIENT_STAGE="$STAGING/rust-client-core/core/rust"
+mkdir -p "$RUST_CLIENT_STAGE"
+cp core/rust/Cargo.lock core/rust/rust-toolchain.toml "$RUST_CLIENT_STAGE/"
+python3 - "$ROOT/core/rust/Cargo.toml" "$RUST_CLIENT_STAGE/Cargo.toml" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+source, target = (Path(arg) for arg in sys.argv[1:])
+text = source.read_text(encoding="utf-8")
+replacement = '''members = [
+  "grain-core",
+  "grain-client-core",
+  "grain-client-wasm",
+]
+resolver = "2"'''
+text, count = re.subn(
+    r'members = \[\n.*?\]\nresolver = "2"',
+    replacement,
+    text,
+    count=1,
+    flags=re.S,
+)
+if count != 1:
+    raise SystemExit("SDK_PACKAGE_ERR_RUST_WORKSPACE_TRIM_FAILED")
+target.write_text(text, encoding="utf-8")
+PY
+cp -R core/rust/grain-core core/rust/grain-client-core core/rust/grain-client-wasm "$RUST_CLIENT_STAGE/"
+
 tar_gz() {
   local artifact="$1"
   shift
@@ -158,6 +187,10 @@ tar_gz "grain-wasm-client-$COMMIT_SHA.tar.gz" \
   -C "$ROOT" \
   sdk/wasm \
   core/rust/grain-client-wasm
+tar_gz "grain-rust-client-core-$COMMIT_SHA.tar.gz" \
+  --exclude 'core/rust/target' \
+  -C "$STAGING/rust-client-core" \
+  core/rust
 tar_gz "grain-sdk-workflow-contract-$COMMIT_SHA.tar.gz" \
   -C "$ROOT" \
   sdk/api \
