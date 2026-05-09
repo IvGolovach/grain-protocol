@@ -121,10 +121,13 @@ run_check() {
   local name="$1"
   shift
   local log_file="logs/${name}.txt"
+  local cmd_display
+  cmd_display="$(printf '%q ' "$@")"
+  cmd_display="${cmd_display% }"
   if "$@" >"$OUT_DIR_ABS/$log_file" 2>&1; then
-    append_check "$name" "pass" "$*" "$log_file"
+    append_check "$name" "pass" "$cmd_display" "$log_file"
   else
-    append_check "$name" "fail" "$*" "$log_file"
+    append_check "$name" "fail" "$cmd_display" "$log_file"
     status=1
   fi
 }
@@ -212,7 +215,7 @@ CHECKS_JSONL="$OUT_DIR_ABS/logs/checks.jsonl"
 REPORT="$OUT_DIR_ABS/local-scanner-flow.json"
 : > "$CHECKS_JSONL"
 
-BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
+BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=normal)"
 status=0
 
 run_check "sdk_doctor" scripts/sdk/doctor
@@ -316,7 +319,7 @@ fi
 
 write_final_report
 
-AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
+AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=normal)"
 if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then
   echo "SDK_LOCAL_FLOW_ERR_DIRTY_WORKTREE_CHANGED: local scanner flow changed git status" >&2
   diff <(printf '%s\n' "$BEFORE_STATUS") <(printf '%s\n' "$AFTER_STATUS") >&2 || true
