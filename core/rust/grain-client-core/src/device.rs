@@ -95,23 +95,83 @@ pub(crate) fn lifecycle_event(
     seq: u64,
     target_ak: &str,
 ) -> LifecycleEventRecord {
-    let payload_cid = match t {
-        "DeviceKeyGrant" => format!("grant:{target_ak}"),
-        "DeviceKeyRevoke" => format!("revoke:{target_ak}"),
-        _ => format!("lifecycle:{target_ak}"),
-    };
-    let event_id = format!(
-        "event-sha256:{}",
-        hex_sha256(format!("{t}:{root_kid}:{seq}:{target_ak}").as_bytes())
-    );
     LifecycleEventRecord {
-        event_id,
+        event_id: lifecycle_event_id(t, root_kid, seq, target_ak),
         t: t.to_string(),
         ak: root_kid.to_string(),
         seq,
-        payload_cid,
+        payload_cid: lifecycle_payload_cid(t, target_ak)
+            .unwrap_or_else(|| format!("lifecycle:{target_ak}")),
         target_ak: target_ak.to_string(),
     }
+}
+
+pub(crate) fn validate_lifecycle_event_record(
+    event: &LifecycleEventRecord,
+    identity: &IdentityBundleV1,
+) -> bool {
+    if event.event_id.is_empty()
+        || event.t.is_empty()
+        || event.ak.is_empty()
+        || event.payload_cid.is_empty()
+        || event.target_ak.is_empty()
+        || event.seq == 0
+    {
+        return false;
+    }
+    if event.ak != identity.root_kid {
+        return false;
+    }
+    let Some(expected_payload) = lifecycle_payload_cid(&event.t, &event.target_ak) else {
+        return false;
+    };
+    if event.payload_cid != expected_payload
+        || event.event_id != lifecycle_event_id(&event.t, &event.ak, event.seq, &event.target_ak)
+    {
+        return false;
+    }
+    let Some(root_seq) = identity
+        .seq_state
+        .get(&event.ak)
+        .and_then(|seq| seq.parse::<u64>().ok())
+    else {
+        return false;
+    };
+    if event.seq > root_seq {
+        return false;
+    }
+    if event.target_ak == identity.root_kid
+        || !identity
+            .device_keys
+            .iter()
+            .any(|device| device.ak == event.target_ak)
+    {
+        return false;
+    }
+    if event.t == "DeviceKeyRevoke"
+        && !identity
+            .revoked_aks
+            .iter()
+            .any(|revoked| revoked == &event.target_ak)
+    {
+        return false;
+    }
+    true
+}
+
+fn lifecycle_payload_cid(t: &str, target_ak: &str) -> Option<String> {
+    match t {
+        "DeviceKeyGrant" => Some(format!("grant:{target_ak}")),
+        "DeviceKeyRevoke" => Some(format!("revoke:{target_ak}")),
+        _ => None,
+    }
+}
+
+fn lifecycle_event_id(t: &str, root_kid: &str, seq: u64, target_ak: &str) -> String {
+    format!(
+        "event-sha256:{}",
+        hex_sha256(format!("{t}:{root_kid}:{seq}:{target_ak}").as_bytes())
+    )
 }
 
 fn device_from_bundle<S: IdentityClientStore>(

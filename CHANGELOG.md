@@ -81,6 +81,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - app-controlled pairing envelope create/preview/accept/replay
     - sync bundle export/import/replay for identity, accepted scans, and lifecycle events
     - atomic rollback/idempotency tests for malformed imports, pairing conflicts, and sync conflicts
+    - lifecycle events imported from sync bundles or snapshots must be root-authored grant/revoke records with derived event IDs, matching payload CIDs, in-range sequence numbers, and known non-root target devices
   - expanded generated Swift/Kotlin/WASM wrappers and shared client workflow fixtures for lifecycle, pairing, and sync parity.
   - added rationale: `docs/human/rationale/TOR-PAIRING-A01.md`.
   - added ADR: `adr/sdk/0004-portable-client-core-generated-platform-sdks.md`.

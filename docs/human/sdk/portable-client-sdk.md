@@ -143,6 +143,7 @@ The identity, device lifecycle, pairing, and sync slice is now present:
 - device authorization keys can be added, activated, revoked, and reported through `client_lifecycle`
 - pairing envelopes move an identity bundle through an app-controlled transfer channel and are idempotent on replay
 - sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics
+- lifecycle events imported from sync bundles or snapshots are revalidated as derived root-authored grant/revoke records before any store mutation
 - Swift, Kotlin, and WASM wrappers expose the same workflow methods through their public `GrainClient` APIs
 
 This is still a portable SDK core, not final production key custody. iOS,
