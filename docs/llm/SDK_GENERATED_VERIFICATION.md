@@ -168,13 +168,19 @@ future release process explicitly names a tracked artifact.
 - workflow contract/docs tarball, including `sdk/trust` bundle schema and
   fixtures
 - manifest with commit SHA, same-SHA version-matrix hash, SDK component
-  versions, artifact byte counts, and SHA-256 checksums
+  versions, artifact byte counts, bounded consumer install paths, and SHA-256
+  checksums
 - SPDX 2.3 JSON SBOM with package checksums for every release artifact
 - `SHA256SUMS` for the tarballs and SBOM
 
 The default path refuses a dirty worktree and runs strict SDK verification before
 packaging. Archives must not contain `node_modules`, `dist`, `build`, `.build`,
 `.gradle`, `.kotlin`, `target`, `pkg`, or `.wasm` build output.
+
+The package manifest also records the bounded repo-relative paths an external
+consumer should install or vendor for each artifact; release package checking
+rejects missing, absolute, parent-traversing, or otherwise mismatched consumer
+paths.
 
 The package is a source-archive release candidate for the same repo SHA. It does
 not publish npm/Maven/SPM registry entries, does not certify App Store, Play
