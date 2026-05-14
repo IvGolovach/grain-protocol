@@ -3,6 +3,7 @@
   "description": "Deterministic subset for WASM read/verify path portability checks",
   "vector_ids": [
     "NEG-ENC-001",
+    "NEG-ENC-WA-0001",
     "POS-UTF8-WA-0001",
     "POS-CID-001",
     "POS-COSE-001",
