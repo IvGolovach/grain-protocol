@@ -4,6 +4,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 
 ## [Unreleased]
 - Repository-wide audit hardening:
+  - aligned TypeScript COSE/GR1 verification with the strict issuer profile: protected `kid` must match `first16(SHA-256(pubkey))`, and `verifyGR1()` now rejects signed payloads that are not strict matching `ServingOffer` records.
   - made TypeScript base64 decoding strict so malformed standard-base64 fields reject with `GRAIN_ERR_SCHEMA` instead of being silently decoded by Node.
   - aligned Rust and TypeScript E2E decrypt precedence so nonce profile mismatches are reported before AEAD authentication, and added a separate AEAD tamper vector.
   - added regression scripts for base64 and E2E diagnostic contracts to developer verify, CI, and release-evidence paths.

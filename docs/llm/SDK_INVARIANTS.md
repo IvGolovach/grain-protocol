@@ -38,8 +38,8 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0009 deterministic error model`)
   Modules: `core/ts/grain-sdk/src/errors.ts`, `core/ts/grain-sdk/src/codec.ts`
 
-- SDK-INV-0010: transport decode and verify MUST stay separate; verify requires explicit trust, and bundle import/export MUST be deterministic + schema-checked + strict-base64-validated on imported binary fields.
-  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`, `SDK-INV-0010 transport verify requires explicit trust`)
+- SDK-INV-0010: transport decode and verify MUST stay separate; verify requires explicit trust, enforces strict `ServingOffer` payload/profile validation, and bundle import/export MUST be deterministic + schema-checked + strict-base64-validated on imported binary fields.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`, `SDK-INV-0010 transport verify requires explicit trust`, `SDK-NEG-0029 verifyGR1 rejects ServingOffer issuer_kid mismatch`)
   Modules: `core/ts/grain-sdk/src/transport.ts`
 
 - SDK-INV-0011: raw ledger CBOR-seq export MUST be deterministic and parseable as canonical CBOR sequence.

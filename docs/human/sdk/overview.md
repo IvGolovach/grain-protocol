@@ -29,7 +29,7 @@ This page is the capability map after that first run.
 - `manifest`: deterministic put/del/resolve wrappers
 - `transport`: GR1 encode/decode/verify wrappers
   - `decodeGR1()` is decode-only
-  - `verifyGR1()` is verify-only, requires explicit `trust.pub_b64`, and rejects malformed trust bytes before verification runs
+  - `verifyGR1()` is verify-only, requires explicit `trust.pub_b64`, rejects malformed trust bytes before verification runs, and accepts only strict `ServingOffer` payloads whose `issuer_kid` matches the verified COSE `kid`
   - transport bundles reject malformed event/manifest rows and invalid base64 on imported binary fields instead of guessing
 - portable client core (`core/rust/grain-client-core`): Rust workflow layer for generated Swift/Kotlin/WASM/device SDKs
   - `scan_preview()` returns `Verified`, `Untrusted`, or `Rejected` without exposing raw protocol runner operations

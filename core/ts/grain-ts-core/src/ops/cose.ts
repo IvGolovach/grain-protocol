@@ -5,11 +5,10 @@ import type { CborNode, Json, OperationActual } from "../types.js";
 import {
   encodeCanonical,
   GENERIC_CBOR_CANONICAL_OPTIONS,
-  mapGet,
   nodeAsBytes,
   parseExact
 } from "../cbor.js";
-import { bytesEq, decodeB64 } from "../utils.js";
+import { bytesEq, decodeB64, sha256 } from "../utils.js";
 
 const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 
@@ -18,6 +17,15 @@ export function opCoseVerify(input: Record<string, Json>): OperationActual {
   const pubKey = decodeB64(input.pub_b64);
   const externalAad = decodeB64(input.external_aad_b64);
 
+  verifyCoseSign1Payload(coseBytes, pubKey, externalAad);
+  return { accepted: true, diag: [], out: {} };
+}
+
+export function verifyCoseSign1Payload(
+  coseBytes: Uint8Array,
+  pubKey: Uint8Array,
+  externalAad: Uint8Array
+): { payload: Uint8Array; kid: Uint8Array } {
   if (isTopLevelTag18(coseBytes)) {
     throw new GrainDiagError("GRAIN_ERR_COSE_TAG18_FORBIDDEN");
   }
@@ -58,9 +66,13 @@ export function opCoseVerify(input: Record<string, Json>): OperationActual {
     throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
   }
 
-  validateProtectedHeaders(protectedNode);
+  const protectedKid = validateProtectedHeaders(protectedNode);
 
   if (pubKey.length !== 32) {
+    throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
+  }
+  const expectedKid = sha256(pubKey).slice(0, 16);
+  if (!bytesEq(protectedKid, expectedKid)) {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
 
@@ -95,16 +107,16 @@ export function opCoseVerify(input: Record<string, Json>): OperationActual {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
 
-  return { accepted: true, diag: [], out: {} };
+  return { payload, kid: protectedKid };
 }
 
-function validateProtectedHeaders(node: CborNode): void {
+function validateProtectedHeaders(node: CborNode): Uint8Array {
   if (node.kind !== "m" || node.entries.length !== 2) {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
 
   let algOk = false;
-  let kidOk = false;
+  let protectedKid: Uint8Array | undefined;
   for (const entry of node.entries) {
     if (entry.key.kind !== "u") {
       throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
@@ -122,16 +134,20 @@ function validateProtectedHeaders(node: CborNode): void {
       if (entry.value.kind !== "b") {
         throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
       }
-      kidOk = true;
+      if (entry.value.value.length !== 16) {
+        throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
+      }
+      protectedKid = entry.value.value;
       continue;
     }
 
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
 
-  if (!(algOk && kidOk)) {
+  if (!algOk || !protectedKid) {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
+  return protectedKid;
 }
 
 function isTopLevelTag18(bytes: Uint8Array): boolean {

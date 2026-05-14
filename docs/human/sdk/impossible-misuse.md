@@ -34,13 +34,16 @@ This checklist documents what public SDK APIs reject by construction.
 10. Verify call with malformed trust bytes
    - rejected by `transport.verifyGR1(...)`
    - code: `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`
-11. Forged/expired/unknown AI accepted token
+11. Verify call with a signed non-matching `ServingOffer`
+   - COSE signature may verify, but payload `issuer_kid` must match the protected issuer `kid`
+   - code: `GRAIN_ERR_SCHEMA`
+12. Forged/expired/unknown AI accepted token
    - rejected by `ai.applyAccepted(...)`
    - code: `SDK_ERR_ACCEPT_TOKEN_FORGED` / `SDK_ERR_ACCEPT_TOKEN_UNKNOWN` / `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
-12. AI candidate bypass around deterministic firewall
+13. AI candidate bypass around deterministic firewall
    - no public `sdk.store` access; side effects require sidecar `accept()` then opaque token apply
    - code path: `SDK-AI-001` gate suite
-13. Unknown critical AI candidate extensions
+14. Unknown critical AI candidate extensions
    - quarantined deterministically
    - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
 

@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUEJCQkJCQkJCQkJCQkJCQkKgUKFhdGxTZXJ2aW5nT2ZmZXJYQAHLRFb3xw1L4EDmJ5RwN5unWFllLI9d1iau5POSC6KzKt8yx7bTN71dYR/5G1KXh+YJWw6Cegi0+B78lK4DNwY=",
+    "external_aad_b64": "",
+    "pub_b64": "6kpsY+KcUgq+9VB7Ey7F+ZVHdq6+vnuSQh7qaRRG0iw="
+  },
+  "meta": {
+    "desc": "Protected kid MUST be first16(SHA-256(pubKey)); a valid signature over a mismatched protected kid must reject."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-WA-0002"
+}

@@ -60,6 +60,10 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
   Ref: NES §5.3  
   Vectors: NEG-COSE-020
 
+- INV-COSE-004: Protected `kid` MUST equal first16(SHA-256(raw_pubkey)); mismatched pubkey/kid pairings reject.
+  Ref: spec/profiles/cose-profile.md §5
+  Vectors: NEG-COSE-WA-0002
+
 ## Ledger semantics
 
 - INV-LED-001: Root-only grant/revoke authority.  

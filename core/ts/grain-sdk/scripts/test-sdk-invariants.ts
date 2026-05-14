@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 
+import { createHash, createPrivateKey, createPublicKey, sign } from "node:crypto";
 import { readFileSync } from "node:fs";
+
+import { encodeCanonical } from "grain-ts-core/cbor";
+import type { CborNode } from "grain-ts-core/types";
 
 import { GrainSdk, InMemorySdkStore } from "../src/index.js";
 import { SdkError } from "../src/errors.js";
 import { buildSetArray } from "../src/primitives.js";
 import type { GrainSdkStore, IdentityBundleV1, LedgerEvent } from "../src/index.js";
+
+const ED25519_PKCS8_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
 
 const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 
@@ -169,6 +175,22 @@ async function run(): Promise<number> {
     } catch (err) {
       const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
       fail("SDK-INV-0010 transport verify requires explicit trust", `unexpected code: ${code}`);
+    }
+
+    try {
+      const tampered = signedServingOfferWithMismatchedIssuerKid(sdk);
+      sdk.transport.verifyGR1({
+        qr_string: tampered.qr_string,
+        trust: { pub_b64: tampered.pub_b64 }
+      });
+      fail("SDK-NEG-0029 verifyGR1 rejects ServingOffer issuer_kid mismatch", "verifyGR1 accepted a signed offer for a different issuer_kid");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "GRAIN_ERR_SCHEMA") {
+        ok("SDK-NEG-0029 verifyGR1 rejects ServingOffer issuer_kid mismatch");
+      } else {
+        fail("SDK-NEG-0029 verifyGR1 rejects ServingOffer issuer_kid mismatch", `unexpected code: ${code}`);
+      }
     }
 
     try {
@@ -608,4 +630,78 @@ function withStoreOverrides(base: InMemorySdkStore, overrides: Partial<GrainSdkS
     manifest: overrides.manifest ?? base.manifest,
     identity: overrides.identity ?? base.identity
   };
+}
+
+function signedServingOfferWithMismatchedIssuerKid(sdk: GrainSdk): { qr_string: string; pub_b64: string } {
+  const seed = new Uint8Array(32).fill(7);
+  const privateKey = createPrivateKey({
+    key: Buffer.concat([ED25519_PKCS8_PREFIX, Buffer.from(seed)]),
+    format: "der",
+    type: "pkcs8"
+  });
+  const publicDer = Buffer.from(createPublicKey(privateKey).export({ format: "der", type: "spki" }));
+  const publicKey = new Uint8Array(publicDer.subarray(publicDer.length - 32));
+  const protectedKid = kidForPublicKey(publicKey);
+  const payloadIssuerKid = new Uint8Array(16).fill(0x42);
+  const payload = encodeCanonical({
+    kind: "m",
+    entries: [
+      textEntry("t", { kind: "t", bytes: utf8("ServingOffer") }),
+      textEntry("v", { kind: "u", value: 1n }),
+      textEntry("var", { kind: "m", entries: [] }),
+      textEntry("mean", { kind: "m", entries: [] }),
+      textEntry("serving_g", { kind: "u", value: 250n }),
+      textEntry("issuer_kid", { kind: "b", value: payloadIssuerKid })
+    ]
+  });
+  const cose = signCosePayload(privateKey, payload, protectedKid);
+  return {
+    qr_string: sdk.transport.gr1Encode(cose),
+    pub_b64: Buffer.from(publicKey).toString("base64")
+  };
+}
+
+function signCosePayload(privateKey: ReturnType<typeof createPrivateKey>, payload: Uint8Array, kid: Uint8Array): Uint8Array {
+  const protectedBstr = encodeCanonical({
+    kind: "m",
+    entries: [
+      { key: { kind: "u", value: 1n }, keyBytes: new Uint8Array(), value: { kind: "n", value: -19n } },
+      { key: { kind: "u", value: 4n }, keyBytes: new Uint8Array(), value: { kind: "b", value: kid } }
+    ]
+  });
+  const sigStructure = encodeCanonical({
+    kind: "a",
+    items: [
+      { kind: "t", bytes: utf8("Signature1") },
+      { kind: "b", value: protectedBstr },
+      { kind: "b", value: new Uint8Array() },
+      { kind: "b", value: payload }
+    ]
+  });
+  const signature = sign(null, Buffer.from(sigStructure), privateKey);
+  return encodeCanonical({
+    kind: "a",
+    items: [
+      { kind: "b", value: protectedBstr },
+      { kind: "m", entries: [] },
+      { kind: "b", value: payload },
+      { kind: "b", value: new Uint8Array(signature) }
+    ]
+  });
+}
+
+function kidForPublicKey(publicKey: Uint8Array): Uint8Array {
+  return new Uint8Array(createHash("sha256").update(publicKey).digest().subarray(0, 16));
+}
+
+function textEntry(key: string, value: CborNode): { key: CborNode; keyBytes: Uint8Array; value: CborNode } {
+  return {
+    key: { kind: "t", bytes: utf8(key) },
+    keyBytes: new Uint8Array(),
+    value
+  };
+}
+
+function utf8(value: string): Uint8Array {
+  return new TextEncoder().encode(value);
 }
