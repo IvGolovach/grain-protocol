@@ -1,3 +1,6 @@
+#[path = "support/signed_qr.rs"]
+mod signed_qr;
+
 use grain_client_core::{scan_accept, ClientStore, MemoryClientStore, ScanAcceptStatus};
 use serde::Deserialize;
 
@@ -83,6 +86,18 @@ fn scan_accept_rejects_empty_trust_without_writing() {
         rejected.diag,
         vec!["SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID"]
     );
+    assert!(rejected.accepted.is_none());
+    assert!(store.list_accepted_scans().is_empty());
+}
+
+#[test]
+fn scan_accept_rejects_signed_payload_that_is_not_serving_offer_without_writing() {
+    let signed = signed_qr::signed_qr_for_payload(b"not dag-cbor serving offer");
+    let mut store = MemoryClientStore::new();
+    let rejected = scan_accept(&mut store, &signed.qr_string, Some(&signed.trust_pub_b64));
+
+    assert_eq!(rejected.status, ScanAcceptStatus::Rejected);
+    assert_eq!(rejected.diag, vec!["GRAIN_ERR_NONCANONICAL"]);
     assert!(rejected.accepted.is_none());
     assert!(store.list_accepted_scans().is_empty());
 }

@@ -4,6 +4,7 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 
+use crate::accepted_scan::validate_accepted_scan_record;
 use crate::diag::{
     SDK_ERR_STORE_ATOMIC_NESTED, SDK_ERR_STORE_CONFLICT, SDK_ERR_STORE_MUTATION_OUTSIDE_ATOMIC,
     SDK_ERR_STORE_SNAPSHOT_INVALID, SDK_ERR_STORE_SNAPSHOT_VERSION,
@@ -119,12 +120,8 @@ fn validate_snapshot_shape(snapshot: &StoreSnapshotV1) -> Result<(), String> {
 fn snapshot_maps(snapshot: &StoreSnapshotV1) -> Result<SnapshotMaps, String> {
     let mut accepted_scans = BTreeMap::new();
     for record in &snapshot.accepted_scans {
-        if record.scan_id.is_empty()
-            || record.cose_b64.is_empty()
-            || record.trust_pub_b64.is_empty()
-        {
-            return Err(SDK_ERR_STORE_SNAPSHOT_INVALID.to_string());
-        }
+        validate_accepted_scan_record(record)
+            .map_err(|_| SDK_ERR_STORE_SNAPSHOT_INVALID.to_string())?;
         if accepted_scans
             .insert(record.scan_id.clone(), record.clone())
             .is_some()

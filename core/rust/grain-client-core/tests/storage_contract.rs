@@ -2,9 +2,10 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use grain_client_core::platform::storage::{list_accepted_scans, put_accepted_scan_atomically};
 use grain_client_core::{
-    client_lifecycle, device_add_key, identity_create_root, AcceptedScanRecord, ClientStore,
-    MemoryClientStore, StorePutResult, StoreSnapshotStatus,
+    client_lifecycle, device_add_key, identity_create_root, scan_accept_prepare,
+    AcceptedScanRecord, ClientStore, MemoryClientStore, StorePutResult, StoreSnapshotStatus,
 };
+use serde_json::Value;
 
 fn record(scan_id: &str) -> AcceptedScanRecord {
     AcceptedScanRecord {
@@ -12,6 +13,24 @@ fn record(scan_id: &str) -> AcceptedScanRecord {
         cose_b64: format!("cose-for-{scan_id}"),
         trust_pub_b64: "trust-anchor".to_string(),
     }
+}
+
+fn fixture_string(path: &str, key: &str) -> String {
+    let text = std::fs::read_to_string(format!("../../../conformance/vectors/{path}"))
+        .expect("fixture must be readable");
+    let json: serde_json::Value = serde_json::from_str(&text).expect("fixture must parse");
+    json["input"][key]
+        .as_str()
+        .expect("fixture value must be a string")
+        .to_string()
+}
+
+fn accepted_record() -> AcceptedScanRecord {
+    let prepared = scan_accept_prepare(
+        &fixture_string("qr/POS-QR-001.json", "qr_string"),
+        Some(&fixture_string("cose/POS-COSE-001.json", "pub_b64")),
+    );
+    prepared.accepted.expect("fixture scan must prepare").into()
 }
 
 #[test]
@@ -83,7 +102,7 @@ fn storage_snapshot_round_trips_identity_lifecycle_and_scans() {
     let mut source = MemoryClientStore::new();
     assert!(identity_create_root(&mut source, "phone").diag.is_empty());
     assert!(device_add_key(&mut source, "glasses").diag.is_empty());
-    let accepted = record("scan-sha256:aaa");
+    let accepted = accepted_record();
     assert_eq!(
         put_accepted_scan_atomically(&mut source, accepted.clone()),
         Ok(StorePutResult::Inserted)
@@ -155,4 +174,35 @@ fn storage_snapshot_rejects_unsupported_version_without_mutation() {
     assert_eq!(rejected.status, StoreSnapshotStatus::Rejected);
     assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_SNAPSHOT_VERSION"]);
     assert_eq!(list_accepted_scans(&target), vec![accepted]);
+}
+
+#[test]
+fn storage_snapshot_rejects_tampered_accepted_scan_without_mutation() {
+    let mut source = MemoryClientStore::new();
+    let accepted = accepted_record();
+    assert_eq!(
+        put_accepted_scan_atomically(&mut source, accepted),
+        Ok(StorePutResult::Inserted)
+    );
+    let snapshot_b64 = source
+        .export_store_snapshot()
+        .snapshot_b64
+        .expect("non-empty snapshot");
+    let mut snapshot: Value =
+        serde_json::from_slice(&STANDARD.decode(snapshot_b64).expect("valid base64"))
+            .expect("valid snapshot JSON");
+    snapshot["accepted_scans"][0]["scan_id"] = serde_json::json!("scan-sha256:not-the-cose");
+    let tampered = STANDARD.encode(serde_json::to_vec(&snapshot).expect("snapshot JSON bytes"));
+
+    let mut target = MemoryClientStore::new();
+    let stale = record("scan-sha256:stale");
+    assert_eq!(
+        put_accepted_scan_atomically(&mut target, stale.clone()),
+        Ok(StorePutResult::Inserted)
+    );
+    let rejected = target.restore_store_snapshot(&tampered);
+
+    assert_eq!(rejected.status, StoreSnapshotStatus::Rejected);
+    assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_SNAPSHOT_INVALID"]);
+    assert_eq!(list_accepted_scans(&target), vec![stale]);
 }
