@@ -1,0 +1,59 @@
+{
+  "expect": {
+    "out": {
+      "diag_contains": [
+        "SEQ_CONFLICT"
+      ],
+      "sum_mean": {
+        "kcal": 0
+      },
+      "sum_var": {
+        "kcal": 0
+      }
+    },
+    "pass": true
+  },
+  "input": {
+    "events": [
+      {
+        "ak": "root",
+        "body": {
+          "grant_ak": "dev1"
+        },
+        "payload_cid": "cid-grant-dev1-a",
+        "seq": 1,
+        "t": "DeviceKeyGrant"
+      },
+      {
+        "ak": "root",
+        "body": {
+          "grant_ak": "dev2"
+        },
+        "payload_cid": "cid-grant-dev2-b",
+        "seq": 1,
+        "t": "DeviceKeyGrant"
+      },
+      {
+        "ak": "dev1",
+        "body": {
+          "mean": {
+            "kcal": 77
+          },
+          "var": {
+            "kcal": 7
+          }
+        },
+        "payload_cid": "cid-intake-dev1-after-conflicted-grant",
+        "seq": 2,
+        "t": "IntakeEvent"
+      }
+    ],
+    "root_kid": "root"
+  },
+  "meta": {
+    "desc": "Conflicted grant events MUST be ignored before they can authorize later device-key intake."
+  },
+  "op": "ledger_reduce",
+  "strict": true,
+  "vector_id": "NEG-LED-040"
+}
