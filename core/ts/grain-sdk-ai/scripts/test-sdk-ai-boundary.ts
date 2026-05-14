@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { GrainSdk } from "grain-sdk-ts";
+import { GRAIN_SDK_AI_HOST } from "grain-sdk-ts/ai-host";
 import { createGrainSdkAi } from "../src/index.js";
 import { encodeB64 } from "../src/sdk-utils.js";
 
@@ -38,6 +39,12 @@ async function run(): Promise<number> {
     fail("SDK-AI-001 no public sdk.store", "public sdk.store still exists");
   } else {
     ok("SDK-AI-001 no public sdk.store");
+  }
+
+  if ("createAiHost" in (sdk as unknown as Record<string, unknown>)) {
+    fail("SDK-AI-001 no public sdk.createAiHost", "public sdk.createAiHost still exists");
+  } else {
+    ok("SDK-AI-001 no public sdk.createAiHost");
   }
 
   const candidate = {
@@ -172,6 +179,25 @@ async function run(): Promise<number> {
     fail("SDK-AI-001 forged token reject", "expected forged token reject");
   } else {
     ok("SDK-AI-001 forged token reject");
+  }
+
+  {
+    const host = sdk[GRAIN_SDK_AI_HOST]();
+    const bytes = new Uint8Array([0xa1, 0x61, 0x61, 0x01]);
+    const cid = host.deriveCid(bytes);
+    try {
+      await host.putObject(`${cid}:tampered`, bytes);
+      fail("SDK-AI-001 host cid mismatch rejects", "host accepted bytes under mismatched cid");
+    } catch (err) {
+      const code = typeof err === "object" && err !== null && "code" in err
+        ? (err as { code?: unknown }).code
+        : undefined;
+      if (code !== "SDK_ERR_AI_CID_MISMATCH") {
+        fail("SDK-AI-001 host cid mismatch rejects", `expected SDK_ERR_AI_CID_MISMATCH, got ${String(code)}`);
+      } else {
+        ok("SDK-AI-001 host cid mismatch rejects");
+      }
+    }
   }
 
   {

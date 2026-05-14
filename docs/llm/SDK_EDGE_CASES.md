@@ -39,7 +39,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-AI-0005: invalid/missing json-pointer paths -> `SDK_ERR_AI_POINTER_*`
 - SDK-NEG-AI-0006: set-array duplicates -> `GRAIN_ERR_SET_ARRAY_DUP`
 - SDK-NEG-AI-0007: unknown critical extension -> `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
-- SDK-NEG-AI-0008: cid derive contract mismatch -> `SDK_ERR_AI_CID_DERIVE`
+- SDK-NEG-AI-0008: cid derive contract mismatch or host write cid mismatch -> `SDK_ERR_AI_CID_DERIVE` / `SDK_ERR_AI_CID_MISMATCH`
 - SDK-NEG-AI-0009: forged or replayed accepted token -> `SDK_ERR_ACCEPT_TOKEN_FORGED` / `SDK_ERR_ACCEPT_TOKEN_UNKNOWN`
 - SDK-NEG-AI-0010: expired accepted token -> `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
 - SDK-NEG-AI-0011: token registry capacity exceeded -> `SDK_ERR_ACCEPT_TOKEN_CAP_REACHED`

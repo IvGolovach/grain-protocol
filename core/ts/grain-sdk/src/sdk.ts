@@ -1,4 +1,4 @@
-import { createGrainSdkAiHost, type GrainSdkAiHost } from "./ai-host.js";
+import { createGrainSdkAiHost, GRAIN_SDK_AI_HOST, type GrainSdkAiHost } from "./ai-host.js";
 import { CanonicalizationToolkit } from "./codec.js";
 import { TsCoreEngine } from "./engine.js";
 import { E2ePrimitives } from "./e2e.js";
@@ -33,7 +33,7 @@ export class GrainSdk {
     this.evidence = new EvidenceBuilder(this.#store);
   }
 
-  createAiHost(): GrainSdkAiHost {
+  [GRAIN_SDK_AI_HOST](): GrainSdkAiHost {
     return createGrainSdkAiHost(this.core, this.#store);
   }
 }

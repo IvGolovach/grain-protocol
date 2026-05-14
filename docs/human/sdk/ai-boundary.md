@@ -11,6 +11,7 @@ Model output is always a suggestion until it passes:
 3. `ai.applyAccepted(token)` (explicit side effect)
 
 No direct append path exists for raw AI candidates.
+The default `GrainSdk` instance must not expose a public raw host writer such as `sdk.createAiHost()`.
 
 Minimal setup:
 
@@ -41,6 +42,7 @@ Ledger append remains an explicit application decision after acceptance.
 
 - SDK AI boundary is model-agnostic.
 - AI is not built into `GrainSdk`; you opt in with `createGrainSdkAi(sdk)`.
+- The sidecar bridge writes only accepted canonical bytes under the CID derived from those bytes.
 - SDK core and the AI sidecar have no outbound network calls.
 - Tokens are opaque runtime objects, not JSON payloads.
 - Quarantined candidates cannot be applied.
