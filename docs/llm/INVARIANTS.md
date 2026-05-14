@@ -6,9 +6,9 @@ Use it when you need to answer: "What MUST stay identical across independent imp
 Each invariant block gives you:
 - stable ID
 - normative reference (NES/profile)
-- executable vector evidence (POS/NEG IDs)
+- executable evidence (POS/NEG vectors or static checks)
 
-If code behavior and an invariant disagree, trust the invariant + vectors and report drift.
+If code behavior and an invariant disagree, trust the invariant + executable evidence and report drift.
 
 ## Encoding / DAG-CBOR
 
@@ -115,6 +115,20 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
 - INV-E2E-006: EncryptedObject envelope requires nonce and AEAD authentication binding.  
   Ref: NES §7.4; spec/profiles/e2e-profile.md §6  
   Vectors: NEG-E2E-WA-0005, NEG-E2E-WA-0006
+
+## Food Profile
+
+- INV-FOOD-001: Food reducer input `source_class` MUST use the fixed Food Profile vocabulary.
+  Ref: NES §6.8; spec/profiles/food-profile.md; spec/profiles/food-profile.v1.json
+  Static: STATIC-FOOD-PROFILE-001
+
+- INV-FOOD-002: Food reducer-visible `kcal` values MUST be integer kilocalories with `scale_exp10 = 0`.
+  Ref: NES §6.8; spec/profiles/food-profile.md; spec/profiles/food-profile.v1.json
+  Static: STATIC-FOOD-PROFILE-001
+
+- INV-FOOD-003: Food quantity fields `amount_g`, `yield_g`, `serving_g`, and `servings` MUST be non-negative int64 values with `scale_exp10 = 0`.
+  Ref: NES §6.8; spec/profiles/food-profile.md; spec/profiles/food-profile.v1.json
+  Static: STATIC-FOOD-PROFILE-001
 
 ## Manifest resolution
 

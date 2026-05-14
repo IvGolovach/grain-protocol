@@ -24,6 +24,12 @@ Current shipped v0.1 reducer semantics are still food-first.
 If the adapter needs reducer-visible behavior today, it should map into the existing `IntakeEvent` path.
 If it emits a new event type, treat that as an opaque or future-extension lane unless the contract says otherwise.
 
+Food Profile 1.0 anchors live in `spec/profiles/food-profile.md` and `spec/profiles/food-profile.v1.json`.
+For reducer-visible food events:
+- `source_class` is exactly `attested`, `measured`, or `estimated`
+- `kcal` is integer kilocalories with `scale_exp10 = 0`
+- `amount_g`, `yield_g`, `serving_g`, and `servings` are non-negative int64 values with `scale_exp10 = 0`
+
 ## Where To Look In Code
 
 1. `docs/human/domain-adapters.md`

@@ -27,6 +27,7 @@ python3 tools/ci/check_toolchain_bootstrap.py
 python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
+python3 tools/ci/check_food_profile.py
 python3 tools/ci/check_maintainer_docs.py
 python3 tools/ci/check_runner_contract_compat.py
 python3 tools/ci/check_runner_shim_boundary.py

@@ -12,6 +12,7 @@ from typing import Any
 
 INV_RE = re.compile(r"^\s*-\s+(INV-[A-Z0-9-]+):")
 VEC_RE = re.compile(r"\b(?:POS|NEG)-[A-Z0-9-]+\b")
+STATIC_RE = re.compile(r"\bSTATIC-[A-Z0-9-]+\b")
 
 
 @dataclass
@@ -19,6 +20,7 @@ class InvariantAudit:
     invariant_id: str
     title: str
     vectors: list[str] = field(default_factory=list)
+    static_checks: list[str] = field(default_factory=list)
     has_pos: bool = False
     has_neg: bool = False
     policy_exception: bool = False
@@ -29,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(allow_abbrev=False)
     p.add_argument("--invariants", default="docs/llm/INVARIANTS.md")
     p.add_argument("--vectors-root", default="conformance/vectors")
+    p.add_argument("--static-checks-root", default="conformance/static_checks")
     p.add_argument("--out-json", required=True)
     p.add_argument("--out-md", required=True)
     return p.parse_args()
@@ -38,10 +41,15 @@ def vector_exists(vectors_root: Path, vector_id: str) -> bool:
     return any(vectors_root.rglob(f"{vector_id}.json"))
 
 
+def static_check_exists(static_checks_root: Path, static_check_id: str) -> bool:
+    return any(static_checks_root.rglob(f"{static_check_id}.json"))
+
+
 def finalize(cur: InvariantAudit | None, all_items: list[InvariantAudit]) -> None:
     if cur is None:
         return
     cur.vectors = sorted(set(cur.vectors))
+    cur.static_checks = sorted(set(cur.static_checks))
     cur.has_pos = any(v.startswith("POS-") for v in cur.vectors)
     cur.has_neg = any(v.startswith("NEG-") for v in cur.vectors)
     all_items.append(cur)
@@ -70,6 +78,8 @@ def load_invariants(path: Path) -> list[InvariantAudit]:
 
         if "Vectors:" in line:
             current.vectors.extend(VEC_RE.findall(line))
+        if "Static:" in line:
+            current.static_checks.extend(STATIC_RE.findall(line))
 
     finalize(current, out)
     return out
@@ -79,10 +89,12 @@ def main() -> int:
     args = parse_args()
     invariants_path = Path(args.invariants)
     vectors_root = Path(args.vectors_root)
+    static_checks_root = Path(args.static_checks_root)
 
     rows = load_invariants(invariants_path)
 
     missing_vector_files: list[dict[str, str]] = []
+    missing_static_check_files: list[dict[str, str]] = []
     uncovered: list[str] = []
     partial_cover: list[str] = []
 
@@ -91,19 +103,24 @@ def main() -> int:
             if not vector_exists(vectors_root, vid):
                 missing_vector_files.append({"invariant": row.invariant_id, "vector_id": vid})
 
-        if not row.vectors and not row.policy_exception:
+        for sid in row.static_checks:
+            if not static_check_exists(static_checks_root, sid):
+                missing_static_check_files.append({"invariant": row.invariant_id, "static_check_id": sid})
+
+        if not row.vectors and not row.static_checks and not row.policy_exception:
             uncovered.append(row.invariant_id)
         elif row.vectors and (not row.has_pos or not row.has_neg) and not row.policy_exception:
             partial_cover.append(row.invariant_id)
 
     status = "PASS"
-    if missing_vector_files or uncovered:
+    if missing_vector_files or missing_static_check_files or uncovered:
         status = "FAIL"
 
     summary: dict[str, Any] = {
         "status": status,
         "invariants_total": len(rows),
         "missing_vector_files": missing_vector_files,
+        "missing_static_check_files": missing_static_check_files,
         "uncovered_invariants": uncovered,
         "partial_coverage_invariants": partial_cover,
         "rows": [
@@ -111,6 +128,7 @@ def main() -> int:
                 "invariant_id": r.invariant_id,
                 "title": r.title,
                 "vectors": r.vectors,
+                "static_checks": r.static_checks,
                 "has_pos": r.has_pos,
                 "has_neg": r.has_neg,
                 "policy_exception": r.policy_exception,
@@ -132,25 +150,33 @@ def main() -> int:
         f"- Status: **{status}**",
         f"- Total invariants: {len(rows)}",
         f"- Missing vector files: {len(missing_vector_files)}",
+        f"- Missing static check files: {len(missing_static_check_files)}",
         f"- Uncovered invariants: {len(uncovered)}",
         f"- Partial coverage invariants (no POS or no NEG, without explicit exception): {len(partial_cover)}",
         "",
         "## Coverage Table",
         "",
-        "| Invariant | POS | NEG | Exception | Vectors |",
-        "|---|---:|---:|---:|---|",
+        "| Invariant | POS | NEG | Static | Exception | Vectors | Static checks |",
+        "|---|---:|---:|---:|---:|---|---|",
     ]
 
     for r in rows:
         md_lines.append(
             f"| {r.invariant_id} | {'yes' if r.has_pos else 'no'} | {'yes' if r.has_neg else 'no'} | "
-            f"{'yes' if r.policy_exception else 'no'} | {', '.join(r.vectors) if r.vectors else '-'} |"
+            f"{'yes' if r.static_checks else 'no'} | {'yes' if r.policy_exception else 'no'} | "
+            f"{', '.join(r.vectors) if r.vectors else '-'} | "
+            f"{', '.join(r.static_checks) if r.static_checks else '-'} |"
         )
 
     if missing_vector_files:
         md_lines.extend(["", "## Missing vector files", ""])
         for m in missing_vector_files:
             md_lines.append(f"- {m['invariant']} -> {m['vector_id']}")
+
+    if missing_static_check_files:
+        md_lines.extend(["", "## Missing static check files", ""])
+        for m in missing_static_check_files:
+            md_lines.append(f"- {m['invariant']} -> {m['static_check_id']}")
 
     if uncovered:
         md_lines.extend(["", "## Uncovered invariants", ""])

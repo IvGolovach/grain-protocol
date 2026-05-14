@@ -85,6 +85,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_docs_flow.py
 
+    - name: Check Food Profile constraints
+      shell: bash
+      run: python3 tools/ci/check_food_profile.py
+
     - name: Real app docs check
       shell: bash
       run: python3 tools/ci/check_real_app_docs.py

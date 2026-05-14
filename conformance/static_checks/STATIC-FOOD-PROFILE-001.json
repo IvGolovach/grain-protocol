@@ -1,0 +1,19 @@
+{
+  "static_check_id": "STATIC-FOOD-PROFILE-001",
+  "title": "Food Profile 1.0 fixed units and source classes",
+  "command": [
+    "python3",
+    "tools/ci/check_food_profile.py"
+  ],
+  "covers": [
+    "INV-FOOD-001",
+    "INV-FOOD-002",
+    "INV-FOOD-003"
+  ],
+  "artifacts": [
+    "spec/profiles/food-profile.v1.json",
+    "spec/profiles/food-profile.md",
+    "spec/schemas/grain-v0.1.cddl",
+    "docs/llm/INVARIANTS.md"
+  ]
+}

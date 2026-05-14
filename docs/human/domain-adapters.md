@@ -50,6 +50,15 @@ If you want reducer-visible behavior in shipped v0.1, emit `IntakeEvent` and kee
 
 If you emit a new event type today, expect store/forward behavior, not built-in reducer output.
 
+## Food Profile 1.0 constraints
+
+Reducer-visible food adapters must follow `spec/profiles/food-profile.md`:
+- `source_class` is exactly `attested`, `measured`, or `estimated`.
+- `kcal` is integer kilocalories with `scale_exp10 = 0`.
+- `amount_g`, `yield_g`, `serving_g`, and `servings` are non-negative int64 values with `scale_exp10 = 0`.
+
+If source data has fractional servings, grams, or nutrition values, the adapter must document its rounding/scaling policy before it emits a Grain event.
+
 ## Minimal pattern: map a meal scan into `IntakeEvent`
 
 ```ts

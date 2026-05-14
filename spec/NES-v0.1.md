@@ -200,6 +200,12 @@ For v0.1, reducers MUST produce deterministic totals only as:
 
 Quantiles (p50/p90) are non-normative UI-level outputs.
 
+### 6.8 Food Profile 1.0 (MUST for food-profile reducer inputs)
+The v0.1 shipped domain profile is Food Profile 1.0.
+Food-specific `IntakeEvent` source classes, reducer-visible nutrient units, and food quantity units are fixed in `spec/profiles/food-profile.md` and its machine-readable mirror `spec/profiles/food-profile.v1.json`.
+
+These food-profile constraints do not add food semantics to domain-neutral core layers.
+
 ## 7. E2E Layer — private sync with capability addressing
 
 ### 7.1 cap_id representation (MUST)
