@@ -12,12 +12,12 @@ REQUIRED_WORKFLOW_TOKENS = (
     "workflows: [\"ci\"]",
     "dependabot[bot]",
     "app/dependabot",
-    ".github/workflows/*",
-    ".github/dependabot.yml",
-    ".github/ISSUE_TEMPLATE/*",
-    ".github/actions/*",
+    ".github/dependabot.yml|.github/ISSUE_TEMPLATE/*",
+    ".github/workflows/*|.github/actions/*",
+    "executable-automation-change:$f",
     "spec/*|conformance/*|core/*|runner/*|docs/llm/*|tools/*",
     "DEPENDABOT_AUTOMERGE_TOKEN",
+    'BLOCK_SEMVER_MAJOR_ACTIONS: "true"',
     "DEPS_ERR_TOKEN_MISSING",
     "DEPS_ERR_TOKEN_INSUFFICIENT_PERMS",
     "repos/$REPO/actions/workflows",
@@ -50,6 +50,8 @@ REQUIRED_DOC_TOKENS = (
     "runner/**",
     "docs/llm/**",
     "tools/**",
+    "executable automation",
+    "semver-major workflow dependency bumps require manual review",
 )
 
 

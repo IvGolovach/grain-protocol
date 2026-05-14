@@ -39,6 +39,8 @@ jobs:
           python3 -m unittest tools.ci.test_check_trust_bundle_governance
           python3 -m unittest tools.ci.test_check_release_train_docs
           python3 -m unittest tools.ci.test_check_workflow_action_pinning
+          python3 -m unittest tools.ci.test_check_dependabot_policy
+          python3 -m unittest tools.ci.test_check_golden_images_policy
 
   capid-csprng-audit:
     runs-on: ubuntu-latest

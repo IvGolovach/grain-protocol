@@ -61,6 +61,10 @@ runs:
       shell: bash
       run: python3 tools/ci/check_dependabot_policy.py
 
+    - name: Check golden image publication policy
+      shell: bash
+      run: python3 tools/ci/check_golden_images_policy.py
+
     - name: Check Node runtime pin consistency
       shell: bash
       run: python3 tools/ci/check_node_runtime_pin.py
