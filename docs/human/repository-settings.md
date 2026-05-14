@@ -137,10 +137,10 @@ CI enforces:
 Safe lane:
 
 - Dependabot author only
-- allowlisted `.github` paths only
+- allowlisted non-executable `.github` metadata paths only
 - auto-approve plus auto-merge after required checks
 - branch update or rebase requested automatically when behind
-- semver-major workflow bumps allowed by default unless the block toggle says otherwise
+- semver-major workflow dependency bumps require manual review
 
 Explicit failure mode:
 
@@ -150,7 +150,8 @@ Explicit failure mode:
 Manual lane:
 
 - any non-allowlisted or critical path changes
-- semver-major workflow bumps only when the block toggle is enabled
+- any executable automation changes under `.github/workflows/**` or `.github/actions/**`
+- semver-major workflow dependency bumps
 
 ## 9) Dependency and intake hygiene
 

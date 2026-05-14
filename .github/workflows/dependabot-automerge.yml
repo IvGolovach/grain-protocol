@@ -25,7 +25,7 @@ jobs:
     env:
       REPO: ${{ github.repository }}
       DEPENDABOT_AUTOMERGE_TOKEN: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
-      BLOCK_SEMVER_MAJOR_ACTIONS: "false"
+      BLOCK_SEMVER_MAJOR_ACTIONS: "true"
     steps:
       - name: Collect candidate PRs from trusted workflow_run
         id: collect
@@ -115,7 +115,11 @@ jobs:
 
             for f in "${files[@]}"; do
               case "$f" in
-                .github/workflows/*|.github/dependabot.yml|.github/ISSUE_TEMPLATE/*|.github/actions/*)
+                .github/dependabot.yml|.github/ISSUE_TEMPLATE/*)
+                  ;;
+                .github/workflows/*|.github/actions/*)
+                  safe=false
+                  reasons+=("executable-automation-change:$f")
                   ;;
                 *)
                   safe=false
@@ -171,7 +175,7 @@ jobs:
                 --jq "[.[] | select(.user.login == \"$bot_login\")][-1].state // \"\""
             )"
             if [[ "$approved_state" != "APPROVED" ]]; then
-              if ! gh pr review "$pr" --repo "$REPO" --approve --body "Auto-approved (safe Dependabot allowlist path under TOR-DEPS-STRICT-FINAL)."; then
+              if ! gh pr review "$pr" --repo "$REPO" --approve --body "Auto-approved (safe non-executable Dependabot metadata path under TOR-DEPS-STRICT-FINAL)."; then
                 echo "::error::DEPS_ERR_APPROVE_FAILED: pr=$pr"
                 exit 1
               fi
@@ -182,5 +186,5 @@ jobs:
               exit 1
             fi
 
-            gh pr comment "$pr" --repo "$REPO" --body "Auto-approved and auto-merge enabled (safe workflow-only Dependabot change)." >/dev/null
+            gh pr comment "$pr" --repo "$REPO" --body "Auto-approved and auto-merge enabled (safe non-executable Dependabot metadata change)." >/dev/null
           done < candidate-prs.txt

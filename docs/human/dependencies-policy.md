@@ -24,18 +24,17 @@ Dependabot safe-lane updates should remove stale review and merge friction while
 
 - author is the Dependabot bot account
 - changed files are only in the allowlist:
-  - `.github/workflows/**`
   - `.github/dependabot.yml`
   - `.github/ISSUE_TEMPLATE/**`
-  - `.github/actions/**`
 - required checks still run before merge
 - branch update is requested automatically when behind
 
 ### 2) Manual review lane
 
 - any PR touching non-allowlisted paths
+- any PR touching executable automation (`.github/workflows/**` or `.github/actions/**`)
 - any PR touching frozen-critical zones (`spec/**`, `conformance/**`, `core/**`, `runner/**`, `docs/llm/**`, `tools/**`)
-- semver-major workflow dependency bumps only if policy toggle `BLOCK_SEMVER_MAJOR_ACTIONS=true`
+- semver-major workflow dependency bumps require manual review
 
 ## Automation workflow
 
@@ -65,7 +64,7 @@ Safety design:
 
 - does not check out PR head
 - uses GitHub API only
-- validates changed files against allowlist and denylist
+- validates changed files against allowlist, denylist, and the executable automation manual lane
 - updates the branch when behind (`update-branch` plus `@dependabot rebase` request)
 - auto-approves safe PRs
 - enables auto-merge (`--auto --rebase`)
@@ -80,13 +79,14 @@ The workflow hard-fails with these diagnostics:
 
 There is no warning-only path and no fallback token.
 
-Default major-bump behavior:
+Major-bump behavior:
 
-- semver-major workflow bumps are allowed by default if checks pass
-- set `BLOCK_SEMVER_MAJOR_ACTIONS=true` in workflow env to force manual review for majors
+- semver-major workflow dependency bumps require manual review
+- the workflow keeps `BLOCK_SEMVER_MAJOR_ACTIONS=true`
 
 ## Governance notes
 
 - CODEOWNERS documents ownership for core paths even though code owner review is not currently required on `main`
 - the safe `.github` dependency path is policy-guarded by allowlist and required checks
+- executable automation changes are never auto-approved by this safe lane
 - dependency automation must not change protocol semantics

@@ -1,7 +1,6 @@
 name: golden-images
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - "repo-*"
@@ -37,10 +36,18 @@ jobs:
 
       - name: Select publish tag lane
         run: |
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            echo "::error::GOLDEN_ERR_TAG_REQUIRED: golden images publish only from repo-* tags."
+            exit 1
+          fi
+
           if [[ "${GITHUB_REF_NAME}" == repo-rc-* ]]; then
             echo "PUBLISH_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-          else
+          elif [[ "${GITHUB_REF_NAME}" == repo-* ]]; then
             echo "PUBLISH_TAG=stable" >> "$GITHUB_ENV"
+          else
+            echo "::error::GOLDEN_ERR_TAG_REQUIRED: golden images publish only from repo-* tags."
+            exit 1
           fi
 
       - name: Build and push ${{ matrix.image.name }}
