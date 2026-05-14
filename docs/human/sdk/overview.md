@@ -42,6 +42,8 @@ This page is the capability map after that first run.
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
   - structured_v1 uses explicit field profiles/maps (no implicit numeric guessing)
+  - candidate v1 is object-only until an event append apply path exists
+  - byte payload fields use canonical base64 standard encoding
 
 ## What SDK does not do
 

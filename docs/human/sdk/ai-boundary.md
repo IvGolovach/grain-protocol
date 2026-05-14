@@ -36,13 +36,14 @@ const ai = createGrainSdkAi(sdk);
 ## Side-effect in v1
 
 In the current AI sidecar, `applyAccepted()` writes accepted canonical bytes to SDK object store under derived CID.
-Ledger append remains an explicit application decision after acceptance.
+Ledger append remains an explicit application decision after acceptance, and `event` candidates reject until an `event_append` apply path exists.
 
 ## Security posture
 
 - SDK AI boundary is model-agnostic.
 - AI is not built into `GrainSdk`; you opt in with `createGrainSdkAi(sdk)`.
 - The sidecar bridge writes only accepted canonical bytes under the CID derived from those bytes.
+- Candidate v1 currently accepts `kind: "object"` only; exported contracts must not advertise event candidates before append semantics exist.
 - SDK core and the AI sidecar have no outbound network calls.
 - Tokens are opaque runtime objects, not JSON payloads.
 - Quarantined candidates cannot be applied.

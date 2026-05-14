@@ -25,8 +25,9 @@ We need a deterministic ingestion firewall that:
    - TTL + bounded pending registry
    - deterministic reject codes for forged/unknown/expired tokens
 4. Define `AICandidateEnvelopeV1` with ingestion-specific rules:
+   - `kind: "object"` only until the sidecar has an implemented `event_append` apply path
    - decimal strings for numeric ingestion fields (conversion convenience only)
-   - base64 standard for structured bytes fields
+   - canonical base64 standard for `dagcbor_b64` payloads and structured bytes fields
    - deterministic set-array sort normalization, duplicate reject
 5. Preserve protocol strictness:
    - strict DAG-CBOR validate + CID derive before acceptance

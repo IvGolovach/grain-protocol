@@ -152,6 +152,8 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - structured_v1 hardening:
     - explicit field profile requirement (`profile_id` or explicit field maps), no implicit numeric guessing
     - added profile table in `core/ts/grain-sdk-ai/src/ai/profiles.ts`
+    - canonical base64 enforcement for `dagcbor_b64` payloads and structured bytes fields
+    - candidate contract narrowed to object candidates until an `event_append` apply path exists
   - explain hardening:
     - default redaction forbids raw candidate/private bytes
     - sensitive mode limited to bounded metadata (hash/length/prefix), never raw payloads

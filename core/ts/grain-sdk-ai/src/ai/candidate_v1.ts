@@ -1,4 +1,5 @@
 import { SdkError } from "grain-sdk-ts/errors";
+import { isStrictBase64Standard } from "../sdk-utils.js";
 import type { AICandidateEnvelopeV1 } from "./adapter.js";
 
 export type NumericKind = "u63" | "i64";
@@ -22,8 +23,11 @@ export function parseCandidateEnvelopeV1(input: unknown): AICandidateEnvelopeV1 
   if (input.target_schema_major !== 1) {
     throw new SdkError("SDK_ERR_AI_SCHEMA_MAJOR", "target_schema_major must be 1");
   }
-  if (input.kind !== "object" && input.kind !== "event") {
-    throw new SdkError("SDK_ERR_AI_KIND_INVALID", "kind must be object|event");
+  if (input.kind === "event") {
+    throw new SdkError("SDK_ERR_AI_KIND_UNSUPPORTED", "event candidates are not supported until event_append is implemented");
+  }
+  if (input.kind !== "object") {
+    throw new SdkError("SDK_ERR_AI_KIND_INVALID", "kind must be object");
   }
   if (typeof input.target_type !== "string" || input.target_type.length === 0) {
     throw new SdkError("SDK_ERR_AI_TARGET_TYPE", "target_type must be a non-empty string");
@@ -36,7 +40,7 @@ export function parseCandidateEnvelopeV1(input: unknown): AICandidateEnvelopeV1 
   if (input.payload_format === "structured_v1") {
     parseStructuredPayloadV1(input.payload);
   } else {
-    if (typeof input.payload !== "string" || !isBase64Standard(input.payload)) {
+    if (typeof input.payload !== "string" || !isStrictBase64Standard(input.payload)) {
       throw new SdkError("SDK_ERR_AI_DAGCBOR_B64", "dagcbor_b64 payload must be base64 string");
     }
   }
@@ -143,11 +147,4 @@ function isObject(input: unknown): input is Record<string, unknown> {
 
 function isJsonPointer(path: string): boolean {
   return path.startsWith("/") || path === "";
-}
-
-function isBase64Standard(value: string): boolean {
-  if (value.length === 0 || value.length % 4 !== 0) {
-    return false;
-  }
-  return /^[A-Za-z0-9+/]*={0,2}$/.test(value);
 }

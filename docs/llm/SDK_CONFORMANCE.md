@@ -255,6 +255,8 @@ for the exact current commit is supposed to exist already.
 - Portable generated SDKs bind workflow APIs and keep raw protocol operations out of the main app surface.
 - AI boundary explain payload is deterministic and redacted by default.
 - structured_v1 field typing must be explicit (profile table or explicit pointer maps).
+- AI candidate v1 is object-only until `event_append` exists; exported contracts must not advertise unsupported event candidates.
+- AI `dagcbor_b64` and structured bytes fields must use canonical base64 standard encoding.
 
 ## SDK no-network policy
 

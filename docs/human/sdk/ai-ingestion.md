@@ -7,7 +7,7 @@ This is an SDK ingestion contract, not a protocol semantic change.
 Required fields:
 
 - `candidate_version: 1`
-- `kind: "object" | "event"`
+- `kind: "object"`
 - `target_schema_major: 1`
 - `target_type: string`
 - `payload_format: "structured_v1" | "dagcbor_b64"`
@@ -16,6 +16,8 @@ Required fields:
 Optional:
 
 - `critical_extensions: string[]`
+
+`kind: "event"` is reserved and rejected in this sidecar version until an `event_append` apply path exists.
 
 ## payload_format = structured_v1
 
@@ -35,7 +37,7 @@ Rules:
   - either via known `profile_id` (see `ai.exportContract().profiles`)
   - or via explicit `numeric_fields` / `bytes_fields` / `set_array_fields`.
 - If no profile and no explicit field maps are provided, SDK rejects (`SDK_ERR_AI_PROFILE_MISSING`).
-- `bytes_fields` must be base64 standard strings.
+- `bytes_fields` must be canonical base64 standard strings, including canonical padding and zero pad bits.
 - `set_array_fields` may be normalized by deterministic sorting.
 - Duplicate set entries are rejected.
 
@@ -44,7 +46,7 @@ This normalization is only in AI ingestion. Strict protocol validation still rej
 
 ## payload_format = dagcbor_b64
 
-- Payload must be base64 standard encoded DAG-CBOR bytes.
+- Payload must be canonical base64 standard encoded DAG-CBOR bytes, including canonical padding and zero pad bits.
 - Bytes are strict-validated unchanged.
 
 ## Quarantine behavior

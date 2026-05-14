@@ -8,6 +8,16 @@ export function encodeB64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
 }
 
+export function isStrictBase64Standard(value: string): boolean {
+  if (value.length === 0 || value.length % 4 !== 0) {
+    return false;
+  }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value)) {
+    return false;
+  }
+  return encodeB64(decodeB64(value)) === value;
+}
+
 export function sha256(bytes: Uint8Array): Uint8Array {
   return new Uint8Array(createHash("sha256").update(bytes).digest());
 }

@@ -33,10 +33,10 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0027: pairing or sync transfer metadata claims device-bound custody, mismatched material, or unsupported custody version -> reject before mutation; public SDK debug/log helpers must redact snapshot, identity, pairing, sync, accepted-scan COSE, and trust payloads
 - SDK-NEG-0028: safe diagnostic event schemas or examples add portable secret payload fields, trust payload material, or accepted-scan COSE payloads -> `tools/ci/check_no_secret_telemetry.py` failure
 - SDK-NEG-0029: `verifyGR1()` receives a signed `ServingOffer` whose payload `issuer_kid` does not match the COSE protected `kid` derived from trusted public key -> `GRAIN_ERR_SCHEMA`
-- SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) -> `SDK_ERR_AI_*`
-- SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) -> deterministic reject
+- SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) or reserved `event` kind before `event_append` exists -> `SDK_ERR_AI_*`
+- SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) or non-canonical base64 DAG-CBOR payload -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
-- SDK-NEG-AI-0004: bytes field not base64 standard -> `SDK_ERR_AI_BYTES_B64`
+- SDK-NEG-AI-0004: bytes field not canonical base64 standard -> `SDK_ERR_AI_BYTES_B64`
 - SDK-NEG-AI-0005: invalid/missing json-pointer paths -> `SDK_ERR_AI_POINTER_*`
 - SDK-NEG-AI-0006: set-array duplicates -> `GRAIN_ERR_SET_ARRAY_DUP`
 - SDK-NEG-AI-0007: unknown critical extension -> `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
