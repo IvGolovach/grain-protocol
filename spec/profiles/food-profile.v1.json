@@ -1,0 +1,50 @@
+{
+  "schema": "grain.food-profile.constraints.v1",
+  "profile": "food-v0.1",
+  "protocol_schema_major": 1,
+  "source_class": {
+    "allowed": [
+      "attested",
+      "measured",
+      "estimated"
+    ],
+    "default": "estimated"
+  },
+  "reducer_visible_nutrients": {
+    "kcal": {
+      "unit": "kilocalorie",
+      "scale_exp10": 0,
+      "integer_domain": "int64"
+    }
+  },
+  "quantity_fields": {
+    "amount_g": {
+      "unit": "gram",
+      "scale_exp10": 0,
+      "integer_domain": "int64",
+      "minimum": 0
+    },
+    "yield_g": {
+      "unit": "gram",
+      "scale_exp10": 0,
+      "integer_domain": "int64",
+      "minimum": 0
+    },
+    "serving_g": {
+      "unit": "gram",
+      "scale_exp10": 0,
+      "integer_domain": "int64",
+      "minimum": 0
+    },
+    "servings": {
+      "unit": "serving",
+      "scale_exp10": 0,
+      "integer_domain": "int64",
+      "minimum": 0
+    }
+  },
+  "reducer_outputs": [
+    "sum_mean",
+    "sum_var"
+  ]
+}

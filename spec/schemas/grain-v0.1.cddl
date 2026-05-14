@@ -18,7 +18,7 @@ ext  = { * tstr => any } ; NES: ext is non-critical; size limited by profile.
 
 ; ---------- Common nutrient vectors (fixed-point ints) ----------
 ; v0.1 normative reducer outputs only sum_mean + sum_var.
-; Units/scales are specified in NES/profiles; values are int64 domains.
+; Units/scales are specified in spec/profiles/food-profile.md; values are int64 domains.
 nutrient-map = { * tstr => int } ; nutrient_code => fixed-point int
 
 ; ---------- Core protocol objects (CAS-objects) ----------
@@ -47,7 +47,7 @@ NutrientProfile = {
 
 CookInput = {
   "ing": cid-link,      ; -> IngredientRef
-  "amount_g": int,      ; fixed-point grams per NES
+  "amount_g": int,      ; Food Profile 1.0: non-negative integer grams, scale_exp10 = 0
   ? "note": tstr,
   ? "ext": ext,
   ? "crit": crit,
@@ -86,25 +86,25 @@ NutritionComputeResult = {
 IntakeFromCookRun = {
   "mode": "from_cookrun",
   "cookrun": cid-link,
-  "amount_g": int,
+  "amount_g": int,      ; Food Profile 1.0: non-negative integer grams, scale_exp10 = 0
 }
 
 IntakeFromIngredient = {
   "mode": "from_ingredient",
   "ing": cid-link,
-  "amount_g": int,
+  "amount_g": int,      ; Food Profile 1.0: non-negative integer grams, scale_exp10 = 0
 }
 
 IntakeFromProfile = {
   "mode": "from_profile",
   "profile": cid-link,
-  "servings": int, ; fixed-point servings
+  "servings": int, ; Food Profile 1.0: non-negative integer serving count, scale_exp10 = 0
 }
 
 IntakeEvent = {
   "v": 1,
   "t": "IntakeEvent",
-  "source_class": tstr,   ; "attested" | "measured" | "estimated" (NES)
+  "source_class": tstr,   ; Food Profile 1.0: "attested" | "measured" | "estimated"
   "mean": nutrient-map,
   "var": nutrient-map,
   ( IntakeFromCookRun //
@@ -119,7 +119,7 @@ ServingOffer = {
   "v": 1,
   "t": "ServingOffer",
   "issuer_kid": bstr16,
-  "serving_g": int,
+  "serving_g": int, ; Food Profile 1.0: non-negative integer grams, scale_exp10 = 0
   "mean": nutrient-map,
   "var": nutrient-map,
   ? "nonce": bstr, ; UX-only; not an ID
