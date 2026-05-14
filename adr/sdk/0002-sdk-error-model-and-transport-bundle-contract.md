@@ -29,15 +29,18 @@ These gaps increase integration ambiguity and make audit/debug workflows weaker.
    - `bundleExport(...)`
    - `bundleImport(...)`
 4. Add typed primitive helpers and set-array strict builder in `src/primitives.ts`.
-5. Extend SDK invariant suite with checks for:
+5. Keep `verifyGR1(...)` verify-only: it requires explicit trust, verifies COSE under the narrow profile, and validates that the signed payload is a strict `ServingOffer` whose `issuer_kid` matches the protected issuer `kid`.
+6. Extend SDK invariant suite with checks for:
    - set-array builder duplicate rejection
    - deterministic error explain contract
    - transport bundle schema/roundtrip behavior
+   - signed `ServingOffer` issuer mismatch rejection
 
 ## Consequences
 
 - SDK diagnostics are machine-usable and audit-friendly.
 - Integrators get deterministic transport bundle boundary checks.
+- QR verification cannot be confused by arbitrary signed COSE bytes or by mismatched issuer metadata.
 - Misuse paths are covered by executable invariant tests.
 - Protocol semantics remain unchanged.
 

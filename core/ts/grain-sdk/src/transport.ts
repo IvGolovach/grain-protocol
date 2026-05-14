@@ -1,6 +1,9 @@
 import { deflateSync } from "node:zlib";
 
-import { SdkError } from "./errors.js";
+import { verifyCoseSign1Payload } from "grain-ts-core/ops/cose";
+import { validateServingOfferPayload } from "grain-ts-core/ops/dagcbor";
+
+import { SdkError, toSdkError } from "./errors.js";
 import { decodeB64Strict, encodeB64, stableStringify, toUtf8, requireBase64Standard } from "./utils.js";
 import type { TsCoreEngine } from "./engine.js";
 import type { Json } from "./utils.js";
@@ -50,17 +53,18 @@ export class TransportToolkit {
     const decoded = this.gr1Decode(qrString);
     const trustedPub = requireTrustPublicKey(trust);
 
-    const actual = this.engine.execute(
-      "cose_verify",
-      {
-        cose_b64: encodeB64(decoded.cose_bytes) as Json,
-        pub_b64: trustedPub as Json,
-        external_aad_b64: "" as Json
-      },
-      true
-    );
+    try {
+      const verified = verifyCoseSign1Payload(
+        decoded.cose_bytes,
+        new Uint8Array(Buffer.from(trustedPub, "base64")),
+        new Uint8Array()
+      );
+      validateServingOfferPayload(verified.payload, verified.kid);
+    } catch (err) {
+      throw toSdkError(err);
+    }
 
-    return { pass: actual.accepted, diag: actual.diag, cose_bytes: decoded.cose_bytes };
+    return { pass: true, diag: [], cose_bytes: decoded.cose_bytes };
   }
 
   verifyGR1(input: { qr_string: string; trust: { pub_b64: string } }): { pass: boolean; diag: string[]; cose_bytes: Uint8Array } {

@@ -26,6 +26,7 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-COSE-003: public key length != 32 bytes -> REJECT
 - NEG-COSE-010: tag18 present -> REJECT
 - NEG-COSE-020: non-deterministic COSE encoding -> REJECT in core contexts
+- NEG-COSE-WA-0002: protected `kid` not derived from verification pubkey -> REJECT
 
 ## Ledger semantics
 - NEG-LED-001: non-root grant/revoke -> IGNORE for authorization

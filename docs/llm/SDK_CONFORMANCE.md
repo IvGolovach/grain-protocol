@@ -47,6 +47,7 @@ Expected contract:
 - scan accept persists verified records inside an atomic store boundary
 - rejected scan accept writes no records
 - duplicate scan accept is idempotent
+- TypeScript `transport.verifyGR1()` verifies COSE under explicit trust and rejects signed payloads that are not strict `ServingOffer` records for the protected issuer `kid`
 - failed or nested store mutations reject or roll back deterministically
 - identity/device lifecycle workflows create, import/export, activate, revoke, and report lifecycle counts deterministically
 - pairing preview is pure, pairing accept is atomic, and repeated pairing accept is idempotent

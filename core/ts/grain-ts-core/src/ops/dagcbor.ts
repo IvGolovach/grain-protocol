@@ -4,11 +4,12 @@ import {
   encodeCanonical,
   STRICT_DAG_CBOR_OPTIONS,
   mapGet,
+  nodeAsBytes,
   nodeAsText,
   parseExact,
   validateSetArrayUtf8
 } from "../cbor.js";
-import { decodeB64, sha256 } from "../utils.js";
+import { bytesEq, decodeB64, sha256 } from "../utils.js";
 
 export function opDagCborValidate(input: Record<string, Json>): OperationActual {
   const bytes = decodeB64(input.bytes_b64);
@@ -35,6 +36,39 @@ export function validateDagCborStrict(bytes: Uint8Array): CborNode {
 
   const node = parseExact(bytes, STRICT_DAG_CBOR_OPTIONS);
   schemaChecks(node);
+  return node;
+}
+
+export function validateServingOfferPayload(payload: Uint8Array, expectedIssuerKid: Uint8Array): CborNode {
+  if (expectedIssuerKid.length !== 16) {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+
+  const node = validateDagCborStrict(payload);
+  if (nodeAsText(mapGet(node, "t")) !== "ServingOffer") {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  const version = mapGet(node, "v");
+  if (!version || version.kind !== "u" || version.value !== 1n) {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  const issuerKid = nodeAsBytes(mapGet(node, "issuer_kid"));
+  if (!issuerKid || !bytesEq(issuerKid, expectedIssuerKid)) {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  const servingG = mapGet(node, "serving_g");
+  if (!servingG || servingG.kind !== "u") {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  const mean = mapGet(node, "mean");
+  if (!mean || mean.kind !== "m") {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  const variance = mapGet(node, "var");
+  if (!variance || variance.kind !== "m") {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+
   return node;
 }
 
