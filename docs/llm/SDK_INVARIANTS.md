@@ -142,8 +142,8 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`
 
-- SDK-AI-001: AI candidate MUST pass `accept()` before any apply side effect; opaque token only.
-  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-001 no public sdk.store`, `SDK-AI-001 apply accepted token`, `SDK-AI-001 forged token reject`)
+- SDK-AI-001: AI candidate MUST pass `accept()` before any apply side effect; opaque token only; default SDK must not expose a public raw AI host writer, and the sidecar bridge must only write bytes under their derived CID.
+  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-001 no public sdk.store`, `SDK-AI-001 no public sdk.createAiHost`, `SDK-AI-001 host cid mismatch rejects`, `SDK-AI-001 apply accepted token`, `SDK-AI-001 forged token reject`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk-ai/src/ai/token_registry.ts`, `core/ts/grain-sdk-ai/src/ai/accept.ts`
 
 - SDK-AI-002: AI acceptance/apply MUST be deterministic for same input class.

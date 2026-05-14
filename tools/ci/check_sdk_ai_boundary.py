@@ -10,6 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SDK_SRC = ROOT / "core" / "ts" / "grain-sdk" / "src"
 AI_SRC = ROOT / "core" / "ts" / "grain-sdk-ai" / "src"
 SDK_INDEX = SDK_SRC / "index.ts"
+SDK_CLASS = SDK_SRC / "sdk.ts"
+SDK_AI_HOST = SDK_SRC / "ai-host.ts"
 
 IMPORT_RE = re.compile(r"""from\s+["']([^"']+)["']""")
 SDK_EXPORT_BLOCKLIST = [
@@ -45,6 +47,18 @@ def main() -> int:
         for token in SDK_EXPORT_BLOCKLIST:
             if token in index_text:
                 violations.append(f"{SDK_INDEX.relative_to(ROOT)}: remove AI export surface token {token!r}")
+
+    if SDK_CLASS.exists():
+        sdk_text = SDK_CLASS.read_text(encoding="utf-8")
+        if re.search(r"\bcreateAiHost\s*\(", sdk_text):
+            violations.append(f"{SDK_CLASS.relative_to(ROOT)}: default SDK API must not expose createAiHost()")
+
+    if SDK_AI_HOST.exists():
+        ai_host_text = SDK_AI_HOST.read_text(encoding="utf-8")
+        if "store.objects.put(cid, bytes)" in ai_host_text and "actualCid !== cid" not in ai_host_text:
+            violations.append(f"{SDK_AI_HOST.relative_to(ROOT)}: putObject must verify cid == deriveCid(bytes) before write")
+        if "async putObject(cid: string, bytes: Uint8Array)" in ai_host_text and "SDK_ERR_AI_CID_MISMATCH" not in ai_host_text:
+            violations.append(f"{SDK_AI_HOST.relative_to(ROOT)}: putObject must reject cid mismatch with SDK_ERR_AI_CID_MISMATCH")
 
     for path in sorted(AI_SRC.rglob("*.ts")):
         if not should_scan(path):

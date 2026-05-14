@@ -1,7 +1,7 @@
 import type { CborNode, Json } from "grain-ts-core/types";
 import { encodeCanonical } from "grain-ts-core/cbor";
 import { compareCanonicalMapKey } from "grain-ts-core/utils";
-import type { GrainSdkAiHost, GrainSdkAiHostFactory } from "grain-sdk-ts/ai-host";
+import { GRAIN_SDK_AI_HOST, type GrainSdkAiHost, type GrainSdkAiHostFactory } from "grain-sdk-ts/ai-host";
 import { SdkError, toSdkError } from "grain-sdk-ts/errors";
 import { compareBytesLex, decodeB64, sha256Hex, toUtf8 } from "../sdk-utils.js";
 import type { AICandidateEnvelopeV1 } from "./adapter.js";
@@ -193,7 +193,7 @@ export class AiBoundary {
 }
 
 export function createGrainSdkAi(sdk: GrainSdkAiHostFactory, cfg?: AiBoundaryOptions): AiBoundary {
-  return new AiBoundary(sdk.createAiHost(), cfg);
+  return new AiBoundary(sdk[GRAIN_SDK_AI_HOST](), cfg);
 }
 
 function findUnknownCritical(candidate: AICandidateEnvelopeV1, known: string[]): string[] {

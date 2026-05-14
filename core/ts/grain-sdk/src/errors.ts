@@ -264,6 +264,13 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
     nes_ref: "conformance/contract/runner_v1.md",
     vector_refs: ["SDK-NEG-AI-0008"]
   },
+  SDK_ERR_AI_CID_MISMATCH: {
+    category: "CONTRACT",
+    summary: "AI object bytes do not match the requested CID.",
+    human_hint: "Re-derive CID from canonical bytes and only apply accepted token payloads.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0008"]
+  },
   SDK_ERR_ACCEPT_TOKEN_FORGED: {
     category: "CONTRACT",
     summary: "Accepted token is forged or external to SDK registry.",
