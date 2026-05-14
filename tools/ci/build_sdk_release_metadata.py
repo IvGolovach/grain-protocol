@@ -20,21 +20,25 @@ ARTIFACT_KINDS = {
             "core/rust/grain-client-core/src/grain_client_core.udl",
             "scripts/sdk/generate_client_bindings.sh",
         ],
+        "consumer_paths": ["generated-bindings/swift", "generated-bindings/kotlin"],
     },
     "grain-swift-client": {
         "kind": "swift-client",
         "name": "Grain Swift client source package",
         "source_paths": ["sdk/swift"],
+        "consumer_paths": ["sdk/swift"],
     },
     "grain-kotlin-client": {
         "kind": "kotlin-client",
         "name": "Grain Kotlin client source package",
         "source_paths": ["sdk/kotlin"],
+        "consumer_paths": ["sdk/kotlin"],
     },
     "grain-wasm-client": {
         "kind": "wasm-client",
         "name": "Grain WASM/mobile-web client source package",
         "source_paths": ["sdk/wasm", "core/rust/grain-client-wasm"],
+        "consumer_paths": ["sdk/wasm", "core/rust/grain-client-wasm"],
     },
     "grain-rust-client-core": {
         "kind": "rust-client-core",
@@ -47,6 +51,7 @@ ARTIFACT_KINDS = {
             "core/rust/grain-client-core",
             "core/rust/grain-client-wasm",
         ],
+        "consumer_paths": ["core/rust"],
     },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
@@ -63,11 +68,36 @@ ARTIFACT_KINDS = {
             "docs/human/sdk/release-train.md",
             "docs/llm/SDK_GENERATED_VERIFICATION.md",
         ],
+        "consumer_paths": [
+            "sdk/api",
+            "sdk/custody",
+            "sdk/device",
+            "sdk/workflows",
+            "sdk/trust",
+            "sdk/generated",
+            "docs/human/sdk/version-matrix.md",
+            "docs/human/sdk/security-review.md",
+            "docs/human/sdk/release-train.md",
+            "docs/llm/SDK_GENERATED_VERIFICATION.md",
+        ],
     },
     "grain-starter-templates": {
         "kind": "starter-templates",
         "name": "Grain starter template source package",
         "source_paths": [
+            "templates",
+            "examples/ios-scanner",
+            "examples/android-scanner",
+            "examples/wasm-scanner",
+            "examples/ios-reference-app",
+            "examples/android-reference-app",
+            "scripts/sdk/check_starter_templates.sh",
+            "scripts/sdk/run_local_scanner_flow.sh",
+            "tools/ci/check_local_scanner_flow_report.py",
+            "docs/human/sdk/start-here.md",
+            "docs/human/sdk/scan-quickstart.md",
+        ],
+        "consumer_paths": [
             "templates",
             "examples/ios-scanner",
             "examples/android-scanner",
@@ -263,6 +293,7 @@ def main() -> int:
                 "sha256": sha256_file(artifact_path),
                 "bytes": artifact_path.stat().st_size,
                 "source_paths": spec["source_paths"],
+                "consumer_paths": spec["consumer_paths"],
             }
         )
 

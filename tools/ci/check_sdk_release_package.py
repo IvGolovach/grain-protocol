@@ -9,21 +9,24 @@ import json
 import re
 import tarfile
 import tomllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_ARTIFACTS = {
     "grain-generated-bindings": {
         "kind": "generated-bindings",
         "required_entries": ["generated-bindings/swift/", "generated-bindings/kotlin/"],
+        "consumer_paths": ["generated-bindings/swift", "generated-bindings/kotlin"],
     },
     "grain-swift-client": {
         "kind": "swift-client",
         "required_entries": ["sdk/swift/Package.swift", "sdk/swift/Sources/GrainClient/"],
+        "consumer_paths": ["sdk/swift"],
     },
     "grain-kotlin-client": {
         "kind": "kotlin-client",
         "required_entries": ["sdk/kotlin/build.gradle.kts", "sdk/kotlin/src/main/kotlin/"],
+        "consumer_paths": ["sdk/kotlin"],
     },
     "grain-wasm-client": {
         "kind": "wasm-client",
@@ -32,6 +35,7 @@ EXPECTED_ARTIFACTS = {
             "sdk/wasm/src/index.mjs",
             "core/rust/grain-client-wasm/Cargo.toml",
         ],
+        "consumer_paths": ["sdk/wasm", "core/rust/grain-client-wasm"],
     },
     "grain-rust-client-core": {
         "kind": "rust-client-core",
@@ -43,6 +47,7 @@ EXPECTED_ARTIFACTS = {
             "core/rust/grain-client-core/Cargo.toml",
             "core/rust/grain-client-wasm/Cargo.toml",
         ],
+        "consumer_paths": ["core/rust"],
     },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
@@ -60,6 +65,18 @@ EXPECTED_ARTIFACTS = {
             "docs/human/sdk/release-train.md",
             "docs/llm/SDK_GENERATED_VERIFICATION.md",
         ],
+        "consumer_paths": [
+            "sdk/api",
+            "sdk/custody",
+            "sdk/device",
+            "sdk/workflows",
+            "sdk/trust",
+            "sdk/generated",
+            "docs/human/sdk/version-matrix.md",
+            "docs/human/sdk/security-review.md",
+            "docs/human/sdk/release-train.md",
+            "docs/llm/SDK_GENERATED_VERIFICATION.md",
+        ],
     },
     "grain-starter-templates": {
         "kind": "starter-templates",
@@ -72,6 +89,19 @@ EXPECTED_ARTIFACTS = {
             "examples/wasm-scanner/package.json",
             "examples/ios-reference-app/Package.swift",
             "examples/android-reference-app/build.gradle.kts",
+            "scripts/sdk/check_starter_templates.sh",
+            "scripts/sdk/run_local_scanner_flow.sh",
+            "tools/ci/check_local_scanner_flow_report.py",
+            "docs/human/sdk/start-here.md",
+            "docs/human/sdk/scan-quickstart.md",
+        ],
+        "consumer_paths": [
+            "templates",
+            "examples/ios-scanner",
+            "examples/android-scanner",
+            "examples/wasm-scanner",
+            "examples/ios-reference-app",
+            "examples/android-reference-app",
             "scripts/sdk/check_starter_templates.sh",
             "scripts/sdk/run_local_scanner_flow.sh",
             "tools/ci/check_local_scanner_flow_report.py",
@@ -125,6 +155,31 @@ def safe_file_name(file_name: str) -> bool:
         and ".." not in p.parts
         and "/" not in file_name
     )
+
+
+def safe_consumer_path(path: str) -> bool:
+    p = PurePosixPath(path)
+    return (
+        bool(path)
+        and path == str(p)
+        and not p.is_absolute()
+        and "." not in p.parts
+        and ".." not in p.parts
+        and "\\" not in path
+        and not path.endswith("/")
+    )
+
+
+def validate_consumer_paths(prefix: str, artifact: dict[str, object]) -> None:
+    expected = EXPECTED_ARTIFACTS[prefix]["consumer_paths"]
+    paths = artifact.get("consumer_paths")
+    require(isinstance(paths, list), f"SDK_RELEASE_CHECK_ERR_CONSUMER_PATHS: {prefix}")
+    for path in paths:
+        require(
+            isinstance(path, str) and safe_consumer_path(path),
+            f"SDK_RELEASE_CHECK_ERR_CONSUMER_PATH: {prefix}:{path}",
+        )
+    require(paths == expected, f"SDK_RELEASE_CHECK_ERR_CONSUMER_PATHS: {prefix}")
 
 
 def artifact_prefix(file_name: str, commit: str) -> str:
@@ -306,6 +361,7 @@ def validate_manifest(out_dir: Path, args: argparse.Namespace) -> dict[str, obje
         expected = EXPECTED_ARTIFACTS.get(prefix)
         require(expected is not None, f"SDK_RELEASE_CHECK_ERR_ARTIFACT_UNKNOWN: {file_name}")
         require(artifact.get("kind") == expected["kind"], f"SDK_RELEASE_CHECK_ERR_ARTIFACT_KIND: {file_name}")
+        validate_consumer_paths(prefix, artifact)
         artifact_path = out_dir / file_name
         require(artifact_path.is_file(), f"SDK_RELEASE_CHECK_ERR_ARTIFACT_MISSING: {file_name}")
         require(artifact.get("bytes") == artifact_path.stat().st_size, f"SDK_RELEASE_CHECK_ERR_ARTIFACT_BYTES: {file_name}")

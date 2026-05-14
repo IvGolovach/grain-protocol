@@ -72,6 +72,23 @@ class SdkReleasePackageArchivePolicyTests(unittest.TestCase):
         self.assertIn("scripts/sdk/run_local_scanner_flow.sh", starters)
         self.assertIn("tools/ci/check_local_scanner_flow_report.py", starters)
 
+    def test_consumer_install_paths_are_required_and_bounded(self) -> None:
+        module = load_module()
+
+        module.validate_consumer_paths(
+            "grain-swift-client",
+            {"consumer_paths": ["sdk/swift"]},
+        )
+
+        with self.assertRaisesRegex(SystemExit, "SDK_RELEASE_CHECK_ERR_CONSUMER_PATHS"):
+            module.validate_consumer_paths("grain-swift-client", {})
+
+        with self.assertRaisesRegex(SystemExit, "SDK_RELEASE_CHECK_ERR_CONSUMER_PATH"):
+            module.validate_consumer_paths(
+                "grain-swift-client",
+                {"consumer_paths": ["/tmp/grain"]},
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

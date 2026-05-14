@@ -33,7 +33,7 @@ Attach or point to these same-SHA assets:
 
 | Asset | Purpose |
 | --- | --- |
-| `manifest.json` | Records the source commit, package policy, component versions, verification mode, version-matrix hash, and artifact metadata. |
+| `manifest.json` | Records the source commit, package policy, component versions, verification mode, version-matrix hash, artifact metadata, and consumer install paths. |
 | `SHA256SUMS` | Lets the receiver verify every source archive and SBOM byte-for-byte. |
 | `sbom.spdx.json` | Lists SDK source package artifacts and checksums for audit. |
 | `grain-generated-bindings-<sha>.tar.gz` | Generated Swift/Kotlin binding snapshot for audit, reproduction, and future wrapper checks. |
