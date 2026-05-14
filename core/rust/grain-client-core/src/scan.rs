@@ -1,15 +1,11 @@
-use std::fmt::Write;
-
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use grain_core::cose::verify_cose_sign1;
 use grain_core::qr::decode_gr1_to_cose;
-use sha2::{Digest, Sha256};
 
+use crate::accepted_scan::prepare_accepted_scan;
 use crate::diag::SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED;
 use crate::store::{ClientStore, StorePutResult};
-use crate::trust::decode_trust_pub_b64;
-use crate::types::{AcceptedScan, AcceptedScanRecord, ScanAccept, ScanPreview};
+use crate::types::{AcceptedScanRecord, ScanAccept, ScanPreview};
 
 /// Decode a GR1 scan and optionally verify it against explicit trust material.
 ///
@@ -27,14 +23,9 @@ pub fn scan_preview(qr_string: &str, trust_pub_b64: Option<&str>) -> ScanPreview
         return ScanPreview::untrusted(&cose);
     };
 
-    let trusted_pub = match decode_trust_pub_b64(trust_pub_b64) {
-        Ok(bytes) => bytes,
+    match prepare_accepted_scan(&cose, trust_pub_b64) {
+        Ok(_) => ScanPreview::verified(&cose),
         Err(diag) => return ScanPreview::rejected(diag, Some(STANDARD.encode(&cose))),
-    };
-
-    match verify_cose_sign1(&cose, &trusted_pub, &[]) {
-        Ok(()) => ScanPreview::verified(&cose),
-        Err(err) => ScanPreview::rejected(err.diag().code(), Some(STANDARD.encode(&cose))),
     }
 }
 
@@ -53,20 +44,10 @@ pub fn scan_accept_prepare(qr_string: &str, trust_pub_b64: Option<&str>) -> Scan
         return ScanAccept::rejected(SDK_ERR_SCAN_ACCEPT_TRUST_REQUIRED);
     };
 
-    let trusted_pub = match decode_trust_pub_b64(trust_pub_b64) {
-        Ok(bytes) => bytes,
-        Err(diag) => return ScanAccept::rejected(diag),
-    };
-
-    if let Err(err) = verify_cose_sign1(&cose, &trusted_pub, &[]) {
-        return ScanAccept::rejected(err.diag().code());
+    match prepare_accepted_scan(&cose, trust_pub_b64) {
+        Ok(accepted) => ScanAccept::accepted(accepted),
+        Err(diag) => ScanAccept::rejected(diag),
     }
-
-    ScanAccept::accepted(AcceptedScan {
-        scan_id: scan_id_for_cose(&cose),
-        cose_b64: STANDARD.encode(&cose),
-        trust_pub_b64: trust_pub_b64.to_string(),
-    })
 }
 
 /// Verify and atomically persist an accepted scan record.
@@ -89,14 +70,4 @@ pub fn scan_accept<S: ClientStore>(
         Ok(StorePutResult::AlreadyExists) => ScanAccept::already_accepted(accepted),
         Err(diag) => ScanAccept::rejected(diag),
     }
-}
-
-fn scan_id_for_cose(cose: &[u8]) -> String {
-    let digest = Sha256::digest(cose);
-    let mut scan_id = String::with_capacity("scan-sha256:".len() + 64);
-    scan_id.push_str("scan-sha256:");
-    for byte in digest {
-        write!(&mut scan_id, "{byte:02x}").expect("writing to string cannot fail");
-    }
-    scan_id
 }

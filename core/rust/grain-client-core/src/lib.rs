@@ -1,5 +1,6 @@
 //! Workflow-shaped client SDK core for generated platform bindings.
 
+mod accepted_scan;
 #[cfg(feature = "bindings")]
 mod binding_api;
 mod custody;

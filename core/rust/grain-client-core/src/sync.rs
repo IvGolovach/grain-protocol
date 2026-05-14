@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::accepted_scan::validate_accepted_scan_record;
 use crate::custody::PortableTransferCustodyV1;
 use crate::diag::{SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_SYNC_BUNDLE_INVALID};
 use crate::identity::{decode_json_b64, encode_json_b64, validate_identity_bundle};
@@ -128,9 +129,7 @@ fn decode_sync_bundle(bundle_b64: &str) -> Result<SyncBundleV1, String> {
         validate_identity_bundle(identity).map_err(|_| SDK_ERR_SYNC_BUNDLE_INVALID.to_string())?;
     }
     for scan in &bundle.accepted_scans {
-        if scan.scan_id.is_empty() || scan.cose_b64.is_empty() || scan.trust_pub_b64.is_empty() {
-            return Err(SDK_ERR_SYNC_BUNDLE_INVALID.to_string());
-        }
+        validate_accepted_scan_record(scan).map_err(|_| SDK_ERR_SYNC_BUNDLE_INVALID.to_string())?;
     }
     if bundle.identity.is_none() && !bundle.lifecycle_events.is_empty() {
         return Err(SDK_ERR_SYNC_BUNDLE_INVALID.to_string());

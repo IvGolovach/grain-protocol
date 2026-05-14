@@ -14,6 +14,38 @@ pub fn validate_strict_dagcbor(bytes: &[u8]) -> GrainResult<CborValue> {
     Ok(value)
 }
 
+pub fn validate_serving_offer_payload(
+    payload: &[u8],
+    expected_issuer_kid: &[u8],
+) -> GrainResult<CborValue> {
+    if expected_issuer_kid.len() != 16 {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
+
+    let value = validate_strict_dagcbor(payload)?;
+    if value.map_get("t").and_then(CborValue::as_text_bytes) != Some(b"ServingOffer") {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
+    if !matches!(value.map_get("v"), Some(CborValue::Unsigned(1))) {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
+    match value.map_get("issuer_kid").and_then(CborValue::as_bytes) {
+        Some(kid) if kid == expected_issuer_kid => {}
+        _ => return Err(GrainError::from_diag(Diag::Schema)),
+    }
+    if !matches!(value.map_get("serving_g"), Some(CborValue::Unsigned(_))) {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
+    if !matches!(value.map_get("mean"), Some(CborValue::Map(_))) {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
+    if !matches!(value.map_get("var"), Some(CborValue::Map(_))) {
+        return Err(GrainError::from_diag(Diag::Schema));
+    }
+
+    Ok(value)
+}
+
 fn validate_schema_level(value: &CborValue) -> GrainResult<()> {
     let Some(map) = value.as_map() else {
         return Ok(());
@@ -211,12 +243,10 @@ mod tests {
 
     #[test]
     fn rejects_non_text_top_level_key() {
-        let bytes = encode(CborValue::Map(vec![
-            (
-                CborValue::Unsigned(1),
-                CborValue::Text(b"IngredientRef".to_vec()),
-            ),
-        ]));
+        let bytes = encode(CborValue::Map(vec![(
+            CborValue::Unsigned(1),
+            CborValue::Text(b"IngredientRef".to_vec()),
+        )]));
 
         let err = validate_strict_dagcbor(&bytes).unwrap_err();
         assert_eq!(err.diag(), Diag::NonCanonical);
@@ -235,5 +265,81 @@ mod tests {
 
         let err = validate_strict_dagcbor(&bytes).unwrap_err();
         assert_eq!(err.diag(), Diag::UnknownTopLevelKey);
+    }
+
+    fn serving_offer_payload(kid: &[u8]) -> Vec<u8> {
+        encode(CborValue::Map(vec![
+            (CborValue::Text(b"v".to_vec()), CborValue::Unsigned(1)),
+            (
+                CborValue::Text(b"t".to_vec()),
+                CborValue::Text(b"ServingOffer".to_vec()),
+            ),
+            (
+                CborValue::Text(b"issuer_kid".to_vec()),
+                CborValue::Bytes(kid.to_vec()),
+            ),
+            (
+                CborValue::Text(b"serving_g".to_vec()),
+                CborValue::Unsigned(250),
+            ),
+            (
+                CborValue::Text(b"mean".to_vec()),
+                CborValue::Map(Vec::new()),
+            ),
+            (CborValue::Text(b"var".to_vec()), CborValue::Map(Vec::new())),
+        ]))
+    }
+
+    #[test]
+    fn serving_offer_payload_accepts_required_profile_shape() {
+        let kid = [7u8; 16];
+        let value = validate_serving_offer_payload(&serving_offer_payload(&kid), &kid).unwrap();
+
+        assert_eq!(
+            value.map_get("t").and_then(CborValue::as_text_bytes),
+            Some(&b"ServingOffer"[..])
+        );
+    }
+
+    #[test]
+    fn serving_offer_payload_rejects_wrong_object_type() {
+        let bytes = encode(CborValue::Map(vec![
+            (
+                CborValue::Text(b"t".to_vec()),
+                CborValue::Text(b"IngredientRef".to_vec()),
+            ),
+            (CborValue::Text(b"v".to_vec()), CborValue::Unsigned(1)),
+        ]));
+
+        let err = validate_serving_offer_payload(&bytes, &[7u8; 16]).unwrap_err();
+
+        assert_eq!(err.diag(), Diag::Schema);
+    }
+
+    #[test]
+    fn serving_offer_payload_rejects_issuer_kid_mismatch() {
+        let err = validate_serving_offer_payload(&serving_offer_payload(&[7u8; 16]), &[8u8; 16])
+            .unwrap_err();
+
+        assert_eq!(err.diag(), Diag::Schema);
+    }
+
+    #[test]
+    fn serving_offer_payload_rejects_missing_required_fields() {
+        let bytes = encode(CborValue::Map(vec![
+            (CborValue::Text(b"v".to_vec()), CborValue::Unsigned(1)),
+            (
+                CborValue::Text(b"t".to_vec()),
+                CborValue::Text(b"ServingOffer".to_vec()),
+            ),
+            (
+                CborValue::Text(b"issuer_kid".to_vec()),
+                CborValue::Bytes(vec![7u8; 16]),
+            ),
+        ]));
+
+        let err = validate_serving_offer_payload(&bytes, &[7u8; 16]).unwrap_err();
+
+        assert_eq!(err.diag(), Diag::Schema);
     }
 }

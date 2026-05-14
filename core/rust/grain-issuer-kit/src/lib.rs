@@ -6,7 +6,9 @@ use ed25519_dalek::{Signer, SigningKey};
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use grain_core::cbor::{encode_canonical, CborValue};
-use grain_core::dagcbor::validate_strict_dagcbor;
+use grain_core::dagcbor::{
+    validate_serving_offer_payload as validate_core_serving_offer_payload, validate_strict_dagcbor,
+};
 use grain_core::error::GrainError;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -211,14 +213,22 @@ fn validate_serving_offer_payload(
     }
 
     match value.map_get("issuer_kid").and_then(CborValue::as_bytes) {
-        Some(kid) if kid == expected_issuer_kid => Ok(()),
-        Some(_) => Err(IssuerError::Payload(
-            "ServingOffer issuer_kid must match issuer public key".to_string(),
-        )),
-        None => Err(IssuerError::Payload(
-            "ServingOffer issuer_kid is required".to_string(),
-        )),
+        Some(kid) if kid == expected_issuer_kid => {}
+        Some(_) => {
+            return Err(IssuerError::Payload(
+                "ServingOffer issuer_kid must match issuer public key".to_string(),
+            ));
+        }
+        None => {
+            return Err(IssuerError::Payload(
+                "ServingOffer issuer_kid is required".to_string(),
+            ));
+        }
     }
+
+    validate_core_serving_offer_payload(payload, &expected_issuer_kid)
+        .map(|_| ())
+        .map_err(payload_error)
 }
 
 #[cfg(test)]

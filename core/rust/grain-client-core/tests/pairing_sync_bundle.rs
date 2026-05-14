@@ -116,6 +116,23 @@ fn sync_bundle_rejects_device_bound_custody_claim_without_mutation() {
 }
 
 #[test]
+fn sync_bundle_rejects_tampered_accepted_scan_without_mutation() {
+    let mut source = MemoryClientStore::new();
+    let qr = fixture_string("conformance/vectors/qr/POS-QR-001.json#/input/qr_string");
+    let trust = fixture_string("conformance/vectors/cose/POS-COSE-001.json#/input/pub_b64");
+    assert!(scan_accept(&mut source, &qr, Some(&trust)).diag.is_empty());
+    let exported = sync_export_bundle(&source);
+    let mut bundle = decode_bundle_value(exported.bundle_b64.as_deref().expect("bundle"));
+    bundle["accepted_scans"][0]["scan_id"] = Value::String("scan-sha256:not-the-cose".to_string());
+
+    let mut target = MemoryClientStore::new();
+    let rejected = sync_import_bundle(&mut target, &encode_bundle_value(&bundle));
+
+    assert_eq!(rejected.status, SyncStatus::Rejected);
+    assert!(target.list_accepted_scans().is_empty());
+}
+
+#[test]
 fn sync_identity_conflict_rolls_back_import() {
     let mut source = MemoryClientStore::new();
     assert_eq!(

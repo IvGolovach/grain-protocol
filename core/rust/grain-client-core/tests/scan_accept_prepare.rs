@@ -1,3 +1,6 @@
+#[path = "support/signed_qr.rs"]
+mod signed_qr;
+
 use std::fmt::Write;
 
 use base64::engine::general_purpose::STANDARD;
@@ -125,5 +128,15 @@ fn scan_accept_prepare_rejects_wrong_trust_key_without_record() {
 
     assert_eq!(prepared.status, ScanAcceptStatus::Rejected);
     assert_eq!(prepared.diag, vec!["GRAIN_ERR_COSE_PROFILE"]);
+    assert!(prepared.accepted.is_none());
+}
+
+#[test]
+fn scan_accept_prepare_rejects_signed_payload_that_is_not_serving_offer_dag_cbor() {
+    let signed = signed_qr::signed_qr_for_payload(b"not dag-cbor serving offer");
+    let prepared = scan_accept_prepare(&signed.qr_string, Some(&signed.trust_pub_b64));
+
+    assert_eq!(prepared.status, ScanAcceptStatus::Rejected);
+    assert_eq!(prepared.diag, vec!["GRAIN_ERR_NONCANONICAL"]);
     assert!(prepared.accepted.is_none());
 }

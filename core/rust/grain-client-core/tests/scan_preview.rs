@@ -1,3 +1,6 @@
+#[path = "support/signed_qr.rs"]
+mod signed_qr;
+
 use grain_client_core::{scan_preview, ScanPreviewStatus};
 use serde::Deserialize;
 
@@ -81,5 +84,15 @@ fn scan_preview_rejects_empty_trust_before_verify() {
 
     assert_eq!(preview.status, ScanPreviewStatus::Rejected);
     assert_eq!(preview.diag, vec!["SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID"]);
+    assert!(preview.cose_b64.is_some());
+}
+
+#[test]
+fn scan_preview_rejects_signed_payload_that_is_not_serving_offer_dag_cbor() {
+    let signed = signed_qr::signed_qr_for_payload(b"not dag-cbor serving offer");
+    let preview = scan_preview(&signed.qr_string, Some(&signed.trust_pub_b64));
+
+    assert_eq!(preview.status, ScanPreviewStatus::Rejected);
+    assert_eq!(preview.diag, vec!["GRAIN_ERR_NONCANONICAL"]);
     assert!(preview.cose_b64.is_some());
 }
