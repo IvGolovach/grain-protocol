@@ -23,11 +23,18 @@ pub struct LedgerTotals {
 
 pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<LedgerTotals> {
     let mut diagnostics: BTreeSet<Diag> = BTreeSet::new();
+    let conflicted = collect_conflicted_sequences(events);
+    if !conflicted.is_empty() {
+        diagnostics.insert(Diag::SeqConflict);
+    }
 
     let mut grants: BTreeSet<String> = BTreeSet::new();
     let mut revokes: BTreeSet<String> = BTreeSet::new();
 
     for ev in events {
+        if conflicted.contains(&(ev.ak.clone(), ev.seq)) {
+            continue;
+        }
         match ev.t.as_str() {
             "DeviceKeyGrant" => {
                 if ev.ak == root_kid {
@@ -60,6 +67,9 @@ pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<Ledg
 
     let mut authorized_events: Vec<&LedgerEvent> = Vec::new();
     for ev in events {
+        if conflicted.contains(&(ev.ak.clone(), ev.seq)) {
+            continue;
+        }
         if !is_authorized(&ev.ak) {
             if revokes.contains(&ev.ak) {
                 diagnostics.insert(Diag::AkRevoked);
@@ -69,32 +79,12 @@ pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<Ledg
         authorized_events.push(ev);
     }
 
-    let mut pair_payloads: BTreeMap<(String, u64), BTreeSet<String>> = BTreeMap::new();
-    for ev in &authorized_events {
-        pair_payloads
-            .entry((ev.ak.clone(), ev.seq))
-            .or_default()
-            .insert(ev.payload_cid.clone());
-    }
-
-    let conflicted: BTreeSet<(String, u64)> = pair_payloads
-        .iter()
-        .filter_map(|(k, payloads)| if payloads.len() > 1 { Some(k.clone()) } else { None })
-        .collect();
-
-    if !conflicted.is_empty() {
-        diagnostics.insert(Diag::SeqConflict);
-    }
-
     let mut sum_mean: i128 = 0;
     let mut sum_var: i128 = 0;
 
     let mut seen_exact: BTreeSet<(String, u64, String)> = BTreeSet::new();
 
     for ev in authorized_events {
-        if conflicted.contains(&(ev.ak.clone(), ev.seq)) {
-            continue;
-        }
         if !seen_exact.insert((ev.ak.clone(), ev.seq, ev.payload_cid.clone())) {
             // set-union semantics: exact duplicates are idempotent
             continue;
@@ -147,6 +137,21 @@ pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<Ledg
     })
 }
 
+fn collect_conflicted_sequences(events: &[LedgerEvent]) -> BTreeSet<(String, u64)> {
+    let mut pair_payloads: BTreeMap<(String, u64), BTreeSet<String>> = BTreeMap::new();
+    for ev in events {
+        pair_payloads
+            .entry((ev.ak.clone(), ev.seq))
+            .or_default()
+            .insert(ev.payload_cid.clone());
+    }
+
+    pair_payloads
+        .into_iter()
+        .filter_map(|(k, payloads)| if payloads.len() > 1 { Some(k) } else { None })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,6 +193,71 @@ mod tests {
 
         assert_eq!(totals.sum_mean.get("kcal"), Some(&0));
         assert_eq!(totals.sum_var.get("kcal"), Some(&0));
+        assert!(totals.diag_contains.contains(&Diag::SeqConflict.code().to_string()));
+    }
+
+    #[test]
+    fn conflicted_grant_does_not_authorize_later_events() {
+        let totals = reduce_ledger(
+            "root",
+            &[
+                LedgerEvent {
+                    t: "DeviceKeyGrant".to_string(),
+                    ak: "root".to_string(),
+                    seq: 1,
+                    payload_cid: "grant-dev1-a".to_string(),
+                    body: json!({ "grant_ak": "dev1" }),
+                },
+                LedgerEvent {
+                    t: "DeviceKeyGrant".to_string(),
+                    ak: "root".to_string(),
+                    seq: 1,
+                    payload_cid: "grant-dev2-b".to_string(),
+                    body: json!({ "grant_ak": "dev2" }),
+                },
+                intake_event("dev1", 2, "cid-dev1", 77, 7),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(totals.sum_mean.get("kcal"), Some(&0));
+        assert_eq!(totals.sum_var.get("kcal"), Some(&0));
+        assert!(totals.diag_contains.contains(&Diag::SeqConflict.code().to_string()));
+    }
+
+    #[test]
+    fn conflicted_revoke_does_not_deauthorize_existing_grant() {
+        let totals = reduce_ledger(
+            "root",
+            &[
+                LedgerEvent {
+                    t: "DeviceKeyGrant".to_string(),
+                    ak: "root".to_string(),
+                    seq: 1,
+                    payload_cid: "grant-dev1".to_string(),
+                    body: json!({ "grant_ak": "dev1" }),
+                },
+                LedgerEvent {
+                    t: "DeviceKeyRevoke".to_string(),
+                    ak: "root".to_string(),
+                    seq: 2,
+                    payload_cid: "revoke-dev1-a".to_string(),
+                    body: json!({ "revoke_ak": "dev1" }),
+                },
+                LedgerEvent {
+                    t: "DeviceKeyRevoke".to_string(),
+                    ak: "root".to_string(),
+                    seq: 2,
+                    payload_cid: "revoke-dev1-b".to_string(),
+                    body: json!({ "revoke_ak": "dev1" }),
+                },
+                intake_event("dev1", 3, "cid-dev1", 77, 7),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(totals.sum_mean.get("kcal"), Some(&77));
+        assert_eq!(totals.sum_var.get("kcal"), Some(&7));
         assert!(totals.diag_contains.contains(&Diag::SeqConflict.code().to_string()));
     }
 

@@ -20,10 +20,19 @@ export function opLedgerReduce(input: Record<string, Json>): OperationActual {
   const events = parseLedgerEvents(input.events);
 
   const diagnostics = new Set<string>();
+  const conflicted = collectConflictedSequences(events);
+  if (conflicted.size > 0) {
+    diagnostics.add("SEQ_CONFLICT");
+  }
+
   const grants = new Set<string>();
   const revokes = new Set<string>();
 
   for (const ev of events) {
+    if (conflicted.has(sequenceKey(ev.ak, ev.seq))) {
+      continue;
+    }
+
     if (ev.t === "DeviceKeyGrant") {
       if (ev.ak === rootKid) {
         const grantAk = textFromObjectField(ev.body, "grant_ak");
@@ -56,6 +65,10 @@ export function opLedgerReduce(input: Record<string, Json>): OperationActual {
 
   const authorizedEvents: LedgerEvent[] = [];
   for (const ev of events) {
+    if (conflicted.has(sequenceKey(ev.ak, ev.seq))) {
+      continue;
+    }
+
     if (!isAuthorized(ev.ak)) {
       if (revokes.has(ev.ak)) {
         diagnostics.add("AK_REVOKED");
@@ -65,21 +78,12 @@ export function opLedgerReduce(input: Record<string, Json>): OperationActual {
     authorizedEvents.push(ev);
   }
 
-  const conflicted = collectConflictedSequences(authorizedEvents);
-  if (conflicted.size > 0) {
-    diagnostics.add("SEQ_CONFLICT");
-  }
-
   let sumMean = 0n;
   let sumVar = 0n;
   const seenExact = new Set<string>();
 
   for (const ev of authorizedEvents) {
     const pairKey = sequenceKey(ev.ak, ev.seq);
-    if (conflicted.has(pairKey)) {
-      continue;
-    }
-
     const exactKey = `${pairKey}\u0000${ev.payloadCid}`;
     if (seenExact.has(exactKey)) {
       continue;
