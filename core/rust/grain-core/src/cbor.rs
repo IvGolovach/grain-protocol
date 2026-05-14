@@ -110,7 +110,11 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn new(bytes: &'a [u8], opts: ParseOptions) -> Self {
-        Self { bytes, pos: 0, opts }
+        Self {
+            bytes,
+            pos: 0,
+            opts,
+        }
     }
 
     fn eof(&self) -> bool {
@@ -133,6 +137,14 @@ impl<'a> Parser<'a> {
         let s = &self.bytes[self.pos..self.pos + n];
         self.pos += n;
         Ok(s)
+    }
+
+    fn read_exact_len(&mut self, len: u64) -> Result<&'a [u8], ParseFail> {
+        if (self.bytes.len().saturating_sub(self.pos) as u64) < len {
+            return Err(ParseFail::Truncated);
+        }
+        let n = usize::try_from(len).map_err(|_| ParseFail::Truncated)?;
+        self.read_exact(n)
     }
 
     fn parse_uint_arg(&mut self, ai: u8) -> Result<u64, ParseFail> {
@@ -196,26 +208,27 @@ impl<'a> Parser<'a> {
                 Ok(CborValue::Negative(n))
             }
             2 => {
-                let len = self.parse_uint_arg(ai)? as usize;
-                let b = self.read_exact(len)?.to_vec();
+                let len = self.parse_uint_arg(ai)?;
+                let b = self.read_exact_len(len)?.to_vec();
                 Ok(CborValue::Bytes(b))
             }
             3 => {
-                let len = self.parse_uint_arg(ai)? as usize;
-                if len > self.opts.limits.max_tstr_utf8_bytes {
+                let len = self.parse_uint_arg(ai)?;
+                if len > self.opts.limits.max_tstr_utf8_bytes as u64 {
                     return Err(ParseFail::Diag(Diag::Limit));
                 }
-                let b = self.read_exact(len)?.to_vec();
+                let b = self.read_exact_len(len)?.to_vec();
                 if std::str::from_utf8(&b).is_err() {
                     return Err(ParseFail::Diag(Diag::NonCanonical));
                 }
                 Ok(CborValue::Text(b))
             }
             4 => {
-                let len = self.parse_uint_arg(ai)? as usize;
-                if len > self.opts.limits.max_cbor_array_length {
+                let len = self.parse_uint_arg(ai)?;
+                if len > self.opts.limits.max_cbor_array_length as u64 {
                     return Err(ParseFail::Diag(Diag::Limit));
                 }
+                let len = usize::try_from(len).map_err(|_| ParseFail::Diag(Diag::Limit))?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
                     out.push(self.parse_item(depth + 1)?);
@@ -223,10 +236,11 @@ impl<'a> Parser<'a> {
                 Ok(CborValue::Array(out))
             }
             5 => {
-                let len = self.parse_uint_arg(ai)? as usize;
-                if len > self.opts.limits.max_cbor_map_pairs {
+                let len = self.parse_uint_arg(ai)?;
+                if len > self.opts.limits.max_cbor_map_pairs as u64 {
                     return Err(ParseFail::Diag(Diag::Limit));
                 }
+                let len = usize::try_from(len).map_err(|_| ParseFail::Diag(Diag::Limit))?;
                 let mut out = Vec::with_capacity(len);
                 let mut seen: HashSet<Vec<u8>> = HashSet::with_capacity(len);
                 let mut prev_key_encoded: Option<Vec<u8>> = None;
