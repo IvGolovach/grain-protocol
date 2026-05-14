@@ -85,6 +85,7 @@ Payload sizes:
 - CBL_MAX_CRIT_TOTAL_UTF8_BYTES = 4096
 
 Context-specific:
+- CBL_MAX_GR1_COSE_BYTES = 16_384
 - CBL_MAX_LEDGER_EVENT_PAYLOAD_BYTES = 32_768
 - CBL_MAX_MANIFEST_RECORD_PAYLOAD_BYTES = 8_192
 - CBL_MAX_SERVINGOFFER_PAYLOAD_BYTES = 2_048
@@ -103,4 +104,3 @@ Implementations MUST provide a Strict Conformance Mode where:
 Conformance suite runs only in Strict Conformance Mode.
 
 Implementations MAY support higher limits outside strict mode, but behavior must remain deterministic and documented.
-

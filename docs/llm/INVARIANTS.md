@@ -136,9 +136,9 @@ If code behavior and an invariant disagree, trust the invariant + vectors and re
   Ref: NES §8.1; qr-profile.md  
   Vectors: NEG-QR-001
 
-- INV-QR-002: After the `GR1:` prefix, body MUST be valid Base45 of a zlib-compressed COSE blob; malformed body bytes -> reject.
+- INV-QR-002: After the `GR1:` prefix, body MUST be valid Base45 of a zlib-compressed COSE blob; malformed body bytes and oversized decoded COSE bytes -> reject.
   Ref: NES §8.1; qr-profile.md
-  Vectors: POS-QR-001, NEG-QR-002, NEG-QR-003
+  Vectors: POS-QR-001, NEG-QR-002, NEG-QR-003, NEG-QR-WA-0001
 
 ## Limits / Strict mode
 

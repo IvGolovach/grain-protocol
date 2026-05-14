@@ -19,9 +19,22 @@ export function opQrDecodeGr1(input: Record<string, Json>): OperationActual {
   const compressed = base45Decode(body);
   let cose: Uint8Array;
   try {
-    cose = new Uint8Array(inflateSync(Buffer.from(compressed)));
-  } catch {
+    cose = new Uint8Array(
+      inflateSync(Buffer.from(compressed), {
+        maxOutputLength: LIMITS.CBL_MAX_GR1_COSE_BYTES + 1
+      })
+    );
+  } catch (err) {
+    if (errorCode(err) === "ERR_BUFFER_TOO_LARGE") {
+      throw new GrainDiagError("GRAIN_ERR_LIMIT");
+    }
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  if (cose.length === 0) {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
+  if (cose.length > LIMITS.CBL_MAX_GR1_COSE_BYTES) {
+    throw new GrainDiagError("GRAIN_ERR_LIMIT");
   }
 
   return {
@@ -31,6 +44,12 @@ export function opQrDecodeGr1(input: Record<string, Json>): OperationActual {
       cose_b64: encodeB64(cose)
     }
   };
+}
+
+function errorCode(err: unknown): unknown {
+  return typeof err === "object" && err !== null && "code" in err
+    ? (err as { code?: unknown }).code
+    : undefined;
 }
 
 export function opParseCborSeq(input: Record<string, Json>): OperationActual {

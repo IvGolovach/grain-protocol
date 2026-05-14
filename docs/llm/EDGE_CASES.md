@@ -71,6 +71,7 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-QR-001: wrong prefix (not GR1:) -> REJECT
 - NEG-QR-002: invalid Base45 body after `GR1:` -> REJECT
 - NEG-QR-003: invalid zlib payload after Base45 decode -> REJECT
+- NEG-QR-WA-0001: decoded GR1 COSE bytes exceed CBL_MAX_GR1_COSE_BYTES -> GRAIN_ERR_LIMIT
 
 ## Limits
 - NEG-LIM-001: baseline limits exceeded in strict mode -> GRAIN_ERR_LIMIT
