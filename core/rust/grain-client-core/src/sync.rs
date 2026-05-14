@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::accepted_scan::validate_accepted_scan_record;
 use crate::custody::PortableTransferCustodyV1;
+use crate::device::validate_lifecycle_event_record;
 use crate::diag::{SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_SYNC_BUNDLE_INVALID};
 use crate::identity::{decode_json_b64, encode_json_b64, validate_identity_bundle};
 use crate::store::{IdentityClientStore, StorePutResult};
@@ -136,24 +137,9 @@ fn decode_sync_bundle(bundle_b64: &str) -> Result<SyncBundleV1, String> {
     }
     if let Some(identity) = &bundle.identity {
         for event in &bundle.lifecycle_events {
-            if event.ak != identity.root_kid
-                || !identity
-                    .device_keys
-                    .iter()
-                    .any(|device| device.ak == event.target_ak)
-            {
+            if !validate_lifecycle_event_record(event, identity) {
                 return Err(SDK_ERR_SYNC_BUNDLE_INVALID.to_string());
             }
-        }
-    }
-    for event in &bundle.lifecycle_events {
-        if event.event_id.is_empty()
-            || event.t.is_empty()
-            || event.ak.is_empty()
-            || event.payload_cid.is_empty()
-            || event.target_ak.is_empty()
-        {
-            return Err(SDK_ERR_SYNC_BUNDLE_INVALID.to_string());
         }
     }
     Ok(bundle)

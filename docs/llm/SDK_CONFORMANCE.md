@@ -51,7 +51,8 @@ Expected contract:
 - failed or nested store mutations reject or roll back deterministically
 - identity/device lifecycle workflows create, import/export, activate, revoke, and report lifecycle counts deterministically
 - pairing preview is pure, pairing accept is atomic, and repeated pairing accept is idempotent
-- sync bundle export/import carries identity, accepted scans, and lifecycle events atomically
+- sync bundle export/import carries identity, accepted scans, and derived root-authored grant/revoke lifecycle events atomically
+- sync/snapshot import rejects forged lifecycle event IDs, unknown lifecycle event types, mismatched payload CIDs, out-of-range sequence numbers, root targets, and unknown target devices before mutation
 - pairing and sync transfer metadata rejects unsupported or falsely device-bound
   custody claims before mutation
 - Rust and binding DTO debug output redacts snapshots, identity bundles, pairing

@@ -206,3 +206,32 @@ fn storage_snapshot_rejects_tampered_accepted_scan_without_mutation() {
     assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_SNAPSHOT_INVALID"]);
     assert_eq!(list_accepted_scans(&target), vec![stale]);
 }
+
+#[test]
+fn storage_snapshot_rejects_lifecycle_payload_mismatch_without_mutation() {
+    let mut source = MemoryClientStore::new();
+    assert!(identity_create_root(&mut source, "phone").diag.is_empty());
+    assert!(device_add_key(&mut source, "glasses").diag.is_empty());
+    let snapshot_b64 = source
+        .export_store_snapshot()
+        .snapshot_b64
+        .expect("non-empty snapshot");
+    let mut snapshot: Value =
+        serde_json::from_slice(&STANDARD.decode(snapshot_b64).expect("valid base64"))
+            .expect("valid snapshot JSON");
+    snapshot["lifecycle_events"][0]["payload_cid"] = serde_json::json!("revoke:not-the-target");
+    let tampered = STANDARD.encode(serde_json::to_vec(&snapshot).expect("snapshot JSON bytes"));
+
+    let mut target = MemoryClientStore::new();
+    let stale = record("scan-sha256:stale");
+    assert_eq!(
+        put_accepted_scan_atomically(&mut target, stale.clone()),
+        Ok(StorePutResult::Inserted)
+    );
+    let rejected = target.restore_store_snapshot(&tampered);
+
+    assert_eq!(rejected.status, StoreSnapshotStatus::Rejected);
+    assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_SNAPSHOT_INVALID"]);
+    assert_eq!(list_accepted_scans(&target), vec![stale]);
+    assert_eq!(client_lifecycle(&target).lifecycle_event_count, 0);
+}

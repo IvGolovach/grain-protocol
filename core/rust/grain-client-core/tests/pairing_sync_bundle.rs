@@ -281,6 +281,76 @@ fn sync_import_rejects_cross_identity_lifecycle_events() {
     assert!(target.list_lifecycle_events().is_empty());
 }
 
+#[test]
+fn sync_import_rejects_lifecycle_event_id_mismatch() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "source").status,
+        IdentityStatus::Created
+    );
+    assert_eq!(
+        device_add_key(&mut source, "device").diag,
+        Vec::<String>::new()
+    );
+    let exported = sync_export_bundle(&source);
+    let mut bundle =
+        decode_bundle_value(exported.bundle_b64.as_deref().expect("sync bundle present"));
+    bundle["lifecycle_events"][0]["event_id"] =
+        Value::String("event-sha256:not-derived-from-event".to_string());
+
+    let mut target = MemoryClientStore::new();
+    let rejected = sync_import_bundle(&mut target, &encode_bundle_value(&bundle));
+    assert_eq!(rejected.status, SyncStatus::Rejected);
+    assert!(target.load_identity_bundle().is_none());
+    assert!(target.list_lifecycle_events().is_empty());
+}
+
+#[test]
+fn sync_import_rejects_unknown_lifecycle_event_type() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "source").status,
+        IdentityStatus::Created
+    );
+    assert_eq!(
+        device_add_key(&mut source, "device").diag,
+        Vec::<String>::new()
+    );
+    let exported = sync_export_bundle(&source);
+    let mut bundle =
+        decode_bundle_value(exported.bundle_b64.as_deref().expect("sync bundle present"));
+    bundle["lifecycle_events"][0]["t"] = Value::String("DeviceKeyRename".to_string());
+
+    let mut target = MemoryClientStore::new();
+    let rejected = sync_import_bundle(&mut target, &encode_bundle_value(&bundle));
+    assert_eq!(rejected.status, SyncStatus::Rejected);
+    assert!(target.load_identity_bundle().is_none());
+    assert!(target.list_lifecycle_events().is_empty());
+}
+
+#[test]
+fn sync_import_rejects_lifecycle_event_seq_beyond_identity_state() {
+    let mut source = MemoryClientStore::new();
+    assert_eq!(
+        identity_create_root(&mut source, "source").status,
+        IdentityStatus::Created
+    );
+    assert_eq!(
+        device_add_key(&mut source, "device").diag,
+        Vec::<String>::new()
+    );
+    let exported = sync_export_bundle(&source);
+    let mut bundle =
+        decode_bundle_value(exported.bundle_b64.as_deref().expect("sync bundle present"));
+    bundle["lifecycle_events"][0]["seq"] = Value::Number(999_u64.into());
+
+    let mut target = MemoryClientStore::new();
+    let rejected = sync_import_bundle(&mut target, &encode_bundle_value(&bundle));
+    assert_eq!(rejected.status, SyncStatus::Rejected);
+    assert!(target.load_identity_bundle().is_none());
+    assert!(target.list_lifecycle_events().is_empty());
+}
+
 fn fixture_string(reference: &str) -> String {
     let (file_part, pointer) = reference
         .split_once("#/")

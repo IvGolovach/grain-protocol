@@ -25,6 +25,7 @@ The current slice makes the SDK surface consistent and testable. Future platform
 ## Rules
 
 - Rust client core owns bundle parsing, lifecycle mutation, pairing envelope validation, and sync import atomicity.
+- Imported lifecycle records are treated as derived custody metadata, not trusted prose: event IDs, event types, payload CIDs, target devices, and root sequence bounds are recomputed/validated before mutation.
 - Generated SDKs expose workflow APIs, not raw protocol runner operations.
 - Pairing preview is pure.
 - Pairing accept mutates only through the client store atomic boundary.
