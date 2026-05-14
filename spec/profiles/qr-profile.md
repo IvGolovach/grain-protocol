@@ -35,8 +35,8 @@ Full object graphs MUST be distributed via pointer/fetch mechanisms (out of scop
 ## 5. Size guidance (SHOULD)
 
 Implementations SHOULD target:
+- Decoded COSE_Sign1 bytes <= CBL_MAX_GR1_COSE_BYTES (see CBOR profile)
 - ServingOffer payload <= CBL_MAX_SERVINGOFFER_PAYLOAD_BYTES (see CBOR profile)
 - QR error correction level Q
 
 These are interoperability/scannability targets, not protocol correctness constraints.
-
