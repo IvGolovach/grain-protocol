@@ -12,7 +12,7 @@ export type AIExplainRequest = {
 
 export type AICandidateEnvelopeV1 = {
   candidate_version: 1;
-  kind: "object" | "event";
+  kind: "object";
   target_schema_major: 1;
   target_type: string;
   payload_format: "structured_v1" | "dagcbor_b64";

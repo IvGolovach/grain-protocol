@@ -142,21 +142,21 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`
 
-- SDK-AI-001: AI candidate MUST pass `accept()` before any apply side effect; opaque token only; default SDK must not expose a public raw AI host writer, and the sidecar bridge must only write bytes under their derived CID.
-  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-001 no public sdk.store`, `SDK-AI-001 no public sdk.createAiHost`, `SDK-AI-001 host cid mismatch rejects`, `SDK-AI-001 apply accepted token`, `SDK-AI-001 forged token reject`)
+- SDK-AI-001: AI candidate MUST pass `accept()` before any apply side effect; opaque token only; default SDK must not expose a public raw AI host writer, the sidecar bridge must only write bytes under their derived CID, and exported candidate contracts MUST NOT advertise unsupported event candidates before `event_append` exists.
+  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-001 no public sdk.store`, `SDK-AI-001 no public sdk.createAiHost`, `SDK-AI-001 host cid mismatch rejects`, `SDK-AI-001 apply accepted token`, `SDK-AI-001 forged token reject`, `SDK-AI-001 contract narrows unsupported event candidates`, `SDK-AI-001 event candidates reject until append is implemented`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk-ai/src/ai/token_registry.ts`, `core/ts/grain-sdk-ai/src/ai/accept.ts`
 
-- SDK-AI-002: AI acceptance/apply MUST be deterministic for same input class.
-  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-002 deterministic accept`, `SDK-AI-002 replay reject`, `SDK-AI-002 token expiry`, `SDK-AI-002 dagcbor accept path`)
+- SDK-AI-002: AI acceptance/apply MUST be deterministic for same input class, and `dagcbor_b64` payloads MUST be canonical base64 standard before strict DAG-CBOR validation.
+  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-002 deterministic accept`, `SDK-AI-002 replay reject`, `SDK-AI-002 token expiry`, `SDK-AI-002 dagcbor accept path`, `SDK-AI-002 dagcbor rejects non-canonical base64`)
   Modules: `core/ts/grain-sdk-ai/src/ai/accept.ts`, `core/ts/grain-sdk-ai/src/ai/token_registry.ts`
 
 - SDK-AI-003: SDK core MUST have no outbound network calls (model/vendor agnostic boundary).
   Tests: `tools/ci/check_sdk_no_network.py` (`SDK no-network guard: OK (core + ai sidecar)`), `tools/ci/check_sdk_ai_boundary.py` (`SDK AI boundary guard: OK`)
   Modules: `core/ts/grain-sdk/src/**`, `core/ts/grain-sdk-ai/src/**`, `tools/ci/check_sdk_no_network.py`, `tools/ci/check_sdk_ai_boundary.py`
 
-- SDK-AI-004: AI explain payload MUST be redacted by default.
-  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-004 redaction default`, `SDK-AI-004 sensitive mode bounded`)
-  Modules: `core/ts/grain-sdk-ai/src/ai/diagnostics.ts`
+- SDK-AI-004: AI explain payload MUST be redacted by default, and structured bytes fields MUST be canonical base64 standard before byte conversion.
+  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-004 redaction default`, `SDK-AI-004 sensitive mode bounded`, `SDK-AI-004 bytes field rejects non-canonical base64`)
+  Modules: `core/ts/grain-sdk-ai/src/ai/diagnostics.ts`, `core/ts/grain-sdk-ai/src/ai/accept.ts`
 
 - SDK-AI-005: Numeric ingestion MUST accept decimal strings only and convert deterministically.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-005 numeric fields reject JS number`, `SDK-AI-005 explicit profile required`)

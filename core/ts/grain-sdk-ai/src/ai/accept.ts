@@ -3,7 +3,7 @@ import { encodeCanonical } from "grain-ts-core/cbor";
 import { compareCanonicalMapKey } from "grain-ts-core/utils";
 import { GRAIN_SDK_AI_HOST, type GrainSdkAiHost, type GrainSdkAiHostFactory } from "grain-sdk-ts/ai-host";
 import { SdkError, toSdkError } from "grain-sdk-ts/errors";
-import { compareBytesLex, decodeB64, sha256Hex, toUtf8 } from "../sdk-utils.js";
+import { compareBytesLex, decodeB64, isStrictBase64Standard, sha256Hex, toUtf8 } from "../sdk-utils.js";
 import type { AICandidateEnvelopeV1 } from "./adapter.js";
 import { parseCandidateEnvelopeV1, parseStructuredPayloadV1, type NumericKind } from "./candidate_v1.js";
 import { exportAiContract, type ContractExportV1 } from "./contract_export.js";
@@ -257,7 +257,7 @@ function applyByteConversions(root: InternalValue, paths: string[] | undefined):
     if (typeof current !== "string") {
       throw new SdkError("SDK_ERR_AI_BYTES_B64", `bytes field must be base64 string at ${path}`);
     }
-    if (!isBase64Standard(current)) {
+    if (!isStrictBase64Standard(current)) {
       throw new SdkError("SDK_ERR_AI_BYTES_B64", `bytes field is not base64 standard at ${path}`);
     }
     setByPointer(root, path, decodeB64(current));
@@ -414,6 +414,10 @@ function invariantRefsForCode(code: string): string[] {
     case "SDK_ERR_AI_PROFILE_MISSING":
     case "SDK_ERR_AI_PROFILE_UNKNOWN":
       return ["SDK-AI-005"];
+    case "SDK_ERR_AI_BYTES_B64":
+      return ["SDK-AI-004"];
+    case "SDK_ERR_AI_KIND_UNSUPPORTED":
+      return ["SDK-AI-001"];
     case "SDK_ERR_AI_SET_ARRAY_INVALID":
     case "GRAIN_ERR_SET_ARRAY_DUP":
       return ["SDK-AI-006"];
@@ -422,11 +426,6 @@ function invariantRefsForCode(code: string): string[] {
     default:
       return ["SDK-AI-002"];
   }
-}
-
-function isBase64Standard(value: string): boolean {
-  if (value.length === 0 || value.length % 4 !== 0) return false;
-  return /^[A-Za-z0-9+/]*={0,2}$/.test(value);
 }
 
 function resolveStructuredProfile(

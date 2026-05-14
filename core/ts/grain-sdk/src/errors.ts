@@ -148,7 +148,14 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
   SDK_ERR_AI_KIND_INVALID: {
     category: "VALIDATION",
     summary: "AI candidate kind is invalid.",
-    human_hint: "kind must be object or event.",
+    human_hint: "kind must be object.",
+    nes_ref: "docs/human/sdk/ai-boundary.md",
+    vector_refs: ["SDK-NEG-AI-0001"]
+  },
+  SDK_ERR_AI_KIND_UNSUPPORTED: {
+    category: "CONTRACT",
+    summary: "AI candidate kind is not supported by the current sidecar.",
+    human_hint: "Use object candidates until event_append is implemented.",
     nes_ref: "docs/human/sdk/ai-boundary.md",
     vector_refs: ["SDK-NEG-AI-0001"]
   },

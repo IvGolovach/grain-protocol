@@ -43,7 +43,13 @@ This checklist documents what public SDK APIs reject by construction.
 13. AI candidate bypass around deterministic firewall
    - no public `sdk.store` access; side effects require sidecar `accept()` then opaque token apply
    - code path: `SDK-AI-001` gate suite
-14. Unknown critical AI candidate extensions
+14. Unsupported AI event candidate
+   - rejected until the sidecar has an implemented `event_append` apply path
+   - code: `SDK_ERR_AI_KIND_UNSUPPORTED`
+15. Non-canonical AI base64 bytes
+   - `dagcbor_b64` payloads and structured `bytes_fields` must round-trip to canonical base64 standard
+   - code: `SDK_ERR_AI_DAGCBOR_B64` / `SDK_ERR_AI_BYTES_B64`
+16. Unknown critical AI candidate extensions
    - quarantined deterministically
    - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
 

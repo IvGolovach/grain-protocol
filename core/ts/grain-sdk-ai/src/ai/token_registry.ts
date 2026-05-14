@@ -4,23 +4,13 @@ import { bytesEq, sha256Hex } from "../sdk-utils.js";
 const TOKEN_SECRET = Symbol("sdk-ai-accepted-token-secret");
 
 export type AcceptedPayload = {
-  kind: "object" | "event";
+  kind: "object";
   target_type: string;
   cid: string;
   canonical_bytes: Uint8Array;
-  apply_plan:
-    | {
-        mode: "object_put";
-      }
-    | {
-        mode: "event_append";
-        event: {
-          t: string;
-          payload_cid: string;
-          body: Record<string, unknown>;
-          ak?: string;
-        };
-      };
+  apply_plan: {
+    mode: "object_put";
+  };
 };
 
 type RegistryConfig = {

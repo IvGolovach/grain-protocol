@@ -24,7 +24,7 @@ If any step is bypassed, treat it as a bug.
 
 - `SDK-AI-000`: AI stays opt-in; `GrainSdk` must not grow a default `sdk.ai`
 - `SDK-AI-001`: no append/apply bypass without accept token
-- `SDK-AI-002`: deterministic accept/apply outcomes
+- `SDK-AI-002`: deterministic accept/apply outcomes and canonical base64 `dagcbor_b64`
 - `SDK-AI-003`: no network in SDK core or AI sidecar
 - `SDK-AI-004`: explain redaction by default
 - `SDK-AI-005`: numeric ingestion uses decimal strings only
@@ -35,4 +35,5 @@ If any step is bypassed, treat it as a bug.
 
 - Decimal strings are ingestion convenience, not protocol semantics.
 - Set-array normalization is AI-ingestion only, not strict protocol relax.
-- Base64 rule here is SDK ingestion contract, not protocol-wide encoding rule.
+- Base64 rule here is canonical SDK ingestion contract, not protocol-wide encoding rule.
+- Candidate v1 is object-only until an `event_append` apply path exists.

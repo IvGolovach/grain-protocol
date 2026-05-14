@@ -2,7 +2,7 @@ export type ContractExportV1 = {
   contract_version: 1;
   candidate_schema: {
     candidate_version: 1;
-    kind: ["object", "event"];
+    kind: ["object"];
     payload_format: ["structured_v1", "dagcbor_b64"];
   };
   structured_v1_rules: {
@@ -28,12 +28,12 @@ export function exportAiContract(): ContractExportV1 {
     contract_version: 1,
     candidate_schema: {
       candidate_version: 1,
-      kind: ["object", "event"],
+      kind: ["object"],
       payload_format: ["structured_v1", "dagcbor_b64"]
     },
     structured_v1_rules: {
       numeric_policy: "Ingestion convenience only: numeric protocol fields are accepted as decimal strings and converted deterministically.",
-      bytes_policy: "Bytes in structured_v1 MUST be base64 standard (A-Z a-z 0-9 + / with optional = padding).",
+      bytes_policy: "Bytes in structured_v1 MUST be canonical base64 standard (A-Z a-z 0-9 + / with optional = padding and zero pad bits).",
       set_array_policy: "AI ingestion may normalize unsorted set-arrays; duplicates are always rejected."
     },
     prohibitions: [

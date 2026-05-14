@@ -284,6 +284,63 @@ async function run(): Promise<number> {
     ok("SDK-AI-002 dagcbor accept path");
   }
 
+  const dagNonCanonical = await ai.accept({
+    candidate_version: 1,
+    kind: "object",
+    target_schema_major: 1,
+    target_type: "Claim",
+    payload_format: "dagcbor_b64",
+    payload: "AB=="
+  });
+  if (dagNonCanonical.status !== "rejected" || dagNonCanonical.error.code !== "SDK_ERR_AI_DAGCBOR_B64") {
+    fail("SDK-AI-002 dagcbor rejects non-canonical base64", "expected SDK_ERR_AI_DAGCBOR_B64 for non-canonical padded bits");
+  } else {
+    ok("SDK-AI-002 dagcbor rejects non-canonical base64");
+  }
+
+  const bytesNonCanonical = await ai.accept({
+    candidate_version: 1,
+    kind: "object",
+    target_schema_major: 1,
+    target_type: "CustomBytesOnly",
+    payload_format: "structured_v1",
+    payload: {
+      data: {
+        blob: "AB=="
+      },
+      bytes_fields: ["/blob"]
+    }
+  });
+  if (bytesNonCanonical.status !== "rejected" || bytesNonCanonical.error.code !== "SDK_ERR_AI_BYTES_B64") {
+    fail("SDK-AI-004 bytes field rejects non-canonical base64", "expected SDK_ERR_AI_BYTES_B64 for non-canonical padded bits");
+  } else {
+    ok("SDK-AI-004 bytes field rejects non-canonical base64");
+  }
+
+  const exportedContract = ai.exportContract();
+  if ((exportedContract.candidate_schema.kind as readonly string[]).includes("event")) {
+    fail("SDK-AI-001 contract narrows unsupported event candidates", "contract still advertises event candidates");
+  } else {
+    ok("SDK-AI-001 contract narrows unsupported event candidates");
+  }
+
+  const eventCandidate = await ai.accept({
+    candidate_version: 1,
+    kind: "event",
+    target_schema_major: 1,
+    target_type: "Claim",
+    payload_format: "structured_v1",
+    payload: {
+      profile_id: "claim_v1",
+      data: { amount: "1", tags: ["event"] }
+    }
+  });
+  if (eventCandidate.status !== "rejected" || eventCandidate.error.code !== "SDK_ERR_AI_KIND_UNSUPPORTED") {
+    fail("SDK-AI-001 event candidates reject until append is implemented", "expected SDK_ERR_AI_KIND_UNSUPPORTED");
+  } else {
+    ok("SDK-AI-001 event candidates reject until append is implemented");
+  }
+
   const privacy = await ai.accept({
     candidate_version: 1,
     kind: "object",
