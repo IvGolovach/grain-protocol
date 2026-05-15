@@ -4,6 +4,14 @@ Reference examples show how applications should use the portable client SDKs
 without owning protocol-critical QR, COSE, DAG-CBOR, trust, or persistence
 semantics.
 
+## Reference Fixtures
+
+- `reference-fixtures`: small JSON examples and vector links that can be read
+  without phones, cameras, registries, or external apps.
+
+Use these when you want to inspect the happy path, negative security examples,
+and profile sample events before running platform-specific SDK shells.
+
 ## Scanner Shells
 
 - `ios-scanner`: SwiftUI shell over `sdk/swift`.
@@ -46,6 +54,7 @@ identity, pairing, and sync artifacts.
 ## Check
 
 ```bash
+python3 tools/ci/check_repo_native_developer_platform.py
 scripts/sdk/run_local_scanner_flow.sh --strict
 scripts/sdk/check_scanner_examples.sh
 scripts/sdk/check_ios_reference_app.sh

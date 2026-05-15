@@ -159,6 +159,8 @@ python3 tools/ci/check_workflow_action_pinning.py
 python3 tools/ci/check_docs_links.py
 python3 tools/ci/check_docs_flow.py
 python3 tools/ci/check_food_profile.py
+python3 tools/ci/check_repo_native_developer_platform.py
+python3 tools/ci/check_npm_release_dry_run.py --fixture fixtures/external-consumers/npm-sdk
 python3 tools/ci/check_maintainer_docs.py
 python3 tools/ci/check_runner_contract_compat.py
 python3 tools/ci/check_runner_shim_boundary.py

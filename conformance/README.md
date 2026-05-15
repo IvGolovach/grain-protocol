@@ -22,6 +22,10 @@ A strong interoperability claim is made after two independent implementations pa
 ## Structure
 
 - `vectors/` — test vectors grouped by area
+- `reference-fixtures.v1.json` lives under `examples/reference-fixtures/` and
+  points humans at the smallest inspectable examples
+- `security-regressions.v1.json` — named guards for closed security findings
+- `interop-matrix.v1.json` — repo-native Rust, TypeScript, and WASM proof lanes
 - `SPEC.md` — runner interface
 - `contract/runner_v1.md` — frozen CLI/output contract for portability
 - `harness/` — optional tooling for vector validation (format-level)

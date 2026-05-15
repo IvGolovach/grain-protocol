@@ -1,0 +1,17 @@
+{
+  "fixture_id": "inventory-count.valid.v1",
+  "profile_id": "inventory-v0.1",
+  "event": {
+    "t": "InventoryCountEvent",
+    "payload_cid": "inventory-count:warehouse-a:sku-001:lot-2026-05",
+    "body": {
+      "source_class": "counted",
+      "sku": "sku-001",
+      "lot_id": "lot-2026-05",
+      "location_id": "warehouse-a",
+      "quantity_count": 42,
+      "unit": "each",
+      "observed_at_ms": 1767225600000
+    }
+  }
+}

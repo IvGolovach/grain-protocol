@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
+cd "$ROOT"
+
+MODE="auto"
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/demo [--local|--docker]
+
+Runs the deterministic Grain quickstart demo and prints one JSON object.
+
+Default mode prefers the local pinned toolchain when available, then falls back
+to Docker. The demo always runs grain-runner in strict mode.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --local)
+      MODE="local"
+      shift
+      ;;
+    --docker)
+      MODE="docker"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "DEMO_ERR_UNKNOWN_ARG: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+run_local() {
+  if command -v mise >/dev/null 2>&1; then
+    exec mise exec -- cargo run -q --manifest-path core/rust/Cargo.toml -p grain-runner -- demo --strict
+  fi
+
+  if command -v cargo >/dev/null 2>&1; then
+    exec cargo run -q --manifest-path core/rust/Cargo.toml -p grain-runner -- demo --strict
+  fi
+
+  return 127
+}
+
+run_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    return 127
+  fi
+
+  exec docker run --rm -v "$ROOT":/work -w /work/core/rust rust:1.86 \
+    bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- demo --strict'
+}
+
+case "$MODE" in
+  local)
+    run_local
+    ;;
+  docker)
+    run_docker
+    ;;
+  auto)
+    if command -v mise >/dev/null 2>&1 || command -v cargo >/dev/null 2>&1; then
+      run_local
+    fi
+    if command -v docker >/dev/null 2>&1; then
+      run_docker
+    fi
+    echo "DEMO_ERR_NO_RUNTIME: install the pinned local toolchain with ./scripts/bootstrap or install Docker." >&2
+    exit 1
+    ;;
+esac

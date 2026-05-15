@@ -28,6 +28,7 @@ def main() -> int:
 
     required_tokens = [
         "Run the demo pipeline",
+        "./scripts/demo",
         "grain-runner -- demo --strict",
         "Expected deterministic output",
     ]

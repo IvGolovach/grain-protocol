@@ -5,11 +5,12 @@ This repo is protocol-first and fairly strict, but the day-to-day workflow shoul
 
 If you are new, start here:
 
-1. Run `./scripts/doctor`.
-2. Run `./scripts/bootstrap` if you want the blessed local toolchain path.
-3. Run `./scripts/verify`.
-4. Read `docs/human/maintainer-start-here.md`.
-5. Read `docs/llm/DOC_SYNC.md` before changing behavior, contracts, or process docs.
+1. Run `./scripts/demo`.
+2. Run `./scripts/doctor`.
+3. Run `./scripts/bootstrap` if you want the blessed local toolchain path.
+4. Run `./scripts/verify`.
+5. Read `docs/human/maintainer-start-here.md`.
+6. Read `docs/llm/DOC_SYNC.md` before changing behavior, contracts, or process docs.
 
 ## Ground rules
 

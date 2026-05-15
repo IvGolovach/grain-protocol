@@ -59,6 +59,15 @@ Reducer-visible food adapters must follow `spec/profiles/food-profile.md`:
 
 If source data has fractional servings, grams, or nutrition values, the adapter must document its rounding/scaling policy before it emits a Grain event.
 
+## Other repo-native profile examples
+
+The repo also includes two opaque profile examples:
+- `spec/profiles/inventory-profile.md`
+- `spec/profiles/audit-artifact-profile.md`
+
+They show how to preserve domain records without claiming v0.1 reducer
+semantics. Their sample events live in `examples/reference-fixtures/`.
+
 ## Minimal pattern: map a meal scan into `IntakeEvent`
 
 ```ts

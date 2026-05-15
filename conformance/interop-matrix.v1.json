@@ -1,0 +1,45 @@
+{
+  "schema": "grain.interop-matrix.v1",
+  "purpose": "Repo-native interoperability map for the implementations that can be proven without external devices.",
+  "strict": true,
+  "lanes": [
+    {
+      "lane_id": "rust-strict-full",
+      "implementation": "Rust grain-runner",
+      "coverage": "full-conformance",
+      "vectors": "conformance/vectors/**/*.json",
+      "command": "cargo build --manifest-path core/rust/Cargo.toml -p grain-runner && python3 tools/ci/run_runner_suite.py --vectors-root conformance/vectors --runner-cmd core/rust/target/debug/grain-runner run --strict --vector"
+    },
+    {
+      "lane_id": "typescript-strict-full",
+      "implementation": "TypeScript runner",
+      "coverage": "full-conformance",
+      "vectors": "runner/typescript/profiles/full.json",
+      "command": "npm --prefix runner/typescript run run:full"
+    },
+    {
+      "lane_id": "wasm-read-verify-subset",
+      "implementation": "Rust WASM read/verify ABI",
+      "coverage": "read-verify-subset",
+      "vectors": "runner/typescript/profiles/wasm-subset.json",
+      "command": "cargo build --manifest-path core/rust/Cargo.toml -p grain-core-wasm --target wasm32-wasip1 --release && npm --prefix runner/typescript run run:wasm-subset"
+    }
+  ],
+  "gates": [
+    {
+      "gate_id": "rust-ts-full-divergence",
+      "requires": [
+        "rust-strict-full",
+        "typescript-strict-full"
+      ],
+      "command": "GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix runner/typescript run divergence:full"
+    },
+    {
+      "gate_id": "wasm-subset-smoke",
+      "requires": [
+        "wasm-read-verify-subset"
+      ],
+      "command": "npm --prefix runner/typescript run run:wasm-subset"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "grain.audit-artifact-profile.constraints.v1",
+  "profile": "audit-artifact-v0.1",
+  "protocol_schema_major": 1,
+  "event_type": "AuditArtifactEvent",
+  "reducer_visibility": "opaque",
+  "artifact_kind": {
+    "allowed": [
+      "inspection_report",
+      "calibration_record",
+      "receipt",
+      "photo_evidence",
+      "operator_attestation"
+    ]
+  },
+  "link_fields": {
+    "subject_id": {
+      "type": "text",
+      "required": true
+    },
+    "evidence_cid": {
+      "type": "cid-text-or-stable-id",
+      "required": true
+    }
+  },
+  "digest": {
+    "algorithm": "sha256",
+    "field": "digest_sha256_hex",
+    "encoding": "lower-hex"
+  },
+  "time_fields": {
+    "observed_at_ms": {
+      "integer_domain": "int64",
+      "timezone": "utc-epoch-ms"
+    }
+  }
+}

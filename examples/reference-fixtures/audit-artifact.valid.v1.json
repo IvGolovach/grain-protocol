@@ -1,0 +1,15 @@
+{
+  "fixture_id": "audit-artifact.valid.v1",
+  "profile_id": "audit-artifact-v0.1",
+  "event": {
+    "t": "AuditArtifactEvent",
+    "payload_cid": "audit-artifact:inspection-report-001",
+    "body": {
+      "artifact_kind": "inspection_report",
+      "subject_id": "inventory-count:warehouse-a:sku-001:lot-2026-05",
+      "evidence_cid": "audit-evidence:inspection-report-001",
+      "digest_sha256_hex": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "observed_at_ms": 1767225600000
+    }
+  }
+}

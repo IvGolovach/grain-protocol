@@ -1,0 +1,87 @@
+{
+  "schema": "grain.security-regressions.v1",
+  "purpose": "Permanent repo-native guards for validated security findings closed before and through the developer-platform work.",
+  "findings": [
+    {
+      "id": "GRAIN-SEC-01",
+      "title": "WASM and native Rust reject malformed or overflowing DAG-CBOR consistently",
+      "evidence": [
+        {"kind": "vector", "id": "NEG-ENC-WA-0001", "path": "conformance/vectors/encoding/NEG-ENC-WA-0001.json"},
+        {"kind": "path", "path": "runner/typescript/profiles/wasm-subset.json"},
+        {"kind": "path", "path": "core/rust/grain-core/src/cbor.rs"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-02",
+      "title": "Accepted scan imports are validated before sync or snapshot restore persists them",
+      "evidence": [
+        {"kind": "path", "path": "core/rust/grain-client-core/tests/pairing_sync_bundle.rs"},
+        {"kind": "path", "path": "core/rust/grain-client-core/tests/storage_contract.rs"},
+        {"kind": "path", "path": "core/rust/grain-client-core/src/accepted_scan.rs"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-03",
+      "title": "Signed QR payloads must be strict ServingOffer records bound to the issuer kid",
+      "evidence": [
+        {"kind": "vector", "id": "NEG-COSE-WA-0002", "path": "conformance/vectors/cose/NEG-COSE-WA-0002.json"},
+        {"kind": "path", "path": "core/ts/grain-sdk/scripts/test-sdk-invariants.ts"},
+        {"kind": "path", "path": "core/ts/grain-ts-core/src/ops/dagcbor.ts"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-04",
+      "title": "COSE protected kid must match first16(SHA-256(pubkey))",
+      "evidence": [
+        {"kind": "vector", "id": "NEG-COSE-WA-0002", "path": "conformance/vectors/cose/NEG-COSE-WA-0002.json"},
+        {"kind": "path", "path": "core/rust/grain-core/src/cose.rs"},
+        {"kind": "path", "path": "core/ts/grain-ts-core/src/ops/cose.ts"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-05",
+      "title": "Conflicted ledger grants and revokes are discarded before authority effects",
+      "evidence": [
+        {"kind": "vector", "id": "NEG-LED-040", "path": "conformance/vectors/ledger/NEG-LED-040.json"},
+        {"kind": "path", "path": "core/rust/grain-core/src/ledger.rs"},
+        {"kind": "path", "path": "core/ts/grain-ts-core/src/ops/ledger.ts"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-06",
+      "title": "GR1 zlib inflate is bounded before COSE bytes are accepted",
+      "evidence": [
+        {"kind": "vector", "id": "NEG-QR-WA-0001", "path": "conformance/vectors/qr/NEG-QR-WA-0001.json"},
+        {"kind": "path", "path": "core/rust/grain-core/src/qr.rs"},
+        {"kind": "path", "path": "core/ts/grain-ts-core/src/ops/transport.ts"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-07",
+      "title": "AI sidecar cannot write directly around SDK accept/apply boundaries",
+      "evidence": [
+        {"kind": "path", "path": "tools/ci/check_sdk_ai_boundary.py"},
+        {"kind": "path", "path": "core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts"},
+        {"kind": "path", "path": "core/ts/grain-sdk/src/ai-host.ts"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-08",
+      "title": "Golden image workflow cannot publish stable tags from manual drift",
+      "evidence": [
+        {"kind": "path", "path": "tools/ci/check_golden_images_policy.py"},
+        {"kind": "path", "path": "tools/ci/test_check_golden_images_policy.py"},
+        {"kind": "path", "path": ".github/workflows/golden-images.yml"}
+      ]
+    },
+    {
+      "id": "GRAIN-SEC-09",
+      "title": "Dependabot automerge cannot self-approve executable workflow or action updates",
+      "evidence": [
+        {"kind": "path", "path": "tools/ci/check_dependabot_policy.py"},
+        {"kind": "path", "path": "tools/ci/test_check_dependabot_policy.py"},
+        {"kind": "path", "path": ".github/workflows/dependabot-automerge.yml"}
+      ]
+    }
+  ]
+}

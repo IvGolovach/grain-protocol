@@ -30,6 +30,12 @@ For reducer-visible food events:
 - `kcal` is integer kilocalories with `scale_exp10 = 0`
 - `amount_g`, `yield_g`, `serving_g`, and `servings` are non-negative int64 values with `scale_exp10 = 0`
 
+Opaque profile examples live in:
+- `spec/profiles/inventory-profile.md`
+- `spec/profiles/audit-artifact-profile.md`
+
+Those profiles preserve domain records without adding v0.1 reducer semantics.
+
 ## Where To Look In Code
 
 1. `docs/human/domain-adapters.md`

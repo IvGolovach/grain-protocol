@@ -24,9 +24,14 @@ If you want the longer product direction, read [Future Vision](./future-vision.m
 
 ## Choose your path
 
+If you only run one command, run:
+
+- `./scripts/demo`
+
 If you only read one more page, read [Quickstart](./quickstart.md).
 
 - [Quickstart: run the demo first](./quickstart.md)
+- [Reference fixtures: inspect examples without external devices](../../examples/reference-fixtures/README.md)
 - [Build the smallest app with the SDK](./sdk/minimal-app-example.md)
 - [Build an app on Grain](./building-on-grain.md)
 - [Use the SDK primitives](./sdk/start-here.md)
@@ -44,6 +49,10 @@ Blessed local bootstrap:
 Quick health view:
 
 - `./scripts/doctor`
+
+One-command demo:
+
+- `./scripts/demo`
 
 Fast local verification:
 
