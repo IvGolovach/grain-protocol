@@ -51,6 +51,13 @@
       "purpose": "Reducer-visible Food Profile sample."
     },
     {
+      "fixture_id": "profile.food-local-pilot.valid",
+      "kind": "sample",
+      "profile_id": "food-v0.1",
+      "path": "examples/reference-fixtures/food-local-pilot.valid.v1.json",
+      "purpose": "Local no-device Food Profile pilot sample with expected reducer output."
+    },
+    {
       "fixture_id": "profile.inventory-count.valid",
       "kind": "sample",
       "profile_id": "inventory-v0.1",

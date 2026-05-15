@@ -70,6 +70,7 @@ This page is the capability map after that first run.
 - compatibility matrix:
   - SDK `0.2.x` -> Protocol major `1`
 - domain adapter example: `core/ts/grain-sdk/examples/sensor-event-v1.ts`
+- local no-device Food pilot: `scripts/sdk/run_local_food_pilot.sh`
 - architecture: `docs/human/sdk/architecture.md`
 - error model: `docs/human/sdk/errors.md`
 - impossible misuse checklist: `docs/human/sdk/impossible-misuse.md`

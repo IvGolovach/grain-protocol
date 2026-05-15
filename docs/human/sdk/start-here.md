@@ -14,24 +14,26 @@ If you are building an app on Grain, start here. Keep the first version small an
    [Source SDK handoff](./source-sdk-handoff.md).
 5. If you want a thin starter shell, use `templates/ios-starter`,
    `templates/android-starter`, or `templates/web-wasm-starter`.
-6. If you only want the smallest ledger app, read
+6. If you want a food-profile pilot that stays entirely inside the repo, run
+   `scripts/sdk/run_local_food_pilot.sh`.
+7. If you only want the smallest ledger app, read
    [Minimal app example](./minimal-app-example.md).
-7. Run the ready-made demo if you want a quick confidence check.
-8. On a fresh checkout, install `core/ts/grain-ts-core`
+8. Run the ready-made demo if you want a quick confidence check.
+9. On a fresh checkout, install `core/ts/grain-ts-core`
    and `core/ts/grain-sdk` before the first SDK build.
-9. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
-10. If you are building a camera-first iOS, Android, glasses, or robot client,
+10. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
+11. If you are building a camera-first iOS, Android, glasses, or robot client,
    read [Portable client SDK](./portable-client-sdk.md).
-11. For scanner-shell reference code, start with `examples/ios-scanner`,
+12. For scanner-shell reference code, start with `examples/ios-scanner`,
    `examples/ios-reference-app`, `examples/android-scanner`, or
    `examples/wasm-scanner`.
-12. To create a real signed scanner input for local app development, run
+13. To create a real signed scanner input for local app development, run
    `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`
    and wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle.
-13. For app-owned trust material, load that bundle into the platform static
+14. For app-owned trust material, load that bundle into the platform static
    trust provider and pass a stable trust anchor ID (`trustAnchorID` in Swift,
    `trustAnchorId` in Kotlin and WASM).
-14. If you build manually, use the SDK build. It will build the shared
+15. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash
@@ -56,6 +58,16 @@ Expected output includes stable fields like:
 
 For that first event, `payload_cid` can be a stable application identifier for the payload.
 If you later persist the payload as its own canonical Grain object, switch to using that real CID.
+
+For the current food-first reducer path, the repo-native local proof is:
+
+```bash
+scripts/sdk/run_local_food_pilot.sh
+```
+
+It proves the Food Profile fixture can append and reduce locally, and that a
+reference signed scanner input can be generated without leaving source control
+or requiring another device.
 
 If you need device lifecycle changes, use `identity.addDeviceKey()` and `identity.revokeDeviceKey()`. These APIs keep the SDK's local authorization view and the ledger in sync.
 If you are adapting another domain into Grain, read `docs/human/domain-adapters.md` after the first success.

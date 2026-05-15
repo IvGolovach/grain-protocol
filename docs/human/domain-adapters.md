@@ -96,6 +96,20 @@ export function toSdkEvent(input: MealScan): AppendEventInput {
 
 This keeps the source-domain identity (`capture_id`) while still using the reducer-visible event path that exists today.
 
+## Local no-device Food pilot
+
+For a repo-local proof that needs no phone, camera, external app, external
+credential, registry, or app-store account, run:
+
+```bash
+scripts/sdk/run_local_food_pilot.sh
+```
+
+The script uses `examples/reference-fixtures/food-local-pilot.valid.v1.json`,
+builds the TypeScript SDK, appends the fixture's `IntakeEvent`, reduces it to
+the expected `sum_mean` / `sum_var`, generates a local reference issuer QR, and
+writes a safe report under ignored `artifacts/`.
+
 ## Avoid these mistakes
 
 - Do not imply that `payload_cid` is always a real CID if your adapter is only using a stable app-level identifier.

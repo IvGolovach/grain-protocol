@@ -5,6 +5,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 ## [Unreleased]
 - Repository-wide audit hardening:
   - added Food Profile 1.0 constraints for reducer-visible food events, with machine-readable profile metadata, invariant static-check evidence, and CI/verify guards for source classes and integer unit scales.
+  - added a repo-local no-device Food pilot proof pack that appends the Food Profile fixture through the TypeScript SDK, checks reducer output, generates a reference issuer QR, and validates a safe local report.
   - aligned TypeScript COSE/GR1 verification with the strict issuer profile: protected `kid` must match `first16(SHA-256(pubkey))`, and `verifyGR1()` now rejects signed payloads that are not strict matching `ServingOffer` records.
   - made TypeScript base64 decoding strict so malformed standard-base64 fields reject with `GRAIN_ERR_SCHEMA` instead of being silently decoded by Node.
   - aligned Rust and TypeScript E2E decrypt precedence so nonce profile mismatches are reported before AEAD authentication, and added a separate AEAD tamper vector.
