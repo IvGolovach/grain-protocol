@@ -21,6 +21,7 @@ and Rust crates that were not reviewed together.
 | WASM client crate | `core/rust/grain-client-wasm` | `0.1.0` | Builds against `grain-client-core` with default features disabled for `wasm32-wasip1`. |
 | WASM/mobile-web package | `sdk/wasm` | `0.1.0` | Use with the matching `grain-client-wasm.wasm` artifact and JavaScript wrapper. |
 | WASM/mobile-web adapter pack | `sdk/wasm/src/browser-storage.mjs`, `examples/wasm-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence, IndexedDB/browser storage boundaries, explicit trust-anchor wiring, and browser camera handoff, not production PWA packaging. |
+| TypeScript SDK source package | `core/ts/grain-ts-core`, `core/ts/grain-sdk`, `core/ts/grain-sdk-ai`, `fixtures/external-consumers/npm-sdk` | `0.1.0` / `0.2.0` | Use from the matching `grain-typescript-sdk-<sha>.tar.gz`; release smoke builds the source packages, runs npm pack dry-runs, and typechecks/runs the external npm consumer fixture from the extracted release layout. |
 | Public SDK API snapshot | `sdk/api/public-sdk-v0.1.json` | v0.1 | Stable app-facing methods, statuses, workflows, and compatibility matrix must stay present unless a future API snapshot intentionally replaces them. |
 | Starter templates | `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter` | repo-SHA versioned | Use with the same commit's source SDK packet; templates prove thin app shells, not store or PWA publication. |
 
@@ -74,12 +75,14 @@ That command proves:
   bindings, Rust client-core source, workflow contract/docs, `manifest.json`,
   `SHA256SUMS`, and `sbom.spdx.json`
 - the release package checker verifies artifact checksums, archive cleanliness,
-  SDK component versions, the version-matrix hash, and SBOM package checksums
+  SDK component versions, including the TypeScript package versions, the
+  version-matrix hash, and SBOM package checksums
 - the release package is source-only: registry publication, compiled WASM
   binaries, PWA packaging, app-store packaging, and device custody policy stay
   outside this certificate
-- the external release consumer smoke builds from extracted release assets
-  rather than from the original repo checkout
+- the external release consumer smoke builds from extracted release assets,
+  including the TypeScript npm fixture, rather than from the original repo
+  checkout
 
 The `ci` workflow runs the same strict platform SDK gate in the `sdk-platform`
 job on a Swift 6-capable macOS runner, packages the SDK release artifacts after

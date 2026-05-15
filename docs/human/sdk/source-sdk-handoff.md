@@ -5,8 +5,9 @@ It is the handoff checklist for source SDK artifacts, generated binding
 snapshots, scanner examples, and the local issuer QR path.
 
 This is not a registry or store release. It is a same-SHA source handoff that
-lets a developer build against reviewed Swift, Kotlin, WASM, generated binding,
-Rust client-core, workflow, and trust-bundle inputs from one commit.
+lets a developer build against reviewed Swift, Kotlin, TypeScript, WASM,
+generated binding, Rust client-core, workflow, and trust-bundle inputs from one
+commit.
 
 ## Handoff Packet
 
@@ -41,6 +42,7 @@ Attach or point to these same-SHA assets:
 | `grain-kotlin-client-<sha>.tar.gz` | Kotlin/JVM source wrapper over the generated client workflow API. |
 | `grain-wasm-client-<sha>.tar.gz` | WASM/mobile-web source wrapper and Rust WASM crate source. |
 | `grain-rust-client-core-<sha>.tar.gz` | Trimmed Rust workspace source required to build the native `grain-client-core` library for Swift/Kotlin consumers without cloning the monorepo. |
+| `grain-typescript-sdk-<sha>.tar.gz` | TypeScript protocol core, universal SDK, optional AI sidecar, and npm external-consumer fixture source. |
 | `grain-sdk-workflow-contract-<sha>.tar.gz` | Client workflow fixtures, public API snapshot, safe diagnostic event schema, trust bundle schema, custody adapter contract, generated-lane docs, release-train docs, and version matrix. |
 | `grain-starter-templates-<sha>.tar.gz` | iOS, Android, and Web/WASM starter templates, reusable scanner-shell examples they depend on, and the starter-template smoke command. |
 
@@ -110,8 +112,8 @@ scripts/sdk/doctor \
 
 `release_dry_run.sh` packages the source SDK artifacts, validates the manifest,
 checks the external consumer layout, checks the compatibility matrix, runs the
-repo-local npm consumer fixture against public package exports, and runs
-registry dry-run metadata without publishing anything.
+npm consumer fixture against public package exports from the extracted TypeScript
+source release, and runs registry dry-run metadata without publishing anything.
 
 `sdk doctor: PASS` means the local machine has the lightweight readiness inputs
 and package metadata. `sdk doctor: WARN` means policy checks passed, but the
@@ -147,14 +149,15 @@ tar -xzf grain-swift-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-kotlin-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-wasm-client-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-rust-client-core-<sha>.tar.gz -C vendor/grain-sdk/<sha>
+tar -xzf grain-typescript-sdk-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-generated-bindings-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-sdk-workflow-contract-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 tar -xzf grain-starter-templates-<sha>.tar.gz -C vendor/grain-sdk/<sha>
 ```
 
 The generated binding snapshot is a proof and wrapper-development input. Normal
-app code should start from the Swift, Kotlin, or WASM package wrapper, not from
-raw generated FFI calls.
+app code should start from the Swift, Kotlin, TypeScript, or WASM package
+wrapper, not from raw generated FFI calls.
 
 ## Local Scanner Flow
 

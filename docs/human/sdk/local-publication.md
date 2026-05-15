@@ -13,8 +13,8 @@ accounts in scope.
 - `SHA256SUMS`
 - `sbom.spdx.json`
 - generated binding snapshots
-- Swift, Kotlin, WASM, Rust client-core, workflow, trust, custody, device,
-  starter-template, and reference-example source inputs
+- Swift, Kotlin, TypeScript, WASM, Rust client-core, workflow, trust, custody,
+  device, starter-template, and reference-example source inputs
 - registry dry-run metadata
 
 It does not publish to Swift Package Index, npm, Maven Central, TestFlight, App
@@ -55,9 +55,9 @@ gate. It is not a registry publish.
 ## What To Tell A Consumer
 
 Give the consumer one commit or release tag and the matching source packet.
-They should not mix Swift, Kotlin, WASM, Rust client-core, generated bindings,
-workflow contracts, device contracts, starter templates, or reference examples
-from different commits.
+They should not mix Swift, Kotlin, TypeScript, WASM, Rust client-core, generated
+bindings, workflow contracts, device contracts, starter templates, or reference
+examples from different commits.
 
 From a checkout at that same SHA, scanner developers can run
 `scripts/sdk/run_local_scanner_flow.sh` to generate a local QR/trust bundle and

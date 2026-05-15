@@ -114,6 +114,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
     - `scripts/sdk/check_ios_reference_app.sh` builds the app package, runs a boot/scan/accept/restore smoke, and rejects raw protocol/FFI calls, hidden trust discovery, and secret-like logging
   - hardened SDK release certification:
     - SDK packaging now emits `manifest.json`, `SHA256SUMS`, and SPDX JSON SBOM metadata for generated bindings, Swift, Kotlin, WASM/mobile-web, and workflow-contract artifacts
+    - SDK packaging now includes the TypeScript protocol core, universal SDK, AI sidecar, and npm external-consumer fixture as a same-SHA source artifact with extracted-layout npm pack/typecheck/runtime proof
     - release package checking verifies same-SHA version-matrix hashes, SDK component versions, artifact byte counts, SHA-256 sums, archive cleanliness, bounded consumer install paths, and SBOM package checksums
     - CI packages the SDK release artifacts after the strict platform SDK gate and re-checks the package metadata before final evidence build
     - tag release evidence now runs the strict platform SDK gate, verifies the same-commit SDK package, includes the SDK suite summary in the evidence bundle, and attaches SDK source package assets to GitHub releases

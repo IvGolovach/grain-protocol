@@ -85,6 +85,22 @@ def write_release(release_dir: Path, *, wasm_commit: str = COMMIT) -> None:
             },
         ),
         (
+            "grain-typescript-sdk",
+            "typescript-sdk",
+            COMMIT,
+            {
+                "core/ts/grain-ts-core/package.json": '{"name":"grain-ts-core","version":"0.1.0","files":["dist"],"exports":{"./types":{"types":"./dist/src/types.d.ts","default":"./dist/src/types.js"}}}\n',
+                "core/ts/grain-ts-core/src/types.ts": "export type Grain = string;\n",
+                "core/ts/grain-sdk/package.json": '{"name":"grain-sdk-ts","version":"0.2.0","files":["dist"],"exports":{".":{"types":"./dist/src/index.d.ts","default":"./dist/src/index.js"}}}\n',
+                "core/ts/grain-sdk/src/index.ts": "export const grain = true;\n",
+                "core/ts/grain-sdk-ai/package.json": '{"name":"grain-sdk-ai-ts","version":"0.2.0","files":["dist"],"exports":{".":{"types":"./dist/src/index.d.ts","default":"./dist/src/index.js"}}}\n',
+                "core/ts/grain-sdk-ai/src/index.ts": "export const ai = true;\n",
+                "fixtures/external-consumers/npm-sdk/package.json": '{"private":true,"dependencies":{"grain-ts-core":"file:../../../core/ts/grain-ts-core","grain-sdk-ts":"file:../../../core/ts/grain-sdk","grain-sdk-ai-ts":"file:../../../core/ts/grain-sdk-ai"}}\n',
+                "fixtures/external-consumers/npm-sdk/src/import-smoke.ts": 'import "grain-sdk-ts";\n',
+                "fixtures/external-consumers/npm-sdk/src/runtime-smoke.mjs": 'await import("grain-sdk-ts");\n',
+            },
+        ),
+        (
             "grain-generated-bindings",
             "generated-bindings",
             COMMIT,
@@ -179,6 +195,10 @@ class ExternalConsumerTemplateTests(unittest.TestCase):
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/sdk/swift/Package.swift").is_file())
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/sdk/kotlin/build.gradle.kts").is_file())
             self.assertTrue((result.consumer_root / "vendor/grain-sdk/sdk/wasm/package.json").is_file())
+            self.assertTrue((result.consumer_root / "vendor/grain-sdk/core/ts/grain-sdk/package.json").is_file())
+            self.assertTrue(
+                (result.consumer_root / "vendor/grain-sdk/fixtures/external-consumers/npm-sdk/package.json").is_file()
+            )
             self.assertTrue(
                 (result.consumer_root / "vendor/grain-sdk/sdk/device/device_adapter_v1.schema.json").is_file()
             )

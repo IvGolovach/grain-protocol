@@ -221,10 +221,11 @@ python3 tools/ci/check_sdk_release_package.py \
 
 `verify_all_sdks.sh --strict` proves platform SDK workflow behavior.
 `package_client_sdks.sh` produces same-SHA source artifacts, manifest,
-checksums, and SBOM. `check_sdk_release_package.py` proves the metadata matches
-the files, version matrix, and bounded consumer install paths. Repository release
-evidence still comes from `./scripts/verify`, `./scripts/certify`, and mandatory
-GitHub CI; do not treat a package smoke by itself as full release authority.
+checksums, and SBOM, including the TypeScript source SDK packet and npm consumer
+fixture. `check_sdk_release_package.py` proves the metadata matches the files,
+version matrix, and bounded consumer install paths. Repository release evidence
+still comes from `./scripts/verify`, `./scripts/certify`, and mandatory GitHub
+CI; do not treat a package smoke by itself as full release authority.
 
 ## Developer DX Doctor
 

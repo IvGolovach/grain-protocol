@@ -58,7 +58,8 @@ python3 tools/ci/check_toolchain_bootstrap.py
    - `golden-images` ran from the pushed tag, not manual dispatch; any non-tag
      publish path must fail closed with `GOLDEN_ERR_TAG_REQUIRED`
    - the SDK release package includes `manifest.json`, `SHA256SUMS`,
-     `sbom.spdx.json`, and source SDK archives verified by
+     `sbom.spdx.json`, and source SDK archives, including the TypeScript SDK
+     packet, verified by
      `check_sdk_release_package.py --require-strict --require-clean`
    - for `repo-*` tags, image alias `stable` is updated
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only and must not overwrite `stable`

@@ -53,6 +53,22 @@ ARTIFACT_KINDS = {
         ],
         "consumer_paths": ["core/rust"],
     },
+    "grain-typescript-sdk": {
+        "kind": "typescript-sdk",
+        "name": "Grain TypeScript SDK source package",
+        "source_paths": [
+            "core/ts/grain-ts-core",
+            "core/ts/grain-sdk",
+            "core/ts/grain-sdk-ai",
+            "fixtures/external-consumers/npm-sdk",
+        ],
+        "consumer_paths": [
+            "core/ts/grain-ts-core",
+            "core/ts/grain-sdk",
+            "core/ts/grain-sdk-ai",
+            "fixtures/external-consumers/npm-sdk",
+        ],
+    },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
         "name": "Grain client workflow contract package",
@@ -158,6 +174,16 @@ def load_wasm_package() -> dict[str, str]:
     }
 
 
+def load_npm_package(path: str) -> dict[str, str]:
+    data = json.loads((ROOT / path).read_text(encoding="utf-8"))
+    return {
+        "name": str(data["name"]),
+        "version": str(data["version"]),
+        "license": "Apache-2.0",
+        "source": path,
+    }
+
+
 def load_kotlin_package() -> dict[str, str]:
     path = "sdk/kotlin/build.gradle.kts"
     text = (ROOT / path).read_text(encoding="utf-8")
@@ -184,6 +210,9 @@ def load_sdk_versions() -> dict[str, dict[str, str]]:
         },
         "kotlin_client": load_kotlin_package(),
         "wasm_client": load_wasm_package(),
+        "typescript_core": load_npm_package("core/ts/grain-ts-core/package.json"),
+        "typescript_sdk": load_npm_package("core/ts/grain-sdk/package.json"),
+        "typescript_ai_sdk": load_npm_package("core/ts/grain-sdk-ai/package.json"),
     }
 
 

@@ -11,8 +11,11 @@ if (typeof sdk.InMemorySdkStore !== "function") {
 if (typeof errors.describeError !== "function") {
   throw new Error("missing describeError public export");
 }
-if (typeof ai.createAcceptedTokenFromObjectCandidate !== "function") {
-  throw new Error("missing AI sidecar public export");
+if (typeof ai.createGrainSdkAi !== "function") {
+  throw new Error("missing createGrainSdkAi public export");
+}
+if (typeof ai.AiBoundary !== "function") {
+  throw new Error("missing AiBoundary public export");
 }
 
 console.log(JSON.stringify({ pass: true, fixture: "external-npm-consumer" }));
