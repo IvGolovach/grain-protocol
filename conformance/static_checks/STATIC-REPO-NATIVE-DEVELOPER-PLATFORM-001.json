@@ -1,0 +1,11 @@
+{
+  "static_check_id": "STATIC-REPO-NATIVE-DEVELOPER-PLATFORM-001",
+  "script": "tools/ci/check_repo_native_developer_platform.py",
+  "covers": [
+    "scripts/demo",
+    "examples/reference-fixtures/catalog.v1.json",
+    "conformance/interop-matrix.v1.json",
+    "conformance/security-regressions.v1.json",
+    "spec/profiles/profile-registry.v1.json"
+  ]
+}

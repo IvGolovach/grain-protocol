@@ -72,6 +72,10 @@ python3 tools/ci/check_external_release_consumer_smoke.py \
   --strict
 python3 tools/ci/check_sdk_compatibility_matrix.py \
   --manifest artifacts/sdk-release/$(git rev-parse HEAD)/manifest.json
+python3 tools/ci/check_npm_release_dry_run.py \
+  --fixture fixtures/external-consumers/npm-sdk \
+  --out-dir artifacts/sdk-release/$(git rev-parse HEAD)/npm-release-dry-run \
+  --build
 python3 tools/ci/check_public_sdk_api.py
 scripts/sdk/check_registry_dry_runs.sh
 scripts/sdk/check_starter_templates.sh
@@ -98,10 +102,16 @@ crates, and builds/smokes the public starter paths from that layout.
 Before calling the packet ready, run:
 
 ```bash
+scripts/sdk/release_dry_run.sh
 scripts/sdk/doctor \
   --release-out-dir artifacts/sdk-release/$(git rev-parse HEAD) \
   --require-release-package
 ```
+
+`release_dry_run.sh` packages the source SDK artifacts, validates the manifest,
+checks the external consumer layout, checks the compatibility matrix, runs the
+repo-local npm consumer fixture against public package exports, and runs
+registry dry-run metadata without publishing anything.
 
 `sdk doctor: PASS` means the local machine has the lightweight readiness inputs
 and package metadata. `sdk doctor: WARN` means policy checks passed, but the

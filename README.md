@@ -14,12 +14,15 @@ if two independent implementations read the same valid input, they should agree 
 Pick one path and get a quick win first:
 
 - See the repo quickly: `docs/human/start-here.md`
+- Run one command first: `./scripts/demo`
 - Run one happy-path demo: `docs/human/quickstart.md`
+- Inspect repo-native fixtures: `examples/reference-fixtures/README.md`
 - Build the smallest possible app: `docs/human/sdk/minimal-app-example.md`
 - Run local reference apps without paid accounts: `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`
 - Run a local scanner flow: `scripts/sdk/run_local_scanner_flow.sh`, then `docs/human/sdk/scan-quickstart.md`
 - Start from app templates: `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`
 - Hand one SDK SHA to another team: `docs/human/sdk/source-sdk-handoff.md`
+- Prove external npm-style imports without publishing: `fixtures/external-consumers/npm-sdk`
 - Build an app on top of Grain: `docs/human/building-on-grain.md`
 - Use the SDK path: `docs/human/sdk/start-here.md`
 - Implement Grain itself: `docs/human/implementing-grain.md`
@@ -28,8 +31,8 @@ Pick one path and get a quick win first:
 
 ## Project areas
 
-- Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`
-- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`, `docs/human/sdk/device-abstraction.md`, `docs/human/sdk/local-publication.md`, `docs/human/sdk/certification.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `sdk/README.md`, `examples/README.md`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
+- Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`, `examples/reference-fixtures/README.md`
+- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`, `docs/human/sdk/device-abstraction.md`, `docs/human/sdk/local-publication.md`, `docs/human/sdk/certification.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `sdk/README.md`, `examples/README.md`, `fixtures/external-consumers/npm-sdk`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
 - Implement: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
 - Operate: `docs/human/portability-pack.md`, `docs/human/repro-checklist.md`, `docs/human/release-process.md`
 - Maintain: `docs/human/maintainer-start-here.md`, `CONTRIBUTING.md`, `docs/human/repository-settings.md`, `docs/human/maintainer-writing.md`
@@ -62,6 +65,8 @@ Pick one path and get a quick win first:
 - The optional AI sidecar in `core/ts/grain-sdk-ai` stays outside the core SDK surface and is wired in explicitly.
 - CI evidence is tied to commit SHA on `main` and on release tags.
 - Release-grade verification is available through `./scripts/certify`.
+- Repo-native developer-product checks cover `./scripts/demo`, reference fixtures,
+  profile registry, security regressions, and the Rust/TS/WASM interop matrix.
 
 ## Verification paths
 
@@ -75,6 +80,12 @@ Quick repo health view:
 
 ```bash
 ./scripts/doctor
+```
+
+One-command demo:
+
+```bash
+./scripts/demo
 ```
 
 Fast local verification on the pinned local toolchain:

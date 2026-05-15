@@ -89,6 +89,14 @@ runs:
       shell: bash
       run: python3 tools/ci/check_food_profile.py
 
+    - name: Check repo-native developer platform
+      shell: bash
+      run: python3 tools/ci/check_repo_native_developer_platform.py
+
+    - name: Check npm release dry-run fixture
+      shell: bash
+      run: python3 tools/ci/check_npm_release_dry_run.py --fixture fixtures/external-consumers/npm-sdk
+
     - name: Real app docs check
       shell: bash
       run: python3 tools/ci/check_real_app_docs.py

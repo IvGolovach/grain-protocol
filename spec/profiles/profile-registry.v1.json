@@ -1,0 +1,33 @@
+{
+  "schema": "grain.profile-registry.v1",
+  "protocol_schema_major": 1,
+  "profiles": [
+    {
+      "profile_id": "food-v0.1",
+      "kind": "reducer-visible",
+      "doc": "spec/profiles/food-profile.md",
+      "constraints": "spec/profiles/food-profile.v1.json",
+      "sample_fixtures": [
+        "examples/reference-fixtures/food-intake.valid.v1.json"
+      ]
+    },
+    {
+      "profile_id": "inventory-v0.1",
+      "kind": "opaque-domain-event",
+      "doc": "spec/profiles/inventory-profile.md",
+      "constraints": "spec/profiles/inventory-profile.v1.json",
+      "sample_fixtures": [
+        "examples/reference-fixtures/inventory-count.valid.v1.json"
+      ]
+    },
+    {
+      "profile_id": "audit-artifact-v0.1",
+      "kind": "opaque-domain-event",
+      "doc": "spec/profiles/audit-artifact-profile.md",
+      "constraints": "spec/profiles/audit-artifact-profile.v1.json",
+      "sample_fixtures": [
+        "examples/reference-fixtures/audit-artifact.valid.v1.json"
+      ]
+    }
+  ]
+}

@@ -7,6 +7,15 @@ This path uses Docker so you can get a first success without setting up a local 
 
 ## 1) Run the demo pipeline
 
+The shortest path is the repo wrapper:
+
+```bash
+./scripts/demo
+```
+
+It prefers the pinned local toolchain when available and falls back to Docker.
+For the raw runner path, this is the command it executes:
+
 ```bash
 docker run --rm -v "$PWD":/work -w /work/core/rust rust:1.86 \
   bash -lc 'export PATH=/usr/local/cargo/bin:$PATH; cargo run -q -p grain-runner -- demo --strict'

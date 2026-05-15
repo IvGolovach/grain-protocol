@@ -1,0 +1,38 @@
+{
+  "schema": "grain.inventory-profile.constraints.v1",
+  "profile": "inventory-v0.1",
+  "protocol_schema_major": 1,
+  "event_type": "InventoryCountEvent",
+  "reducer_visibility": "opaque",
+  "source_class": {
+    "allowed": [
+      "counted",
+      "transferred",
+      "estimated"
+    ],
+    "default": "counted"
+  },
+  "identity_fields": [
+    "sku",
+    "lot_id",
+    "location_id"
+  ],
+  "quantity_fields": {
+    "quantity_count": {
+      "unit_allowed": [
+        "each",
+        "gram",
+        "milliliter"
+      ],
+      "scale_exp10": 0,
+      "integer_domain": "int64",
+      "minimum": 0
+    }
+  },
+  "time_fields": {
+    "observed_at_ms": {
+      "integer_domain": "int64",
+      "timezone": "utc-epoch-ms"
+    }
+  }
+}

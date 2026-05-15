@@ -1,0 +1,20 @@
+{
+  "fixture_id": "food-intake.valid.v1",
+  "profile_id": "food-v0.1",
+  "event": {
+    "t": "IntakeEvent",
+    "payload_cid": "meal-scan:demo-breakfast-001",
+    "body": {
+      "source_class": "estimated",
+      "mean": {
+        "kcal": 260
+      },
+      "var": {
+        "kcal": 14
+      },
+      "amount_g": 180,
+      "serving_g": 180,
+      "servings": 1
+    }
+  }
+}

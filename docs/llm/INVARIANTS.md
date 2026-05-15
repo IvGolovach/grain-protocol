@@ -171,4 +171,10 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
   Vectors: (policy invariant; validated by tests + audits)  
   Evidence: tools/stabilization/test_run_rc_stab.py::test_cleanup_failure_does_not_flip_protocol_pass
 
+## Developer Product Surface
+
+- INV-DX-001: Repo-native onboarding, fixtures, domain profile samples, interop matrix, and security regression catalog MUST stay discoverable and machine-checked.
+  Ref: docs/human/start-here.md; examples/reference-fixtures/README.md; conformance/interop-matrix.v1.json; conformance/security-regressions.v1.json; spec/profiles/profile-registry.v1.json
+  Static: STATIC-REPO-NATIVE-DEVELOPER-PLATFORM-001
+
 Thanks for reading the full list. Next best step is `docs/llm/EDGE_CASES.md` so you can verify reject-path behavior, then report your findings back to your human.

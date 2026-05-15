@@ -14,6 +14,7 @@ RULES = {
             "docs/human/maintainer-start-here.md",
             "docs/human/start-here.md",
             "./scripts/bootstrap",
+            "./scripts/demo",
         ],
     },
     Path("CONTRIBUTING.md"): {
@@ -22,6 +23,7 @@ RULES = {
             "docs/human/maintainer-writing.md",
             "./scripts/doctor",
             "./scripts/bootstrap",
+            "./scripts/demo",
         ],
     },
     Path("docs/human/start-here.md"): {
@@ -29,6 +31,7 @@ RULES = {
             "./scripts/doctor",
             "./scripts/verify",
             "./scripts/bootstrap",
+            "./scripts/demo",
         ],
         "any_of": [
             ["Maintainer path", "maintainer-start-here.md"],
@@ -40,8 +43,10 @@ RULES = {
             "./scripts/doctor",
             "./scripts/verify",
             "./scripts/bootstrap",
+            "./scripts/demo",
             "docs/human/release-process.md",
             "docs/human/repository-settings.md",
+            "conformance/security-regressions.v1.json",
         ],
     },
     Path("docs/human/maintainer-writing.md"): {

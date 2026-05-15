@@ -5,22 +5,24 @@ The repo already has strong guardrails. This page helps you find them fast.
 
 ## Fast path (15 minutes)
 
-1. Run `./scripts/doctor`.
+1. Run `./scripts/demo`.
+   - This proves the repo still has a runnable happy path before you read internals.
+2. Run `./scripts/doctor`.
    - This gives you a quick health check for branch state, toolchains, and recent verification artifacts.
-2. If the change touches the portable SDK or scanner docs, run `scripts/sdk/doctor`.
+3. If the change touches the portable SDK or scanner docs, run `scripts/sdk/doctor`.
    - This gives you a lightweight SDK readiness view without platform builds.
-3. Run `./scripts/bootstrap` if this clone does not already have the pinned local toolchains.
+4. Run `./scripts/bootstrap` if this clone does not already have the pinned local toolchains.
    - This is the blessed host setup path. It uses `mise` plus the repo package installs.
-4. Run `./scripts/verify`.
+5. Run `./scripts/verify`.
    - This is the normal day-to-day confidence pass.
-5. Read `CONTRIBUTING.md`.
+6. Read `CONTRIBUTING.md`.
    - It tells you the repo rules that matter during normal work.
-6. Read `docs/human/release-process.md`.
+7. Read `docs/human/release-process.md`.
    - This is the shortest reliable path to a release.
-7. Read `docs/human/repository-settings.md`.
+8. Read `docs/human/repository-settings.md`.
    - This explains the GitHub rules the repo expects to stay true.
 
-If you only do one thing before reviewing or merging changes, do steps 1 through 4.
+If you only do one thing before reviewing or merging changes, do steps 1 through 5.
 
 ## What matters most
 
@@ -29,6 +31,9 @@ If you only do one thing before reviewing or merging changes, do steps 1 through
 - Trust the spec and conformance vectors over any human summary if they disagree.
 - Be slow near protocol semantics and fast everywhere else.
 - Prefer adding guardrails over adding tribal knowledge.
+- Keep `conformance/security-regressions.v1.json`, `conformance/interop-matrix.v1.json`,
+  and `examples/reference-fixtures/catalog.v1.json` in sync with any future
+  security, runtime, or onboarding change.
 
 ## Daily jobs
 
@@ -57,7 +62,8 @@ If you only do one thing before reviewing or merging changes, do steps 1 through
 3. Use `./scripts/bootstrap` if the host toolchain is not already aligned.
 4. Run `./scripts/verify`.
 5. Run `./scripts/certify`.
-6. Follow the tag and artifact steps exactly.
+6. Run `scripts/sdk/release_dry_run.sh` if the SDK handoff surface changed.
+7. Follow the tag and artifact steps exactly.
 
 ## Repo map for maintainers
 
@@ -66,6 +72,9 @@ If you only do one thing before reviewing or merging changes, do steps 1 through
 - `docs/human/release-process.md`: release runbook
 - `docs/human/repository-settings.md`: GitHub settings baseline
 - `docs/human/portability-pack.md`: verification and evidence model
+- `examples/reference-fixtures/README.md`: repo-native examples and fixture catalog
+- `conformance/interop-matrix.v1.json`: Rust, TypeScript, and WASM proof lanes
+- `conformance/security-regressions.v1.json`: named guards for closed security findings
 - `docs/human/repro-checklist.md`: clean-clone reproduction
 - `docs/human/maintainer-writing.md`: tone and writing rules for human docs
 - `docs/llm/DOC_SYNC.md`: doc sync map when behavior or process changes

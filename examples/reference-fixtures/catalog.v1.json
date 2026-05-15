@@ -1,0 +1,68 @@
+{
+  "schema": "grain.reference-fixtures.v1",
+  "fixtures": [
+    {
+      "fixture_id": "demo.qr.valid",
+      "kind": "vector",
+      "vector_id": "POS-QR-001",
+      "path": "conformance/vectors/qr/POS-QR-001.json",
+      "purpose": "Valid GR1 transport payload used by the one-command demo."
+    },
+    {
+      "fixture_id": "demo.cose.valid",
+      "kind": "vector",
+      "vector_id": "POS-COSE-001",
+      "path": "conformance/vectors/cose/POS-COSE-001.json",
+      "purpose": "Valid COSE verification path used by the one-command demo."
+    },
+    {
+      "fixture_id": "demo.ledger.valid",
+      "kind": "vector",
+      "vector_id": "POS-LED-001",
+      "path": "conformance/vectors/ledger/POS-LED-001.json",
+      "purpose": "Valid reducer path extended by the one-command demo."
+    },
+    {
+      "fixture_id": "security.qr.inflate-limit",
+      "kind": "vector",
+      "vector_id": "NEG-QR-WA-0001",
+      "path": "conformance/vectors/qr/NEG-QR-WA-0001.json",
+      "purpose": "GR1 inflate output cap regression guard."
+    },
+    {
+      "fixture_id": "security.cose.kid-serving-offer",
+      "kind": "vector",
+      "vector_id": "NEG-COSE-WA-0002",
+      "path": "conformance/vectors/cose/NEG-COSE-WA-0002.json",
+      "purpose": "COSE kid and strict ServingOffer issuer binding regression guard."
+    },
+    {
+      "fixture_id": "security.ledger.conflicted-grant",
+      "kind": "vector",
+      "vector_id": "NEG-LED-040",
+      "path": "conformance/vectors/ledger/NEG-LED-040.json",
+      "purpose": "Conflicted grant/revoke authority regression guard."
+    },
+    {
+      "fixture_id": "profile.food-intake.valid",
+      "kind": "sample",
+      "profile_id": "food-v0.1",
+      "path": "examples/reference-fixtures/food-intake.valid.v1.json",
+      "purpose": "Reducer-visible Food Profile sample."
+    },
+    {
+      "fixture_id": "profile.inventory-count.valid",
+      "kind": "sample",
+      "profile_id": "inventory-v0.1",
+      "path": "examples/reference-fixtures/inventory-count.valid.v1.json",
+      "purpose": "Opaque Inventory Profile sample."
+    },
+    {
+      "fixture_id": "profile.audit-artifact.valid",
+      "kind": "sample",
+      "profile_id": "audit-artifact-v0.1",
+      "path": "examples/reference-fixtures/audit-artifact.valid.v1.json",
+      "purpose": "Opaque Audit Artifact Profile sample."
+    }
+  ]
+}
