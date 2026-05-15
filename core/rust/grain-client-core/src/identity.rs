@@ -24,9 +24,7 @@ pub fn identity_create_root<S: IdentityClientStore>(store: &mut S, label: &str) 
 
     let mut root_pub = [0u8; 32];
     let mut sync_secret = [0u8; 32];
-    if getrandom::getrandom(&mut root_pub).is_err()
-        || getrandom::getrandom(&mut sync_secret).is_err()
-    {
+    if getrandom::fill(&mut root_pub).is_err() || getrandom::fill(&mut sync_secret).is_err() {
         return identity_rejected(IdentityStatus::Rejected, SDK_ERR_CSPRNG_UNAVAILABLE);
     }
 

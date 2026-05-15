@@ -41,7 +41,7 @@ pub struct Issuer {
 impl Issuer {
     pub fn generate() -> Result<Self, IssuerError> {
         let mut seed = [0u8; 32];
-        getrandom::getrandom(&mut seed).map_err(|err| IssuerError::Random(err.to_string()))?;
+        getrandom::fill(&mut seed).map_err(|err| IssuerError::Random(err.to_string()))?;
         Ok(Self::from_seed(seed))
     }
 

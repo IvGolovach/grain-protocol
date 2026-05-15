@@ -11,7 +11,7 @@ use crate::types::{DeviceKey, DeviceResult, DeviceStatus, IdentityBundleV1, Life
 
 pub fn device_add_key<S: IdentityClientStore>(store: &mut S, label: &str) -> DeviceResult {
     let mut pub_bytes = [0u8; 32];
-    if getrandom::getrandom(&mut pub_bytes).is_err() {
+    if getrandom::fill(&mut pub_bytes).is_err() {
         return device_rejected(SDK_ERR_CSPRNG_UNAVAILABLE);
     }
     let pub_b64 = STANDARD.encode(pub_bytes);
