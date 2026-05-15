@@ -39,6 +39,7 @@ jobs:
           python3 -m unittest tools.ci.test_check_registry_dry_run_metadata
           python3 -m unittest tools.ci.test_check_external_client_certification
           python3 -m unittest tools.ci.test_check_local_scanner_flow_report
+          python3 -m unittest tools.ci.test_check_local_food_pilot_report
           python3 -m unittest tools.ci.test_check_no_secret_telemetry
           python3 -m unittest tools.ci.test_check_trust_bundle_governance
           python3 -m unittest tools.ci.test_check_release_train_docs

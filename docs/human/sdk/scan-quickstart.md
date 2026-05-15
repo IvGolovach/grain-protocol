@@ -26,6 +26,17 @@ itself.
 
 ## Fast Path
 
+If the first milestone is only to prove the food-profile reducer path inside
+the repo, run the no-device pilot first:
+
+```bash
+scripts/sdk/run_local_food_pilot.sh
+```
+
+That proof builds the TypeScript SDK, appends the local Food Profile fixture,
+checks the reducer output, and generates a local reference issuer QR without
+using a camera, phone, registry, app store, or external credentials.
+
 Run the local scanner DevKit flow:
 
 ```bash

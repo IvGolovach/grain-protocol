@@ -7,6 +7,8 @@ without running a phone, camera, registry, or external application.
 - happy-path conformance vectors
 - negative security vectors
 - profile sample events for Food, Inventory, and Audit Artifact adapters
+- a local Food pilot fixture that can be run without phones, cameras, app
+  stores, registries, or external credentials
 
 These fixtures are examples and guardrails. Protocol conformance still lives in
 `conformance/vectors/`.
@@ -15,4 +17,5 @@ These fixtures are examples and guardrails. Protocol conformance still lives in
 
 ```bash
 python3 tools/ci/check_repo_native_developer_platform.py
+scripts/sdk/run_local_food_pilot.sh
 ```

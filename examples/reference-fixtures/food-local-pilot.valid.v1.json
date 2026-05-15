@@ -1,0 +1,52 @@
+{
+  "fixture_id": "food-local-pilot.valid.v1",
+  "profile_id": "food-v0.1",
+  "pilot": {
+    "scope": "local-source-validation-only",
+    "requires_external_apps": false,
+    "requires_external_devices": false,
+    "requires_external_credentials": false,
+    "capture": {
+      "capture_id": "local-pilot-breakfast-001",
+      "source": "local-kitchen-scale",
+      "payload_cid_model": "stable app-level identifier"
+    },
+    "events": [
+      {
+        "t": "IntakeEvent",
+        "payload_cid": "meal-scan:local-pilot-breakfast-001",
+        "body": {
+          "source_class": "measured",
+          "mean": {
+            "kcal": 620
+          },
+          "var": {
+            "kcal": 9
+          },
+          "amount_g": 250,
+          "serving_g": 250,
+          "servings": 1,
+          "ts_ms": 1717200000000
+        }
+      }
+    ],
+    "scanner_offer": {
+      "t": "ServingOffer",
+      "serving_g": 250,
+      "mean": {
+        "kcal": 620
+      },
+      "var": {
+        "kcal": 9
+      }
+    },
+    "expected_reducer": {
+      "sum_mean": {
+        "kcal": 620
+      },
+      "sum_var": {
+        "kcal": 9
+      }
+    }
+  }
+}

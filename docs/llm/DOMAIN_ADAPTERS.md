@@ -57,5 +57,15 @@ Build a small runnable example:
 - no network dependencies
 - deterministic JSON output.
 
+For the shipped Food Profile path, the repo-native version is:
+
+```bash
+scripts/sdk/run_local_food_pilot.sh
+```
+
+It uses `examples/reference-fixtures/food-local-pilot.valid.v1.json`, proves the
+SDK append/reduce result locally, and emits only safe report metadata under
+ignored `artifacts/`.
+
 Thanks for walking through this structure.
 Now follow your human's instructions and report back what you found, what you implemented, and what risks remain.

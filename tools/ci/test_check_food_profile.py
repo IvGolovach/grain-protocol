@@ -71,6 +71,62 @@ def write_repo(root: Path, profile: dict[str, object]) -> None:
         '"servings": int\n',
         encoding="utf-8",
     )
+    (root / "examples/reference-fixtures").mkdir(parents=True)
+    local_pilot = {
+        "fixture_id": "food-local-pilot.valid.v1",
+        "profile_id": "food-v0.1",
+        "pilot": {
+            "scope": "local-source-validation-only",
+            "requires_external_apps": False,
+            "requires_external_devices": False,
+            "requires_external_credentials": False,
+            "events": [
+                {
+                    "t": "IntakeEvent",
+                    "payload_cid": "meal-scan:test-001",
+                    "body": {
+                        "source_class": "measured",
+                        "mean": {"kcal": 10},
+                        "var": {"kcal": 1},
+                        "amount_g": 20,
+                        "serving_g": 20,
+                        "servings": 1,
+                    },
+                }
+            ],
+            "scanner_offer": {
+                "t": "ServingOffer",
+                "serving_g": 20,
+                "mean": {"kcal": 10},
+                "var": {"kcal": 1},
+            },
+            "expected_reducer": {
+                "sum_mean": {"kcal": 10},
+                "sum_var": {"kcal": 1},
+            },
+        },
+    }
+    (root / "examples/reference-fixtures/food-local-pilot.valid.v1.json").write_text(
+        json.dumps(local_pilot) + "\n",
+        encoding="utf-8",
+    )
+    (root / "examples/reference-fixtures/catalog.v1.json").write_text(
+        json.dumps(
+            {
+                "schema": "grain.reference-fixtures.v1",
+                "fixtures": [
+                    {
+                        "fixture_id": "profile.food-local-pilot.valid",
+                        "kind": "sample",
+                        "profile_id": "food-v0.1",
+                        "path": "examples/reference-fixtures/food-local-pilot.valid.v1.json",
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 class FoodProfileTests(unittest.TestCase):
@@ -85,6 +141,7 @@ class FoodProfileTests(unittest.TestCase):
             self.assertEqual(result.profile, "food-v0.1")
             self.assertEqual(result.source_classes, ["attested", "measured", "estimated"])
             self.assertEqual(result.reducer_visible_nutrients, ["kcal"])
+            self.assertEqual(result.local_pilot_fixture, "examples/reference-fixtures/food-local-pilot.valid.v1.json")
 
     def test_source_class_drift_is_rejected(self) -> None:
         module = load_module()
@@ -106,6 +163,32 @@ class FoodProfileTests(unittest.TestCase):
             write_repo(root, profile)
 
             with self.assertRaisesRegex(SystemExit, "FOOD_PROFILE_ERR_QUANTITY_SCALE"):
+                module.check_food_profile(root=root)
+
+    def test_local_food_pilot_requires_local_boundary(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_repo(root, valid_profile())
+            fixture_path = root / "examples/reference-fixtures/food-local-pilot.valid.v1.json"
+            fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+            fixture["pilot"]["requires_external_devices"] = True
+            fixture_path.write_text(json.dumps(fixture) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(SystemExit, "FOOD_PROFILE_ERR_LOCAL_PILOT_BOUNDARY"):
+                module.check_food_profile(root=root)
+
+    def test_local_food_pilot_rejects_bad_expected_reducer(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_repo(root, valid_profile())
+            fixture_path = root / "examples/reference-fixtures/food-local-pilot.valid.v1.json"
+            fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+            fixture["pilot"]["expected_reducer"]["sum_mean"]["kcal"] = 11
+            fixture_path.write_text(json.dumps(fixture) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(SystemExit, "FOOD_PROFILE_ERR_LOCAL_PILOT_EXPECTED"):
                 module.check_food_profile(root=root)
 
 
