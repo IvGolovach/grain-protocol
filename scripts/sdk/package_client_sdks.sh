@@ -119,6 +119,10 @@ require_source_path sdk/device/device_adapter_v1.schema.json
 require_source_path sdk/device/README.md
 require_source_path examples/ios-reference-app/Package.swift
 require_source_path examples/android-reference-app/build.gradle.kts
+require_source_path core/ts/grain-ts-core/package.json
+require_source_path core/ts/grain-sdk/package.json
+require_source_path core/ts/grain-sdk-ai/package.json
+require_source_path fixtures/external-consumers/npm-sdk/package.json
 
 if [[ "$RUN_VERIFY" -eq 1 ]]; then
   scripts/sdk/verify_all_sdks.sh --strict --out-dir "$OUT_DIR_ABS/verify"
@@ -166,9 +170,9 @@ tar_gz() {
 
 assert_archive_clean() {
   local artifact="$1"
-  if tar -tzf "$OUT_DIR_ABS/$artifact" | grep -E '(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|\.wasm$' >/dev/null; then
+  if tar -tzf "$OUT_DIR_ABS/$artifact" | grep -E '(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|(^|/)tsconfig\.build\.tsbuildinfo$|\.wasm$' >/dev/null; then
     echo "SDK_PACKAGE_ERR_FORBIDDEN_ARCHIVE_ENTRY: $artifact contains build/cache output" >&2
-    tar -tzf "$OUT_DIR_ABS/$artifact" | grep -E '(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|\.wasm$' >&2 || true
+    tar -tzf "$OUT_DIR_ABS/$artifact" | grep -E '(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|(^|/)tsconfig\.build\.tsbuildinfo$|\.wasm$' >&2 || true
     exit 1
   fi
 }
@@ -197,6 +201,23 @@ tar_gz "grain-rust-client-core-$COMMIT_SHA.tar.gz" \
   --exclude 'core/rust/target' \
   -C "$STAGING/rust-client-core" \
   core/rust
+tar_gz "grain-typescript-sdk-$COMMIT_SHA.tar.gz" \
+  --exclude 'core/ts/grain-ts-core/node_modules' \
+  --exclude 'core/ts/grain-ts-core/dist' \
+  --exclude 'core/ts/grain-ts-core/tsconfig.build.tsbuildinfo' \
+  --exclude 'core/ts/grain-sdk/node_modules' \
+  --exclude 'core/ts/grain-sdk/dist' \
+  --exclude 'core/ts/grain-sdk/tsconfig.build.tsbuildinfo' \
+  --exclude 'core/ts/grain-sdk-ai/node_modules' \
+  --exclude 'core/ts/grain-sdk-ai/dist' \
+  --exclude 'core/ts/grain-sdk-ai/tsconfig.build.tsbuildinfo' \
+  --exclude 'fixtures/external-consumers/npm-sdk/node_modules' \
+  --exclude 'fixtures/external-consumers/npm-sdk/dist' \
+  -C "$ROOT" \
+  core/ts/grain-ts-core \
+  core/ts/grain-sdk \
+  core/ts/grain-sdk-ai \
+  fixtures/external-consumers/npm-sdk
 tar_gz "grain-sdk-workflow-contract-$COMMIT_SHA.tar.gz" \
   -C "$ROOT" \
   sdk/api \

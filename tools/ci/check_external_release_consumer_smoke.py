@@ -17,6 +17,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+ROOT = SCRIPT_DIR.parents[1]
 
 import check_external_consumer_templates as consumer_templates
 
@@ -205,6 +206,23 @@ def run_smoke_commands(*, consumer_root: Path, strict: bool) -> tuple[str, ...]:
             env=env,
         )
         checks.append("web-starter-smoke")
+        run_command(
+            "TypeScript SDK external consumer from release asset",
+            [
+                sys.executable,
+                str(ROOT / "tools/ci/check_npm_release_dry_run.py"),
+                "--vendor-root",
+                str(vendor_root),
+                "--fixture",
+                str(vendor_root / "fixtures/external-consumers/npm-sdk"),
+                "--out-dir",
+                str(consumer_root / ".scratch/npm-release-dry-run"),
+                "--build",
+                "--consumer-smoke",
+            ],
+            env=env,
+        )
+        checks.append("typescript-sdk-smoke")
     else:
         skip_or_fail(strict, "EXTERNAL_RELEASE_CONSUMER_SMOKE_ERR_NPM_MISSING", "npm command not found")
 

@@ -49,6 +49,30 @@ EXPECTED_ARTIFACTS = {
         ],
         "consumer_paths": ["core/rust"],
     },
+    "grain-typescript-sdk": {
+        "kind": "typescript-sdk",
+        "required_entries": [
+            "core/ts/grain-ts-core/package.json",
+            "core/ts/grain-ts-core/package-lock.json",
+            "core/ts/grain-ts-core/src/",
+            "core/ts/grain-sdk/package.json",
+            "core/ts/grain-sdk/package-lock.json",
+            "core/ts/grain-sdk/src/",
+            "core/ts/grain-sdk-ai/package.json",
+            "core/ts/grain-sdk-ai/package-lock.json",
+            "core/ts/grain-sdk-ai/src/",
+            "fixtures/external-consumers/npm-sdk/package.json",
+            "fixtures/external-consumers/npm-sdk/tsconfig.json",
+            "fixtures/external-consumers/npm-sdk/src/import-smoke.ts",
+            "fixtures/external-consumers/npm-sdk/src/runtime-smoke.mjs",
+        ],
+        "consumer_paths": [
+            "core/ts/grain-ts-core",
+            "core/ts/grain-sdk",
+            "core/ts/grain-sdk-ai",
+            "fixtures/external-consumers/npm-sdk",
+        ],
+    },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
         "required_entries": [
@@ -111,7 +135,8 @@ EXPECTED_ARTIFACTS = {
     },
 }
 FORBIDDEN_ARCHIVE_RE = re.compile(
-    r"(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|\.wasm$"
+    r"(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|"
+    r"(^|/)tsconfig\.build\.tsbuildinfo$|\.wasm$"
 )
 SECRET_ARCHIVE_RE = re.compile(r"(^|/)(\.env(?:[._-][^/]*)?|secrets?)(/|$)|\.(pem|key|p12|pfx)$")
 FORBIDDEN_POLICY_CLAIM_RE = re.compile(
@@ -201,12 +226,18 @@ def expected_versions() -> dict[str, str]:
     kotlin_version = re.search(r'^\s*version\s*=\s*"([^"]+)"', kotlin_text, re.MULTILINE)
     require(kotlin_version is not None, "SDK_RELEASE_CHECK_ERR_KOTLIN_VERSION_MISSING")
     wasm = json.loads((ROOT / "sdk/wasm/package.json").read_text(encoding="utf-8"))
+    ts_core = json.loads((ROOT / "core/ts/grain-ts-core/package.json").read_text(encoding="utf-8"))
+    ts_sdk = json.loads((ROOT / "core/ts/grain-sdk/package.json").read_text(encoding="utf-8"))
+    ts_ai = json.loads((ROOT / "core/ts/grain-sdk-ai/package.json").read_text(encoding="utf-8"))
     return {
         "grain_client_core": load_cargo_version("core/rust/grain-client-core/Cargo.toml"),
         "grain_client_wasm": load_cargo_version("core/rust/grain-client-wasm/Cargo.toml"),
         "kotlin_client": kotlin_version.group(1),
         "wasm_client": str(wasm["version"]),
         "swift_client": "repo-sha",
+        "typescript_core": str(ts_core["version"]),
+        "typescript_sdk": str(ts_sdk["version"]),
+        "typescript_ai_sdk": str(ts_ai["version"]),
     }
 
 

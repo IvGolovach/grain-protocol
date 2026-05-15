@@ -165,6 +165,7 @@ future release process explicitly names a tracked artifact.
 - Swift client source tarball
 - Kotlin client source tarball
 - WASM/mobile-web source tarball
+- TypeScript SDK source tarball with npm external-consumer fixture
 - workflow contract/docs tarball, including `sdk/trust` bundle schema and
   fixtures
 - manifest with commit SHA, same-SHA version-matrix hash, SDK component

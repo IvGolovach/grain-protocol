@@ -8,6 +8,14 @@ COMMIT_SHA="$(git rev-parse HEAD)"
 OUT_DIR="artifacts/sdk-release/$COMMIT_SHA"
 LAYOUT_ONLY=1
 PACKAGE_ARGS=()
+TMP_CONSUMER_PARENT=""
+
+cleanup() {
+  if [[ -n "$TMP_CONSUMER_PARENT" ]]; then
+    rm -rf "$TMP_CONSUMER_PARENT"
+  fi
+}
+trap cleanup EXIT
 
 usage() {
   cat <<'EOF'
@@ -70,9 +78,13 @@ fi
 
 python3 tools/ci/check_sdk_release_package.py "${check_args[@]}"
 python3 tools/ci/check_external_sdk_handoff.py "${check_args[@]}"
+
+TMP_CONSUMER_PARENT="$(mktemp -d "${TMPDIR:-/tmp}/grain-release-dry-run-consumer.XXXXXX")"
+TMP_CONSUMER_ROOT="$TMP_CONSUMER_PARENT/consumer"
 python3 tools/ci/check_external_consumer_templates.py \
   --out-dir "$OUT_DIR" \
-  --expected-commit "$COMMIT_SHA"
+  --expected-commit "$COMMIT_SHA" \
+  --consumer-root "$TMP_CONSUMER_ROOT"
 
 consumer_args=(--out-dir "$OUT_DIR" --expected-commit "$COMMIT_SHA")
 if [[ "$LAYOUT_ONLY" == "1" ]]; then
@@ -84,9 +96,11 @@ python3 tools/ci/check_external_release_consumer_smoke.py "${consumer_args[@]}"
 
 python3 tools/ci/check_sdk_compatibility_matrix.py --manifest "$OUT_DIR/manifest.json"
 python3 tools/ci/check_npm_release_dry_run.py \
-  --fixture fixtures/external-consumers/npm-sdk \
+  --vendor-root "$TMP_CONSUMER_ROOT/vendor/grain-sdk" \
+  --fixture "$TMP_CONSUMER_ROOT/vendor/grain-sdk/fixtures/external-consumers/npm-sdk" \
   --out-dir "$OUT_DIR/npm-release-dry-run" \
-  --build
+  --build \
+  --consumer-smoke
 python3 tools/ci/check_public_sdk_api.py
 scripts/sdk/check_registry_dry_runs.sh
 

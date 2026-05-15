@@ -31,6 +31,62 @@ class NpmReleaseDryRunTests(unittest.TestCase):
         for name, path in module.PACKAGES.items():
             module.validate_package_exports(name, path, require_dist=False)
 
+    def test_vendor_root_fixture_layout_passes_static_check(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            vendor_root = Path(tmp) / "vendor" / "grain-sdk"
+            fixture = vendor_root / "fixtures/external-consumers/npm-sdk"
+            (fixture / "src").mkdir(parents=True)
+            for name, relative in module.PACKAGE_RELATIVE_PATHS.items():
+                package_dir = vendor_root / relative
+                package_dir.mkdir(parents=True)
+                (package_dir / "package.json").write_text(
+                    json.dumps(
+                        {
+                            "name": name,
+                            "version": "0.0.0",
+                            "files": ["dist"],
+                            "exports": {
+                                ".": {
+                                    "types": "./dist/src/index.d.ts",
+                                    "default": "./dist/src/index.js",
+                                }
+                            },
+                        }
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+            (fixture / "package.json").write_text(
+                json.dumps(
+                    {
+                        "private": True,
+                        "dependencies": {
+                            "grain-ts-core": "file:../../../core/ts/grain-ts-core",
+                            "grain-sdk-ts": "file:../../../core/ts/grain-sdk",
+                            "grain-sdk-ai-ts": "file:../../../core/ts/grain-sdk-ai",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (fixture / "tsconfig.json").write_text("{}\n", encoding="utf-8")
+            (fixture / "src/import-smoke.ts").write_text(
+                'import "grain-sdk-ts";\nimport "grain-sdk-ts/errors";\nimport "grain-sdk-ai-ts";\n',
+                encoding="utf-8",
+            )
+            (fixture / "src/runtime-smoke.mjs").write_text(
+                'await import("grain-sdk-ts");\nawait import("grain-sdk-ts/errors");\nawait import("grain-sdk-ai-ts");\n',
+                encoding="utf-8",
+            )
+
+            packages = module.package_paths(vendor_root)
+            module.validate_fixture(fixture, packages)
+            for name, path in packages.items():
+                module.validate_package_exports(name, path, require_dist=False)
+
     def test_rejects_internal_fixture_import(self) -> None:
         module = load_module()
         with tempfile.TemporaryDirectory() as tmp:

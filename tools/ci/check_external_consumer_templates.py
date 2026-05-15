@@ -50,6 +50,20 @@ EXPECTED_ARTIFACTS = {
             "core/rust/grain-client-wasm/Cargo.toml",
         ],
     },
+    "grain-typescript-sdk": {
+        "kind": "typescript-sdk",
+        "required_entries": [
+            "core/ts/grain-ts-core/package.json",
+            "core/ts/grain-ts-core/src/",
+            "core/ts/grain-sdk/package.json",
+            "core/ts/grain-sdk/src/",
+            "core/ts/grain-sdk-ai/package.json",
+            "core/ts/grain-sdk-ai/src/",
+            "fixtures/external-consumers/npm-sdk/package.json",
+            "fixtures/external-consumers/npm-sdk/src/import-smoke.ts",
+            "fixtures/external-consumers/npm-sdk/src/runtime-smoke.mjs",
+        ],
+    },
     "grain-sdk-workflow-contract": {
         "kind": "workflow-contract",
         "required_entries": [
@@ -214,6 +228,10 @@ def validate_consumer_inputs(consumer_root: Path) -> None:
         "vendor/grain-sdk/core/rust/grain-core/Cargo.toml",
         "vendor/grain-sdk/core/rust/grain-client-core/Cargo.toml",
         "vendor/grain-sdk/core/rust/grain-client-wasm/Cargo.toml",
+        "vendor/grain-sdk/core/ts/grain-ts-core/package.json",
+        "vendor/grain-sdk/core/ts/grain-sdk/package.json",
+        "vendor/grain-sdk/core/ts/grain-sdk-ai/package.json",
+        "vendor/grain-sdk/fixtures/external-consumers/npm-sdk/package.json",
         "vendor/grain-sdk/sdk/api/public-sdk-v0.1.json",
         "vendor/grain-sdk/sdk/custody/secure_storage_adapter_v1.md",
         "vendor/grain-sdk/sdk/device/device_adapter_v1.schema.json",

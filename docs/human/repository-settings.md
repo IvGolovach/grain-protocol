@@ -83,7 +83,8 @@ Historical imported milestone tags have GitHub release pages now, but some older
   - merges to `main`
   - pushes of `protocol-*`, `repo-*`, `protocol-rc-*`, and `repo-rc-*` tags
 - Tag release evidence must also attach the same-commit SDK source release
-  package assets after the strict platform SDK gate passes.
+  package assets, including the TypeScript source SDK packet, after the strict
+  platform SDK gate passes.
 - Evidence bundle must include:
   - suite summaries
   - vector manifests plus hashes

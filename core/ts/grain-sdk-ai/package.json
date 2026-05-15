@@ -9,6 +9,10 @@
   "engines": {
     "node": ">=22"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
