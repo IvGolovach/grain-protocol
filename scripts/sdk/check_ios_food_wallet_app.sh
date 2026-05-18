@@ -36,7 +36,7 @@ else
 fi
 
 has_raw_photo_retention() {
-  local pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|writeToFile|FileManager\.default\.createFile|NSLog|os_log'
+  local pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|UIImageWriteToSavedPhotosAlbum|PHPhotoLibrary|writeToFile|\.write\s*\(|FileManager\.default\.(createFile|copyItem|moveItem)|UserDefaults\.standard\.(set|data)|NSKeyedArchiver'
   python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \
@@ -52,6 +52,45 @@ else
     exit "$PHOTO_STATUS"
   fi
 fi
+
+has_raw_photo_logging() {
+  local pattern='(print|debugPrint|NSLog|os_log|Logger\.[A-Za-z]+)\s*\([^)]*(jpegData|pngData|imageBytes|photoBytes|rawPhoto|base64EncodedString|TransientMealPhotoPayload)'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
+    "$APP_DIR/Sources/FoodWalletCore" \
+    "$APP_DIR/Sources/FoodWalletApp" \
+    "$APP_DIR/Sources/FoodWalletAppIntents" >/dev/null
+}
+
+if has_raw_photo_logging; then
+  echo "SDK_IOS_FOOD_WALLET_ERR_RAW_PHOTO_LOGGING: app must not log raw photo material" >&2
+  exit 1
+else
+  PHOTO_LOG_STATUS=$?
+  if [[ "$PHOTO_LOG_STATUS" -ne 1 ]]; then
+    exit "$PHOTO_LOG_STATUS"
+  fi
+fi
+
+has_direct_provider_usage() {
+  local pattern='api\.openai\.com|OPENAI_API_KEY|sk-proj-|sk-[A-Za-z0-9_-]{20,}|USDA_API_KEY|FOODDATA_CENTRAL|FDC_API_KEY|api\.nal\.usda\.gov|api\.data\.gov'
+  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
+    "$APP_DIR/Sources/FoodWalletCore" \
+    "$APP_DIR/Sources/FoodWalletApp" \
+    "$APP_DIR/Sources/FoodWalletAppIntents" \
+    "$APP_DIR/AppStore/Info.plist" >/dev/null
+}
+
+if has_direct_provider_usage; then
+  echo "SDK_IOS_FOOD_WALLET_ERR_DIRECT_PROVIDER_USAGE: iOS app must use a backend broker, not embedded OpenAI/USDA keys or direct provider calls" >&2
+  exit 1
+else
+  PROVIDER_STATUS=$?
+  if [[ "$PROVIDER_STATUS" -ne 1 ]]; then
+    exit "$PROVIDER_STATUS"
+  fi
+fi
+
+scripts/sdk/check_food_analysis_broker.sh
 
 swift build --package-path "$APP_DIR" --scratch-path "$TMP_DIR/swift"
 swift run --package-path "$APP_DIR" --scratch-path "$TMP_DIR/swift" FoodWalletCoreTests

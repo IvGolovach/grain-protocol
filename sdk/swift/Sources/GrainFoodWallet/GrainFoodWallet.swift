@@ -33,6 +33,7 @@ public struct MealEstimate: Equatable, Sendable {
     public let amountGrams: Int64
     public let servingGrams: Int64?
     public let servings: Int64
+    public let macronutrients: MealMacronutrients?
 
     public init(
         label: String,
@@ -40,7 +41,8 @@ public struct MealEstimate: Equatable, Sendable {
         varianceKcal: Int64,
         amountGrams: Int64,
         servingGrams: Int64? = nil,
-        servings: Int64 = 1
+        servings: Int64 = 1,
+        macronutrients: MealMacronutrients? = nil
     ) {
         self.label = label
         self.kcal = kcal
@@ -48,6 +50,37 @@ public struct MealEstimate: Equatable, Sendable {
         self.amountGrams = amountGrams
         self.servingGrams = servingGrams
         self.servings = servings
+        self.macronutrients = macronutrients
+    }
+}
+
+public struct MealMacronutrients: Codable, Equatable, Sendable {
+    public let proteinGrams: Double
+    public let carbohydrateGrams: Double
+    public let fatGrams: Double
+    public let fiberGrams: Double?
+
+    public init(
+        proteinGrams: Double,
+        carbohydrateGrams: Double,
+        fatGrams: Double,
+        fiberGrams: Double? = nil
+    ) {
+        self.proteinGrams = proteinGrams
+        self.carbohydrateGrams = carbohydrateGrams
+        self.fatGrams = fatGrams
+        self.fiberGrams = fiberGrams
+    }
+
+    public var shortLabel: String {
+        "P \(Self.format(proteinGrams))g • C \(Self.format(carbohydrateGrams))g • F \(Self.format(fatGrams))g"
+    }
+
+    private static func format(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%.1f", value)
     }
 }
 
@@ -83,6 +116,7 @@ public struct SafeFoodSummary: Equatable, Sendable {
         public let kcal: Int64
         public let varianceKcal: Int64
         public let amountGrams: Int64
+        public let macronutrients: MealMacronutrients?
         public let sourceClass: FoodSourceClass
         public let trustLabel: String
         public let dateKey: String
@@ -169,6 +203,7 @@ public final class GrainFoodWallet {
                     kcal: entry.meal.kcal,
                     varianceKcal: entry.meal.varianceKcal,
                     amountGrams: entry.meal.amountGrams,
+                    macronutrients: entry.meal.macronutrients,
                     sourceClass: entry.sourceClass,
                     trustLabel: entry.trustStatus.label,
                     dateKey: entry.dateKey
@@ -228,7 +263,17 @@ extension FoodSourceClass: CustomStringConvertible, CustomDebugStringConvertible
 extension MealEstimate: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         "MealEstimate(label: \(label), kcal: \(kcal), varianceKcal: \(varianceKcal), amountGrams: \(amountGrams), " +
-            "servingGrams: \(String(describing: servingGrams)), servings: \(servings))"
+            "servingGrams: \(String(describing: servingGrams)), servings: \(servings), " +
+            "macronutrients: \(String(describing: macronutrients)))"
+    }
+
+    public var debugDescription: String { description }
+}
+
+extension MealMacronutrients: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String {
+        "MealMacronutrients(proteinGrams: \(proteinGrams), carbohydrateGrams: \(carbohydrateGrams), " +
+            "fatGrams: \(fatGrams), fiberGrams: \(String(describing: fiberGrams)))"
     }
 
     public var debugDescription: String { description }

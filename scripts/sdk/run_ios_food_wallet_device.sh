@@ -8,6 +8,7 @@ DERIVED_DATA="${GRAIN_IOS_DERIVED_DATA:-$ROOT_DIR/artifacts/ios-food-wallet-devi
 DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 XCRUN="${XCRUN:-/usr/bin/xcrun}"
 BUNDLE_ID="${GRAIN_IOS_BUNDLE_ID:-dev.grain.foodwallet}"
+BROKER_URL="${GRAIN_FOOD_ANALYSIS_BROKER_URL:-}"
 export DEVELOPER_DIR
 
 if [ ! -d "$DEVELOPER_DIR" ]; then
@@ -127,7 +128,18 @@ fi
 
 APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphoneos/FoodWallet.app"
 SMOKE_LOG="$DERIVED_DATA/device-smoke.log"
-LAUNCH_ENV='{"LLVM_PROFILE_FILE":"/dev/null"}'
+LAUNCH_ENV="$(
+  python3 - "$BROKER_URL" <<'PY'
+import json
+import sys
+
+env = {"LLVM_PROFILE_FILE": "/dev/null"}
+broker_url = sys.argv[1]
+if broker_url:
+    env["GRAIN_FOOD_ANALYSIS_BROKER_URL"] = broker_url
+print(json.dumps(env, separators=(",", ":")))
+PY
+)"
 
 echo "Using development team $TEAM_ID for bundle $BUNDLE_ID"
 echo "Generating Xcode project at $PROJECT_PATH"
@@ -141,6 +153,7 @@ build_args=(
   -allowProvisioningUpdates
   DEVELOPMENT_TEAM="$TEAM_ID"
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID"
+  GRAIN_FOOD_ANALYSIS_BROKER_URL="$BROKER_URL"
   build
 )
 

@@ -45,15 +45,20 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public var todayTotalLabel: String {
-        if entries.isEmpty {
+        let selected = todayEntries
+        if selected.isEmpty {
             return "No meals saved yet"
         }
-        let totals = safeSummary.totals
-        let variance = totals.sumVarianceKcal
+        let mean = selected.reduce(Int64(0)) { $0 + $1.meal.kcal }
+        let variance = selected.reduce(Int64(0)) { $0 + $1.meal.varianceKcal }
         if variance == 0 {
-            return "\(totals.sumMeanKcal) kcal"
+            return "\(mean) kcal"
         }
-        return "\(max(0, totals.sumMeanKcal - variance))-\(totals.sumMeanKcal + variance) kcal"
+        return "\(max(0, mean - variance))-\(mean + variance) kcal"
+    }
+
+    public var todayEntries: [FoodIntakeEntry] {
+        entries.filter { Calendar.autoupdatingCurrent.isDateInToday($0.confirmedAt) }
     }
 
     public var hasDraft: Bool {
@@ -81,9 +86,41 @@ public final class FoodWalletStore: ObservableObject {
     public func analyze(example: FoodCaptureExample) async {
         do {
             let candidate = try await analysisClient.estimate(example: example)
-            let draft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
-            currentCandidate = candidate
-            currentDraft = draft
+            apply(candidate: candidate)
+        } catch {
+            currentCandidate = nil
+            currentDraft = nil
+        }
+    }
+
+    public func analyze(photo: CapturedMealPhoto) async {
+        if privacy == .denied {
+            return
+        }
+        if privacy == .notRequested {
+            grantAIConsent()
+        }
+
+        do {
+            let candidate = try await analysisClient.estimate(photo: photo)
+            apply(candidate: candidate)
+        } catch {
+            currentCandidate = nil
+            currentDraft = nil
+        }
+    }
+
+    public func analyze(photoPayload: TransientMealPhotoPayload) async {
+        if privacy == .denied {
+            return
+        }
+        if privacy == .notRequested {
+            grantAIConsent()
+        }
+
+        do {
+            let candidate = try await analysisClient.estimate(photoPayload: photoPayload)
+            apply(candidate: candidate)
         } catch {
             currentCandidate = nil
             currentDraft = nil
@@ -133,9 +170,9 @@ public final class FoodWalletStore: ObservableObject {
     public func runDeviceSmoke() async -> FoodWalletDeviceSmokeResult {
         resetLocalData()
 
-        await analyze(example: .fujiApple)
+        await analyze(photo: .uiTestFujiApple)
         guard currentCandidate?.primaryLabel == "Fuji apple", currentDraft != nil else {
-            return smokeFailure("apple draft was not created")
+            return smokeFailure("photo apple draft was not created")
         }
         confirmDraft()
 
@@ -174,5 +211,11 @@ public final class FoodWalletStore: ObservableObject {
             totalKcal: safeSummary.totals.sumMeanKcal,
             reason: reason
         )
+    }
+
+    private func apply(candidate: FoodAnalysisCandidate) {
+        let draft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
+        currentCandidate = candidate
+        currentDraft = draft
     }
 }

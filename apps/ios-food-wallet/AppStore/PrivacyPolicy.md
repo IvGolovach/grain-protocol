@@ -13,13 +13,19 @@ and confirmation time.
 
 Meal photos are used to create food estimate drafts. Food Wallet does not store raw meal photos by default.
 Photos are not included in safe summaries, exports, or protocol proof views.
+If you choose remote analysis, the app sends the selected photo to the Food
+Wallet backend broker for that analysis request. The photo is treated as
+transient request data and is not retained by Food Wallet after the estimate is
+created.
 
 ## AI Analysis
 
 Production photo analysis will use a backend broker before calling an AI
 provider such as OpenAI. The app must ask for consent before sending a selected
 photo for analysis. The broker should strip metadata, avoid request-body logs,
-and discard image bytes after the analysis request completes.
+keep provider keys out of the app, use nutrition sources such as USDA FoodData
+Central only from the backend, and discard image bytes after the analysis
+request completes.
 
 ## Subscriptions
 

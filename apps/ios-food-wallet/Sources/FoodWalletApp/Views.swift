@@ -2,6 +2,10 @@ import FoodWalletCore
 import GrainFoodWallet
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#endif
+
 private enum FoodWalletTab: String, CaseIterable, Identifiable {
     case today
     case capture
@@ -35,17 +39,23 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
 struct FoodWalletRootView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var selectedTab: FoodWalletTab = .today
+    @State private var isShowingCamera = false
+    @State private var captureErrorMessage: String?
+
+    private var usesUITestPhotoFlow: Bool {
+        ProcessInfo.processInfo.arguments.contains("--grain-ui-test-photo-flow")
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                TodayView(selectedTab: $selectedTab)
+                TodayView(onAddFood: startAddFoodFlow)
             }
             .tabItem { Label(FoodWalletTab.today.title, systemImage: FoodWalletTab.today.symbol) }
             .tag(FoodWalletTab.today)
 
             NavigationStack {
-                CaptureView(selectedTab: $selectedTab)
+                CaptureView(selectedTab: $selectedTab, onCapturePhoto: startAddFoodFlow)
             }
             .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
             .tag(FoodWalletTab.capture)
@@ -70,12 +80,63 @@ struct FoodWalletRootView: View {
         }
         .tint(.green)
         .accessibilityIdentifier("FoodWalletRoot")
+        #if os(iOS)
+        .sheet(isPresented: $isShowingCamera) {
+            CameraCaptureView(
+                onPhotoCaptured: { photoPayload in
+                    isShowingCamera = false
+                    Task {
+                        await store.analyze(photoPayload: photoPayload)
+                    }
+                },
+                onCancel: {
+                    isShowingCamera = false
+                }
+            )
+        }
+        #endif
+        .alert(
+            "Camera unavailable",
+            isPresented: Binding(
+                get: { captureErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        captureErrorMessage = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(captureErrorMessage ?? "")
+        }
+    }
+
+    private func startAddFoodFlow() {
+        selectedTab = .capture
+
+        if usesUITestPhotoFlow {
+            Task {
+                await store.analyze(photo: .uiTestFujiApple)
+            }
+            return
+        }
+
+        #if os(iOS)
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            isShowingCamera = true
+        } else {
+            captureErrorMessage = "This device does not expose a camera to Food Wallet. Use a real iPhone for camera capture."
+        }
+        #else
+        captureErrorMessage = "Camera capture is available in the iOS app target on a real iPhone."
+        #endif
     }
 }
 
 private struct TodayView: View {
     @EnvironmentObject private var store: FoodWalletStore
-    @Binding var selectedTab: FoodWalletTab
+    var onAddFood: () -> Void
 
     var body: some View {
         List {
@@ -93,23 +154,21 @@ private struct TodayView: View {
             }
 
             Section("Quick actions") {
-                Button {
-                    selectedTab = .capture
-                } label: {
+                Button(action: onAddFood) {
                     Label("Add food", systemImage: "plus.circle.fill")
                 }
                 .accessibilityIdentifier("AddFoodButton")
             }
 
             Section("Saved today") {
-                if store.entries.isEmpty {
+                if store.todayEntries.isEmpty {
                     EmptyStateView(
                         title: "No meals yet",
                         symbol: "fork.knife",
                         message: "Capture a photo estimate or save a manual draft."
                     )
                 } else {
-                    ForEach(store.entries, id: \.entryID) { entry in
+                    ForEach(store.todayEntries, id: \.entryID) { entry in
                         MealRow(entry: entry)
                     }
                 }
@@ -122,6 +181,7 @@ private struct TodayView: View {
 private struct CaptureView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Binding var selectedTab: FoodWalletTab
+    var onCapturePhoto: () -> Void
 
     var body: some View {
         List {
@@ -129,6 +189,16 @@ private struct CaptureView: View {
                 Text("Photo creates a draft. You decide what gets saved.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+            }
+
+            Section("Camera") {
+                CaptureAction(
+                    title: "Take meal photo",
+                    subtitle: "Open camera and create a nutrition draft",
+                    symbol: "camera.fill",
+                    accessibilityIdentifier: "TakeMealPhotoButton",
+                    action: onCapturePhoto
+                )
             }
 
             Section("Try photo analysis") {
@@ -190,6 +260,10 @@ private struct DraftReviewView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .accessibilityIdentifier("DraftNutritionLabel")
+                        Text(candidate.macronutrients.shortLabel)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("DraftMacronutrientsLabel")
                     }
                     Spacer()
                     SourceBadge(text: "Estimated", tint: .orange)
@@ -355,6 +429,12 @@ private struct MealRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("MealRowNutrition-\(entry.meal.label)")
+                if let macronutrients = entry.meal.macronutrients {
+                    Text(macronutrients.shortLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("MealRowMacros-\(entry.meal.label)")
+                }
             }
             Spacer()
             SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus == .verified ? .green : .orange)

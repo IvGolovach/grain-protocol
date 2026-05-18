@@ -34,6 +34,7 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: AppStore/Info.plist
+        GRAIN_FOOD_ANALYSIS_BROKER_URL: ""
         PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet
         PRODUCT_NAME: FoodWallet
 
