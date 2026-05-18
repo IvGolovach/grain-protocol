@@ -101,3 +101,12 @@ Before TestFlight/App Store submission, add:
 
 This package is the working app surface that future App Store packaging should
 wrap, not the final signed release artifact.
+
+Draft App Store artifacts live in `AppStore/`:
+
+- `Info.plist`
+- `PrivacyInfo.xcprivacy`
+- `AppPrivacyAnswers.md`
+- `AppReviewNotes.md`
+- `PrivacyPolicy.md`
+- `StoreKitProducts.md`

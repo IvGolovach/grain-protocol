@@ -13,6 +13,8 @@ if [[ ! -d "$APP_DIR" ]]; then
   exit 1
 fi
 
+python3 tools/ci/check_ios_food_wallet_app_store.py
+
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 
 has_raw_protocol_api() {

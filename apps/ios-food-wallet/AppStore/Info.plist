@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSCameraUsageDescription</key>
+  <string>Food Wallet uses the camera to scan verified food codes and, when you choose, capture a meal photo for an estimate.</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Food Wallet lets you choose a meal photo for an estimate. Selected photos create a draft and are not stored by Food Wallet.</string>
+</dict>
+</plist>
