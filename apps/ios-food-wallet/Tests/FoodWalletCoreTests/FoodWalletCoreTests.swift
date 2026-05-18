@@ -26,6 +26,12 @@ struct FoodWalletCoreTests {
         await run("storeConfirmsOnlyAfterDraftReview") {
             try await testStoreConfirmsOnlyAfterDraftReview()
         }
+        await run("storePublishesAnalysisStateWhilePhotoEstimateRuns") {
+            try await testStorePublishesAnalysisStateWhilePhotoEstimateRuns()
+        }
+        await run("storePublishesFailureStateWhenPhotoAnalysisFails") {
+            try await testStorePublishesFailureStateWhenPhotoAnalysisFails()
+        }
         await run("storeResetClearsSafeSummary") {
             try await testStoreResetClearsSafeSummary()
         }
@@ -175,6 +181,35 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStorePublishesAnalysisStateWhilePhotoEstimateRuns() async throws {
+        let store = FoodWalletStore(analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 100_000_000))
+
+        let task = Task {
+            await store.analyze(photo: .uiTestFujiApple)
+        }
+        try await Task.sleep(nanoseconds: 20_000_000)
+
+        try expect(store.analysisState.isAnalyzing, "expected store to publish analyzing state")
+        try expect(store.analysisState.statusText == "Looking for food", "expected first analysis status")
+
+        await task.value
+
+        try expect(store.analysisState == .draftReady, "expected draft ready state")
+        try expect(store.currentDraft != nil, "expected draft after delayed analysis")
+    }
+
+    @MainActor
+    private static func testStorePublishesFailureStateWhenPhotoAnalysisFails() async throws {
+        let store = FoodWalletStore(analysisClient: FailingFoodAnalysisClient())
+
+        await store.analyze(photo: .uiTestFujiApple)
+
+        try expect(store.analysisState.isFailed, "expected failed analysis state")
+        try expect(store.analysisState.statusText == "Couldn’t analyze photo", "expected friendly failure status")
+        try expect(store.currentDraft == nil, "expected no draft after failed analysis")
+    }
+
+    @MainActor
     private static func testStoreResetClearsSafeSummary() async throws {
         let store = FoodWalletStore()
 
@@ -202,6 +237,7 @@ struct FoodWalletCoreTests {
         await store.analyzeSelectedExample()
 
         try expect(store.privacy == .denied, "expected denied privacy to remain denied")
+        try expect(store.analysisState == .blockedPrivacy, "expected denied privacy state")
         try expect(store.currentCandidate == nil, "expected denied privacy to block candidate")
         try expect(store.currentDraft == nil, "expected denied privacy to block draft")
         try expect(store.entries.isEmpty, "expected denied privacy to avoid entries")
@@ -250,6 +286,39 @@ private final class BrokerRequestCapture: @unchecked Sendable {
     var method: String?
     var contentType: String?
     var body = Data()
+}
+
+private struct SlowFoodAnalysisClient: FoodAnalysisClient {
+    var delayNanoseconds: UInt64
+
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        try await Task.sleep(nanoseconds: delayNanoseconds)
+        return try await MockFoodAnalysisClient().estimate(example: example)
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        try await Task.sleep(nanoseconds: delayNanoseconds)
+        return try await MockFoodAnalysisClient().estimate(photo: photo)
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        try await Task.sleep(nanoseconds: delayNanoseconds)
+        return try await MockFoodAnalysisClient().estimate(photoPayload: photoPayload)
+    }
+}
+
+private struct FailingFoodAnalysisClient: FoodAnalysisClient {
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        throw FoodWalletTestFailure("analysis unavailable")
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        throw FoodWalletTestFailure("analysis unavailable")
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        throw FoodWalletTestFailure("analysis unavailable")
+    }
 }
 
 private func brokerClient(

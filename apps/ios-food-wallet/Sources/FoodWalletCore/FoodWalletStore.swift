@@ -16,10 +16,106 @@ public struct FoodWalletDeviceSmokeResult: Equatable, Sendable {
     }
 }
 
+public enum FoodAnalysisSource: Equatable, Sendable {
+    case example(FoodCaptureExample)
+    case photo(id: String)
+    case transientPhoto(id: String, byteCount: Int)
+}
+
+public struct FoodAnalysisOperation: Equatable, Sendable {
+    public var id: UUID
+    public var source: FoodAnalysisSource
+    public var startedAt: Date
+
+    public init(id: UUID = UUID(), source: FoodAnalysisSource, startedAt: Date = Date()) {
+        self.id = id
+        self.source = source
+        self.startedAt = startedAt
+    }
+}
+
+public enum FoodAnalysisFailureCode: Equatable, Sendable {
+    case invalidPayload
+    case invalidResponse
+    case httpStatus(Int)
+    case unsafeCandidate
+    case network
+    case unknown
+}
+
+public struct FoodAnalysisFailure: Equatable, Sendable {
+    public var code: FoodAnalysisFailureCode
+    public var message: String
+
+    public init(code: FoodAnalysisFailureCode, message: String) {
+        self.code = code
+        self.message = message
+    }
+}
+
+public enum FoodAnalysisState: Equatable, Sendable {
+    case idle
+    case analyzing(FoodAnalysisOperation)
+    case slow(FoodAnalysisOperation)
+    case failed(FoodAnalysisFailure)
+    case draftReady
+    case blockedPrivacy
+
+    public var isAnalyzing: Bool {
+        switch self {
+        case .analyzing, .slow:
+            return true
+        case .idle, .failed, .draftReady, .blockedPrivacy:
+            return false
+        }
+    }
+
+    public var isSlow: Bool {
+        if case .slow = self {
+            return true
+        }
+        return false
+    }
+
+    public var isFailed: Bool {
+        if case .failed = self {
+            return true
+        }
+        return false
+    }
+
+    public var statusText: String {
+        switch self {
+        case .idle:
+            return "No active analysis"
+        case .analyzing:
+            return "Looking for food"
+        case .slow:
+            return "Still analyzing photo"
+        case .failed:
+            return "Couldn’t analyze photo"
+        case .draftReady:
+            return "Draft ready"
+        case .blockedPrivacy:
+            return "AI photo analysis disabled"
+        }
+    }
+
+    public var errorMessage: String? {
+        if case let .failed(failure) = self {
+            return failure.message
+        }
+        return nil
+    }
+}
+
 @MainActor
 public final class FoodWalletStore: ObservableObject {
+    private static let defaultSlowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
+
     @Published public private(set) var currentCandidate: FoodAnalysisCandidate?
     @Published public private(set) var currentDraft: FoodIntakeDraft?
+    @Published public private(set) var analysisState: FoodAnalysisState
     @Published public private(set) var entries: [FoodIntakeEntry]
     @Published public private(set) var safeSummary: SafeFoodSummary
     @Published public var selectedExample: FoodCaptureExample
@@ -27,16 +123,21 @@ public final class FoodWalletStore: ObservableObject {
     @Published public var privacy: PrivacyConsentState
 
     private let analysisClient: any FoodAnalysisClient
+    private let slowAnalysisThresholdNanoseconds: UInt64
+    private var slowAnalysisTask: Task<Void, Never>?
     private var wallet: GrainFoodWallet
 
     public init(
         analysisClient: any FoodAnalysisClient = MockFoodAnalysisClient(),
         wallet: GrainFoodWallet = GrainFoodWallet(),
         subscription: SubscriptionState = .free,
-        privacy: PrivacyConsentState = .notRequested
+        privacy: PrivacyConsentState = .notRequested,
+        slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
     ) {
         self.analysisClient = analysisClient
+        self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
         self.wallet = wallet
+        self.analysisState = .idle
         self.entries = []
         self.safeSummary = wallet.exportSafeSummary()
         self.selectedExample = .fujiApple
@@ -65,6 +166,18 @@ public final class FoodWalletStore: ObservableObject {
         currentDraft != nil && currentCandidate != nil
     }
 
+    public var canStartAnalysis: Bool {
+        !analysisState.isAnalyzing && privacy != .denied
+    }
+
+    public var canSaveDraft: Bool {
+        analysisState == .draftReady && hasDraft
+    }
+
+    public var canDiscardDraft: Bool {
+        hasDraft || analysisState.isFailed || analysisState == .blockedPrivacy
+    }
+
     public func grantAIConsent() {
         privacy = .granted
     }
@@ -74,57 +187,62 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func analyzeSelectedExample() async {
-        if privacy == .denied {
+        guard preparePrivacyForAnalysis() else {
             return
-        }
-        if privacy == .notRequested {
-            grantAIConsent()
         }
         await analyze(example: selectedExample)
     }
 
     public func analyze(example: FoodCaptureExample) async {
+        guard preparePrivacyForAnalysis() else {
+            return
+        }
+        let operation = beginAnalysis(source: .example(example))
         do {
             let candidate = try await analysisClient.estimate(example: example)
-            apply(candidate: candidate)
+            apply(candidate: candidate, for: operation)
         } catch {
-            currentCandidate = nil
-            currentDraft = nil
+            failAnalysis(error, for: operation)
         }
     }
 
     public func analyze(photo: CapturedMealPhoto) async {
-        if privacy == .denied {
+        guard preparePrivacyForAnalysis() else {
             return
         }
-        if privacy == .notRequested {
-            grantAIConsent()
-        }
 
+        let operation = beginAnalysis(source: .photo(id: photo.id))
         do {
             let candidate = try await analysisClient.estimate(photo: photo)
-            apply(candidate: candidate)
+            apply(candidate: candidate, for: operation)
         } catch {
-            currentCandidate = nil
-            currentDraft = nil
+            failAnalysis(error, for: operation)
         }
     }
 
     public func analyze(photoPayload: TransientMealPhotoPayload) async {
-        if privacy == .denied {
+        guard preparePrivacyForAnalysis() else {
             return
         }
-        if privacy == .notRequested {
-            grantAIConsent()
-        }
 
+        let operation = beginAnalysis(source: .transientPhoto(
+            id: photoPayload.photo.id,
+            byteCount: photoPayload.byteCount
+        ))
         do {
             let candidate = try await analysisClient.estimate(photoPayload: photoPayload)
-            apply(candidate: candidate)
+            apply(candidate: candidate, for: operation)
         } catch {
-            currentCandidate = nil
-            currentDraft = nil
+            failAnalysis(error, for: operation)
         }
+    }
+
+    public func cancelAnalysis() {
+        slowAnalysisTask?.cancel()
+        slowAnalysisTask = nil
+        currentCandidate = nil
+        currentDraft = nil
+        analysisState = .idle
     }
 
     public func toggleAssumption(id: String) {
@@ -152,18 +270,23 @@ public final class FoodWalletStore: ObservableObject {
         safeSummary = wallet.exportSafeSummary()
         currentCandidate = nil
         currentDraft = nil
+        analysisState = .idle
     }
 
     public func discardDraft() {
         currentCandidate = nil
         currentDraft = nil
+        analysisState = .idle
     }
 
     public func resetLocalData() {
+        slowAnalysisTask?.cancel()
+        slowAnalysisTask = nil
         wallet = GrainFoodWallet()
         entries = []
         currentCandidate = nil
         currentDraft = nil
+        analysisState = .idle
         safeSummary = wallet.exportSafeSummary()
     }
 
@@ -213,9 +336,98 @@ public final class FoodWalletStore: ObservableObject {
         )
     }
 
-    private func apply(candidate: FoodAnalysisCandidate) {
+    private func preparePrivacyForAnalysis() -> Bool {
+        if privacy == .denied {
+            slowAnalysisTask?.cancel()
+            slowAnalysisTask = nil
+            currentCandidate = nil
+            currentDraft = nil
+            analysisState = .blockedPrivacy
+            return false
+        }
+        if privacy == .notRequested {
+            grantAIConsent()
+        }
+        return true
+    }
+
+    private func beginAnalysis(source: FoodAnalysisSource) -> FoodAnalysisOperation {
+        slowAnalysisTask?.cancel()
+        currentCandidate = nil
+        currentDraft = nil
+
+        let operation = FoodAnalysisOperation(source: source)
+        analysisState = .analyzing(operation)
+        scheduleSlowState(for: operation)
+        return operation
+    }
+
+    private func scheduleSlowState(for operation: FoodAnalysisOperation) {
+        let threshold = slowAnalysisThresholdNanoseconds
+        slowAnalysisTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: threshold)
+            } catch {
+                return
+            }
+            await MainActor.run {
+                guard let self, self.analysisState == .analyzing(operation) else {
+                    return
+                }
+                self.analysisState = .slow(operation)
+            }
+        }
+    }
+
+    private func apply(candidate: FoodAnalysisCandidate, for operation: FoodAnalysisOperation) {
+        guard isCurrent(operation: operation) else {
+            return
+        }
+        slowAnalysisTask?.cancel()
+        slowAnalysisTask = nil
         let draft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
         currentCandidate = candidate
         currentDraft = draft
+        analysisState = .draftReady
+    }
+
+    private func failAnalysis(_ error: Error, for operation: FoodAnalysisOperation) {
+        guard isCurrent(operation: operation) else {
+            return
+        }
+        slowAnalysisTask?.cancel()
+        slowAnalysisTask = nil
+        currentCandidate = nil
+        currentDraft = nil
+        analysisState = .failed(FoodAnalysisFailure(
+            code: FoodWalletStore.failureCode(for: error),
+            message: "The analysis service did not return a usable food estimate. Try another photo or enter this meal manually."
+        ))
+    }
+
+    private func isCurrent(operation: FoodAnalysisOperation) -> Bool {
+        switch analysisState {
+        case let .analyzing(current), let .slow(current):
+            return current.id == operation.id
+        case .idle, .failed, .draftReady, .blockedPrivacy:
+            return false
+        }
+    }
+
+    private static func failureCode(for error: Error) -> FoodAnalysisFailureCode {
+        guard let brokerError = error as? FoodAnalysisBrokerClientError else {
+            return .unknown
+        }
+
+        switch brokerError {
+        case .invalidPayload:
+            return .invalidPayload
+        case .invalidResponse:
+            return .invalidResponse
+        case let .httpStatus(status):
+            return .httpStatus(status)
+        case .unsafeCandidate:
+            return .unsafeCandidate
+        }
     }
 }

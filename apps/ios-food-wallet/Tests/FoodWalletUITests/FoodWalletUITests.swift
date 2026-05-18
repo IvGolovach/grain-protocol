@@ -1,16 +1,22 @@
 import XCTest
 
+@MainActor
 final class FoodWalletUITests: XCTestCase {
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+    }
+
+    private func launch(arguments: [String] = ["--grain-ui-test-photo-flow"]) {
         app = XCUIApplication()
-        app.launchArguments.append("--grain-ui-test-photo-flow")
+        app.launchArguments.append(contentsOf: arguments)
         app.launch()
     }
 
     func testAppleEstimateCanBeSavedAndViewed() throws {
+        launch()
+
         XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
@@ -40,5 +46,28 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["ConfirmedEntriesLabel"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["ConfirmedEntriesValue"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["ConfirmedEntriesValue"].label, "1")
+    }
+
+    func testAnalysisProgressIsVisibleDuringDelayedPhotoEstimate() throws {
+        launch(arguments: [
+            "--grain-ui-test-delayed-photo-flow",
+            "--grain-analysis-delay-ms",
+            "5000"
+        ])
+
+        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.otherElements["AnalysisLoadingView"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["AnalysisStatusLabel"].waitForExistence(timeout: 2))
+        XCTAssertTrue([
+            "Looking for food",
+            "Estimating portion",
+            "Checking nutrition ranges",
+            "Preparing draft"
+        ].contains(app.staticTexts["AnalysisStatusLabel"].label))
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Fuji apple")
     }
 }

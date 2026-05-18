@@ -38,6 +38,9 @@ private enum FoodWalletAppConfiguration {
     private static let brokerEndpointEnvironmentKey = "GRAIN_FOOD_ANALYSIS_BROKER_URL"
     private static let deviceSmokeArgument = "--grain-device-smoke"
     private static let uiTestPhotoFlowArgument = "--grain-ui-test-photo-flow"
+    private static let uiTestDelayedPhotoFlowArgument = "--grain-ui-test-delayed-photo-flow"
+    private static let uiTestFailingPhotoFlowArgument = "--grain-ui-test-failing-photo-flow"
+    private static let uiTestAnalysisDelayArgument = "--grain-analysis-delay-ms"
 
     @MainActor
     static func makeStore() -> FoodWalletStore {
@@ -45,6 +48,12 @@ private enum FoodWalletAppConfiguration {
     }
 
     private static func makeAnalysisClient() -> any FoodAnalysisClient {
+        if ProcessInfo.processInfo.arguments.contains(uiTestDelayedPhotoFlowArgument) {
+            return DelayedFoodAnalysisClient(delayNanoseconds: uiTestDelayNanoseconds())
+        }
+        if ProcessInfo.processInfo.arguments.contains(uiTestFailingPhotoFlowArgument) {
+            return UnavailableFoodAnalysisClient()
+        }
         if ProcessInfo.processInfo.arguments.contains(uiTestPhotoFlowArgument) ||
             ProcessInfo.processInfo.arguments.contains(deviceSmokeArgument) {
             return MockFoodAnalysisClient()
@@ -75,4 +84,53 @@ private enum FoodWalletAppConfiguration {
         }
         return endpoint
     }
+
+    private static func uiTestDelayNanoseconds() -> UInt64 {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard
+            let delayIndex = arguments.firstIndex(of: uiTestAnalysisDelayArgument),
+            arguments.indices.contains(delayIndex + 1),
+            let delayMilliseconds = UInt64(arguments[delayIndex + 1])
+        else {
+            return 900_000_000
+        }
+        return delayMilliseconds * 1_000_000
+    }
+}
+
+private struct DelayedFoodAnalysisClient: FoodAnalysisClient {
+    var delayNanoseconds: UInt64
+
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        try await Task.sleep(nanoseconds: delayNanoseconds)
+        return try await MockFoodAnalysisClient().estimate(example: example)
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        try await Task.sleep(nanoseconds: delayNanoseconds)
+        return try await MockFoodAnalysisClient().estimate(photo: photo)
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        try await Task.sleep(nanoseconds: delayNanoseconds)
+        return try await MockFoodAnalysisClient().estimate(photoPayload: photoPayload)
+    }
+}
+
+private struct UnavailableFoodAnalysisClient: FoodAnalysisClient {
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        throw FoodWalletAppConfigurationError.analysisUnavailable
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        throw FoodWalletAppConfigurationError.analysisUnavailable
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        throw FoodWalletAppConfigurationError.analysisUnavailable
+    }
+}
+
+private enum FoodWalletAppConfigurationError: Error {
+    case analysisUnavailable
 }
