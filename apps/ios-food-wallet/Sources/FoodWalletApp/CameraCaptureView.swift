@@ -61,18 +61,19 @@ struct CameraCaptureView: UIViewControllerRepresentable {
 
 private extension TransientMealPhotoPayload {
     static func transientCapture(from image: UIImage) -> TransientMealPhotoPayload? {
-        guard let jpegData = image.jpegData(compressionQuality: 0.65) else {
+        let normalizedImage = image.foodWalletScaledForAnalysis()
+        guard let jpegData = normalizedImage.foodWalletJPEGDataForAnalysis() else {
             return nil
         }
 
-        let pixelsWide = Int(image.size.width * image.scale)
-        let pixelsHigh = Int(image.size.height * image.scale)
+        let pixelsWide = Int(normalizedImage.size.width * normalizedImage.scale)
+        let pixelsHigh = Int(normalizedImage.size.height * normalizedImage.scale)
         let photo = CapturedMealPhoto(
             id: "camera-\(UUID().uuidString)",
             widthPixels: pixelsWide,
             heightPixels: pixelsHigh,
             compressedByteCount: jpegData.count,
-            features: image.foodWalletFeatures()
+            features: normalizedImage.foodWalletFeatures()
         )
 
         return TransientMealPhotoPayload(photo: photo, jpegData: jpegData)
@@ -80,6 +81,41 @@ private extension TransientMealPhotoPayload {
 }
 
 private extension UIImage {
+    func foodWalletScaledForAnalysis() -> UIImage {
+        let maxPixelDimension = CGFloat(1_600)
+        let pixelWidth = size.width * scale
+        let pixelHeight = size.height * scale
+        let largestDimension = max(pixelWidth, pixelHeight)
+        guard largestDimension > maxPixelDimension, largestDimension > 0 else {
+            return self
+        }
+
+        let ratio = maxPixelDimension / largestDimension
+        let targetSize = CGSize(
+            width: max(1, round(pixelWidth * ratio)),
+            height: max(1, round(pixelHeight * ratio))
+        )
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+            draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+    }
+
+    func foodWalletJPEGDataForAnalysis() -> Data? {
+        let maxBytes = 2_500_000
+        for quality in stride(from: 0.72, through: 0.42, by: -0.10) {
+            guard let data = jpegData(compressionQuality: quality) else {
+                continue
+            }
+            if data.count <= maxBytes {
+                return data
+            }
+        }
+        return jpegData(compressionQuality: 0.32)
+    }
+
     func foodWalletFeatures() -> FoodPhotoFeatures {
         guard let cgImage else {
             return .unknown
