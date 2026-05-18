@@ -18,6 +18,12 @@ const PROFILES: Record<string, StructuredFieldProfile> = {
     bytes_fields: [],
     set_array_fields: ["/tags"]
   },
+  food_intake_draft_v1: {
+    profile_id: "food_intake_draft_v1",
+    numeric_fields: ["/mean/kcal", "/var/kcal", "/amount_g", "/serving_g", "/servings"],
+    bytes_fields: [],
+    set_array_fields: []
+  },
   cook_run_v1: {
     profile_id: "cook_run_v1",
     numeric_fields: ["/servings"],
@@ -29,6 +35,7 @@ const PROFILES: Record<string, StructuredFieldProfile> = {
 const TARGET_TYPE_DEFAULT_PROFILE: Record<string, string> = {
   Claim: "claim_v1",
   IntakeEvent: "intake_event_v1",
+  FoodIntakeDraft: "food_intake_draft_v1",
   CookRun: "cook_run_v1"
 };
 

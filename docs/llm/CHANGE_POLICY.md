@@ -80,6 +80,7 @@ If a PR changes SDK strict orchestration behavior (`core/ts/grain-sdk/**`) in an
 - portable generated-client workflow surfaces such as scan preview or scan accept
 - portable storage/trust adapter contracts or generated-binding DTO boundaries
 - generated binding harness files such as UDL, UniFFI scaffolding, bindgen wrappers, or binding generation/check scripts
+- SDK/domain app contracts such as Food Wallet schemas, safe-summary rules, or platform facade guarantees
 
 Then the PR MUST:
 - add or update an ADR under `adr/sdk/`

@@ -61,7 +61,16 @@ tasks.register<JavaExec>("runAndroidAdaptersSmoke") {
     dependsOn("testClasses")
 }
 
+tasks.register<JavaExec>("runFoodWalletSmoke") {
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    description = "Run Food Wallet estimate, draft, confirm, and safe summary smoke tests."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("dev.grain.food.FoodWalletSmokeKt")
+    dependsOn("testClasses")
+}
+
 tasks.named("check") {
     dependsOn("runFixtureRunner")
     dependsOn("runAndroidAdaptersSmoke")
+    dependsOn("runFoodWalletSmoke")
 }

@@ -1,0 +1,24 @@
+{
+  "fixture_id": "food-wallet-self-issued-draft.v1",
+  "schema": "grain.food-wallet.fixture.v1",
+  "kind": "self_issued_draft",
+  "draft": {
+    "draft_id": "draft-home-soup-001",
+    "trust_status": "self_issued",
+    "source_class": "measured",
+    "entry": {
+      "entry_id": "entry-home-soup-001",
+      "source_class": "measured",
+      "trust_status": "self_issued",
+      "mean": {
+        "kcal": 310
+      },
+      "var": {
+        "kcal": 9
+      },
+      "amount_g": 350,
+      "serving_g": 350,
+      "servings": 1
+    }
+  }
+}

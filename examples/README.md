@@ -12,6 +12,11 @@ semantics.
 Use these when you want to inspect the happy path, negative security examples,
 and profile sample events before running platform-specific SDK shells.
 
+For the Food Wallet app boundary, read `docs/human/sdk/food-wallet.md` and run
+`scripts/sdk/run_food_wallet_pilot.sh`. The app owns camera, photo provider, UI,
+and any AI adapter; Grain owns the validation, confirm, and safe export
+primitives.
+
 ## Scanner Shells
 
 - `ios-scanner`: SwiftUI shell over `sdk/swift`.
