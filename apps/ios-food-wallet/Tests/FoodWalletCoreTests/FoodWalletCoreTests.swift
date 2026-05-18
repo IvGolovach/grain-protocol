@@ -14,8 +14,17 @@ struct FoodWalletCoreTests {
         await run("storeConfirmsOnlyAfterDraftReview") {
             try await testStoreConfirmsOnlyAfterDraftReview()
         }
+        await run("storeResetClearsSafeSummary") {
+            try await testStoreResetClearsSafeSummary()
+        }
+        await run("deniedPrivacyBlocksSelectedAnalysis") {
+            try await testDeniedPrivacyBlocksSelectedAnalysis()
+        }
         await run("safeSummaryDoesNotExposeRawPhotoOrProtocolMaterial") {
             try await testSafeSummaryDoesNotExposeRawPhotoOrProtocolMaterial()
+        }
+        await run("deviceSmokeConfirmsAppleAndRisotto") {
+            try await testDeviceSmokeConfirmsAppleAndRisotto()
         }
         print("IOS_FOOD_WALLET_TESTS: PASS")
     }
@@ -77,6 +86,39 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStoreResetClearsSafeSummary() async throws {
+        let store = FoodWalletStore()
+
+        await store.analyze(example: .fujiApple)
+        store.confirmDraft()
+        try expect(store.entries.count == 1, "expected one entry before reset")
+        try expect(store.safeSummary.totals.entryCount == 1, "expected one summary entry before reset")
+
+        store.resetLocalData()
+        try expect(store.entries.isEmpty, "expected reset to clear entries")
+        try expect(store.currentDraft == nil, "expected reset to clear draft")
+        try expect(store.currentCandidate == nil, "expected reset to clear candidate")
+        try expect(store.safeSummary.totals.entryCount == 0, "expected reset to clear safe summary count")
+        try expect(store.safeSummary.totals.sumMeanKcal == 0, "expected reset to clear safe summary calories")
+
+        await store.analyze(example: .fujiApple)
+        store.confirmDraft()
+        try expect(store.safeSummary.totals.entryCount == 1, "expected one summary entry after post-reset confirm")
+    }
+
+    @MainActor
+    private static func testDeniedPrivacyBlocksSelectedAnalysis() async throws {
+        let store = FoodWalletStore(privacy: .denied)
+
+        await store.analyzeSelectedExample()
+
+        try expect(store.privacy == .denied, "expected denied privacy to remain denied")
+        try expect(store.currentCandidate == nil, "expected denied privacy to block candidate")
+        try expect(store.currentDraft == nil, "expected denied privacy to block draft")
+        try expect(store.entries.isEmpty, "expected denied privacy to avoid entries")
+    }
+
+    @MainActor
     private static func testSafeSummaryDoesNotExposeRawPhotoOrProtocolMaterial() async throws {
         let store = FoodWalletStore()
         await store.analyze(example: .mushroomRisotto)
@@ -87,6 +129,17 @@ struct FoodWalletCoreTests {
         for token in forbidden {
             try expect(!summary.localizedCaseInsensitiveContains(token), "safe summary leaked \(token)")
         }
+    }
+
+    @MainActor
+    private static func testDeviceSmokeConfirmsAppleAndRisotto() async throws {
+        let store = FoodWalletStore()
+        let result = await store.runDeviceSmoke()
+
+        try expect(result.passed, "expected device smoke to pass: \(result.reason)")
+        try expect(result.entryCount == 2, "expected two smoke entries")
+        try expect(result.totalKcal > 0, "expected positive smoke kcal total")
+        try expect(store.entries.map { $0.meal.label } == ["Mushroom risotto", "Fuji apple"], "expected latest entry first")
     }
 }
 

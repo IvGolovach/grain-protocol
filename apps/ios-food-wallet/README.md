@@ -110,3 +110,27 @@ Draft App Store artifacts live in `AppStore/`:
 - `AppReviewNotes.md`
 - `PrivacyPolicy.md`
 - `StoreKitProducts.md`
+
+## Real iPhone Run
+
+The package build proves the Swift app code. A physical iPhone needs a signed
+`.app` bundle, so the repo includes an XcodeGen project definition for local
+device runs:
+
+```sh
+scripts/sdk/run_ios_food_wallet_device.sh
+```
+
+The script detects the first connected developer-mode iPhone, detects the first
+local Apple Development team, generates `FoodWallet.xcodeproj`, builds and
+installs `FoodWallet.app`, runs `--grain-device-smoke`, and then launches the
+app normally.
+
+Useful overrides:
+
+```sh
+GRAIN_IOS_DEVICE_ID=<device-id> \
+GRAIN_IOS_DEVELOPMENT_TEAM=<team-id> \
+GRAIN_IOS_BUNDLE_ID=dev.grain.foodwallet \
+scripts/sdk/run_ios_food_wallet_device.sh
+```

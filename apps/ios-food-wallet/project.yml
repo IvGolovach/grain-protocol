@@ -1,0 +1,52 @@
+name: FoodWallet
+
+options:
+  minimumXcodeGenVersion: 2.42.0
+  deploymentTarget:
+    iOS: "16.0"
+
+settings:
+  base:
+    CODE_SIGN_STYLE: Automatic
+    CURRENT_PROJECT_VERSION: 1
+    ENABLE_CODE_COVERAGE: NO
+    MARKETING_VERSION: 0.1.0
+    SWIFT_VERSION: 6.0
+
+packages:
+  GrainFoodWalletApp:
+    path: .
+
+targets:
+  FoodWallet:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Sources/FoodWalletApp
+    resources:
+      - path: AppStore/PrivacyInfo.xcprivacy
+    dependencies:
+      - package: GrainFoodWalletApp
+        product: FoodWalletCore
+      - package: GrainFoodWalletApp
+        product: FoodWalletAppIntents
+    settings:
+      base:
+        INFOPLIST_FILE: AppStore/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet
+        PRODUCT_NAME: FoodWallet
+
+  FoodWalletUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Tests/FoodWalletUITests
+    dependencies:
+      - target: FoodWallet
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet.uitests
+        TEST_TARGET_NAME: FoodWallet

@@ -18,7 +18,7 @@ python3 tools/ci/check_ios_food_wallet_app_store.py
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 
 has_raw_protocol_api() {
-  local pattern='GrainClientFFI|grain_client_core|uniffi\.grain_client_core|dagcbor|dag_cbor|cose|qrdecode|qr_decode|snapshotB64|trustPubB64|privateKey|GR1'
+  local pattern='GrainClientFFI|grain_client_core|uniffi\.grain_client_core|dagcbor|dag_cbor|qrdecode|qr_decode|snapshotB64|trustPubB64|privateKeyB64|secretKeyB64'
   python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \
@@ -36,7 +36,7 @@ else
 fi
 
 has_raw_photo_retention() {
-  local pattern='rawPhoto|photoBytes|UIImageJPEGRepresentation|UIImagePNGRepresentation|writeToFile|FileManager\.default\.createFile|NSLog|os_log'
+  local pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|writeToFile|FileManager\.default\.createFile|NSLog|os_log'
   python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \

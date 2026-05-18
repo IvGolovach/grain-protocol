@@ -135,7 +135,8 @@ private struct CaptureView: View {
                 CaptureAction(
                     title: "Analyze Fuji apple",
                     subtitle: "Single-item estimate with a tight range",
-                    symbol: "apple.logo"
+                    symbol: "apple.logo",
+                    accessibilityIdentifier: "AnalyzeFujiAppleButton"
                 ) {
                     store.chooseExample(.fujiApple)
                     Task {
@@ -147,7 +148,8 @@ private struct CaptureView: View {
                 CaptureAction(
                     title: "Analyze mushroom risotto",
                     subtitle: "Mixed dish with assumptions and a wider range",
-                    symbol: "camera.macro"
+                    symbol: "camera.macro",
+                    accessibilityIdentifier: "AnalyzeMushroomRisottoButton"
                 ) {
                     store.chooseExample(.mushroomRisotto)
                     Task {
@@ -183,9 +185,11 @@ private struct DraftReviewView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(candidate.primaryLabel)
                             .font(.title3.bold())
+                            .accessibilityIdentifier("DraftPrimaryLabel")
                         Text("\(candidate.portion.label) • \(candidate.nutrition.label)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("DraftNutritionLabel")
                     }
                     Spacer()
                     SourceBadge(text: "Estimated", tint: .orange)
@@ -260,7 +264,13 @@ private struct WalletView: View {
         List {
             Section("Status") {
                 LabeledContent("Storage", value: "Local-first")
-                LabeledContent("Confirmed entries", value: "\(store.entries.count)")
+                LabeledContent {
+                    Text("\(store.entries.count)")
+                        .accessibilityIdentifier("ConfirmedEntriesValue")
+                } label: {
+                    Text("Confirmed entries")
+                        .accessibilityIdentifier("ConfirmedEntriesLabel")
+                }
                 LabeledContent("AI consent", value: store.privacy.label)
             }
 
@@ -340,9 +350,11 @@ private struct MealRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.meal.label)
                     .font(.headline)
+                    .accessibilityIdentifier("MealRowLabel-\(entry.meal.label)")
                 Text("\(entry.meal.amountGrams) g • \(entry.meal.kcal) kcal")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("MealRowNutrition-\(entry.meal.label)")
             }
             Spacer()
             SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus == .verified ? .green : .orange)
@@ -369,6 +381,7 @@ private struct CaptureAction: View {
     var title: String
     var subtitle: String
     var symbol: String
+    var accessibilityIdentifier: String
     var action: () -> Void
 
     var body: some View {
@@ -392,6 +405,7 @@ private struct CaptureAction: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 

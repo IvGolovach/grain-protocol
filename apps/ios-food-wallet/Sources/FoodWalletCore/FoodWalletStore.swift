@@ -2,6 +2,20 @@ import Combine
 import Foundation
 import GrainFoodWallet
 
+public struct FoodWalletDeviceSmokeResult: Equatable, Sendable {
+    public let passed: Bool
+    public let entryCount: Int
+    public let totalKcal: Int64
+    public let reason: String
+
+    public init(passed: Bool, entryCount: Int, totalKcal: Int64, reason: String) {
+        self.passed = passed
+        self.entryCount = entryCount
+        self.totalKcal = totalKcal
+        self.reason = reason
+    }
+}
+
 @MainActor
 public final class FoodWalletStore: ObservableObject {
     @Published public private(set) var currentCandidate: FoodAnalysisCandidate?
@@ -13,7 +27,7 @@ public final class FoodWalletStore: ObservableObject {
     @Published public var privacy: PrivacyConsentState
 
     private let analysisClient: any FoodAnalysisClient
-    private let wallet: GrainFoodWallet
+    private var wallet: GrainFoodWallet
 
     public init(
         analysisClient: any FoodAnalysisClient = MockFoodAnalysisClient(),
@@ -55,7 +69,10 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func analyzeSelectedExample() async {
-        if privacy != .granted {
+        if privacy == .denied {
+            return
+        }
+        if privacy == .notRequested {
             grantAIConsent()
         }
         await analyze(example: selectedExample)
@@ -106,9 +123,56 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func resetLocalData() {
+        wallet = GrainFoodWallet()
         entries = []
         currentCandidate = nil
         currentDraft = nil
         safeSummary = wallet.exportSafeSummary()
+    }
+
+    public func runDeviceSmoke() async -> FoodWalletDeviceSmokeResult {
+        resetLocalData()
+
+        await analyze(example: .fujiApple)
+        guard currentCandidate?.primaryLabel == "Fuji apple", currentDraft != nil else {
+            return smokeFailure("apple draft was not created")
+        }
+        confirmDraft()
+
+        await analyze(example: .mushroomRisotto)
+        guard currentCandidate?.primaryLabel == "Mushroom risotto", currentDraft != nil else {
+            return smokeFailure("risotto draft was not created")
+        }
+        toggleAssumption(id: "butter-oil")
+        confirmDraft()
+
+        guard entries.count == 2 else {
+            return smokeFailure("expected two confirmed entries, got \(entries.count)")
+        }
+        guard safeSummary.totals.entryCount == 2 else {
+            return smokeFailure("expected two safe summary entries, got \(safeSummary.totals.entryCount)")
+        }
+
+        let summary = String(describing: safeSummary)
+        let forbidden = ["rawPhoto", "photoBytes", "COSE", "CBOR", "snapshot", "privateKey", "trustPub", "GR1"]
+        for token in forbidden where summary.localizedCaseInsensitiveContains(token) {
+            return smokeFailure("safe summary leaked \(token)")
+        }
+
+        return FoodWalletDeviceSmokeResult(
+            passed: true,
+            entryCount: entries.count,
+            totalKcal: safeSummary.totals.sumMeanKcal,
+            reason: "ok"
+        )
+    }
+
+    private func smokeFailure(_ reason: String) -> FoodWalletDeviceSmokeResult {
+        FoodWalletDeviceSmokeResult(
+            passed: false,
+            entryCount: entries.count,
+            totalKcal: safeSummary.totals.sumMeanKcal,
+            reason: reason
+        )
     }
 }
