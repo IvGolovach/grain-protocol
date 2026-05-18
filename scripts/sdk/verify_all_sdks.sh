@@ -155,6 +155,15 @@ run_check "release train docs policy" \
 run_check "Food Wallet contract policy" \
   scripts/sdk/check_food_wallet_contract.sh
 
+if have_cmd node && have_cmd npm; then
+  run_check "TypeScript Food Wallet SDK smoke" \
+    npm --prefix core/ts/grain-sdk run test:food-wallet
+  run_check "TypeScript Food Wallet AI boundary smoke" \
+    npm --prefix core/ts/grain-sdk-ai run test:food-boundary
+else
+  skip_or_fail "SDK_VERIFY_ERR_TS_FOOD_WALLET_PREREQ_MISSING" "node and npm are required for TypeScript Food Wallet checks"
+fi
+
 if have_cmd cargo && have_cmd rustc && have_cmd npm; then
   if run_check "WASM target ready" ensure_wasm_target_ready; then
     run_check "WASM client package" env SDK_WASM_TARGET_READY=1 scripts/sdk/check_wasm_package.sh

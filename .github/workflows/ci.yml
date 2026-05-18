@@ -266,6 +266,12 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Install TypeScript SDK dependencies
+        run: |
+          npm ci --prefix core/ts/grain-ts-core
+          npm ci --prefix core/ts/grain-sdk
+          npm ci --prefix core/ts/grain-sdk-ai
+
       - name: Install WASM SDK package deps
         run: npm ci --prefix sdk/wasm
 
