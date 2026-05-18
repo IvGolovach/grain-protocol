@@ -1,0 +1,40 @@
+{
+  "fixture_id": "food-wallet-safe-summary.v1",
+  "schema": "grain.food-wallet.fixture.v1",
+  "kind": "safe_summary_export",
+  "summary": {
+    "schema": "grain.food-wallet.safe-summary.v1",
+    "summary_id": "safe-summary-demo-day-001",
+    "entries": [
+      {
+        "entry_id": "entry-breakfast-001",
+        "source_class": "estimated",
+        "trust_status": "estimated",
+        "mean": {
+          "kcal": 420
+        },
+        "var": {
+          "kcal": 36
+        },
+        "amount_g": 280,
+        "serving_g": 280,
+        "servings": 1
+      }
+    ],
+    "totals": {
+      "mean": {
+        "kcal": 420
+      },
+      "var": {
+        "kcal": 36
+      }
+    },
+    "insights": [
+      {
+        "kind": "confidence",
+        "message": "Estimate-only meal; verify before sharing."
+      }
+    ],
+    "generated_at": "2026-05-17T00:00:00Z"
+  }
+}

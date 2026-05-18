@@ -33,6 +33,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0027: pairing or sync transfer metadata claims device-bound custody, mismatched material, or unsupported custody version -> reject before mutation; public SDK debug/log helpers must redact snapshot, identity, pairing, sync, accepted-scan COSE, and trust payloads
 - SDK-NEG-0028: safe diagnostic event schemas or examples add portable secret payload fields, trust payload material, or accepted-scan COSE payloads -> `tools/ci/check_no_secret_telemetry.py` failure
 - SDK-NEG-0029: `verifyGR1()` receives a signed `ServingOffer` whose payload `issuer_kid` does not match the COSE protected `kid` derived from trusted public key -> `GRAIN_ERR_SCHEMA`
+- SDK-NEG-0030: Food Wallet schema, fixtures, pilot reports, starters, Swift/Kotlin facades, or TypeScript helpers drift from the explicit trust/status/source-class contract or include raw photos, raw QR strings, trust material, snapshots, identity/sync bundles, COSE payloads, or private keys -> Food Wallet contract, pilot, or platform smoke failure
 - SDK-NEG-AI-0001: malformed AI candidate envelope (version/kind/schema/target/payload_format) or reserved `event` kind before `event_append` exists -> `SDK_ERR_AI_*`
 - SDK-NEG-AI-0002: malformed payload by format (`structured_v1` / `dagcbor_b64`) or non-canonical base64 DAG-CBOR payload -> deterministic reject
 - SDK-NEG-AI-0003: numeric field not decimal-string or out-of-range -> `SDK_ERR_AI_NUMERIC_*`
@@ -45,6 +46,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-AI-0010: expired accepted token -> `SDK_ERR_ACCEPT_TOKEN_EXPIRED`
 - SDK-NEG-AI-0011: token registry capacity exceeded -> `SDK_ERR_ACCEPT_TOKEN_CAP_REACHED`
 - SDK-NEG-AI-0012: structured_v1 profile metadata missing/unknown -> `SDK_ERR_AI_PROFILE_*`
+- SDK-NEG-AI-0013: Food photo adapter output or advice path tries to persist raw photo fields, expose raw image bytes, or advertise direct ledger writes -> `SDK_ERR_FOOD_RAW_PHOTO_PERSISTENCE` or Food AI boundary smoke failure
 
 These checks are asserted in:
 - `core/ts/grain-sdk/scripts/test-sdk-invariants.ts`
@@ -81,3 +83,10 @@ These checks are asserted in:
 - `tools/ci/check_no_secret_telemetry.py`
 - `core/rust/grain-issuer-kit/tests/reference_issuer.rs`
 - `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts`
+- `core/ts/grain-sdk-ai/scripts/test-sdk-ai-food-boundary.ts`
+- `core/ts/grain-sdk/scripts/test-food-wallet.ts`
+- `tools/ci/check_food_wallet_contract.py`
+- `scripts/sdk/check_food_wallet_contract.sh`
+- `scripts/sdk/run_food_wallet_pilot.sh`
+- `scripts/sdk/check_swift_food_wallet.sh`
+- `scripts/sdk/check_kotlin_food_wallet.sh`

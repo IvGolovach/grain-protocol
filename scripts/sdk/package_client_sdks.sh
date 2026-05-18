@@ -235,6 +235,9 @@ tar_gz "grain-starter-templates-$COMMIT_SHA.tar.gz" \
   --exclude 'templates/android-starter/.gradle' \
   --exclude 'templates/android-starter/.kotlin' \
   --exclude 'templates/android-starter/build' \
+  --exclude 'templates/android-food-wallet-starter/.gradle' \
+  --exclude 'templates/android-food-wallet-starter/.kotlin' \
+  --exclude 'templates/android-food-wallet-starter/build' \
   --exclude 'templates/web-wasm-starter/node_modules' \
   --exclude 'templates/web-wasm-starter/dist' \
   --exclude 'examples/ios-scanner/.build' \

@@ -1,0 +1,37 @@
+{
+  "fixture_id": "food-wallet-verified-qr-draft.v1",
+  "schema": "grain.food-wallet.fixture.v1",
+  "kind": "verified_qr_draft",
+  "offer": {
+    "offer_id": "offer-cafe-yogurt-001",
+    "issuer": "demo-cafe",
+    "source_class": "attested",
+    "trust_status": "verified",
+    "serving_g": 180,
+    "mean": {
+      "kcal": 260
+    },
+    "var": {
+      "kcal": 4
+    }
+  },
+  "draft": {
+    "draft_id": "draft-cafe-yogurt-001",
+    "trust_status": "verified",
+    "source_class": "attested",
+    "entry": {
+      "entry_id": "entry-cafe-yogurt-001",
+      "source_class": "attested",
+      "trust_status": "verified",
+      "mean": {
+        "kcal": 260
+      },
+      "var": {
+        "kcal": 4
+      },
+      "amount_g": 180,
+      "serving_g": 180,
+      "servings": 1
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "fixture_id": "food-wallet-fake-photo-estimate.v1",
+  "schema": "grain.food-wallet.fixture.v1",
+  "kind": "fake_photo_estimate",
+  "candidate": {
+    "candidate_id": "candidate-fake-photo-001",
+    "source_class": "estimated",
+    "trust_status": "estimated",
+    "label": "breakfast bowl estimate",
+    "mean": {
+      "kcal": 420
+    },
+    "var": {
+      "kcal": 36
+    }
+  },
+  "meta": {
+    "desc": "Synthetic estimate metadata only; no raw photo bytes."
+  }
+}

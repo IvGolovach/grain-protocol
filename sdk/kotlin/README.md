@@ -86,6 +86,10 @@ GrainClient().use { client ->
 
 ## Workflow notes
 
+- `dev.grain.food` is the app-facing Food Wallet facade. It mirrors Food
+  Profile source classes and exposes estimate, draft, confirmed entry, daily
+  totals, and safe summary types without raw photo, snapshot, trust-key,
+  private-key, backend, or account fields.
 - `GrainScanHandoff` is the portable input object for camera, paste,
   share-sheet, glasses, or robot-vision QR capture. Platform code owns the
   sensor; Grain owns preview, accept, diagnostics, and mutation.

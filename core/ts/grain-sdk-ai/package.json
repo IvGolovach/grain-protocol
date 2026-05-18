@@ -22,7 +22,8 @@
   "scripts": {
     "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
     "build": "npm --prefix ../grain-ts-core run build --silent && npm --prefix ../grain-sdk run build --silent && npm run clean --silent && tsc -p tsconfig.build.json",
-    "test:boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-boundary.js"
+    "test:boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-boundary.js",
+    "test:food-boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-food-boundary.js"
   },
   "dependencies": {
     "grain-sdk-ts": "file:../grain-sdk",

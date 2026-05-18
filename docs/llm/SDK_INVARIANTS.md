@@ -138,6 +138,10 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/rust/grain-client-core/tests/pairing_sync_bundle.rs`, `sdk/swift/Sources/GrainClientFixtureRunner/main.swift`, `sdk/kotlin/src/test/kotlin/dev/grain/fixture/GrainClientFixtureRunner.kt`, `sdk/wasm/tests/run-workflow-fixtures.mjs`, `tools/ci/check_sdk_secret_logging.py`
   Modules: `core/rust/grain-client-core/src/custody.rs`, `core/rust/grain-client-core/src/types.rs`, `core/rust/grain-client-core/src/ffi_types.rs`, `core/rust/grain-client-core/src/pairing.rs`, `core/rust/grain-client-core/src/sync.rs`, `sdk/swift/Sources/GrainClient/GrainClient.swift`, `sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt`, `sdk/wasm/src/index.mjs`
 
+- SDK-INV-0032: Food Wallet app surfaces MUST preserve the Food Profile reducer contract while keeping photo/model inputs draft-first and safe-summary-only. Drafts can come from verified serving offers, self-issued/manual entry, or estimated photo/model output; user confirmation is required before append; raw photos, raw QR strings, trust material, snapshots, sync bundles, identity bundles, COSE payloads, and private keys MUST NOT appear in SDK safe reports, fixtures, or starter outputs.
+  Tests: `tools/ci/test_check_food_wallet_contract.py`, `tools/ci/check_food_wallet_contract.py`, `scripts/sdk/check_food_wallet_contract.sh`, `scripts/sdk/run_food_wallet_pilot.sh`, `core/ts/grain-sdk/scripts/test-food-wallet.ts`, `scripts/sdk/check_swift_food_wallet.sh`, `scripts/sdk/check_kotlin_food_wallet.sh`, `scripts/sdk/verify_all_sdks.sh`
+  Modules: `sdk/food/contract/food_wallet_v1.schema.json`, `sdk/food/README.md`, `examples/reference-fixtures/food-wallet-*.v1.json`, `core/ts/grain-sdk/src/food-wallet.ts`, `sdk/swift/Sources/GrainFoodWallet/GrainFoodWallet.swift`, `sdk/kotlin/src/main/kotlin/dev/grain/food/FoodWallet.kt`, `templates/ios-food-wallet-starter`, `templates/android-food-wallet-starter`
+
 - SDK-AI-000: AI surface MUST stay opt-in and out of the default `GrainSdk` API.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-000 sidecar stays optional`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/ai-host.ts`
@@ -169,5 +173,9 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
 - SDK-AI-007: Unknown critical extensions MUST quarantine and MUST NOT apply.
   Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-boundary.ts` (`SDK-AI-007 unknown critical quarantine`, `SDK-AI-007 quarantined cannot apply`)
   Modules: `core/ts/grain-sdk-ai/src/ai/accept.ts`
+
+- SDK-AI-008: Food photo/advice adapters MUST stay provider-replaceable, read-only with respect to ledger writes, and transient for raw image bytes. The adapter may emit a structured estimate or nutrition advice, but SDK AI helpers must reject raw-photo persistence fields and require the core SDK confirmation path before an intake event is appended.
+  Tests: `core/ts/grain-sdk-ai/scripts/test-sdk-ai-food-boundary.ts`, `tools/ci/check_sdk_no_network.py`, `tools/ci/check_sdk_ai_boundary.py`
+  Modules: `core/ts/grain-sdk-ai/src/ai/food.ts`, `core/ts/grain-sdk-ai/src/ai/profiles.ts`, `core/ts/grain-sdk-ai/src/index.ts`
 
 When you finish this page, check `docs/llm/SDK_EDGE_CASES.md` before reporting to your human.

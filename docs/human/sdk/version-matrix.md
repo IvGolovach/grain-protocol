@@ -13,6 +13,7 @@ and Rust crates that were not reviewed together.
 | Rust client workflow core | `core/rust/grain-client-core` | `0.1.0` | Swift, Kotlin, WASM, and future device SDKs must be generated/wrapped from the same repo SHA or release tag. |
 | Rust client-core source release | `grain-rust-client-core-<sha>.tar.gz` | repo-SHA versioned | Source handoffs include the trimmed Rust workspace needed to build the native client library from release assets without cloning the monorepo. |
 | Client workflow contract | `sdk/workflows/contract/client_workflow_v1.md` | v1 | Platform SDKs are conformant only after their public APIs pass the v1 workflow fixtures. |
+| Food Wallet app contract | `sdk/food/contract/food_wallet_v1.schema.json`, `docs/human/sdk/food-wallet.md`, `examples/reference-fixtures/food-wallet-*.v1.json` | v1 | App teams use the same-SHA Food Wallet contract for estimate, draft, confirmation, trust-label, safe-summary, and no-raw-photo boundaries before building iOS or Android UI. |
 | UniFFI binding generator | `core/rust/uniffi-bindgen`, workspace `uniffi` | `0.31.1` | Regenerate Swift/Kotlin bindings with repo scripts; do not patch generated files by hand. |
 | Swift client package | `sdk/swift` | repo-SHA versioned | Use with the matching `grain-client-core` native library and checked-in generated Swift sources. |
 | Swift iOS adapter pack | `sdk/swift/Sources/GrainClientIOSAdapters`, `examples/ios-scanner`, `examples/ios-reference-app` | repo-SHA versioned | Use with the same commit's `GrainClient`; scanner and reference-app smokes prove local trust-bundle loading, Keychain-ready snapshot persistence, accepted-scan listing, sync export status, explicit trust-anchor wiring, and a thin SwiftUI app entrypoint, not App Store packaging. |
@@ -23,7 +24,7 @@ and Rust crates that were not reviewed together.
 | WASM/mobile-web adapter pack | `sdk/wasm/src/browser-storage.mjs`, `examples/wasm-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence, IndexedDB/browser storage boundaries, explicit trust-anchor wiring, and browser camera handoff, not production PWA packaging. |
 | TypeScript SDK source package | `core/ts/grain-ts-core`, `core/ts/grain-sdk`, `core/ts/grain-sdk-ai`, `fixtures/external-consumers/npm-sdk` | `0.1.0` / `0.2.0` | Use from the matching `grain-typescript-sdk-<sha>.tar.gz`; release smoke builds the source packages, runs npm pack dry-runs, and typechecks/runs the external npm consumer fixture from the extracted release layout. |
 | Public SDK API snapshot | `sdk/api/public-sdk-v0.1.json` | v0.1 | Stable app-facing methods, statuses, workflows, and compatibility matrix must stay present unless a future API snapshot intentionally replaces them. |
-| Starter templates | `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter` | repo-SHA versioned | Use with the same commit's source SDK packet; templates prove thin app shells, not store or PWA publication. |
+| Starter templates | `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `templates/ios-food-wallet-starter`, `templates/android-food-wallet-starter` | repo-SHA versioned | Use with the same commit's source SDK packet; templates prove thin app shells and Food Wallet boundaries, not store, account, backend, raw-photo storage, or PWA publication. |
 
 ## Release Rule
 
@@ -67,6 +68,10 @@ That command proves:
   `GrainIOSScanner`/`GrainClientIOSAdapters` surface
 - starter templates keep iOS, Android, and Web/WASM app shells thin and behind
   public SDK/example APIs
+- Food Wallet contract checks keep estimate, draft, confirm, safe-summary, and
+  replaceable AI-provider boundaries source-level and free of raw photos,
+  snapshots, trust bundles, QR payloads, private keys, accounts, and backend
+  assumptions
 - the public SDK API snapshot and compatibility matrix match the packaged
   source artifacts
 - registry dry-runs record no credentials and no publication

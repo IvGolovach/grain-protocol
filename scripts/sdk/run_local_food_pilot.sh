@@ -188,6 +188,21 @@ write_report() {
     dirty_flag="true"
   fi
 
+  if [[ ! -f "$SDK_PROOF" ]]; then
+    status=1
+    {
+      echo "SDK_LOCAL_FOOD_PILOT_ERR_SDK_PROOF_MISSING: $SDK_PROOF"
+      echo "The sdk_reduce step did not produce the expected proof artifact."
+      if [[ -f "$OUT_DIR_ABS/logs/sdk_reduce.txt" ]]; then
+        echo
+        echo "== logs/sdk_reduce.txt =="
+        cat "$OUT_DIR_ABS/logs/sdk_reduce.txt"
+      fi
+    } >"$OUT_DIR_ABS/logs/report_validation.txt"
+    cat "$OUT_DIR_ABS/logs/report_validation.txt" >&2 || true
+    return
+  fi
+
   python3 - "$REPORT" "$COMMIT_SHA" "$dirty_flag" "$CHECKS_JSONL" "$SDK_PROOF" <<'PY'
 import json
 import sys
@@ -281,6 +296,7 @@ if node "$RUNNER" "$ROOT" "$ROOT/$FIXTURE_REL" "$SDK_PROOF" >"$OUT_DIR_ABS/logs/
   append_check "sdk_reduce" "pass" "node <generated local food pilot runner>" "logs/sdk_reduce.txt"
 else
   append_check "sdk_reduce" "fail" "node <generated local food pilot runner>" "logs/sdk_reduce.txt"
+  cat "$OUT_DIR_ABS/logs/sdk_reduce.txt" >&2 || true
   status=1
 fi
 
