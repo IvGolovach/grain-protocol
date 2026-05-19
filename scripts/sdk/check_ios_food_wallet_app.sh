@@ -18,7 +18,7 @@ python3 tools/ci/check_ios_food_wallet_app_store.py
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 
 has_raw_protocol_api() {
-  local pattern='GrainClientFFI|grain_client_core|uniffi\.grain_client_core|dagcbor|dag_cbor|qrdecode|qr_decode|snapshotB64|trustPubB64|privateKeyB64|secretKeyB64'
+  local pattern='GrainClientFFI|grain_client_core|uniffi\.grain_client_core|dagcbor|dag_cbor|qrdecode|qr_decode|rawQrPayload|raw[_-]?qr[_-]?payload'
   python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \
@@ -36,8 +36,8 @@ else
 fi
 
 has_raw_photo_retention() {
-  local storage_pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|UIImageWriteToSavedPhotosAlbum|PHPhotoLibrary|writeToFile|\.write\s*\(|FileManager\.default\.(createFile|copyItem|moveItem)|NSKeyedArchiver'
-  python3 tools/ci/find_regex_match.py --ignore-case "$storage_pattern" \
+  local raw_photo_api_pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|UIImageWriteToSavedPhotosAlbum|PHPhotoLibrary'
+  python3 tools/ci/find_regex_match.py --ignore-case "$raw_photo_api_pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \
     "$APP_DIR/Sources/FoodWalletAppIntents" >/dev/null && return 0
@@ -46,8 +46,10 @@ has_raw_photo_retention() {
     return "$storage_status"
   fi
 
-  local defaults_photo_pattern='UserDefaults\.standard\.(set|data)[^\n]*(jpegData|pngData|imageBytes|photoBytes|rawPhoto|base64EncodedString|TransientMealPhotoPayload|CapturedMealPhoto)'
-  python3 tools/ci/find_regex_match.py --ignore-case "$defaults_photo_pattern" \
+  local raw_material_pattern='jpegData|pngData|imageBytes|photoBytes|rawPhoto|base64EncodedString|TransientMealPhotoPayload|CapturedMealPhoto|rawQrPayload|raw[_-]?qr[_-]?payload|qr[_-]?(payload|string)|snapshotB64|snapshot[_-]?b64|syncBundle|sync[_-]?bundle|identityBundle|identity[_-]?bundle|trustBundle|trust[_-]?bundle|trustPubB64|trust[_-]?pub[_-]?b64|privateKeyB64|private[_-]?key[_-]?b64|secretKeyB64|secret[_-]?key[_-]?b64|coseB64|cose[_-]?b64'
+  local write_pattern='writeToFile|\.write\s*\(|FileManager\.default\.(createFile|copyItem|moveItem)|UserDefaults\.standard\.(set|data)|NSKeyedArchiver'
+  local retained_raw_material_pattern="($write_pattern)[^\n]*($raw_material_pattern)|($raw_material_pattern)[^\n]*($write_pattern)"
+  python3 tools/ci/find_regex_match.py --ignore-case "$retained_raw_material_pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \
     "$APP_DIR/Sources/FoodWalletAppIntents" >/dev/null

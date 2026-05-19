@@ -1,6 +1,7 @@
 import FoodWalletAppIntents
 import FoodWalletCore
 import Foundation
+import GrainFoodWallet
 import SwiftUI
 
 @main
@@ -41,6 +42,7 @@ private enum FoodWalletAppConfiguration {
     private static let uiTestPhotoFlowArgument = "--grain-ui-test-photo-flow"
     private static let uiTestDelayedPhotoFlowArgument = "--grain-ui-test-delayed-photo-flow"
     private static let uiTestFailingPhotoFlowArgument = "--grain-ui-test-failing-photo-flow"
+    private static let uiTestResetFoodWalletStorageArgument = "--grain-ui-test-reset-food-wallet-storage"
     private static let uiTestResetPersonalIngredientsArgument = "--grain-ui-test-reset-personal-ingredients"
     private static let uiTestAnalysisDelayArgument = "--grain-analysis-delay-ms"
 
@@ -49,9 +51,15 @@ private enum FoodWalletAppConfiguration {
         if ProcessInfo.processInfo.arguments.contains(uiTestResetPersonalIngredientsArgument) {
             UserDefaults.standard.removeObject(forKey: personalIngredientsDefaultsKey)
         }
+        if ProcessInfo.processInfo.arguments.contains(uiTestResetFoodWalletStorageArgument) {
+            FoodWalletLocalLedgerStore.remove()
+        }
+
         return FoodWalletStore(
             analysisClient: makeAnalysisClient(),
+            entries: FoodWalletLocalLedgerStore.loadEntries(),
             personalIngredients: loadPersonalIngredients(),
+            onEntriesChange: FoodWalletLocalLedgerStore.save,
             onPersonalIngredientsChange: savePersonalIngredients
         )
     }
@@ -123,6 +131,51 @@ private enum FoodWalletAppConfiguration {
             return 900_000_000
         }
         return delayMilliseconds * 1_000_000
+    }
+
+}
+
+enum FoodWalletLocalLedgerStore {
+    private static let defaultsKey = "grain.food-wallet.local-ledger.v1"
+
+    static var hasBackup: Bool {
+        !loadEntries().isEmpty
+    }
+
+    static func loadEntries() -> [FoodIntakeEntry] {
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey) else {
+            return []
+        }
+        return (try? FoodWalletLocalLedgerCodec.decodeEntries(data)) ?? []
+    }
+
+    @MainActor
+    static func save(_ entries: [FoodIntakeEntry]) {
+        guard !entries.isEmpty else {
+            remove()
+            return
+        }
+        guard let data = try? FoodWalletLocalLedgerCodec.encodeEntries(entries) else {
+            return
+        }
+        UserDefaults.standard.set(data, forKey: defaultsKey)
+    }
+
+    static func loadBundle() -> FoodWalletExportBundle? {
+        let entries = loadEntries()
+        guard !entries.isEmpty else {
+            return nil
+        }
+        return try? FoodWalletExportFactory.portableBundle(
+            entries: entries,
+            templates: [],
+            recipes: [],
+            generatedAt: Date()
+        )
+    }
+
+    static func remove() {
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
     }
 }
 

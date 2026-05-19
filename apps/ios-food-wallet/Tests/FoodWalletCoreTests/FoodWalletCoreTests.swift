@@ -54,8 +54,35 @@ struct FoodWalletCoreTests {
         await run("visibleLabelDraftExposesProviderEvidence") {
             try await testVisibleLabelDraftExposesProviderEvidence()
         }
+        await run("storeRestoresInjectedEntries") {
+            try await testStoreRestoresInjectedEntries()
+        }
+        await run("entryChangeCallbackFiresForDurableMutations") {
+            try await testEntryChangeCallbackFiresForDurableMutations()
+        }
+        await run("portableBundleHasDeterministicIntegrityMetadataAndSummaries") {
+            try await testPortableBundleHasDeterministicIntegrityMetadataAndSummaries()
+        }
+        await run("importPreviewValidatesAndMergeIsIdempotent") {
+            try await testImportPreviewValidatesAndMergeIsIdempotent()
+        }
         await run("portableExportIncludesSafeUserDataOnly") {
             try await testPortableExportIncludesSafeUserDataOnly()
+        }
+        await run("storeRestoresDurableEntriesAndPublishesLedgerChanges") {
+            try await testStoreRestoresDurableEntriesAndPublishesLedgerChanges()
+        }
+        await run("localLedgerCodecRoundTripsEntries") {
+            try await testLocalLedgerCodecRoundTripsEntries()
+        }
+        await run("portableBundleHasVerifiableIntegrityAndProvenance") {
+            try await testPortableBundleHasVerifiableIntegrityAndProvenance()
+        }
+        await run("portableImportPreviewsAndMergesIdempotently") {
+            try await testPortableImportPreviewsAndMergesIdempotently()
+        }
+        await run("portableImportRejectsTamperedBundle") {
+            try await testPortableImportRejectsTamperedBundle()
         }
         await run("storePublishesAnalysisStateWhilePhotoEstimateRuns") {
             try await testStorePublishesAnalysisStateWhilePhotoEstimateRuns()
@@ -103,6 +130,18 @@ struct FoodWalletCoreTests {
             _ = try await body()
             throw FoodWalletTestFailure("expected error \(expected)")
         } catch let error as FoodAnalysisBrokerClientError {
+            try expect(error == expected, "expected \(expected), got \(error)")
+        }
+    }
+
+    private static func expectImportError<T>(
+        _ expected: FoodWalletImportError,
+        _ body: () throws -> T
+    ) throws {
+        do {
+            _ = try body()
+            throw FoodWalletTestFailure("expected import error \(expected)")
+        } catch let error as FoodWalletImportError {
             try expect(error == expected, "expected \(expected), got \(error)")
         }
     }
@@ -426,6 +465,105 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStoreRestoresInjectedEntries() async throws {
+        let source = FoodWalletStore()
+        try expect(source.createQuickTextDraft("2 eggs and toast"), "expected source draft")
+        source.confirmDraft()
+
+        let restored = FoodWalletStore(entries: source.entries)
+
+        try expect(restored.entries.count == 1, "expected restored entry")
+        try expect(restored.entries.first?.entryID == source.entries.first?.entryID, "expected stable restored entry id")
+        try expect(restored.safeSummary.totals.entryCount == 1, "expected restored safe summary")
+        try expect(restored.safeSummary.entries.first?.label == "2 eggs and toast", "expected restored safe summary label")
+    }
+
+    @MainActor
+    private static func testEntryChangeCallbackFiresForDurableMutations() async throws {
+        let clock = MutableFoodWalletClock(now: Date(timeIntervalSince1970: 1_700_000_000))
+        var snapshots: [[String]] = []
+        let store = FoodWalletStore(
+            wallet: GrainFoodWallet(clock: clock),
+            onEntriesChange: { entries in
+                snapshots.append(entries.map(\.entryID))
+            }
+        )
+
+        try expect(store.createQuickTextDraft("apple"), "expected draft")
+        store.confirmDraft()
+        let sourceDateKey = store.entries.first!.dateKey
+
+        clock.nowDate = clock.nowDate.addingTimeInterval(86_400)
+        _ = store.copyEntries(fromDateKey: sourceDateKey)
+
+        let bundle = try store.exportPortableBundle(generatedAt: Date(timeIntervalSince1970: 10))
+        let imported = FoodWalletStore()
+        try imported.importPortableBundle(bundle)
+        store.resetLocalData()
+
+        try expect(snapshots.count == 3, "expected confirm, copy, reset callbacks")
+        try expect(snapshots[0].count == 1, "expected confirm callback with one entry")
+        try expect(snapshots[1].count == 2, "expected copy callback with two entries")
+        try expect(snapshots[2].isEmpty, "expected reset callback with no entries")
+    }
+
+    @MainActor
+    private static func testPortableBundleHasDeterministicIntegrityMetadataAndSummaries() async throws {
+        let store = FoodWalletStore()
+        try expect(store.createQuickTextDraft("apple"), "expected quick text draft")
+        store.confirmDraft()
+        try expect(store.createVisibleLabelDraft(label: "Bottle label", caloriesPerContainer: 80, grams: 473), "expected label draft")
+        store.confirmDraft()
+
+        let generatedAt = Date(timeIntervalSince1970: 1_700_000_123)
+        let first = try store.exportPortableBundle(generatedAt: generatedAt)
+        let second = try store.exportPortableBundle(generatedAt: generatedAt)
+
+        try expect(first.manifest.contentSha256 == second.manifest.contentSha256, "expected deterministic content hash")
+        try expect(first.manifest.contentDigestID == second.manifest.contentDigestID, "expected deterministic digest id")
+        try expect(first.manifest.contentSha256.count == 64, "expected content SHA-256")
+        try expect(FoodWalletExportFactory.verifyIntegrity(first), "expected first bundle integrity")
+        try expect(FoodWalletExportFactory.verifyIntegrity(second), "expected second bundle integrity")
+        try expect(first.summary.sourceClassCounts["measured"] == 2, "expected measured source summary")
+        try expect(first.summary.trustStatusCounts["self_issued"] == 2, "expected self-issued trust summary")
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let json = String(decoding: try encoder.encode(first), as: UTF8.self)
+        let forbidden = ["rawPhoto", "photoBytes", "photoBase64", "imageBytes", "snapshotB64", "bundleB64", "privateKey", "trustPub", "COSE", "CBOR", "GR1"]
+        for token in forbidden {
+            try expect(!json.localizedCaseInsensitiveContains(token), "portable bundle leaked \(token)")
+        }
+    }
+
+    @MainActor
+    private static func testImportPreviewValidatesAndMergeIsIdempotent() async throws {
+        let source = FoodWalletStore()
+        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        source.confirmDraft()
+        let bundle = try source.exportPortableBundle(generatedAt: Date(timeIntervalSince1970: 42))
+
+        let target = FoodWalletStore()
+        let preview = try target.previewPortableImport(bundle)
+
+        try expect(preview.integrityVerified, "expected import preview to be valid")
+        try expect(preview.entryCount == 1, "expected one preview entry")
+        try expect(preview.newEntryCount == 1, "expected one new preview entry")
+        try expect(preview.duplicateEntryCount == 0, "expected no duplicate before import")
+        try expect(preview.sourceClassSummary["measured"] == 1, "expected measured preview summary")
+
+        let firstImport = try target.importPortableBundle(bundle)
+        let secondImport = try target.importPortableBundle(bundle)
+
+        try expect(firstImport.importedEntryCount == 1, "expected first import to merge one entry")
+        try expect(secondImport.importedEntryCount == 0, "expected second import to be idempotent")
+        try expect(secondImport.duplicateEntryCount == 1, "expected second import to report duplicate")
+        try expect(target.entries.count == 1, "expected target to keep one imported entry")
+        try expect(target.entries.first?.entryID == source.entries.first?.entryID, "expected imported entry id")
+    }
+
+    @MainActor
     private static func testPortableExportIncludesSafeUserDataOnly() async throws {
         let store = FoodWalletStore()
 
@@ -443,11 +581,12 @@ struct FoodWalletCoreTests {
         store.confirmDraft()
 
         let bundle = try store.exportPortableBundle()
-        try expect(bundle.schema == "grain.food-wallet.export.v1", "expected export schema")
+        try expect(bundle.schema == "grain.food-wallet.bundle.v1", "expected portable bundle schema")
         try expect(bundle.entries.count == 2, "expected two exported entries")
         try expect(bundle.templates.isEmpty, "expected no fake templates in export")
         try expect(bundle.recipes.isEmpty, "expected no fake recipes in export")
-        try expect(bundle.manifest.sha256.count == 64, "expected SHA-256 checksum")
+        try expect(bundle.manifest.contentSha256.count == 64, "expected SHA-256 checksum")
+        try expect(FoodWalletExportFactory.verifyIntegrity(bundle), "expected export integrity")
 
         let json = String(decoding: try store.exportPortableJSON(), as: UTF8.self)
         let csv = store.exportCSV()
@@ -459,6 +598,121 @@ struct FoodWalletCoreTests {
             try expect(!json.localizedCaseInsensitiveContains(token), "portable export leaked \(token)")
             try expect(!csv.localizedCaseInsensitiveContains(token), "CSV export leaked \(token)")
         }
+    }
+
+    @MainActor
+    private static func testStoreRestoresDurableEntriesAndPublishesLedgerChanges() async throws {
+        let seed = FoodWalletStore()
+        try expect(seed.createQuickTextDraft("2 eggs and toast"), "expected seed draft")
+        seed.confirmDraft()
+        let restoredEntries = seed.entries
+
+        var publishedCounts: [Int] = []
+        let restored = FoodWalletStore(
+            entries: restoredEntries,
+            onEntriesChange: { entries in
+                publishedCounts.append(entries.count)
+            }
+        )
+
+        try expect(restored.entries.count == 1, "expected restored entry")
+        try expect(restored.safeSummary.totals.entryCount == 1, "expected restored safe summary")
+        try expect(restored.todayTotalLabel != "No meals saved yet", "expected restored total label")
+
+        try expect(restored.createQuickTextDraft("apple"), "expected second draft")
+        restored.confirmDraft()
+        try expect(restored.entries.count == 2, "expected restored store to append entries")
+        try expect(publishedCounts == [2], "expected one entry-change publication after append")
+
+        restored.resetLocalData()
+        try expect(restored.entries.isEmpty, "expected reset to clear restored entries")
+        try expect(publishedCounts == [2, 0], "expected reset to publish empty ledger")
+    }
+
+    @MainActor
+    private static func testLocalLedgerCodecRoundTripsEntries() async throws {
+        let store = FoodWalletStore()
+        try expect(store.createQuickTextDraft("apple"), "expected draft")
+        store.confirmDraft()
+
+        let data = try FoodWalletLocalLedgerCodec.encodeEntries(store.entries)
+        let decoded = try FoodWalletLocalLedgerCodec.decodeEntries(data)
+
+        try expect(decoded == store.entries, "expected local ledger codec to preserve entries")
+        let text = String(decoding: data, as: UTF8.self)
+        for token in ["rawPhoto", "photoBytes", "snapshotB64", "bundleB64", "privateKey", "trustPub", "GR1"] {
+            try expect(!text.localizedCaseInsensitiveContains(token), "local ledger leaked \(token)")
+        }
+    }
+
+    @MainActor
+    private static func testPortableBundleHasVerifiableIntegrityAndProvenance() async throws {
+        let store = FoodWalletStore()
+        try expect(store.createQuickTextDraft("apple"), "expected estimated draft")
+        store.confirmDraft()
+        try expect(store.createVerifiedServingOfferDraft(), "expected verified draft")
+        store.confirmDraft()
+
+        let bundle = try store.exportPortableBundle()
+
+        try expect(bundle.schema == "grain.food-wallet.bundle.v1", "expected Grain portable bundle schema")
+        try expect(bundle.manifest.contentSha256.count == 64, "expected content hash")
+        try expect(bundle.manifest.contentDigestID == "sha256:\(bundle.manifest.contentSha256)", "expected digest id to bind hash")
+        try expect(bundle.manifest.signature?.algorithm == "p256-sha256", "expected self-issued signature")
+        try expect(bundle.manifest.trustStatusSummary["verified"] == 1, "expected verified provenance count")
+        try expect(bundle.manifest.trustStatusSummary["self_issued"] == 1, "expected self-issued provenance count")
+        try expect(bundle.manifest.sourceClassSummary["attested"] == 1, "expected attested source count")
+        try expect(bundle.manifest.sourceClassSummary["measured"] == 1, "expected measured source count")
+        try expect(FoodWalletExportFactory.verifyIntegrity(bundle), "expected bundle integrity to verify")
+    }
+
+    @MainActor
+    private static func testPortableImportPreviewsAndMergesIdempotently() async throws {
+        let source = FoodWalletStore()
+        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        source.confirmDraft()
+        let data = try source.exportPortableJSON()
+
+        var publishedCounts: [Int] = []
+        let target = FoodWalletStore(onEntriesChange: { entries in
+            publishedCounts.append(entries.count)
+        })
+
+        let preview = try target.previewPortableImport(data)
+        try expect(preview.entryCount == 1, "expected one import entry")
+        try expect(preview.newEntryCount == 1, "expected one new entry")
+        try expect(preview.duplicateEntryCount == 0, "expected no duplicates")
+        try expect(preview.integrityVerified, "expected verified bundle integrity")
+        try expect(preview.dateRange != nil, "expected date range")
+
+        let firstImport = try target.importPortableBundle(data)
+        try expect(firstImport.importedEntryCount == 1, "expected one imported entry")
+        try expect(firstImport.duplicateEntryCount == 0, "expected no duplicate on first import")
+        try expect(target.entries == source.entries, "expected imported entries to match source")
+
+        let secondPreview = try target.previewPortableImport(data)
+        try expect(secondPreview.newEntryCount == 0, "expected no new entries after import")
+        try expect(secondPreview.duplicateEntryCount == 1, "expected duplicate preview after import")
+
+        let secondImport = try target.importPortableBundle(data)
+        try expect(secondImport.importedEntryCount == 0, "expected idempotent re-import")
+        try expect(secondImport.duplicateEntryCount == 1, "expected duplicate count on re-import")
+        try expect(publishedCounts == [1], "expected only first import to publish a ledger change")
+    }
+
+    @MainActor
+    private static func testPortableImportRejectsTamperedBundle() async throws {
+        let source = FoodWalletStore()
+        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        source.confirmDraft()
+        let original = String(decoding: try source.exportPortableJSON(), as: UTF8.self)
+        let tampered = original.replacingOccurrences(of: "apple", with: "pear")
+
+        let target = FoodWalletStore()
+        try expectImportError(.integrityMismatch) {
+            try target.previewPortableImport(Data(tampered.utf8))
+        }
+        try expect(target.entries.isEmpty, "expected tampered import to write nothing")
     }
 
     @MainActor

@@ -2,6 +2,7 @@ import FoodWalletCore
 import Foundation
 import GrainFoodWallet
 import SwiftUI
+import UniformTypeIdentifiers
 
 #if os(iOS)
 import UIKit
@@ -984,6 +985,10 @@ private struct HistoryView: View {
 
 private struct WalletView: View {
     @EnvironmentObject private var store: FoodWalletStore
+    @State private var isShowingBackupImporter = false
+    @State private var restoreDraft: RestoreDraft?
+    @State private var restoreStatusMessage: String?
+    @State private var restoreErrorMessage: String?
 
     var body: some View {
         List {
@@ -1022,10 +1027,58 @@ private struct WalletView: View {
                 }
                 .accessibilityIdentifier("ExportCSVButton")
 
+                ShareLink(item: grainBundleText) {
+                    Label("Export Grain bundle", systemImage: "shippingbox")
+                }
+                .accessibilityIdentifier("ExportGrainBundleButton")
+
                 Text("Exports include confirmed food data, templates, recipes, and redacted provenance only.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .accessibilityIdentifier("ExportPrivacyLabel")
+            }
+
+            Section("Import") {
+                Button {
+                    isShowingBackupImporter = true
+                } label: {
+                    Label("Choose Grain bundle", systemImage: "doc.badge.plus")
+                }
+                .accessibilityIdentifier("ChooseBackupFileButton")
+
+                Button {
+                    previewLatestBackup()
+                } label: {
+                    Label("Preview saved local data", systemImage: "doc.text.magnifyingglass")
+                }
+                .disabled(!FoodWalletLocalLedgerStore.hasBackup)
+                .accessibilityIdentifier("PreviewLatestBackupButton")
+
+                if let restoreDraft {
+                    RestorePreviewView(draft: restoreDraft)
+
+                    Button {
+                        applyRestore(restoreDraft)
+                    } label: {
+                        Label("Import new entries", systemImage: "arrow.clockwise.circle")
+                    }
+                    .disabled(restoreDraft.preview.newEntryCount == 0)
+                    .accessibilityIdentifier("ApplyRestoreButton")
+                }
+
+                if let restoreStatusMessage {
+                    Text(restoreStatusMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("RestoreStatusLabel")
+                }
+
+                if let restoreErrorMessage {
+                    Text(restoreErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .accessibilityIdentifier("RestoreErrorLabel")
+                }
             }
 
             Section("Developer proof") {
@@ -1043,6 +1096,12 @@ private struct WalletView: View {
             }
         }
         .navigationTitle("Wallet")
+        .fileImporter(
+            isPresented: $isShowingBackupImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false,
+            onCompletion: handleBackupImport
+        )
     }
 
     private var portableJSONText: String {
@@ -1051,6 +1110,111 @@ private struct WalletView: View {
             return "{}"
         }
         return text
+    }
+
+    private var grainBundleText: String {
+        portableJSONText
+    }
+
+    private func handleBackupImport(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else {
+                return
+            }
+            let isSecurityScoped = url.startAccessingSecurityScopedResource()
+            defer {
+                if isSecurityScoped {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+            try previewBackup(data: Data(contentsOf: url))
+        } catch {
+            restoreDraft = nil
+            restoreStatusMessage = nil
+            restoreErrorMessage = "That Grain bundle could not be read."
+        }
+    }
+
+    private func previewLatestBackup() {
+        guard let bundle = FoodWalletLocalLedgerStore.loadBundle() else {
+            restoreDraft = nil
+            restoreStatusMessage = nil
+            restoreErrorMessage = "No saved local data is available yet."
+            return
+        }
+        do {
+            try previewBackup(bundle: bundle)
+        } catch {
+            restoreDraft = nil
+            restoreStatusMessage = nil
+            restoreErrorMessage = "Saved local data could not be previewed."
+        }
+    }
+
+    private func previewBackup(data: Data) throws {
+        let bundle = try FoodWalletExportFactory.decodeBundle(data)
+        try previewBackup(bundle: bundle)
+    }
+
+    private func previewBackup(bundle: FoodWalletExportBundle) throws {
+        let preview = try store.previewPortableImport(bundle)
+        restoreDraft = RestoreDraft(bundle: bundle, preview: preview)
+        restoreStatusMessage = nil
+        restoreErrorMessage = nil
+    }
+
+    private func applyRestore(_ draft: RestoreDraft) {
+        do {
+            let result = try store.importPortableBundle(draft.bundle)
+            restoreStatusMessage = "\(result.importedEntryCount) imported • \(result.duplicateEntryCount) already saved"
+            restoreErrorMessage = nil
+            restoreDraft = nil
+        } catch {
+            restoreStatusMessage = nil
+            restoreErrorMessage = "That Grain bundle could not be imported."
+        }
+    }
+}
+
+private struct RestoreDraft {
+    var bundle: FoodWalletExportBundle
+    var preview: FoodWalletImportPreview
+}
+
+private struct RestorePreviewView: View {
+    var draft: RestoreDraft
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(summary)
+                .font(.subheadline.weight(.semibold))
+                .accessibilityIdentifier("RestorePreviewSummary")
+            Text("Review first. Nothing changes until you restore new entries.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if !sourceSummary.isEmpty {
+                Text(sourceSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("RestorePreviewSourceSummary")
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var summary: String {
+        "\(draft.preview.entryCount) \(entryNoun(draft.preview.entryCount)) in bundle • \(draft.preview.newEntryCount) new • \(draft.preview.duplicateEntryCount) already saved"
+    }
+
+    private var sourceSummary: String {
+        draft.preview.trustStatusSummary
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key): \($0.value)" }
+            .joined(separator: " • ")
+    }
+
+    private func entryNoun(_ count: Int) -> String {
+        count == 1 ? "entry" : "entries"
     }
 }
 

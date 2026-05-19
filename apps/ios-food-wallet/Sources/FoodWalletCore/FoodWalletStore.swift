@@ -128,26 +128,31 @@ public final class FoodWalletStore: ObservableObject {
     private let analysisClient: any FoodAnalysisClient
     private let slowAnalysisThresholdNanoseconds: UInt64
     private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
+    private let entriesDidChange: @MainActor ([FoodIntakeEntry]) -> Void
     private var slowAnalysisTask: Task<Void, Never>?
     private var wallet: GrainFoodWallet
 
     public init(
         analysisClient: any FoodAnalysisClient = MockFoodAnalysisClient(),
         wallet: GrainFoodWallet = GrainFoodWallet(),
+        entries: [FoodIntakeEntry] = [],
         subscription: SubscriptionState = .free,
         privacy: PrivacyConsentState = .notRequested,
         savedTemplates: [SavedFoodTemplate] = SavedFoodTemplate.defaultTemplates,
         savedRecipes: [SavedFoodRecipe] = SavedFoodRecipe.defaultRecipes,
         personalIngredients: [PersonalFoodIngredient] = [],
+        onEntriesChange: @escaping @MainActor ([FoodIntakeEntry]) -> Void = { _ in },
         onPersonalIngredientsChange: @escaping @MainActor ([PersonalFoodIngredient]) -> Void = { _ in },
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
     ) {
         self.analysisClient = analysisClient
         self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
         self.personalIngredientsDidChange = onPersonalIngredientsChange
+        self.entriesDidChange = onEntriesChange
         self.wallet = wallet
         self.analysisState = .idle
-        self.entries = []
+        self.entries = entries
+        self.wallet.replaceEntries(entries)
         self.safeSummary = wallet.exportSafeSummary()
         self.savedTemplates = savedTemplates
         self.savedRecipes = savedRecipes
@@ -540,16 +545,17 @@ public final class FoodWalletStore: ObservableObject {
         }
         if !selected.isEmpty {
             safeSummary = wallet.exportSafeSummary()
+            entriesDidChange(entries)
         }
         return selected.count
     }
 
-    public func exportPortableBundle() throws -> FoodWalletExportBundle {
+    public func exportPortableBundle(generatedAt: Date = Date()) throws -> FoodWalletExportBundle {
         try FoodWalletExportFactory.portableBundle(
             entries: entries,
             templates: savedTemplates,
             recipes: savedRecipes,
-            generatedAt: Date()
+            generatedAt: generatedAt
         )
     }
 
@@ -561,6 +567,47 @@ public final class FoodWalletStore: ObservableObject {
         FoodWalletExportFactory.csv(entries: entries)
     }
 
+    public func previewPortableImport(_ data: Data) throws -> FoodWalletImportPreview {
+        try previewPortableImport(FoodWalletExportFactory.decodeBundle(data))
+    }
+
+    public func previewPortableImport(_ bundle: FoodWalletExportBundle) throws -> FoodWalletImportPreview {
+        try FoodWalletExportFactory.importPreview(
+            bundle: bundle,
+            existingEntryIDs: Set(entries.map(\.entryID))
+        )
+    }
+
+    @discardableResult
+    public func importPortableBundle(_ data: Data) throws -> FoodWalletImportResult {
+        try importPortableBundle(FoodWalletExportFactory.decodeBundle(data))
+    }
+
+    @discardableResult
+    public func importPortableBundle(_ bundle: FoodWalletExportBundle) throws -> FoodWalletImportResult {
+        let preview = try previewPortableImport(bundle)
+        guard preview.newEntryCount > 0 else {
+            return FoodWalletImportResult(
+                importedEntryCount: 0,
+                duplicateEntryCount: preview.duplicateEntryCount
+            )
+        }
+
+        let existingIDs = Set(entries.map(\.entryID))
+        let importedEntries = try FoodWalletExportFactory.entries(from: bundle)
+        let newEntries = importedEntries.filter { !existingIDs.contains($0.entryID) }
+        for entry in newEntries.reversed() {
+            entries.insert(entry, at: 0)
+        }
+        wallet.replaceEntries(entries)
+        safeSummary = wallet.exportSafeSummary()
+        entriesDidChange(entries)
+        return FoodWalletImportResult(
+            importedEntryCount: newEntries.count,
+            duplicateEntryCount: preview.duplicateEntryCount
+        )
+    }
+
     public func confirmDraft() {
         guard let draft = currentDraft else {
             return
@@ -568,6 +615,7 @@ public final class FoodWalletStore: ObservableObject {
         let entry = wallet.confirmDraft(draft)
         entries.insert(entry, at: 0)
         safeSummary = wallet.exportSafeSummary()
+        entriesDidChange(entries)
         currentCandidate = nil
         currentDraft = nil
         analysisState = .idle
@@ -590,6 +638,7 @@ public final class FoodWalletStore: ObservableObject {
         safeSummary = wallet.exportSafeSummary()
         personalIngredients = []
         personalIngredientsDidChange(personalIngredients)
+        entriesDidChange(entries)
     }
 
     public func runDeviceSmoke() async -> FoodWalletDeviceSmokeResult {

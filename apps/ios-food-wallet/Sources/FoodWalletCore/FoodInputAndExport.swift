@@ -195,6 +195,7 @@ public struct FoodWalletExportBundle: Codable, Equatable, Sendable {
     public var version: Int
     public var generatedAt: String
     public var totals: FoodWalletExportTotals
+    public var summary: FoodWalletExportSummary
     public var entries: [FoodWalletExportEntry]
     public var templates: [FoodWalletExportTemplate]
     public var recipes: [FoodWalletExportRecipe]
@@ -208,20 +209,47 @@ public struct FoodWalletExportTotals: Codable, Equatable, Sendable {
     public var sumVarianceKcal: Int64
 }
 
+public struct FoodWalletExportSummary: Codable, Equatable, Sendable {
+    public var sourceClassCounts: [String: Int]
+    public var trustStatusCounts: [String: Int]
+}
+
 public struct FoodWalletExportEntry: Codable, Equatable, Sendable {
     public var entryID: String
     public var draftID: String
+    public var confirmedAt: String
     public var dateKey: String
     public var label: String
     public var kcal: Int64
     public var varianceKcal: Int64
     public var amountGrams: Int64
+    public var servingGrams: Int64?
+    public var servings: Int64
     public var proteinGrams: Double?
     public var carbohydrateGrams: Double?
     public var fatGrams: Double?
     public var fiberGrams: Double?
     public var sourceClass: String
     public var trustStatus: String
+
+    enum CodingKeys: String, CodingKey {
+        case entryID = "entryId"
+        case draftID = "draftId"
+        case confirmedAt
+        case dateKey
+        case label
+        case kcal
+        case varianceKcal
+        case amountGrams
+        case servingGrams
+        case servings
+        case proteinGrams
+        case carbohydrateGrams
+        case fatGrams
+        case fiberGrams
+        case sourceClass
+        case trustStatus
+    }
 }
 
 public struct FoodWalletExportTemplate: Codable, Equatable, Sendable {
@@ -249,7 +277,89 @@ public struct FoodWalletExportManifest: Codable, Equatable, Sendable {
     public var entryCount: Int
     public var templateCount: Int
     public var recipeCount: Int
-    public var sha256: String
+    public var contentSha256: String
+    public var contentDigestID: String
+    public var sourceClassSummary: [String: Int]
+    public var trustStatusSummary: [String: Int]
+    public var signature: FoodWalletExportSignature?
+
+    enum CodingKeys: String, CodingKey {
+        case entryCount
+        case templateCount
+        case recipeCount
+        case contentSha256
+        case contentDigestID = "contentDigestId"
+        case sourceClassSummary
+        case trustStatusSummary
+        case signature
+    }
+}
+
+public struct FoodWalletExportSignature: Codable, Equatable, Sendable {
+    public var algorithm: String
+    public var signer: String
+    public var publicKeyX963Base64: String
+    public var signatureDerBase64: String
+
+    enum CodingKeys: String, CodingKey {
+        case algorithm
+        case signer
+        case publicKeyX963Base64
+        case signatureDerBase64
+    }
+}
+
+public struct FoodWalletImportPreview: Equatable, Sendable {
+    public var integrityVerified: Bool
+    public var entryCount: Int
+    public var newEntryCount: Int
+    public var duplicateEntryCount: Int
+    public var dateRange: String?
+    public var sourceClassSummary: [String: Int]
+    public var trustStatusSummary: [String: Int]
+}
+
+public struct FoodWalletImportResult: Equatable, Sendable {
+    public var importedEntryCount: Int
+    public var duplicateEntryCount: Int
+}
+
+public enum FoodWalletImportError: Error, Equatable, Sendable, CustomStringConvertible {
+    case invalidJSON
+    case unsupportedSchema(String)
+    case unsupportedVersion(Int)
+    case integrityMismatch
+    case signatureMismatch
+    case unsafeMaterial(String)
+    case invalidManifest(String)
+    case invalidEntry(String)
+
+    public var description: String {
+        switch self {
+        case .invalidJSON:
+            return "invalidJSON"
+        case let .unsupportedSchema(schema):
+            return "unsupportedSchema(\(schema))"
+        case let .unsupportedVersion(version):
+            return "unsupportedVersion(\(version))"
+        case .integrityMismatch:
+            return "integrityMismatch"
+        case .signatureMismatch:
+            return "signatureMismatch"
+        case let .unsafeMaterial(token):
+            return "unsafeMaterial(\(token))"
+        case let .invalidManifest(reason):
+            return "invalidManifest(\(reason))"
+        case let .invalidEntry(reason):
+            return "invalidEntry(\(reason))"
+        }
+    }
+}
+
+public struct FoodWalletLocalLedgerState: Codable, Equatable, Sendable {
+    public var schema: String
+    public var version: Int
+    public var entries: [FoodWalletExportEntry]
 }
 
 public extension FoodAnalysisCandidate {
@@ -846,22 +956,28 @@ enum QuickTextFoodParser {
     }
 }
 
-enum FoodWalletExportFactory {
-    static func portableBundle(
+public enum FoodWalletExportFactory {
+    public static func portableBundle(
         entries: [FoodIntakeEntry],
         templates: [SavedFoodTemplate],
         recipes: [SavedFoodRecipe],
         generatedAt: Date
     ) throws -> FoodWalletExportBundle {
         let exportEntries = entries.map(FoodWalletExportEntry.init(entry:))
-        let preliminary = FoodWalletExportBundle(
-            schema: "grain.food-wallet.export.v1",
+        let sourceCounts = counts(entries.map { $0.sourceClass.rawValue })
+        let trustCounts = counts(entries.map { $0.trustStatus.rawValue })
+        var bundle = FoodWalletExportBundle(
+            schema: "grain.food-wallet.bundle.v1",
             version: 1,
             generatedAt: ISO8601DateFormatter().string(from: generatedAt),
             totals: FoodWalletExportTotals(
                 entryCount: entries.count,
                 sumMeanKcal: entries.reduce(0) { $0 + $1.meal.kcal },
                 sumVarianceKcal: entries.reduce(0) { $0 + $1.meal.varianceKcal }
+            ),
+            summary: FoodWalletExportSummary(
+                sourceClassCounts: sourceCounts,
+                trustStatusCounts: trustCounts
             ),
             entries: exportEntries,
             templates: templates.map(FoodWalletExportTemplate.init(template:)),
@@ -875,23 +991,42 @@ enum FoodWalletExportFactory {
                 entryCount: entries.count,
                 templateCount: templates.count,
                 recipeCount: recipes.count,
-                sha256: ""
+                contentSha256: "",
+                contentDigestID: "",
+                sourceClassSummary: sourceCounts,
+                trustStatusSummary: trustCounts,
+                signature: nil
             )
         )
-        let digest = try sha256Hex(preliminary)
-        var bundle = preliminary
-        bundle.manifest.sha256 = digest
+        let contentData = try canonicalContentData(for: bundle)
+        let digest = sha256Hex(contentData)
+        bundle.manifest.contentSha256 = digest
+        bundle.manifest.contentDigestID = "sha256:\(digest)"
+        bundle.manifest.signature = try sign(contentData)
         return bundle
     }
 
-    static func jsonData(_ bundle: FoodWalletExportBundle) throws -> Data {
+    public static func jsonData(_ bundle: FoodWalletExportBundle) throws -> Data {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         return try encoder.encode(bundle)
     }
 
-    static func csv(entries: [FoodIntakeEntry]) -> String {
+    public static func decodeBundle(_ data: Data) throws -> FoodWalletExportBundle {
+        guard isSafeForImport(data) else {
+            throw FoodWalletImportError.unsafeMaterial("raw_protocol_or_photo_material")
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        do {
+            return try decoder.decode(FoodWalletExportBundle.self, from: data)
+        } catch {
+            throw FoodWalletImportError.invalidJSON
+        }
+    }
+
+    public static func csv(entries: [FoodIntakeEntry]) -> String {
         let header = "date,label,kcal_min,kcal_mode,kcal_max,grams,source_class,trust_status"
         let rows = entries.map { entry in
             [
@@ -908,9 +1043,191 @@ enum FoodWalletExportFactory {
         return ([header] + rows).joined(separator: "\n") + "\n"
     }
 
-    private static func sha256Hex(_ bundle: FoodWalletExportBundle) throws -> String {
-        let data = try jsonData(bundle)
-        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    public static func verifyIntegrity(_ bundle: FoodWalletExportBundle) -> Bool {
+        do {
+            try validate(bundle)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    public static func validate(_ bundle: FoodWalletExportBundle) throws {
+        guard bundle.schema == "grain.food-wallet.bundle.v1" else {
+            throw FoodWalletImportError.unsupportedSchema(bundle.schema)
+        }
+        guard bundle.version == 1 else {
+            throw FoodWalletImportError.unsupportedVersion(bundle.version)
+        }
+        guard bundle.manifest.entryCount == bundle.entries.count else {
+            throw FoodWalletImportError.invalidManifest("entry count mismatch")
+        }
+        guard bundle.manifest.templateCount == bundle.templates.count else {
+            throw FoodWalletImportError.invalidManifest("template count mismatch")
+        }
+        guard bundle.manifest.recipeCount == bundle.recipes.count else {
+            throw FoodWalletImportError.invalidManifest("recipe count mismatch")
+        }
+        let contentData = try canonicalContentData(for: bundle)
+        let digest = sha256Hex(contentData)
+        guard digest == bundle.manifest.contentSha256 else {
+            throw FoodWalletImportError.integrityMismatch
+        }
+        guard bundle.manifest.contentDigestID == "sha256:\(digest)" else {
+            throw FoodWalletImportError.integrityMismatch
+        }
+        if let signature = bundle.manifest.signature {
+            guard try verify(signature: signature, contentData: contentData) else {
+                throw FoodWalletImportError.signatureMismatch
+            }
+        }
+        guard bundle.totals.entryCount == bundle.entries.count else {
+            throw FoodWalletImportError.invalidManifest("total entry count mismatch")
+        }
+        let sourceCounts = counts(bundle.entries.map(\.sourceClass))
+        let trustCounts = counts(bundle.entries.map(\.trustStatus))
+        guard bundle.totals.sumMeanKcal == bundle.entries.reduce(0, { $0 + $1.kcal }) else {
+            throw FoodWalletImportError.invalidManifest("total kcal mismatch")
+        }
+        guard bundle.totals.sumVarianceKcal == bundle.entries.reduce(0, { $0 + $1.varianceKcal }) else {
+            throw FoodWalletImportError.invalidManifest("total variance mismatch")
+        }
+        guard sourceCounts == bundle.summary.sourceClassCounts else {
+            throw FoodWalletImportError.invalidManifest("source summary mismatch")
+        }
+        guard trustCounts == bundle.summary.trustStatusCounts else {
+            throw FoodWalletImportError.invalidManifest("trust summary mismatch")
+        }
+        guard sourceCounts == bundle.manifest.sourceClassSummary else {
+            throw FoodWalletImportError.invalidManifest("manifest source summary mismatch")
+        }
+        guard trustCounts == bundle.manifest.trustStatusSummary else {
+            throw FoodWalletImportError.invalidManifest("manifest trust summary mismatch")
+        }
+        guard bundle.privacy.photoRetentionPolicy == "no_photo_storage",
+              bundle.privacy.excludesProtocolCustodyMaterial,
+              bundle.privacy.excludesPrivateMaterial else {
+            throw FoodWalletImportError.invalidManifest("privacy policy mismatch")
+        }
+        for entry in bundle.entries {
+            try validate(entry)
+        }
+    }
+
+    public static func importPreview(
+        bundle: FoodWalletExportBundle,
+        existingEntryIDs: Set<String>
+    ) throws -> FoodWalletImportPreview {
+        try validate(bundle)
+        let incomingIDs = bundle.entries.map(\.entryID)
+        let duplicateCount = incomingIDs.filter { existingEntryIDs.contains($0) }.count
+        return FoodWalletImportPreview(
+            integrityVerified: true,
+            entryCount: bundle.entries.count,
+            newEntryCount: bundle.entries.count - duplicateCount,
+            duplicateEntryCount: duplicateCount,
+            dateRange: dateRange(for: bundle.entries),
+            sourceClassSummary: bundle.manifest.sourceClassSummary,
+            trustStatusSummary: bundle.manifest.trustStatusSummary
+        )
+    }
+
+    public static func entries(from bundle: FoodWalletExportBundle) throws -> [FoodIntakeEntry] {
+        try validate(bundle)
+        return try bundle.entries.map(FoodIntakeEntry.init(exportEntry:))
+    }
+
+    private static func validate(_ entry: FoodWalletExportEntry) throws {
+        guard !entry.entryID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing entry id")
+        }
+        guard !entry.draftID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing draft id")
+        }
+        guard !entry.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing label")
+        }
+        guard entry.amountGrams >= 0, entry.kcal >= 0, entry.varianceKcal >= 0 else {
+            throw FoodWalletImportError.invalidEntry("negative nutrition values")
+        }
+        guard FoodSourceClass(rawValue: entry.sourceClass) != nil else {
+            throw FoodWalletImportError.invalidEntry("unknown source class")
+        }
+        guard FoodTrustStatus(rawValue: entry.trustStatus) != nil else {
+            throw FoodWalletImportError.invalidEntry("unknown trust status")
+        }
+    }
+
+    private static func canonicalContentData(for bundle: FoodWalletExportBundle) throws -> Data {
+        var unsigned = bundle
+        unsigned.manifest.contentSha256 = ""
+        unsigned.manifest.contentDigestID = ""
+        unsigned.manifest.signature = nil
+        return try jsonData(unsigned)
+    }
+
+    private static func sign(_ contentData: Data) throws -> FoodWalletExportSignature {
+        let privateKey = P256.Signing.PrivateKey()
+        let signature = try privateKey.signature(for: contentData)
+        return FoodWalletExportSignature(
+            algorithm: "p256-sha256",
+            signer: "local-device-self-issued",
+            publicKeyX963Base64: privateKey.publicKey.x963Representation.base64EncodedString(),
+            signatureDerBase64: signature.derRepresentation.base64EncodedString()
+        )
+    }
+
+    private static func verify(signature: FoodWalletExportSignature, contentData: Data) throws -> Bool {
+        guard signature.algorithm == "p256-sha256" else {
+            return false
+        }
+        guard
+            let publicKeyData = Data(base64Encoded: signature.publicKeyX963Base64),
+            let signatureData = Data(base64Encoded: signature.signatureDerBase64)
+        else {
+            return false
+        }
+        let publicKey = try P256.Signing.PublicKey(x963Representation: publicKeyData)
+        let ecdsaSignature = try P256.Signing.ECDSASignature(derRepresentation: signatureData)
+        return publicKey.isValidSignature(ecdsaSignature, for: contentData)
+    }
+
+    private static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func counts(_ values: [String]) -> [String: Int] {
+        values.reduce(into: [:]) { partial, value in
+            partial[value, default: 0] += 1
+        }
+    }
+
+    private static func dateRange(for entries: [FoodWalletExportEntry]) -> String? {
+        let values = entries.map(\.dateKey).sorted()
+        guard let first = values.first, let last = values.last else {
+            return nil
+        }
+        return first == last ? first : "\(first)...\(last)"
+    }
+
+    private static func isSafeForImport(_ data: Data) -> Bool {
+        let text = String(decoding: data, as: UTF8.self)
+        let forbidden = [
+            "rawPhoto",
+            "photoBytes",
+            "photoBase64",
+            "imageBytes",
+            "snapshotB64",
+            "bundleB64",
+            "identityBundle",
+            "syncBundle",
+            "privateKey",
+            "trustPub",
+            "COSE",
+            "CBOR",
+            "GR1:",
+        ]
+        return !forbidden.contains { text.localizedCaseInsensitiveContains($0) }
     }
 
     private static func csvEscape(_ value: String) -> String {
@@ -921,15 +1238,18 @@ enum FoodWalletExportFactory {
     }
 }
 
-private extension FoodWalletExportEntry {
+extension FoodWalletExportEntry {
     init(entry: FoodIntakeEntry) {
         entryID = entry.entryID
         draftID = entry.draftID
+        confirmedAt = String(format: "%.17g", entry.confirmedAt.timeIntervalSinceReferenceDate)
         dateKey = entry.dateKey
         label = entry.meal.label
         kcal = entry.meal.kcal
         varianceKcal = entry.meal.varianceKcal
         amountGrams = entry.meal.amountGrams
+        servingGrams = entry.meal.servingGrams
+        servings = entry.meal.servings
         proteinGrams = entry.meal.macronutrients?.proteinGrams
         carbohydrateGrams = entry.meal.macronutrients?.carbohydrateGrams
         fatGrams = entry.meal.macronutrients?.fatGrams
@@ -937,6 +1257,105 @@ private extension FoodWalletExportEntry {
         sourceClass = entry.sourceClass.rawValue
         trustStatus = entry.trustStatus.rawValue
     }
+
+    var mealEstimate: MealEstimate {
+        let macronutrients: MealMacronutrients?
+        if proteinGrams == nil, carbohydrateGrams == nil, fatGrams == nil, fiberGrams == nil {
+            macronutrients = nil
+        } else {
+            macronutrients = MealMacronutrients(
+                proteinGrams: proteinGrams ?? 0,
+                carbohydrateGrams: carbohydrateGrams ?? 0,
+                fatGrams: fatGrams ?? 0,
+                fiberGrams: fiberGrams
+            )
+        }
+        return MealEstimate(
+            label: label,
+            kcal: kcal,
+            varianceKcal: varianceKcal,
+            amountGrams: amountGrams,
+            servingGrams: servingGrams,
+            servings: servings,
+            macronutrients: macronutrients
+        )
+    }
+}
+
+public enum FoodWalletLocalLedgerCodec {
+    public static func encodeEntries(_ entries: [FoodIntakeEntry]) throws -> Data {
+        let state = FoodWalletLocalLedgerState(
+            schema: "grain.food-wallet.local-ledger.v1",
+            version: 1,
+            entries: entries.map(FoodWalletExportEntry.init(entry:))
+        )
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(state)
+    }
+
+    public static func decodeEntries(_ data: Data) throws -> [FoodIntakeEntry] {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let state: FoodWalletLocalLedgerState
+        do {
+            state = try decoder.decode(FoodWalletLocalLedgerState.self, from: data)
+        } catch {
+            throw FoodWalletImportError.invalidJSON
+        }
+        guard state.schema == "grain.food-wallet.local-ledger.v1" else {
+            throw FoodWalletImportError.unsupportedSchema(state.schema)
+        }
+        guard state.version == 1 else {
+            throw FoodWalletImportError.unsupportedVersion(state.version)
+        }
+        return try state.entries.map(FoodIntakeEntry.init(exportEntry:))
+    }
+}
+
+private extension FoodIntakeEntry {
+    init(exportEntry: FoodWalletExportEntry) throws {
+        guard !exportEntry.entryID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing entry id")
+        }
+        guard !exportEntry.draftID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing draft id")
+        }
+        guard !exportEntry.label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing label")
+        }
+        guard exportEntry.amountGrams >= 0,
+              exportEntry.kcal >= 0,
+              exportEntry.varianceKcal >= 0 else {
+            throw FoodWalletImportError.invalidEntry("negative nutrition values")
+        }
+        guard let sourceClass = FoodSourceClass(rawValue: exportEntry.sourceClass) else {
+            throw FoodWalletImportError.invalidEntry("unknown source class")
+        }
+        guard let trustStatus = FoodTrustStatus(rawValue: exportEntry.trustStatus) else {
+            throw FoodWalletImportError.invalidEntry("unknown trust status")
+        }
+        let confirmedAt = Double(exportEntry.confirmedAt).map(Date.init(timeIntervalSinceReferenceDate:))
+            ?? foodWalletISO8601Formatter().date(from: exportEntry.confirmedAt)
+            ?? ISO8601DateFormatter().date(from: exportEntry.confirmedAt)
+            ?? Date(timeIntervalSince1970: 0)
+        self.init(
+            entryID: exportEntry.entryID,
+            draftID: exportEntry.draftID,
+            meal: exportEntry.mealEstimate,
+            sourceClass: sourceClass,
+            trustStatus: trustStatus,
+            confirmedAt: confirmedAt,
+            dateKey: exportEntry.dateKey
+        )
+    }
+}
+
+private func foodWalletISO8601Formatter() -> ISO8601DateFormatter {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
 }
 
 private extension FoodWalletExportTemplate {

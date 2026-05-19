@@ -8,11 +8,30 @@ final class FoodWalletUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func launch(arguments: [String] = ["--grain-ui-test-photo-flow"]) {
+    private func launch(
+        arguments: [String] = ["--grain-ui-test-photo-flow"],
+        resetFoodWalletStorage: Bool = true
+    ) {
         app = XCUIApplication()
         app.launchArguments.append("--grain-ui-test-reset-personal-ingredients")
+        if resetFoodWalletStorage {
+            app.launchArguments.append("--grain-ui-test-reset-food-wallet-storage")
+        }
         app.launchArguments.append(contentsOf: arguments)
         app.launch()
+    }
+
+    private func scrollToElement(_ element: XCUIElement, maxSwipes: Int = 4) -> Bool {
+        if element.exists {
+            return true
+        }
+        for _ in 0..<maxSwipes {
+            app.swipeUp()
+            if element.waitForExistence(timeout: 1) {
+                return true
+            }
+        }
+        return element.exists
     }
 
     func testAppleEstimateCanBeSavedAndViewed() throws {
@@ -234,6 +253,43 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Wallet"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["ExportPortableJSONButton"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["ExportCSVButton"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["ExportPrivacyLabel"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["ExportGrainBundleButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(scrollToElement(app.staticTexts["ExportPrivacyLabel"]))
+    }
+
+    func testConfirmedEntryPersistsAcrossRelaunch() throws {
+        launch()
+
+        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        app.buttons["SaveToFoodWalletButton"].tap()
+        app.terminate()
+
+        launch(resetFoodWalletStorage: false)
+
+        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["History"].tap()
+        XCTAssertTrue(app.staticTexts["MealRowLabel-Fuji apple"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["MealRowNutrition-Fuji apple"].label, "170 g • 102 kcal")
+    }
+
+    func testRestorePreviewDoesNotMutateUntilApplied() throws {
+        launch()
+
+        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        app.buttons["SaveToFoodWalletButton"].tap()
+
+        app.tabBars.buttons["Wallet"].tap()
+        XCTAssertTrue(app.staticTexts["ConfirmedEntriesValue"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["ConfirmedEntriesValue"].label, "1")
+        XCTAssertTrue(scrollToElement(app.buttons["PreviewLatestBackupButton"]))
+        app.buttons["PreviewLatestBackupButton"].tap()
+
+        XCTAssertTrue(app.staticTexts["RestorePreviewSummary"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["RestorePreviewSummary"].label, "1 entry in bundle • 0 new • 1 already saved")
+        XCTAssertFalse(app.buttons["ApplyRestoreButton"].isEnabled)
     }
 }
