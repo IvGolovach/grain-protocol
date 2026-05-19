@@ -12,7 +12,11 @@ accounts, or third-party SDKs are added.
 - Raw photo retention: no.
 - Local food history: yes, stored on device.
 - Third-party AI photo analysis: planned through a backend broker, only after
-  explicit user consent.
+  explicit user consent. The app sends the selected photo to the broker as
+  transient request data; the app does not store the raw photo and the broker
+  should not retain it.
+- Provider keys in app: no. OpenAI, USDA/data.gov, and other provider keys stay
+  server-side.
 - Payment: StoreKit subscription planned for Pro features.
 
 ## Data Types
@@ -30,6 +34,8 @@ AI provider:
 - Disclose photo transfer according to the provider retention and processing
   terms.
 - Disclose derived nutrition or food-log data if it leaves the device.
+- Disclose that remote analysis uses backend processing and does not retain raw
+  photos unless the production behavior changes.
 - Keep the App Store privacy label consistent with the production backend, not
   the mock build.
 

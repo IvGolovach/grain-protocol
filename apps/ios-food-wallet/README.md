@@ -6,7 +6,10 @@ contract. It is intentionally product-shaped rather than a protocol demo.
 The current build is a Swift package app surface with:
 
 - SwiftUI Today, Capture, History, Wallet, and Pro tabs;
-- deterministic mock photo analysis for a Fuji apple and mushroom risotto;
+- real iPhone camera capture with transient in-memory photo analysis input;
+- deterministic mock photo analysis for a captured Fuji apple and mushroom
+  risotto;
+- calorie, portion, and macro estimates before confirmation;
 - editable assumptions before confirmation;
 - `GrainFoodWallet` draft and confirmation flow;
 - safe summary checks;
@@ -16,7 +19,7 @@ The current build is a Swift package app surface with:
 ## Product Loop
 
 ```text
-photo or sample capture
+camera photo or sample capture
 -> food analysis candidate
 -> editable assumptions
 -> user-confirmed draft
@@ -33,9 +36,9 @@ The product promise is no raw photo retention by default.
 
 - The iOS app must not store raw photos in local state, logs, safe summaries,
   exports, or support bundles.
-- A future FoodAnalysisBroker must strip metadata, avoid request-body logging,
-  keep image bytes in memory only for the provider request, and return
-  structured estimate candidates.
+- The FoodAnalysisBroker strips the app-facing contract down to structured
+  estimates, avoids request-body logging, keeps image bytes in memory only for
+  the provider request, and returns structured estimate candidates.
 - Safe summaries must not include raw photos, snapshots, QR payloads, trust
   material, private keys, COSE, CBOR, or GR1 payloads.
 
@@ -45,14 +48,56 @@ OpenAI API keys must not be embedded in the iOS app. The production path is a
 backend broker:
 
 ```text
-iOS image bytes
+iOS transient meal photo
 -> FoodAnalysisBroker
--> OpenAI Responses image input with structured output
--> nutrition resolver
+-> OpenAI Responses image input with structured output, if configured
+-> USDA FoodData Central nutrition resolver, if configured
 -> FoodAnalysisCandidate
 ```
 
-The app can run without that broker today using `MockFoodAnalysisClient`.
+The iOS app sends a selected photo only to the broker, over the app's backend
+contract. Raw image bytes are transient request material: the app must not
+persist them, the broker must not store them, and neither side should log request
+bodies, base64 image payloads, or provider responses that include image bytes.
+
+All OpenAI, USDA, and commercial nutrition-provider credentials live on the
+broker. The app must not call `api.openai.com` directly, ship `OPENAI_API_KEY`,
+ship USDA/data.gov keys, or read provider keys from the iOS bundle.
+
+The app can run without that broker today using `MockFoodAnalysisClient`. Device
+verification for a live flow should point the app at a non-production broker
+with test provider credentials, capture one meal photo, confirm that the result
+requires user review, and then verify logs/storage contain no raw image bytes.
+
+## Live API Setup
+
+The iOS app can keep using mocks for deterministic local and CI runs. Register
+and configure live providers on the broker, not in the app:
+
+- OpenAI Responses API: create an OpenAI API key and use vision input with
+  Structured Outputs to produce the `FoodAnalysisCandidate` schema.
+- USDA FoodData Central: create a data.gov API key for generic food and
+  prepared-food nutrition lookup.
+- Open Food Facts: use a clear application `User-Agent` for public packaged
+  food reads; account/auth is only needed for contribution flows.
+- Optional commercial providers: Edamam, Nutritionix, FatSecret, LogMeal,
+  Passio, or Spoonacular can improve packaged, restaurant, barcode, recipe, or
+  food-image coverage. Keep their keys server-side and gate each provider by
+  environment configuration.
+
+The broker returns structured estimates with calorie range, portion range,
+macros, assumptions, evidence, confidence, and a mandatory confirmation flag. If
+no live provider is configured, it uses deterministic local development fixtures
+or a low-confidence model-only estimate that still requires user confirmation.
+
+Run the broker guard after touching the backend service:
+
+```sh
+scripts/sdk/check_food_analysis_broker.sh
+```
+
+The guard does not require provider accounts; live credentials stay in the local
+environment or a deployment secret manager.
 
 ## Nutrition Resolver Plan
 
@@ -110,3 +155,27 @@ Draft App Store artifacts live in `AppStore/`:
 - `AppReviewNotes.md`
 - `PrivacyPolicy.md`
 - `StoreKitProducts.md`
+
+## Real iPhone Run
+
+The package build proves the Swift app code. A physical iPhone needs a signed
+`.app` bundle, so the repo includes an XcodeGen project definition for local
+device runs:
+
+```sh
+scripts/sdk/run_ios_food_wallet_device.sh
+```
+
+The script detects the first connected developer-mode iPhone, detects the first
+local Apple Development team, generates `FoodWallet.xcodeproj`, builds and
+installs `FoodWallet.app`, runs `--grain-device-smoke`, and then launches the
+app normally.
+
+Useful overrides:
+
+```sh
+GRAIN_IOS_DEVICE_ID=<device-id> \
+GRAIN_IOS_DEVELOPMENT_TEAM=<team-id> \
+GRAIN_IOS_BUNDLE_ID=dev.grain.foodwallet \
+scripts/sdk/run_ios_food_wallet_device.sh
+```

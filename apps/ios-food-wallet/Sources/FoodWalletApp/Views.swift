@@ -2,6 +2,10 @@ import FoodWalletCore
 import GrainFoodWallet
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#endif
+
 private enum FoodWalletTab: String, CaseIterable, Identifiable {
     case today
     case capture
@@ -35,17 +39,26 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
 struct FoodWalletRootView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var selectedTab: FoodWalletTab = .today
+    @State private var isShowingCamera = false
+    @State private var captureErrorMessage: String?
+
+    private var usesUITestPhotoFlow: Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.contains("--grain-ui-test-photo-flow") ||
+            arguments.contains("--grain-ui-test-delayed-photo-flow") ||
+            arguments.contains("--grain-ui-test-failing-photo-flow")
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                TodayView(selectedTab: $selectedTab)
+                TodayView(onAddFood: startAddFoodFlow)
             }
             .tabItem { Label(FoodWalletTab.today.title, systemImage: FoodWalletTab.today.symbol) }
             .tag(FoodWalletTab.today)
 
             NavigationStack {
-                CaptureView(selectedTab: $selectedTab)
+                CaptureView(selectedTab: $selectedTab, onCapturePhoto: startAddFoodFlow)
             }
             .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
             .tag(FoodWalletTab.capture)
@@ -70,12 +83,63 @@ struct FoodWalletRootView: View {
         }
         .tint(.green)
         .accessibilityIdentifier("FoodWalletRoot")
+        #if os(iOS)
+        .sheet(isPresented: $isShowingCamera) {
+            CameraCaptureView(
+                onPhotoCaptured: { photoPayload in
+                    isShowingCamera = false
+                    Task {
+                        await store.analyze(photoPayload: photoPayload)
+                    }
+                },
+                onCancel: {
+                    isShowingCamera = false
+                }
+            )
+        }
+        #endif
+        .alert(
+            "Camera unavailable",
+            isPresented: Binding(
+                get: { captureErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        captureErrorMessage = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(captureErrorMessage ?? "")
+        }
+    }
+
+    private func startAddFoodFlow() {
+        selectedTab = .capture
+
+        if usesUITestPhotoFlow {
+            Task {
+                await store.analyze(photo: .uiTestFujiApple)
+            }
+            return
+        }
+
+        #if os(iOS)
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            isShowingCamera = true
+        } else {
+            captureErrorMessage = "This device does not expose a camera to Food Wallet. Use a real iPhone for camera capture."
+        }
+        #else
+        captureErrorMessage = "Camera capture is available in the iOS app target on a real iPhone."
+        #endif
     }
 }
 
 private struct TodayView: View {
     @EnvironmentObject private var store: FoodWalletStore
-    @Binding var selectedTab: FoodWalletTab
+    var onAddFood: () -> Void
 
     var body: some View {
         List {
@@ -93,23 +157,21 @@ private struct TodayView: View {
             }
 
             Section("Quick actions") {
-                Button {
-                    selectedTab = .capture
-                } label: {
+                Button(action: onAddFood) {
                     Label("Add food", systemImage: "plus.circle.fill")
                 }
                 .accessibilityIdentifier("AddFoodButton")
             }
 
             Section("Saved today") {
-                if store.entries.isEmpty {
+                if store.todayEntries.isEmpty {
                     EmptyStateView(
                         title: "No meals yet",
                         symbol: "fork.knife",
                         message: "Capture a photo estimate or save a manual draft."
                     )
                 } else {
-                    ForEach(store.entries, id: \.entryID) { entry in
+                    ForEach(store.todayEntries, id: \.entryID) { entry in
                         MealRow(entry: entry)
                     }
                 }
@@ -122,6 +184,7 @@ private struct TodayView: View {
 private struct CaptureView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Binding var selectedTab: FoodWalletTab
+    var onCapturePhoto: () -> Void
 
     var body: some View {
         List {
@@ -131,11 +194,24 @@ private struct CaptureView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Camera") {
+                CaptureAction(
+                    title: "Take meal photo",
+                    subtitle: "Open camera and create a nutrition draft",
+                    symbol: "camera.fill",
+                    accessibilityIdentifier: "TakeMealPhotoButton",
+                    isDisabled: !store.canStartAnalysis,
+                    action: onCapturePhoto
+                )
+            }
+
             Section("Try photo analysis") {
                 CaptureAction(
                     title: "Analyze Fuji apple",
                     subtitle: "Single-item estimate with a tight range",
-                    symbol: "apple.logo"
+                    symbol: "apple.logo",
+                    accessibilityIdentifier: "AnalyzeFujiAppleButton",
+                    isDisabled: !store.canStartAnalysis
                 ) {
                     store.chooseExample(.fujiApple)
                     Task {
@@ -147,7 +223,9 @@ private struct CaptureView: View {
                 CaptureAction(
                     title: "Analyze mushroom risotto",
                     subtitle: "Mixed dish with assumptions and a wider range",
-                    symbol: "camera.macro"
+                    symbol: "camera.macro",
+                    accessibilityIdentifier: "AnalyzeMushroomRisottoButton",
+                    isDisabled: !store.canStartAnalysis
                 ) {
                     store.chooseExample(.mushroomRisotto)
                     Task {
@@ -158,7 +236,21 @@ private struct CaptureView: View {
             }
 
             Section("Review draft") {
-                if store.hasDraft {
+                if store.analysisState.isAnalyzing {
+                    AnalysisProgressCard(state: store.analysisState) {
+                        store.cancelAnalysis()
+                    }
+                } else if let errorMessage = store.analysisState.errorMessage {
+                    AnalysisFailureCard(
+                        message: errorMessage,
+                        onRetry: onCapturePhoto,
+                        onDismiss: store.discardDraft
+                    )
+                } else if store.analysisState == .blockedPrivacy {
+                    AnalysisBlockedCard {
+                        store.discardDraft()
+                    }
+                } else if store.hasDraft {
                     DraftReviewView()
                 } else {
                     EmptyStateView(
@@ -173,6 +265,201 @@ private struct CaptureView: View {
     }
 }
 
+private struct AnalysisProgressCard: View {
+    var state: FoodAnalysisState
+    var onCancel: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var scanForward = false
+    @State private var stepIndex = 0
+    @State private var hasTakenLonger = false
+
+    private let steps = [
+        "Looking for food",
+        "Estimating portion",
+        "Checking nutrition ranges",
+        "Preparing draft"
+    ]
+
+    private var statusText: String {
+        if state.isSlow || hasTakenLonger {
+            return "Still working..."
+        }
+        return steps[stepIndex]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .center, spacing: 14) {
+                scanner
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .tint(.green)
+                            .accessibilityIdentifier("AnalysisLoadingIndicator")
+                        Text(statusText)
+                            .font(.headline)
+                            .accessibilityIdentifier("AnalysisStatusLabel")
+                    }
+
+                    Text("Food Wallet is turning this photo into a reviewable nutrition draft.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            AnalysisStepList(steps: steps, activeIndex: stepIndex)
+
+            if state.isSlow || hasTakenLonger {
+                HStack {
+                    Label("Still analyzing. You can cancel and try another photo.", systemImage: "clock")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Cancel", role: .cancel, action: onCancel)
+                        .accessibilityIdentifier("CancelAnalysisButton")
+                }
+                .transition(.opacity)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.green.opacity(0.18), lineWidth: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("AnalysisLoadingView")
+        .task(id: state) {
+            stepIndex = 0
+            hasTakenLonger = state.isSlow
+            guard state.isAnalyzing else {
+                return
+            }
+
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_350_000_000)
+                guard !Task.isCancelled else {
+                    return
+                }
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
+                    stepIndex = (stepIndex + 1) % steps.count
+                }
+            }
+        }
+        .task(id: state.isSlow) {
+            if state.isSlow {
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
+                    hasTakenLonger = true
+                }
+            }
+        }
+    }
+
+    private var scanner: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.green.opacity(0.11))
+                .frame(width: 72, height: 72)
+
+            Image(systemName: "viewfinder")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(.green)
+
+            if !reduceMotion {
+                Capsule()
+                    .fill(LinearGradient(
+                        colors: [.clear, .green.opacity(0.55), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
+                    .frame(width: 56, height: 3)
+                    .offset(y: scanForward ? 24 : -24)
+                    .animation(
+                        .easeInOut(duration: 1.25).repeatForever(autoreverses: true),
+                        value: scanForward
+                    )
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onAppear {
+            scanForward = true
+        }
+    }
+}
+
+private struct AnalysisStepList: View {
+    var steps: [String]
+    var activeIndex: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            ForEach(steps.indices, id: \.self) { index in
+                HStack(spacing: 8) {
+                    Image(systemName: index <= activeIndex ? "checkmark.circle.fill" : "circle")
+                        .font(.caption)
+                        .foregroundStyle(index <= activeIndex ? .green : .secondary)
+                    Text(steps[index])
+                        .font(.caption)
+                        .foregroundStyle(index == activeIndex ? .primary : .secondary)
+                }
+            }
+        }
+        .accessibilityIdentifier("AnalysisStepList")
+    }
+}
+
+private struct AnalysisFailureCard: View {
+    var message: String
+    var onRetry: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Couldn’t analyze photo", systemImage: "exclamationmark.triangle.fill")
+                .font(.headline)
+                .foregroundStyle(.orange)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("AnalysisErrorMessage")
+            HStack {
+                Button("Dismiss", role: .cancel, action: onDismiss)
+                    .accessibilityIdentifier("DismissAnalysisErrorButton")
+                Spacer()
+                Button(action: onRetry) {
+                    Label("Try again", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .accessibilityIdentifier("RetryAnalysisButton")
+            }
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+private struct AnalysisBlockedCard: View {
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("AI photo analysis disabled", systemImage: "lock.shield")
+                .font(.headline)
+            Text("Food Wallet did not send this photo for analysis because AI photo analysis is disabled.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Button("Dismiss", role: .cancel, action: onDismiss)
+        }
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("AnalysisPrivacyBlockedView")
+    }
+}
+
 private struct DraftReviewView: View {
     @EnvironmentObject private var store: FoodWalletStore
 
@@ -183,9 +470,15 @@ private struct DraftReviewView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(candidate.primaryLabel)
                             .font(.title3.bold())
+                            .accessibilityIdentifier("DraftPrimaryLabel")
                         Text("\(candidate.portion.label) • \(candidate.nutrition.label)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("DraftNutritionLabel")
+                        Text(candidate.macronutrients.shortLabel)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("DraftMacronutrientsLabel")
                     }
                     Spacer()
                     SourceBadge(text: "Estimated", tint: .orange)
@@ -222,6 +515,7 @@ private struct DraftReviewView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
+                    .disabled(!store.canSaveDraft)
                     .accessibilityIdentifier("SaveToFoodWalletButton")
                 }
             }
@@ -260,7 +554,13 @@ private struct WalletView: View {
         List {
             Section("Status") {
                 LabeledContent("Storage", value: "Local-first")
-                LabeledContent("Confirmed entries", value: "\(store.entries.count)")
+                LabeledContent {
+                    Text("\(store.entries.count)")
+                        .accessibilityIdentifier("ConfirmedEntriesValue")
+                } label: {
+                    Text("Confirmed entries")
+                        .accessibilityIdentifier("ConfirmedEntriesLabel")
+                }
                 LabeledContent("AI consent", value: store.privacy.label)
             }
 
@@ -340,9 +640,17 @@ private struct MealRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.meal.label)
                     .font(.headline)
+                    .accessibilityIdentifier("MealRowLabel-\(entry.meal.label)")
                 Text("\(entry.meal.amountGrams) g • \(entry.meal.kcal) kcal")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("MealRowNutrition-\(entry.meal.label)")
+                if let macronutrients = entry.meal.macronutrients {
+                    Text(macronutrients.shortLabel)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("MealRowMacros-\(entry.meal.label)")
+                }
             }
             Spacer()
             SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus == .verified ? .green : .orange)
@@ -369,6 +677,8 @@ private struct CaptureAction: View {
     var title: String
     var subtitle: String
     var symbol: String
+    var accessibilityIdentifier: String
+    var isDisabled = false
     var action: () -> Void
 
     var body: some View {
@@ -392,6 +702,9 @@ private struct CaptureAction: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.5 : 1)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 

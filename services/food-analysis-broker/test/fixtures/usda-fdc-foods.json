@@ -1,0 +1,157 @@
+{
+  "foods": [
+    {
+      "fdcId": "1750340",
+      "description": "Apples, raw, fuji, with skin",
+      "dataType": "Foundation",
+      "aliases": ["fuji apple", "apple", "raw apple"],
+      "servingBasis": "per_100g",
+      "per100g": {
+        "kcal": 63,
+        "proteinGrams": 0.2,
+        "carbohydrateGrams": 15.2,
+        "fatGrams": 0.2,
+        "fiberGrams": 2.1
+      }
+    },
+    {
+      "fdcId": "1102653",
+      "description": "Rice, white, long-grain, cooked",
+      "dataType": "Foundation",
+      "aliases": ["cooked rice", "rice"],
+      "servingBasis": "per_100g",
+      "per100g": {
+        "kcal": 130,
+        "proteinGrams": 2.7,
+        "carbohydrateGrams": 28.2,
+        "fatGrams": 0.3,
+        "fiberGrams": 0.4
+      }
+    },
+    {
+      "fdcId": "170845",
+      "description": "Cheese, parmesan, grated",
+      "dataType": "SR Legacy",
+      "aliases": ["parmesan", "cheese"],
+      "servingBasis": "per_100g",
+      "per100g": {
+        "kcal": 431,
+        "proteinGrams": 38.5,
+        "carbohydrateGrams": 4.1,
+        "fatGrams": 28.6,
+        "fiberGrams": 0
+      }
+    },
+    {
+      "fdcId": "173410",
+      "description": "Butter, salted",
+      "dataType": "SR Legacy",
+      "aliases": ["butter"],
+      "servingBasis": "per_100g",
+      "per100g": {
+        "kcal": 717,
+        "proteinGrams": 0.9,
+        "carbohydrateGrams": 0.1,
+        "fatGrams": 81.1,
+        "fiberGrams": 0
+      }
+    },
+    {
+      "fdcId": "1103350",
+      "description": "Mushrooms, white, raw",
+      "dataType": "Foundation",
+      "aliases": ["mushroom", "mushrooms"],
+      "servingBasis": "per_100g",
+      "per100g": {
+        "kcal": 22,
+        "proteinGrams": 3.1,
+        "carbohydrateGrams": 3.3,
+        "fatGrams": 0.3,
+        "fiberGrams": 1
+      }
+    },
+    {
+      "fdcId": "171413",
+      "description": "Oil, olive, salad or cooking",
+      "dataType": "SR Legacy",
+      "aliases": ["olive oil", "oil"],
+      "servingBasis": "per_100g",
+      "per100g": {
+        "kcal": 884,
+        "proteinGrams": 0,
+        "carbohydrateGrams": 0,
+        "fatGrams": 100,
+        "fiberGrams": 0
+      }
+    },
+    {
+      "fdcId": "fixture-risotto-mushroom-components",
+      "description": "Mushroom risotto, reconstructed from visible components",
+      "dataType": "Recipe Reconstruction",
+      "aliases": ["mushroom risotto", "risotto"],
+      "servingBasis": "recipe_component",
+      "components": [
+        {
+          "fdcId": "1102653",
+          "description": "Rice, white, long-grain, cooked",
+          "portion": { "gramsMin": 190, "gramsMode": 225, "gramsMax": 260 },
+          "per100g": {
+            "kcal": 130,
+            "proteinGrams": 2.7,
+            "carbohydrateGrams": 28.2,
+            "fatGrams": 0.3,
+            "fiberGrams": 0.4
+          }
+        },
+        {
+          "fdcId": "170845",
+          "description": "Cheese, parmesan, grated",
+          "portion": { "gramsMin": 15, "gramsMode": 25, "gramsMax": 35 },
+          "per100g": {
+            "kcal": 431,
+            "proteinGrams": 38.5,
+            "carbohydrateGrams": 4.1,
+            "fatGrams": 28.6,
+            "fiberGrams": 0
+          }
+        },
+        {
+          "fdcId": "173410",
+          "description": "Butter, salted",
+          "portion": { "gramsMin": 10, "gramsMode": 15, "gramsMax": 25 },
+          "per100g": {
+            "kcal": 717,
+            "proteinGrams": 0.9,
+            "carbohydrateGrams": 0.1,
+            "fatGrams": 81.1,
+            "fiberGrams": 0
+          }
+        },
+        {
+          "fdcId": "1103350",
+          "description": "Mushrooms, white, raw",
+          "portion": { "gramsMin": 30, "gramsMode": 45, "gramsMax": 65 },
+          "per100g": {
+            "kcal": 22,
+            "proteinGrams": 3.1,
+            "carbohydrateGrams": 3.3,
+            "fatGrams": 0.3,
+            "fiberGrams": 1
+          }
+        },
+        {
+          "fdcId": "171413",
+          "description": "Oil, olive, salad or cooking",
+          "portion": { "gramsMin": 5, "gramsMode": 10, "gramsMax": 15 },
+          "per100g": {
+            "kcal": 884,
+            "proteinGrams": 0,
+            "carbohydrateGrams": 0,
+            "fatGrams": 100,
+            "fiberGrams": 0
+          }
+        }
+      ]
+    }
+  ]
+}
