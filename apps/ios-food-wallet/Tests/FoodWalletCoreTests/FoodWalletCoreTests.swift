@@ -48,6 +48,9 @@ struct FoodWalletCoreTests {
         await run("portionEditorPreservesProviderEvidenceAndDraftProvenance") {
             try await testPortionEditorPreservesProviderEvidenceAndDraftProvenance()
         }
+        await run("portionEditorRejectsNonPositiveGrams") {
+            try await testPortionEditorRejectsNonPositiveGrams()
+        }
         await run("startsWithoutDemoSavedMealsOrRecipes") {
             try await testStartsWithoutDemoSavedMealsOrRecipes()
         }
@@ -363,8 +366,16 @@ struct FoodWalletCoreTests {
         let updated = store.updateCurrentDraftPortion(gramsMode: 85)
 
         try expect(updated, "expected portion update to succeed")
+        try expect(store.currentCandidate?.portion.gramsMin == 70, "expected candidate min grams to scale")
         try expect(store.currentCandidate?.portion.gramsMode == 85, "expected candidate grams to update")
+        try expect(store.currentCandidate?.portion.gramsMax == 105, "expected candidate max grams to scale")
+        try expect(store.currentCandidate?.nutrition.minKcal == 45, "expected candidate min kcal to scale")
         try expect(store.currentCandidate?.nutrition.modeKcal == 51, "expected candidate kcal to scale")
+        try expect(store.currentCandidate?.nutrition.maxKcal == 58, "expected candidate max kcal to scale")
+        try expect(store.currentCandidate?.macronutrients.proteinGrams == 0.25, "expected protein to scale")
+        try expect(store.currentCandidate?.macronutrients.carbohydrateGrams == 13.5, "expected carbs to scale")
+        try expect(abs((store.currentCandidate?.macronutrients.fatGrams ?? 0) - 0.15) < 0.0001, "expected fat to scale")
+        try expect(store.currentCandidate?.assumptions.filter { $0.id == "user-portion" }.count == 1, "expected one user portion assumption")
         try expect(store.currentDraft?.meal.amountGrams == 85, "expected draft grams to update")
         try expect(store.currentDraft?.meal.kcal == 51, "expected draft kcal to update")
         try expect(store.currentDraft?.meal.varianceKcal == 6, "expected scaled variance")
@@ -372,12 +383,17 @@ struct FoodWalletCoreTests {
 
     @MainActor
     private static func testPortionEditorPreservesProviderEvidenceAndDraftProvenance() async throws {
-        let store = FoodWalletStore()
+        let clock = MutableFoodWalletClock(now: Date(timeIntervalSince1970: 1_700_000_000))
+        let store = FoodWalletStore(wallet: GrainFoodWallet(clock: clock))
         await store.analyze(photo: .uiTestFujiApple)
 
         guard let originalEvidence = store.currentCandidate?.evidence else {
             throw FoodWalletTestFailure("expected provider evidence before portion edit")
         }
+        guard let originalDraft = store.currentDraft else {
+            throw FoodWalletTestFailure("expected draft before portion edit")
+        }
+        clock.nowDate = clock.nowDate.addingTimeInterval(86_400)
         let originalSourceClass = store.currentDraft?.sourceClass
         let originalTrustStatus = store.currentDraft?.trustStatus
 
@@ -386,11 +402,33 @@ struct FoodWalletCoreTests {
         try expect(updated, "expected portion update to succeed")
         try expect(store.currentCandidate?.evidence == originalEvidence, "expected portion edit to preserve provider evidence")
         try expect(store.currentCandidate?.assumptions.contains { $0.id == "user-portion" } == true, "expected user portion assumption")
+        try expect(store.currentDraft?.draftID == originalDraft.draftID, "expected draft id to be preserved")
+        try expect(store.currentDraft?.createdAt == originalDraft.createdAt, "expected draft createdAt to be preserved")
+        try expect(store.currentDraft?.dateKey == originalDraft.dateKey, "expected draft dateKey to be preserved")
         try expect(store.currentDraft?.sourceClass == originalSourceClass, "expected draft source class to be preserved")
         try expect(store.currentDraft?.trustStatus == originalTrustStatus, "expected draft trust status to be preserved")
         store.confirmDraft()
+        try expect(store.entries.first?.draftID == originalDraft.draftID, "expected saved entry draft id to be preserved")
+        try expect(store.entries.first?.meal.amountGrams == 255, "expected saved entry grams to preserve portion edit")
+        try expect(store.entries.first?.meal.kcal == 153, "expected saved entry kcal to preserve portion edit")
         try expect(store.entries.first?.sourceClass == originalSourceClass, "expected saved entry source class to be preserved")
         try expect(store.entries.first?.trustStatus == originalTrustStatus, "expected saved entry trust status to be preserved")
+    }
+
+    @MainActor
+    private static func testPortionEditorRejectsNonPositiveGrams() async throws {
+        let store = FoodWalletStore()
+        await store.analyze(example: .fujiApple)
+
+        let originalCandidate = store.currentCandidate
+        let originalDraft = store.currentDraft
+
+        try expect(!store.updateCurrentDraftPortion(gramsMode: 0), "expected zero grams to be rejected")
+        try expect(store.currentCandidate == originalCandidate, "expected candidate to remain unchanged after zero grams")
+        try expect(store.currentDraft == originalDraft, "expected draft to remain unchanged after zero grams")
+        try expect(!store.updateCurrentDraftPortion(gramsMode: -10), "expected negative grams to be rejected")
+        try expect(store.currentCandidate == originalCandidate, "expected candidate to remain unchanged after negative grams")
+        try expect(store.currentDraft == originalDraft, "expected draft to remain unchanged after negative grams")
     }
 
     @MainActor

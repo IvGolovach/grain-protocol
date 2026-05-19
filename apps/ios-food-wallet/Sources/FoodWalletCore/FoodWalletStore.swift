@@ -364,11 +364,17 @@ public final class FoodWalletStore: ObservableObject {
         guard let candidate = currentCandidate, let draft = currentDraft, gramsMode > 0 else {
             return false
         }
-        presentDraft(
-            candidate: candidate.scaled(toGrams: gramsMode),
+        let scaledCandidate = candidate.scaled(toGrams: gramsMode)
+        currentCandidate = scaledCandidate
+        currentDraft = FoodIntakeDraft(
+            draftID: draft.draftID,
+            meal: scaledCandidate.mealEstimate(),
             sourceClass: draft.sourceClass,
-            trustStatus: draft.trustStatus
+            trustStatus: draft.trustStatus,
+            createdAt: draft.createdAt,
+            dateKey: draft.dateKey
         )
+        analysisState = .draftReady
         return true
     }
 

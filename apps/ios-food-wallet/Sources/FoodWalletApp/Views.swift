@@ -297,6 +297,10 @@ private struct IngredientBuilderRow: Identifiable {
     var grams = ""
 }
 
+private enum AddFoodRoute: Hashable {
+    case buildMeal
+}
+
 private struct AddFoodHubView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
@@ -342,17 +346,17 @@ private struct AddFoodHubView: View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 14) {
-                    AddFoodSearchField(
-                        text: $quickText,
-                        focusedField: $focusedField,
-                        onSubmit: createQuickTextDraft
-                    )
-
                     AddFoodShortcutGrid(
                         canStartPhoto: store.canStartAnalysis,
                         hasQuickText: hasSearchQuery,
                         onPhoto: onTakePhoto,
                         onQuickAdd: startQuickAdd
+                    )
+
+                    AddFoodSearchField(
+                        text: $quickText,
+                        focusedField: $focusedField,
+                        onSubmit: createQuickTextDraft
                     )
 
                     AddFoodScopeBar(selectedScope: $selectedScope)
@@ -382,57 +386,9 @@ private struct AddFoodHubView: View {
                 }
                 .padding(.vertical, 4)
             } header: {
-                Text("Search")
+                Text("Choose how to add")
             } footer: {
                 Text("Search recent meals, saved meals, recipes, and personal foods. Typed text creates a local draft for review.")
-            }
-
-            Section("Build a meal") {
-                TextField("Meal name", text: $mealTitle)
-                    .accessibilityIdentifier("MealTitleField")
-
-                ForEach(ingredientRows.indices, id: \.self) { index in
-                    IngredientBuilderRowView(
-                        index: index,
-                        row: $ingredientRows[index]
-                    )
-                }
-
-                Button {
-                    ingredientRows.append(IngredientBuilderRow())
-                } label: {
-                    Label("Add ingredient", systemImage: "plus.circle")
-                }
-                .accessibilityIdentifier("AddIngredientRowButton")
-
-                if let ingredientErrorMessage {
-                    Text(ingredientErrorMessage)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("IngredientBuilderError")
-                }
-
-                if let personalIngredientName {
-                    PersonalIngredientResolutionView(
-                        ingredientName: personalIngredientName,
-                        servingGrams: $personalServingGrams,
-                        servingKcal: $personalServingKcal,
-                        proteinGrams: $personalProteinGrams,
-                        carbohydrateGrams: $personalCarbohydrateGrams,
-                        fatGrams: $personalFatGrams,
-                        fiberGrams: $personalFiberGrams,
-                        errorMessage: personalIngredientErrorMessage,
-                        onSave: savePersonalIngredient
-                    )
-                }
-
-                Button(action: createIngredientMealDraft) {
-                    Label("Create meal draft", systemImage: "fork.knife.circle.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .disabled(!canCreateIngredientDraft)
-                .accessibilityIdentifier("CreateIngredientMealDraftButton")
             }
 
             if shouldShowBrowseResultsSection {
@@ -547,6 +503,30 @@ private struct AddFoodHubView: View {
                 Button("Cancel") {
                     dismiss()
                 }
+            }
+        }
+        .navigationDestination(for: AddFoodRoute.self) { route in
+            switch route {
+            case .buildMeal:
+                BuildMealEditorView(
+                    mealTitle: $mealTitle,
+                    ingredientRows: $ingredientRows,
+                    ingredientErrorMessage: ingredientErrorMessage,
+                    personalIngredientName: personalIngredientName,
+                    personalServingGrams: $personalServingGrams,
+                    personalServingKcal: $personalServingKcal,
+                    personalProteinGrams: $personalProteinGrams,
+                    personalCarbohydrateGrams: $personalCarbohydrateGrams,
+                    personalFatGrams: $personalFatGrams,
+                    personalFiberGrams: $personalFiberGrams,
+                    personalIngredientErrorMessage: personalIngredientErrorMessage,
+                    canCreateIngredientDraft: canCreateIngredientDraft,
+                    onAddIngredient: {
+                        ingredientRows.append(IngredientBuilderRow())
+                    },
+                    onCreateDraft: createIngredientMealDraft,
+                    onSavePersonalIngredient: savePersonalIngredient
+                )
             }
         }
     }
@@ -816,6 +796,82 @@ private struct AddFoodHubView: View {
     }
 }
 
+private struct BuildMealEditorView: View {
+    @Binding var mealTitle: String
+    @Binding var ingredientRows: [IngredientBuilderRow]
+    var ingredientErrorMessage: String?
+    var personalIngredientName: String?
+    @Binding var personalServingGrams: String
+    @Binding var personalServingKcal: String
+    @Binding var personalProteinGrams: String
+    @Binding var personalCarbohydrateGrams: String
+    @Binding var personalFatGrams: String
+    @Binding var personalFiberGrams: String
+    var personalIngredientErrorMessage: String?
+    var canCreateIngredientDraft: Bool
+    var onAddIngredient: () -> Void
+    var onCreateDraft: () -> Void
+    var onSavePersonalIngredient: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                TextField("Meal name", text: $mealTitle)
+                    .accessibilityIdentifier("MealTitleField")
+
+                ForEach(ingredientRows.indices, id: \.self) { index in
+                    IngredientBuilderRowView(
+                        index: index,
+                        row: $ingredientRows[index]
+                    )
+                }
+
+                Button(action: onAddIngredient) {
+                    Label("Add ingredient", systemImage: "plus.circle")
+                }
+                .accessibilityIdentifier("AddIngredientRowButton")
+
+                if let ingredientErrorMessage {
+                    Text(ingredientErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .accessibilityIdentifier("IngredientBuilderError")
+                }
+            } header: {
+                Text("Ingredients")
+            }
+
+            if let personalIngredientName {
+                Section {
+                    PersonalIngredientResolutionView(
+                        ingredientName: personalIngredientName,
+                        servingGrams: $personalServingGrams,
+                        servingKcal: $personalServingKcal,
+                        proteinGrams: $personalProteinGrams,
+                        carbohydrateGrams: $personalCarbohydrateGrams,
+                        fatGrams: $personalFatGrams,
+                        fiberGrams: $personalFiberGrams,
+                        errorMessage: personalIngredientErrorMessage,
+                        onSave: onSavePersonalIngredient
+                    )
+                }
+            }
+
+            Section {
+                Button(action: onCreateDraft) {
+                    Label("Create meal draft", systemImage: "fork.knife.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(!canCreateIngredientDraft)
+                .accessibilityIdentifier("CreateIngredientMealDraftButton")
+            }
+        }
+        .navigationTitle("Build Meal")
+        .accessibilityIdentifier("BuildMealScreen")
+    }
+}
+
 private enum AddFoodFocus: Hashable {
     case search
 }
@@ -928,7 +984,7 @@ private struct AddFoodShortcutGrid: View {
                 title: "Photo",
                 subtitle: canStartPhoto ? "Analyze a plate" : "Analysis is unavailable now",
                 symbol: "camera.fill",
-                accessibilityIdentifier: "HubTakePhotoButton",
+                accessibilityIdentifier: "AddFoodModePhotoButton",
                 isEnabled: canStartPhoto,
                 action: onPhoto
             )
@@ -937,10 +993,22 @@ private struct AddFoodShortcutGrid: View {
                 title: "Quick Add",
                 subtitle: hasQuickText ? "Create local draft" : "Type food first",
                 symbol: "plus.circle.fill",
-                accessibilityIdentifier: "HubQuickAddButton",
+                accessibilityIdentifier: "AddFoodModeQuickAddButton",
                 action: onQuickAdd
             )
+
+            NavigationLink(value: AddFoodRoute.buildMeal) {
+                AddFoodShortcutTile(
+                    title: "Build Meal",
+                    subtitle: "Ingredients and grams",
+                    symbol: "list.bullet.clipboard",
+                    isEnabled: true
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("AddFoodModeBuildMealButton")
         }
+        .accessibilityIdentifier("AddFoodModeChooser")
     }
 }
 
@@ -954,32 +1022,48 @@ private struct AddFoodShortcutButton: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(spacing: 8) {
-                    Image(systemName: symbol)
-                        .font(.headline)
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                }
-
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            }
-            .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-            .padding(10)
-            .background(isEnabled ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            AddFoodShortcutTile(
+                title: title,
+                subtitle: subtitle,
+                symbol: symbol,
+                isEnabled: isEnabled
+            )
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.7)
         .accessibilityIdentifier(accessibilityIdentifier)
         .accessibilityHint(subtitle)
+    }
+}
+
+private struct AddFoodShortcutTile: View {
+    var title: String
+    var subtitle: String
+    var symbol: String
+    var isEnabled: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .font(.headline)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
+        .padding(10)
+        .background(isEnabled ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -1350,6 +1434,7 @@ private struct AnalysisBlockedCard: View {
 
 private struct DraftReviewView: View {
     @EnvironmentObject private var store: FoodWalletStore
+    @State private var portionGramsText = ""
 
     var body: some View {
         if let candidate = store.currentCandidate {
@@ -1379,19 +1464,11 @@ private struct DraftReviewView: View {
                 Label(candidate.confidence.label, systemImage: "gauge.with.dots.needle.50percent")
                     .font(.subheadline)
 
-                PortionControlsView(candidate: candidate)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Assumptions")
-                        .font(.headline)
-                    ForEach(candidate.assumptions) { assumption in
-                        Toggle(assumption.label, isOn: Binding(
-                            get: { assumption.isEnabled },
-                            set: { _ in store.toggleAssumption(id: assumption.id) }
-                        ))
-                        .accessibilityIdentifier("Assumption-\(assumption.id)")
-                    }
-                }
+                PortionControlsView(
+                    candidate: candidate,
+                    gramsText: $portionGramsText,
+                    onCommit: commitPortion
+                )
 
                 HStack {
                     Button(role: .cancel) {
@@ -1403,6 +1480,7 @@ private struct DraftReviewView: View {
                     Spacer()
 
                     Button {
+                        commitPortion()
                         store.confirmDraft()
                     } label: {
                         Label("Save to MealMark", systemImage: "checkmark.circle.fill")
@@ -1414,58 +1492,133 @@ private struct DraftReviewView: View {
                 }
             }
             .padding(.vertical, 8)
+            .onAppear {
+                resetPortionText(with: candidate)
+            }
+            .onChange(of: candidate.id) { _ in
+                resetPortionText(with: candidate)
+            }
+            .onChange(of: candidate.portion.gramsMode) { gramsMode in
+                portionGramsText = "\(gramsMode)"
+            }
         }
+    }
+
+    private func commitPortion() {
+        guard let candidate = store.currentCandidate else {
+            return
+        }
+        let digits = Self.digitsOnly(portionGramsText)
+        guard let grams = Int64(digits), grams > 0 else {
+            portionGramsText = "\(candidate.portion.gramsMode)"
+            return
+        }
+        if grams != candidate.portion.gramsMode {
+            _ = store.updateCurrentDraftPortion(gramsMode: grams)
+        }
+        portionGramsText = "\(grams)"
+    }
+
+    private func resetPortionText(with candidate: FoodAnalysisCandidate) {
+        portionGramsText = "\(candidate.portion.gramsMode)"
+    }
+
+    private static func digitsOnly(_ text: String) -> String {
+        String(text.filter(\.isNumber))
     }
 }
 
 private struct PortionControlsView: View {
     @EnvironmentObject private var store: FoodWalletStore
+    @FocusState private var isGramsFieldFocused: Bool
     var candidate: FoodAnalysisCandidate
+    @Binding var gramsText: String
+    var onCommit: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Portion")
                 .font(.headline)
 
-            HStack(spacing: 10) {
-                Button {
-                    update(to: max(1, candidate.portion.gramsMode / 2))
-                } label: {
-                    Label("Half", systemImage: "divide")
-                }
-                .buttonStyle(.borderless)
-                .accessibilityIdentifier("PortionHalfButton")
-
+            HStack(alignment: .center, spacing: 10) {
                 Button {
                     update(to: max(1, candidate.portion.gramsMode - 25))
                 } label: {
                     Image(systemName: "minus.circle")
+                        .font(.title3)
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Decrease portion")
                 .accessibilityIdentifier("PortionDecreaseButton")
 
-                Text("\(candidate.portion.gramsMode) g")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(minWidth: 64)
-                    .accessibilityIdentifier("PortionValueLabel")
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    TextField("0", text: gramsBinding)
+                        #if os(iOS)
+                        .keyboardType(.numberPad)
+                        #endif
+                        .font(.system(.title2, design: .rounded).weight(.bold))
+                        .multilineTextAlignment(.trailing)
+                        .textFieldStyle(.plain)
+                        .frame(minWidth: 74, maxWidth: 108)
+                        .focused($isGramsFieldFocused)
+                        .accessibilityLabel("Portion grams")
+                        .accessibilityIdentifier("PortionGramsField")
+
+                    Text("g")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 Button {
                     update(to: candidate.portion.gramsMode + 25)
                 } label: {
                     Image(systemName: "plus.circle")
+                        .font(.title3)
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Increase portion")
                 .accessibilityIdentifier("PortionIncreaseButton")
 
-                Spacer()
+                Button {
+                    onCommit()
+                } label: {
+                    Text("Set")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("ApplyPortionGramsButton")
             }
+
+            Button {
+                update(to: max(1, candidate.portion.gramsMode / 2))
+            } label: {
+                Label("Half", systemImage: "divide")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityIdentifier("PortionHalfButton")
+        }
+        .onChange(of: isGramsFieldFocused) { isFocused in
+            if isFocused && gramsText == "\(candidate.portion.gramsMode)" {
+                gramsText = ""
+            }
+        }
+    }
+
+    private var gramsBinding: Binding<String> {
+        Binding {
+            gramsText
+        } set: { newValue in
+            gramsText = String(newValue.filter(\.isNumber))
         }
     }
 
     private func update(to grams: Int64) {
         _ = store.updateCurrentDraftPortion(gramsMode: grams)
+        gramsText = "\(grams)"
     }
 }
 
