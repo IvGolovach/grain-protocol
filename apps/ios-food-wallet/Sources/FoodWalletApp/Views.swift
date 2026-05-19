@@ -1,4 +1,5 @@
 import FoodWalletCore
+import Foundation
 import GrainFoodWallet
 import SwiftUI
 
@@ -36,6 +37,14 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
     }
 }
 
+private enum FoodWalletHaptics {
+    static func selectionChanged() {
+        #if os(iOS)
+        UISelectionFeedbackGenerator().selectionChanged()
+        #endif
+    }
+}
+
 struct FoodWalletRootView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var selectedTab: FoodWalletTab = .today
@@ -48,6 +57,18 @@ struct FoodWalletRootView: View {
         return arguments.contains("--grain-ui-test-photo-flow") ||
             arguments.contains("--grain-ui-test-delayed-photo-flow") ||
             arguments.contains("--grain-ui-test-failing-photo-flow")
+    }
+
+    private var tabSelection: Binding<FoodWalletTab> {
+        Binding {
+            selectedTab
+        } set: { newValue in
+            guard newValue != selectedTab else {
+                return
+            }
+            FoodWalletHaptics.selectionChanged()
+            selectedTab = newValue
+        }
     }
 
     var body: some View {
@@ -114,7 +135,7 @@ struct FoodWalletRootView: View {
     }
 
     private var tabContent: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             NavigationStack {
                 TodayView(onAddFood: openAddFoodHub)
             }
@@ -122,7 +143,7 @@ struct FoodWalletRootView: View {
             .tag(FoodWalletTab.today)
 
             NavigationStack {
-                CaptureView(selectedTab: $selectedTab, onCapturePhoto: startPhotoCaptureFlow)
+                CaptureView(onCapturePhoto: startPhotoCaptureFlow)
             }
             .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
             .tag(FoodWalletTab.capture)
@@ -221,7 +242,6 @@ private struct TodayView: View {
 
 private struct CaptureView: View {
     @EnvironmentObject private var store: FoodWalletStore
-    @Binding var selectedTab: FoodWalletTab
     var onCapturePhoto: () -> Void
 
     var body: some View {
@@ -264,45 +284,27 @@ private struct CaptureView: View {
                     action: onCapturePhoto
                 )
             }
-
-            Section("Try photo analysis") {
-                CaptureAction(
-                    title: "Analyze Fuji apple",
-                    subtitle: "Single-item estimate with a tight range",
-                    symbol: "apple.logo",
-                    accessibilityIdentifier: "AnalyzeFujiAppleButton",
-                    isDisabled: !store.canStartAnalysis
-                ) {
-                    store.chooseExample(.fujiApple)
-                    Task {
-                        await store.analyzeSelectedExample()
-                        selectedTab = .capture
-                    }
-                }
-
-                CaptureAction(
-                    title: "Analyze mushroom risotto",
-                    subtitle: "Mixed dish with assumptions and a wider range",
-                    symbol: "camera.macro",
-                    accessibilityIdentifier: "AnalyzeMushroomRisottoButton",
-                    isDisabled: !store.canStartAnalysis
-                ) {
-                    store.chooseExample(.mushroomRisotto)
-                    Task {
-                        await store.analyzeSelectedExample()
-                        selectedTab = .capture
-                    }
-                }
-            }
         }
         .navigationTitle("Capture")
     }
+}
+
+private struct IngredientBuilderRow: Identifiable {
+    let id = UUID()
+    var name = ""
+    var grams = ""
 }
 
 private struct AddFoodHubView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
     @State private var quickText = ""
+    @State private var mealTitle = ""
+    @State private var ingredientRows = [
+        IngredientBuilderRow(),
+        IngredientBuilderRow(),
+    ]
+    @State private var ingredientErrorMessage: String?
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
@@ -318,26 +320,7 @@ private struct AddFoodHubView: View {
 
     var body: some View {
         List {
-            Section("Fastest") {
-                HStack(spacing: 10) {
-                    TextField("Describe food", text: $quickText)
-                        .accessibilityIdentifier("QuickTextField")
-
-                    Button {
-                        guard store.createQuickTextDraft(quickText) else {
-                            return
-                        }
-                        onDraftReady()
-                    } label: {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .font(.title3)
-                    }
-                    .disabled(quickText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("CreateQuickDraftButton")
-                }
-            }
-
-            Section("Photo and labels") {
+            Section("Photo") {
                 CaptureAction(
                     title: "Take meal photo",
                     subtitle: "Analyze a plate and review before saving",
@@ -346,62 +329,58 @@ private struct AddFoodHubView: View {
                     isDisabled: !store.canStartAnalysis,
                     action: onTakePhoto
                 )
+            }
 
-                CaptureAction(
-                    title: "Kombucha label",
-                    subtitle: "Visible label: 80 kcal per bottle",
-                    symbol: "tag.fill",
-                    accessibilityIdentifier: "VisibleLabelKombuchaButton"
-                ) {
-                    if store.createVisibleLabelDraft(label: "Kombucha", caloriesPerContainer: 80, grams: 473) {
-                        onDraftReady()
-                    }
+            Section("Build from ingredients") {
+                TextField("Meal name", text: $mealTitle)
+                    .accessibilityIdentifier("MealTitleField")
+
+                ForEach(ingredientRows.indices, id: \.self) { index in
+                    IngredientBuilderRowView(
+                        index: index,
+                        row: $ingredientRows[index]
+                    )
                 }
 
-                CaptureAction(
-                    title: "Kombucha barcode",
-                    subtitle: "Packaged-food draft with provider evidence",
-                    symbol: "barcode.viewfinder",
-                    accessibilityIdentifier: "BarcodeKombuchaButton"
-                ) {
-                    if store.createPackagedFoodDraft(barcode: "fixture-kombucha-80") {
-                        onDraftReady()
+                Button {
+                    ingredientRows.append(IngredientBuilderRow())
+                } label: {
+                    Label("Add ingredient", systemImage: "plus.circle")
+                }
+                .accessibilityIdentifier("AddIngredientRowButton")
+
+                if let ingredientErrorMessage {
+                    Text(ingredientErrorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .accessibilityIdentifier("IngredientBuilderError")
+                }
+
+                Button(action: createIngredientMealDraft) {
+                    Label("Create meal draft", systemImage: "fork.knife.circle.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .disabled(!canCreateIngredientDraft)
+                .accessibilityIdentifier("CreateIngredientMealDraftButton")
+            }
+
+            Section("Quick text") {
+                HStack(spacing: 10) {
+                    TextField("Describe food", text: $quickText)
+                        .accessibilityIdentifier("QuickTextField")
+
+                    Button(action: createQuickTextDraft) {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.title3)
                     }
+                    .disabled(quickText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("CreateQuickDraftButton")
                 }
             }
 
-            Section("Saved meals") {
-                ForEach(store.savedTemplates) { template in
-                    CaptureAction(
-                        title: template.title,
-                        subtitle: template.subtitle,
-                        symbol: "star.fill",
-                        accessibilityIdentifier: "Template-\(template.id)"
-                    ) {
-                        if store.createTemplateDraft(id: template.id) {
-                            onDraftReady()
-                        }
-                    }
-                }
-            }
-
-            Section("Recipes and portions") {
-                ForEach(store.savedRecipes) { recipe in
-                    CaptureAction(
-                        title: recipe.title,
-                        subtitle: "Log half bowl now, adjust grams on review",
-                        symbol: "slider.horizontal.3",
-                        accessibilityIdentifier: "Recipe-\(recipe.id)"
-                    ) {
-                        if store.createRecipeDraft(id: recipe.id, consumedFraction: 0.5) {
-                            onDraftReady()
-                        }
-                    }
-                }
-            }
-
-            Section("Repeat") {
-                if let latestEntry {
+            if let latestEntry {
+                Section("Repeat") {
                     CaptureAction(
                         title: "Repeat \(latestEntry.meal.label)",
                         subtitle: "\(latestEntry.meal.amountGrams) g • \(latestEntry.meal.kcal) kcal",
@@ -412,11 +391,10 @@ private struct AddFoodHubView: View {
                             onDraftReady()
                         }
                     }
-                } else {
-                    Label("Recent meals will appear here", systemImage: "clock")
-                        .foregroundStyle(.secondary)
                 }
+            }
 
+            Section("Previous day") {
                 if let previousDateKey {
                     Button {
                         if store.copyEntries(fromDateKey: previousDateKey) > 0 {
@@ -426,19 +404,9 @@ private struct AddFoodHubView: View {
                         Label("Copy previous day", systemImage: "calendar.badge.plus")
                     }
                     .accessibilityIdentifier("CopyPreviousDayButton")
-                }
-            }
-
-            Section("Protocol demo") {
-                CaptureAction(
-                    title: "Verified serving offer",
-                    subtitle: "Demo of a cryptographically trusted serving",
-                    symbol: "checkmark.seal.fill",
-                    accessibilityIdentifier: "VerifiedServingOfferButton"
-                ) {
-                    if store.createVerifiedServingOfferDraft() {
-                        onDraftReady()
-                    }
+                } else {
+                    Label("No previous day yet", systemImage: "calendar")
+                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -462,6 +430,60 @@ private struct AddFoodHubView: View {
             components.month ?? 0,
             components.day ?? 0
         )
+    }
+
+    private var canCreateIngredientDraft: Bool {
+        !mealTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            ingredientRows.contains { row in
+                !row.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                    (Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) > 0
+            }
+    }
+
+    private func createQuickTextDraft() {
+        guard store.createQuickTextDraft(quickText) else {
+            return
+        }
+        onDraftReady()
+    }
+
+    private func createIngredientMealDraft() {
+        let inputs = ingredientRows.map { row in
+            FoodMealIngredientInput(
+                name: row.name,
+                grams: Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+            )
+        }
+        let result = store.createIngredientMealDraft(title: mealTitle, ingredients: inputs)
+        switch result {
+        case .created:
+            ingredientErrorMessage = nil
+            onDraftReady()
+        case .emptyTitle:
+            ingredientErrorMessage = "Add a meal name."
+        case .noIngredients:
+            ingredientErrorMessage = "Add at least one ingredient."
+        case let .invalidGrams(name):
+            ingredientErrorMessage = "Check grams for \(name)."
+        case let .unknownIngredient(name):
+            ingredientErrorMessage = "Unknown ingredient: \(name)."
+        }
+    }
+}
+
+private struct IngredientBuilderRowView: View {
+    var index: Int
+    @Binding var row: IngredientBuilderRow
+
+    var body: some View {
+        HStack(spacing: 10) {
+            TextField("Ingredient", text: $row.name)
+                .accessibilityIdentifier("IngredientNameField-\(index)")
+
+            TextField("g", text: $row.grams)
+                .frame(width: 72)
+                .accessibilityIdentifier("IngredientGramsField-\(index)")
+        }
     }
 }
 

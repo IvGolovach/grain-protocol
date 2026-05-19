@@ -47,38 +47,7 @@ public struct SavedFoodTemplate: Identifiable, Equatable, Sendable {
         )
     }
 
-    public static let defaultTemplates: [SavedFoodTemplate] = [
-        SavedFoodTemplate(
-            id: "usual-breakfast",
-            title: "Usual breakfast",
-            subtitle: "Greek yogurt, oats, berries, coffee",
-            kcal: 420,
-            varianceKcal: 35,
-            amountGrams: 360,
-            servingGrams: 360,
-            macronutrients: MealMacronutrients(
-                proteinGrams: 31,
-                carbohydrateGrams: 54,
-                fatGrams: 10,
-                fiberGrams: 8
-            )
-        ),
-        SavedFoodTemplate(
-            id: "protein-coffee",
-            title: "Protein coffee",
-            subtitle: "Coffee with protein shake",
-            kcal: 190,
-            varianceKcal: 20,
-            amountGrams: 420,
-            servingGrams: 420,
-            macronutrients: MealMacronutrients(
-                proteinGrams: 26,
-                carbohydrateGrams: 10,
-                fatGrams: 5,
-                fiberGrams: 1
-            )
-        ),
-    ]
+    public static let defaultTemplates: [SavedFoodTemplate] = []
 }
 
 public struct SavedFoodRecipeIngredient: Identifiable, Equatable, Sendable {
@@ -137,27 +106,40 @@ public struct SavedFoodRecipe: Identifiable, Equatable, Sendable {
         )
     }
 
-    public static let defaultRecipes: [SavedFoodRecipe] = [
-        SavedFoodRecipe(
-            id: "tomato-cucumber-salad",
-            title: "Tomato cucumber salad",
-            subtitle: "Tomatoes, cucumber, olive oil, herbs",
-            totalGrams: 420,
-            totalKcal: 280,
-            macronutrients: MealMacronutrients(
-                proteinGrams: 5,
-                carbohydrateGrams: 22,
-                fatGrams: 20,
-                fiberGrams: 7
-            ),
-            ingredients: [
-                SavedFoodRecipeIngredient(id: "tomato", label: "Tomatoes", grams: 180, kcal: 32),
-                SavedFoodRecipeIngredient(id: "cucumber", label: "Cucumber", grams: 160, kcal: 24),
-                SavedFoodRecipeIngredient(id: "olive-oil", label: "Olive oil", grams: 24, kcal: 212),
-                SavedFoodRecipeIngredient(id: "herbs", label: "Herbs and seasoning", grams: 56, kcal: 12),
-            ]
-        ),
-    ]
+    public static let defaultRecipes: [SavedFoodRecipe] = []
+}
+
+public struct FoodMealIngredientInput: Equatable, Sendable {
+    public var name: String
+    public var grams: Int64
+
+    public init(name: String, grams: Int64) {
+        self.name = name
+        self.grams = grams
+    }
+}
+
+public enum FoodMealDraftCreationResult: Error, Equatable, Sendable, CustomStringConvertible {
+    case created
+    case emptyTitle
+    case noIngredients
+    case invalidGrams(String)
+    case unknownIngredient(String)
+
+    public var description: String {
+        switch self {
+        case .created:
+            return "created"
+        case .emptyTitle:
+            return "emptyTitle"
+        case .noIngredients:
+            return "noIngredients"
+        case let .invalidGrams(name):
+            return "invalidGrams(\(name))"
+        case let .unknownIngredient(name):
+            return "unknownIngredient(\(name))"
+        }
+    }
 }
 
 public struct FoodWalletExportBundle: Codable, Equatable, Sendable {
@@ -257,6 +239,338 @@ public extension MealMacronutrients {
             fatGrams: fatGrams * factor,
             fiberGrams: fiberGrams.map { $0 * factor }
         )
+    }
+}
+
+struct FoodIngredientCatalog {
+    struct ResolvedIngredient: Equatable, Sendable {
+        var entry: Entry
+        var inputName: String
+        var grams: Int64
+
+        var kcal: Int64 {
+            Int64((entry.kcalPer100Grams * Double(grams) / 100).rounded())
+        }
+
+        var macronutrients: MealMacronutrients {
+            entry.macronutrientsPer100Grams.scaled(by: Double(grams) / 100)
+        }
+    }
+
+    struct Entry: Equatable, Sendable {
+        var id: String
+        var label: String
+        var aliases: [String]
+        var kcalPer100Grams: Double
+        var macronutrientsPer100Grams: MealMacronutrients
+    }
+
+    static func candidate(
+        title: String,
+        ingredients: [FoodMealIngredientInput]
+    ) -> Result<FoodAnalysisCandidate, FoodMealDraftCreationResult> {
+        let mealTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !mealTitle.isEmpty else {
+            return .failure(.emptyTitle)
+        }
+
+        var resolved: [ResolvedIngredient] = []
+        for ingredient in ingredients {
+            let inputName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if inputName.isEmpty && ingredient.grams <= 0 {
+                continue
+            }
+            guard ingredient.grams > 0 else {
+                return .failure(.invalidGrams(inputName.isEmpty ? "ingredient" : inputName))
+            }
+            guard let entry = lookup(inputName) else {
+                return .failure(.unknownIngredient(inputName))
+            }
+            resolved.append(ResolvedIngredient(entry: entry, inputName: inputName, grams: ingredient.grams))
+        }
+
+        guard !resolved.isEmpty else {
+            return .failure(.noIngredients)
+        }
+
+        let totalGrams = resolved.reduce(Int64(0)) { $0 + $1.grams }
+        let totalKcal = resolved.reduce(Int64(0)) { $0 + $1.kcal }
+        let variance = max(8, Int64((Double(totalKcal) * 0.10).rounded()))
+        let macronutrients = resolved.reduce(
+            MealMacronutrients(proteinGrams: 0, carbohydrateGrams: 0, fatGrams: 0, fiberGrams: 0)
+        ) { partial, ingredient in
+            let macros = ingredient.macronutrients
+            return MealMacronutrients(
+                proteinGrams: partial.proteinGrams + macros.proteinGrams,
+                carbohydrateGrams: partial.carbohydrateGrams + macros.carbohydrateGrams,
+                fatGrams: partial.fatGrams + macros.fatGrams,
+                fiberGrams: (partial.fiberGrams ?? 0) + (macros.fiberGrams ?? 0)
+            )
+        }
+        return .success(FoodAnalysisCandidate(
+            id: "ingredients-\(slug(mealTitle))",
+            primaryLabel: mealTitle,
+            genericLabel: mealTitle.lowercased(),
+            dishType: resolved.count > 1 ? .mixed : .single,
+            portion: PortionEstimate(
+                gramsMin: max(1, totalGrams - max(1, totalGrams / 10)),
+                gramsMode: totalGrams,
+                gramsMax: totalGrams + max(1, totalGrams / 10)
+            ),
+            nutrition: NutritionRange(
+                minKcal: max(0, totalKcal - variance),
+                modeKcal: totalKcal,
+                maxKcal: totalKcal + variance
+            ),
+            macronutrients: macronutrients,
+            confidence: .medium,
+            assumptions: [
+                FoodAssumption(id: "ingredient-catalog", label: "calculated from ingredient nutrition table"),
+                FoodAssumption(id: "review-portion", label: "review portion before saving"),
+            ],
+            evidence: resolved.map { ingredient in
+                ProviderEvidence(
+                    provider: "food_wallet_ingredient_catalog",
+                    providerID: ingredient.entry.id,
+                    matchedName: ingredient.entry.label,
+                    servingBasis: "\(ingredient.grams)g user-entered ingredient"
+                )
+            },
+            userConfirmationRequired: true
+        ))
+    }
+
+    private static func lookup(_ input: String) -> Entry? {
+        let normalized = input.normalizedFoodIngredientName
+        return entries.first { entry in
+            entry.aliases.contains { alias in
+                normalized == alias || normalized.contains(alias)
+            }
+        }
+    }
+
+    private static func slug(_ value: String) -> String {
+        let slug = value
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return slug.isEmpty ? "meal" : slug
+    }
+
+    private static let entries: [Entry] = [
+        Entry(
+            id: "egg.whole",
+            label: "Whole egg",
+            aliases: ["egg", "eggs", "whole egg"],
+            kcalPer100Grams: 143,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 12.6,
+                carbohydrateGrams: 0.7,
+                fatGrams: 9.5,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "bread.toast",
+            label: "Toast",
+            aliases: ["toast", "bread", "sourdough"],
+            kcalPer100Grams: 265,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 9,
+                carbohydrateGrams: 49,
+                fatGrams: 3.2,
+                fiberGrams: 2.7
+            )
+        ),
+        Entry(
+            id: "butter",
+            label: "Butter",
+            aliases: ["butter"],
+            kcalPer100Grams: 717,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.9,
+                carbohydrateGrams: 0.1,
+                fatGrams: 81.1,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "greek-yogurt.plain",
+            label: "Plain Greek yogurt",
+            aliases: ["greek yogurt", "yogurt"],
+            kcalPer100Grams: 97,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 9,
+                carbohydrateGrams: 3.6,
+                fatGrams: 5,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "oats.rolled",
+            label: "Rolled oats",
+            aliases: ["oats", "oatmeal"],
+            kcalPer100Grams: 389,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 16.9,
+                carbohydrateGrams: 66.3,
+                fatGrams: 6.9,
+                fiberGrams: 10.6
+            )
+        ),
+        Entry(
+            id: "berries.mixed",
+            label: "Mixed berries",
+            aliases: ["berries", "blueberries", "strawberries"],
+            kcalPer100Grams: 57,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.7,
+                carbohydrateGrams: 14.5,
+                fatGrams: 0.3,
+                fiberGrams: 2.4
+            )
+        ),
+        Entry(
+            id: "banana",
+            label: "Banana",
+            aliases: ["banana"],
+            kcalPer100Grams: 89,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 1.1,
+                carbohydrateGrams: 22.8,
+                fatGrams: 0.3,
+                fiberGrams: 2.6
+            )
+        ),
+        Entry(
+            id: "apple",
+            label: "Apple",
+            aliases: ["apple", "fuji apple"],
+            kcalPer100Grams: 52,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.3,
+                carbohydrateGrams: 13.8,
+                fatGrams: 0.2,
+                fiberGrams: 2.4
+            )
+        ),
+        Entry(
+            id: "avocado",
+            label: "Avocado",
+            aliases: ["avocado"],
+            kcalPer100Grams: 160,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 2,
+                carbohydrateGrams: 8.5,
+                fatGrams: 14.7,
+                fiberGrams: 6.7
+            )
+        ),
+        Entry(
+            id: "rice.cooked",
+            label: "Cooked rice",
+            aliases: ["rice", "cooked rice"],
+            kcalPer100Grams: 130,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 2.7,
+                carbohydrateGrams: 28,
+                fatGrams: 0.3,
+                fiberGrams: 0.4
+            )
+        ),
+        Entry(
+            id: "chicken-breast.cooked",
+            label: "Cooked chicken breast",
+            aliases: ["chicken", "chicken breast"],
+            kcalPer100Grams: 165,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 31,
+                carbohydrateGrams: 0,
+                fatGrams: 3.6,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "tomato",
+            label: "Tomato",
+            aliases: ["tomato", "tomatoes"],
+            kcalPer100Grams: 18,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.9,
+                carbohydrateGrams: 3.9,
+                fatGrams: 0.2,
+                fiberGrams: 1.2
+            )
+        ),
+        Entry(
+            id: "cucumber",
+            label: "Cucumber",
+            aliases: ["cucumber"],
+            kcalPer100Grams: 15,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.7,
+                carbohydrateGrams: 3.6,
+                fatGrams: 0.1,
+                fiberGrams: 0.5
+            )
+        ),
+        Entry(
+            id: "olive-oil",
+            label: "Olive oil",
+            aliases: ["olive oil", "oil"],
+            kcalPer100Grams: 884,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0,
+                carbohydrateGrams: 0,
+                fatGrams: 100,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "herbs",
+            label: "Herbs",
+            aliases: ["herbs", "seasoning"],
+            kcalPer100Grams: 21,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 1,
+                carbohydrateGrams: 4,
+                fatGrams: 0.5,
+                fiberGrams: 2
+            )
+        ),
+        Entry(
+            id: "coffee",
+            label: "Black coffee",
+            aliases: ["coffee"],
+            kcalPer100Grams: 1,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.1,
+                carbohydrateGrams: 0,
+                fatGrams: 0,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "milk.whole",
+            label: "Whole milk",
+            aliases: ["milk"],
+            kcalPer100Grams: 61,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 3.2,
+                carbohydrateGrams: 4.8,
+                fatGrams: 3.3,
+                fiberGrams: 0
+            )
+        ),
+    ]
+}
+
+private extension String {
+    var normalizedFoodIngredientName: String {
+        lowercased()
+            .replacingOccurrences(of: "[^a-z0-9 ]+", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

@@ -285,6 +285,19 @@ public final class FoodWalletStore: ObservableObject {
         return true
     }
 
+    public func createIngredientMealDraft(
+        title: String,
+        ingredients: [FoodMealIngredientInput]
+    ) -> FoodMealDraftCreationResult {
+        switch FoodIngredientCatalog.candidate(title: title, ingredients: ingredients) {
+        case let .success(candidate):
+            presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
+            return .created
+        case let .failure(result):
+            return result
+        }
+    }
+
     public func updateCurrentDraftPortion(gramsMode: Int64) -> Bool {
         guard let candidate = currentCandidate, let draft = currentDraft, gramsMode > 0 else {
             return false
@@ -381,51 +394,6 @@ public final class FoodWalletStore: ObservableObject {
                         providerID: entry.entryID,
                         matchedName: entry.meal.label,
                         servingBasis: "confirmed_entry"
-                    ),
-                ]
-            ),
-            sourceClass: .measured,
-            trustStatus: .selfIssued
-        )
-        return true
-    }
-
-    public func createPackagedFoodDraft(barcode: String) -> Bool {
-        guard barcode == "fixture-kombucha-80" else {
-            return false
-        }
-        let meal = MealEstimate(
-            label: "Kombucha",
-            kcal: 80,
-            varianceKcal: 0,
-            amountGrams: 473,
-            servingGrams: 473,
-            servings: 1,
-            macronutrients: MealMacronutrients(
-                proteinGrams: 0,
-                carbohydrateGrams: 20,
-                fatGrams: 0,
-                fiberGrams: 0
-            )
-        )
-        presentDraft(
-            candidate: FoodWalletStore.candidate(
-                id: "barcode-fixture-kombucha-80",
-                label: "Kombucha",
-                genericLabel: "kombucha",
-                dishType: .packaged,
-                meal: meal,
-                confidence: .high,
-                assumptions: [
-                    FoodAssumption(id: "barcode-product", label: "barcode matched packaged product"),
-                    FoodAssumption(id: "review-serving", label: "confirm how much you drank"),
-                ],
-                evidence: [
-                    ProviderEvidence(
-                        provider: "open_food_facts_fixture",
-                        providerID: barcode,
-                        matchedName: "Kombucha bottle",
-                        servingBasis: "barcode_product"
                     ),
                 ]
             ),
