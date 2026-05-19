@@ -16,8 +16,10 @@ let package = Package(
     products: [
         .library(name: "GrainClient", targets: ["GrainClient"]),
         .library(name: "GrainClientIOSAdapters", targets: ["GrainClientIOSAdapters"]),
+        .library(name: "GrainFoodWallet", targets: ["GrainFoodWallet"]),
         .executable(name: "GrainClientFixtureRunner", targets: ["GrainClientFixtureRunner"]),
         .executable(name: "GrainClientIOSAdaptersSmoke", targets: ["GrainClientIOSAdaptersSmoke"]),
+        .executable(name: "GrainFoodWalletSmoke", targets: ["GrainFoodWalletSmoke"]),
     ],
     targets: [
         .target(
@@ -51,6 +53,11 @@ let package = Package(
                 .linkedFramework("Security", .when(platforms: [.iOS, .macOS])),
             ]
         ),
+        .target(
+            name: "GrainFoodWallet",
+            dependencies: [],
+            path: "Sources/GrainFoodWallet"
+        ),
         .executableTarget(
             name: "GrainClientFixtureRunner",
             dependencies: ["GrainClient"],
@@ -60,6 +67,11 @@ let package = Package(
             name: "GrainClientIOSAdaptersSmoke",
             dependencies: ["GrainClient", "GrainClientIOSAdapters"],
             path: "Sources/GrainClientIOSAdaptersSmoke"
+        ),
+        .executableTarget(
+            name: "GrainFoodWalletSmoke",
+            dependencies: ["GrainFoodWallet"],
+            path: "Sources/GrainFoodWalletSmoke"
         ),
     ]
 )

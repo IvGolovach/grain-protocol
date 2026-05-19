@@ -18,6 +18,8 @@ If you are unsure whether a doc is affected, assume that it is.
 - command names or workflow steps
 - contributor or release process
 - any wording that tells readers what the repo guarantees
+- SDK/domain app-facing contracts such as Food Wallet schemas, safe-summary
+  boundaries, and platform starter guarantees
 
 ## Update matrix
 

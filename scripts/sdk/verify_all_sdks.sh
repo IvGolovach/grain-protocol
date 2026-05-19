@@ -152,6 +152,17 @@ run_check "trust bundle governance policy" \
   python3 tools/ci/check_trust_bundle_governance.py
 run_check "release train docs policy" \
   python3 tools/ci/check_release_train_docs.py
+run_check "Food Wallet contract policy" \
+  scripts/sdk/check_food_wallet_contract.sh
+
+if have_cmd node && have_cmd npm; then
+  run_check "TypeScript Food Wallet SDK smoke" \
+    npm --prefix core/ts/grain-sdk run test:food-wallet
+  run_check "TypeScript Food Wallet AI boundary smoke" \
+    npm --prefix core/ts/grain-sdk-ai run test:food-boundary
+else
+  skip_or_fail "SDK_VERIFY_ERR_TS_FOOD_WALLET_PREREQ_MISSING" "node and npm are required for TypeScript Food Wallet checks"
+fi
 
 if have_cmd cargo && have_cmd rustc && have_cmd npm; then
   if run_check "WASM target ready" ensure_wasm_target_ready; then
@@ -163,14 +174,23 @@ else
   skip_or_fail "SDK_VERIFY_ERR_WASM_PREREQ_MISSING" "cargo, rustc, and npm are required for WASM package check"
 fi
 
+if have_cmd node && have_cmd npm && have_cmd cargo && have_cmd rustc; then
+  run_check "Food Wallet local pilot" scripts/sdk/run_food_wallet_pilot.sh --out-dir "$OUT_DIR_ABS/food-wallet-pilot"
+else
+  skip_or_fail "SDK_VERIFY_ERR_FOOD_WALLET_PILOT_PREREQ_MISSING" "node, npm, cargo, and rustc are required for Food Wallet local pilot"
+fi
+
 if have_cmd swift; then
   run_check "Swift client package" scripts/sdk/check_swift_package.sh
+  run_check "Swift Food Wallet smoke" scripts/sdk/check_swift_food_wallet.sh --policy-only
+  run_check "iOS Food Wallet app" scripts/sdk/check_ios_food_wallet_app.sh
 else
   skip_or_fail "SDK_VERIFY_ERR_SWIFT_MISSING" "swift command not found"
 fi
 
 if have_cmd java && have_cmd cargo && have_cmd rustc; then
   run_check "Kotlin client package" scripts/sdk/check_kotlin_package.sh
+  run_check "Kotlin Food Wallet smoke" scripts/sdk/check_kotlin_food_wallet.sh --policy-only
 else
   skip_or_fail "SDK_VERIFY_ERR_KOTLIN_PREREQ_MISSING" "java, cargo, and rustc are required for Kotlin package check"
 fi

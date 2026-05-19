@@ -19,6 +19,7 @@ If any step is bypassed, treat it as a bug.
 - `core/ts/grain-sdk-ai/src/ai/token_registry.ts`
 - `core/ts/grain-sdk-ai/src/ai/diagnostics.ts`
 - `core/ts/grain-sdk-ai/src/ai/contract_export.ts`
+- `core/ts/grain-sdk-ai/src/ai/food.ts`
 
 ## Invariants to enforce
 
@@ -30,6 +31,7 @@ If any step is bypassed, treat it as a bug.
 - `SDK-AI-005`: numeric ingestion uses decimal strings only
 - `SDK-AI-006`: set-array sort normalize allowed, duplicates reject
 - `SDK-AI-007`: unknown critical => quarantine, no apply
+- `SDK-AI-008`: food photo/advice adapters stay read-only, provider-replaceable, and transient for raw image bytes
 
 ## Important boundary language
 
@@ -37,3 +39,5 @@ If any step is bypassed, treat it as a bug.
 - Set-array normalization is AI-ingestion only, not strict protocol relax.
 - Base64 rule here is canonical SDK ingestion contract, not protocol-wide encoding rule.
 - Candidate v1 is object-only until an `event_append` apply path exists.
+- Food photo adapters may produce estimates or advice, but they must not append
+  ledger events directly or persist raw photos.

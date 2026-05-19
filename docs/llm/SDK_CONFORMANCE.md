@@ -27,7 +27,7 @@ npm --prefix core/ts/grain-sdk-ai run test:boundary
 Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
-- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0031` and `SDK-AI-000` through `SDK-AI-007`
+- SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0032` and `SDK-AI-000` through `SDK-AI-008`
 
 ## Portable client core
 
@@ -182,6 +182,40 @@ Expected contract:
 - the check leaves git status unchanged except for pre-existing unrelated local work
 
 Local note: Apple silicon environments must use a JVM with the same architecture as the Rust client-core dylib. Set `JAVA_HOME` to an arm64 JDK before running the Kotlin package check on arm64 macOS.
+
+## Food Wallet app contract
+
+Food Wallet contract checks:
+
+```bash
+scripts/sdk/check_food_wallet_contract.sh
+npm --prefix core/ts/grain-sdk run test:food-wallet
+npm --prefix core/ts/grain-sdk-ai run test:food-boundary
+scripts/sdk/run_food_wallet_pilot.sh
+scripts/sdk/check_swift_food_wallet.sh
+scripts/sdk/check_kotlin_food_wallet.sh
+```
+
+Expected contract:
+- `sdk/food/contract/food_wallet_v1.schema.json` defines the app-facing v1
+  concepts for `FoodIntakeEntry`, `MealEstimateCandidate`,
+  `VerifiedServingOffer`, `FoodIntakeDraft`, `TrustStatus`,
+  `FoodSourceClass`, `NutritionInsight`, and `SafeFoodSummary`
+- trust status values are exactly `verified`, `self_issued`, `estimated`, and
+  `untrusted`
+- source class values are exactly `attested`, `measured`, and `estimated`
+- photo/model estimates are draft-first and require user confirmation before
+  append
+- AI providers are replaceable, read-only with respect to ledger writes, and
+  may retain only safe digests such as `photo_sha256_16`
+- safe reports and fixtures do not include raw photos, raw QR payloads, trust
+  material, snapshots, identity bundles, sync bundles, COSE payloads, or private
+  keys
+- Swift and Kotlin Food Wallet facades expose app-facing estimate/draft/confirm
+  and safe-summary helpers without store publication, account, backend, or
+  raw-protocol claims
+- `scripts/sdk/verify_all_sdks.sh` includes Food Wallet contract, pilot,
+  Swift, Kotlin, starter-template, and release-package cleanliness checks
 
 ## WASM/mobile-web client package
 

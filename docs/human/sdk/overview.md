@@ -38,6 +38,9 @@ This page is the capability map after that first run.
 - device abstraction contract (`sdk/device`): names app-owned platform edges
   for scan input, capabilities, local storage, export sinks, diagnostics, and
   trust providers without adding account, registry, or store assumptions
+- Food Wallet contract (`docs/human/sdk/food-wallet.md`): names the app-owned
+  camera/photo/UI and replaceable AI adapter boundary while keeping Grain on
+  validation, confirm, snapshot, trust, and safe export primitives
 - `codec`: strict validation + diagnostics explanation
 - `evidence`: deterministic evidence bundle builder
 - optional AI sidecar (`core/ts/grain-sdk-ai`): deterministic ingestion firewall (`accept` -> `applyAccepted`)
@@ -71,6 +74,9 @@ This page is the capability map after that first run.
   - SDK `0.2.x` -> Protocol major `1`
 - domain adapter example: `core/ts/grain-sdk/examples/sensor-event-v1.ts`
 - local no-device Food pilot: `scripts/sdk/run_local_food_pilot.sh`
+- Food Wallet contract and pilot: `docs/human/sdk/food-wallet.md`,
+  `scripts/sdk/check_food_wallet_contract.sh`,
+  `scripts/sdk/run_food_wallet_pilot.sh`
 - architecture: `docs/human/sdk/architecture.md`
 - error model: `docs/human/sdk/errors.md`
 - impossible misuse checklist: `docs/human/sdk/impossible-misuse.md`

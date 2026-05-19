@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://grain.local/sdk/food/contract/food_wallet_v1.schema.json",
+  "title": "Grain Food Wallet Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "version",
+    "concepts",
+    "safe_summary_policy"
+  ],
+  "properties": {
+    "schema": {
+      "const": "grain.food-wallet.v1"
+    },
+    "version": {
+      "const": 1
+    },
+    "concepts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "FoodIntakeEntry",
+        "MealEstimateCandidate",
+        "VerifiedServingOffer",
+        "FoodIntakeDraft",
+        "TrustStatus",
+        "FoodSourceClass",
+        "NutritionInsight",
+        "SafeFoodSummary"
+      ],
+      "properties": {
+        "FoodIntakeEntry": {
+          "$ref": "#/$defs/FoodIntakeEntry"
+        },
+        "MealEstimateCandidate": {
+          "$ref": "#/$defs/MealEstimateCandidate"
+        },
+        "VerifiedServingOffer": {
+          "$ref": "#/$defs/VerifiedServingOffer"
+        },
+        "FoodIntakeDraft": {
+          "$ref": "#/$defs/FoodIntakeDraft"
+        },
+        "TrustStatus": {
+          "$ref": "#/$defs/TrustStatus"
+        },
+        "FoodSourceClass": {
+          "$ref": "#/$defs/FoodSourceClass"
+        },
+        "NutritionInsight": {
+          "$ref": "#/$defs/NutritionInsight"
+        },
+        "SafeFoodSummary": {
+          "$ref": "#/$defs/SafeFoodSummary"
+        }
+      }
+    },
+    "safe_summary_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "forbidden_raw_material",
+        "allowed_summary_fields"
+      ],
+      "properties": {
+        "forbidden_raw_material": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "raw_photo",
+              "raw_image",
+              "raw_trust_bundle",
+              "raw_snapshot",
+              "private_key",
+              "raw_qr_payload"
+            ]
+          }
+        },
+        "allowed_summary_fields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "schema",
+              "summary_id",
+              "entries",
+              "totals",
+              "insights",
+              "generated_at"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "TrustStatus": {
+      "enum": [
+        "verified",
+        "self_issued",
+        "estimated",
+        "untrusted"
+      ]
+    },
+    "FoodSourceClass": {
+      "enum": [
+        "attested",
+        "measured",
+        "estimated"
+      ]
+    },
+    "NutritionInsight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "message"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "energy",
+            "serving",
+            "confidence"
+          ]
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "MealEstimateCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "source_class",
+        "trust_status",
+        "label",
+        "mean",
+        "var"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "source_class": {
+          "$ref": "#/$defs/FoodSourceClass"
+        },
+        "trust_status": {
+          "$ref": "#/$defs/TrustStatus"
+        },
+        "label": {
+          "type": "string"
+        },
+        "mean": {
+          "type": "object"
+        },
+        "var": {
+          "type": "object"
+        }
+      }
+    },
+    "VerifiedServingOffer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "offer_id",
+        "issuer",
+        "source_class",
+        "trust_status",
+        "serving_g",
+        "mean",
+        "var"
+      ],
+      "properties": {
+        "offer_id": {
+          "type": "string"
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "source_class": {
+          "const": "attested"
+        },
+        "trust_status": {
+          "const": "verified"
+        },
+        "serving_g": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mean": {
+          "type": "object"
+        },
+        "var": {
+          "type": "object"
+        }
+      }
+    },
+    "FoodIntakeDraft": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "draft_id",
+        "trust_status",
+        "source_class",
+        "entry"
+      ],
+      "properties": {
+        "draft_id": {
+          "type": "string"
+        },
+        "trust_status": {
+          "$ref": "#/$defs/TrustStatus"
+        },
+        "source_class": {
+          "$ref": "#/$defs/FoodSourceClass"
+        },
+        "entry": {
+          "$ref": "#/$defs/FoodIntakeEntry"
+        }
+      }
+    },
+    "FoodIntakeEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entry_id",
+        "source_class",
+        "trust_status",
+        "mean",
+        "var",
+        "amount_g",
+        "serving_g",
+        "servings"
+      ],
+      "properties": {
+        "entry_id": {
+          "type": "string"
+        },
+        "source_class": {
+          "$ref": "#/$defs/FoodSourceClass"
+        },
+        "trust_status": {
+          "$ref": "#/$defs/TrustStatus"
+        },
+        "mean": {
+          "type": "object"
+        },
+        "var": {
+          "type": "object"
+        },
+        "amount_g": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "serving_g": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "servings": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "SafeFoodSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "summary_id",
+        "entries",
+        "totals",
+        "insights",
+        "generated_at"
+      ],
+      "properties": {
+        "schema": {
+          "const": "grain.food-wallet.safe-summary.v1"
+        },
+        "summary_id": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FoodIntakeEntry"
+          }
+        },
+        "totals": {
+          "type": "object"
+        },
+        "insights": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NutritionInsight"
+          }
+        },
+        "generated_at": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

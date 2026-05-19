@@ -4,6 +4,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 
 ## [Unreleased]
 - Repository-wide audit hardening:
+  - added the Food Wallet app contract, SDK helpers, AI adapter boundary, Swift/Kotlin facades, starter templates, and verification gates for a local-first food-tracking app that keeps raw photos and protocol material out of safe summaries.
   - added Food Profile 1.0 constraints for reducer-visible food events, with machine-readable profile metadata, invariant static-check evidence, and CI/verify guards for source classes and integer unit scales.
   - added a repo-local no-device Food pilot proof pack that appends the Food Profile fixture through the TypeScript SDK, checks reducer output, generates a reference issuer QR, and validates a safe local report.
   - aligned TypeScript COSE/GR1 verification with the strict issuer profile: protected `kid` must match `first16(SHA-256(pubkey))`, and `verifyGR1()` now rejects signed payloads that are not strict matching `ServingOffer` records.
