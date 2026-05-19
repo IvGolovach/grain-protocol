@@ -74,4 +74,47 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Fuji apple")
     }
+
+    func testAddFoodHubCreatesQuickTextDraftAndAdjustsPortion() throws {
+        launch(arguments: [])
+
+        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
+
+        let quickText = app.textFields["QuickTextField"]
+        XCTAssertTrue(quickText.waitForExistence(timeout: 5))
+        quickText.tap()
+        quickText.typeText("2 eggs and toast")
+        app.buttons["CreateQuickDraftButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "2 eggs and toast")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 220 g • 295-365 kcal")
+
+        app.buttons["PortionHalfButton"].tap()
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 110 g • 148-183 kcal")
+
+        app.buttons["SaveToFoodWalletButton"].tap()
+        app.tabBars.buttons["History"].tap()
+        XCTAssertTrue(app.staticTexts["MealRowLabel-2 eggs and toast"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["MealRowNutrition-2 eggs and toast"].label, "110 g • 165 kcal")
+    }
+
+    func testWalletOffersSafeExportsAfterSavingEntry() throws {
+        launch()
+
+        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        app.buttons["SaveToFoodWalletButton"].tap()
+
+        app.tabBars.buttons["Wallet"].tap()
+        XCTAssertTrue(app.navigationBars["Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["ExportPortableJSONButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["ExportCSVButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["ExportPrivacyLabel"].waitForExistence(timeout: 5))
+    }
 }

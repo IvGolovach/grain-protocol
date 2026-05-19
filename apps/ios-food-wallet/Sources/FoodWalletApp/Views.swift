@@ -40,6 +40,7 @@ struct FoodWalletRootView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var selectedTab: FoodWalletTab = .today
     @State private var isShowingCamera = false
+    @State private var isShowingAddFoodHub = false
     @State private var captureErrorMessage: String?
 
     private var usesUITestPhotoFlow: Bool {
@@ -63,6 +64,23 @@ struct FoodWalletRootView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: store.analysisState.isAnalyzing)
         .tint(.green)
+        .sheet(isPresented: $isShowingAddFoodHub) {
+            NavigationStack {
+                AddFoodHubView(
+                    onDraftReady: {
+                        isShowingAddFoodHub = false
+                        selectedTab = .capture
+                    },
+                    onTakePhoto: {
+                        isShowingAddFoodHub = false
+                        selectedTab = .capture
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            startPhotoCaptureFlow()
+                        }
+                    }
+                )
+            }
+        }
         #if os(iOS)
         .sheet(isPresented: $isShowingCamera) {
             CameraCaptureView(
@@ -98,13 +116,13 @@ struct FoodWalletRootView: View {
     private var tabContent: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                TodayView(onAddFood: startAddFoodFlow)
+                TodayView(onAddFood: openAddFoodHub)
             }
             .tabItem { Label(FoodWalletTab.today.title, systemImage: FoodWalletTab.today.symbol) }
             .tag(FoodWalletTab.today)
 
             NavigationStack {
-                CaptureView(selectedTab: $selectedTab, onCapturePhoto: startAddFoodFlow)
+                CaptureView(selectedTab: $selectedTab, onCapturePhoto: startPhotoCaptureFlow)
             }
             .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
             .tag(FoodWalletTab.capture)
@@ -129,7 +147,7 @@ struct FoodWalletRootView: View {
         }
     }
 
-    private func startAddFoodFlow() {
+    private func openAddFoodHub() {
         selectedTab = .capture
 
         if usesUITestPhotoFlow {
@@ -138,6 +156,12 @@ struct FoodWalletRootView: View {
             }
             return
         }
+
+        isShowingAddFoodHub = true
+    }
+
+    private func startPhotoCaptureFlow() {
+        selectedTab = .capture
 
         #if os(iOS)
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -208,6 +232,28 @@ private struct CaptureView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Review draft") {
+                if let errorMessage = store.analysisState.errorMessage {
+                    AnalysisFailureCard(
+                        message: errorMessage,
+                        onRetry: onCapturePhoto,
+                        onDismiss: store.discardDraft
+                    )
+                } else if store.analysisState == .blockedPrivacy {
+                    AnalysisBlockedCard {
+                        store.discardDraft()
+                    }
+                } else if store.hasDraft {
+                    DraftReviewView()
+                } else {
+                    EmptyStateView(
+                        title: "No active draft",
+                        symbol: "doc.text.magnifyingglass",
+                        message: "Analyze a sample photo to create a Food Wallet draft."
+                    )
+                }
+            }
+
             Section("Camera") {
                 CaptureAction(
                     title: "Take meal photo",
@@ -248,30 +294,174 @@ private struct CaptureView: View {
                     }
                 }
             }
+        }
+        .navigationTitle("Capture")
+    }
+}
 
-            Section("Review draft") {
-                if let errorMessage = store.analysisState.errorMessage {
-                    AnalysisFailureCard(
-                        message: errorMessage,
-                        onRetry: onCapturePhoto,
-                        onDismiss: store.discardDraft
-                    )
-                } else if store.analysisState == .blockedPrivacy {
-                    AnalysisBlockedCard {
-                        store.discardDraft()
+private struct AddFoodHubView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var quickText = ""
+
+    var onDraftReady: () -> Void
+    var onTakePhoto: () -> Void
+
+    private var latestEntry: FoodIntakeEntry? {
+        store.entries.first
+    }
+
+    private var previousDateKey: String? {
+        let today = Self.utcDateKey(for: Date())
+        return store.entries.first { $0.dateKey != today }?.dateKey
+    }
+
+    var body: some View {
+        List {
+            Section("Fastest") {
+                HStack(spacing: 10) {
+                    TextField("Describe food", text: $quickText)
+                        .accessibilityIdentifier("QuickTextField")
+
+                    Button {
+                        guard store.createQuickTextDraft(quickText) else {
+                            return
+                        }
+                        onDraftReady()
+                    } label: {
+                        Image(systemName: "arrow.right.circle.fill")
+                            .font(.title3)
                     }
-                } else if store.hasDraft {
-                    DraftReviewView()
+                    .disabled(quickText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("CreateQuickDraftButton")
+                }
+            }
+
+            Section("Photo and labels") {
+                CaptureAction(
+                    title: "Take meal photo",
+                    subtitle: "Analyze a plate and review before saving",
+                    symbol: "camera.fill",
+                    accessibilityIdentifier: "HubTakePhotoButton",
+                    isDisabled: !store.canStartAnalysis,
+                    action: onTakePhoto
+                )
+
+                CaptureAction(
+                    title: "Kombucha label",
+                    subtitle: "Visible label: 80 kcal per bottle",
+                    symbol: "tag.fill",
+                    accessibilityIdentifier: "VisibleLabelKombuchaButton"
+                ) {
+                    if store.createVisibleLabelDraft(label: "Kombucha", caloriesPerContainer: 80, grams: 473) {
+                        onDraftReady()
+                    }
+                }
+
+                CaptureAction(
+                    title: "Kombucha barcode",
+                    subtitle: "Packaged-food draft with provider evidence",
+                    symbol: "barcode.viewfinder",
+                    accessibilityIdentifier: "BarcodeKombuchaButton"
+                ) {
+                    if store.createPackagedFoodDraft(barcode: "fixture-kombucha-80") {
+                        onDraftReady()
+                    }
+                }
+            }
+
+            Section("Saved meals") {
+                ForEach(store.savedTemplates) { template in
+                    CaptureAction(
+                        title: template.title,
+                        subtitle: template.subtitle,
+                        symbol: "star.fill",
+                        accessibilityIdentifier: "Template-\(template.id)"
+                    ) {
+                        if store.createTemplateDraft(id: template.id) {
+                            onDraftReady()
+                        }
+                    }
+                }
+            }
+
+            Section("Recipes and portions") {
+                ForEach(store.savedRecipes) { recipe in
+                    CaptureAction(
+                        title: recipe.title,
+                        subtitle: "Log half bowl now, adjust grams on review",
+                        symbol: "slider.horizontal.3",
+                        accessibilityIdentifier: "Recipe-\(recipe.id)"
+                    ) {
+                        if store.createRecipeDraft(id: recipe.id, consumedFraction: 0.5) {
+                            onDraftReady()
+                        }
+                    }
+                }
+            }
+
+            Section("Repeat") {
+                if let latestEntry {
+                    CaptureAction(
+                        title: "Repeat \(latestEntry.meal.label)",
+                        subtitle: "\(latestEntry.meal.amountGrams) g • \(latestEntry.meal.kcal) kcal",
+                        symbol: "clock.arrow.circlepath",
+                        accessibilityIdentifier: "RepeatLastMealButton"
+                    ) {
+                        if store.createRecentEntryDraft(entryID: latestEntry.entryID) {
+                            onDraftReady()
+                        }
+                    }
                 } else {
-                    EmptyStateView(
-                        title: "No active draft",
-                        symbol: "doc.text.magnifyingglass",
-                        message: "Analyze a sample photo to create a Food Wallet draft."
-                    )
+                    Label("Recent meals will appear here", systemImage: "clock")
+                        .foregroundStyle(.secondary)
+                }
+
+                if let previousDateKey {
+                    Button {
+                        if store.copyEntries(fromDateKey: previousDateKey) > 0 {
+                            dismiss()
+                        }
+                    } label: {
+                        Label("Copy previous day", systemImage: "calendar.badge.plus")
+                    }
+                    .accessibilityIdentifier("CopyPreviousDayButton")
+                }
+            }
+
+            Section("Protocol demo") {
+                CaptureAction(
+                    title: "Verified serving offer",
+                    subtitle: "Demo of a cryptographically trusted serving",
+                    symbol: "checkmark.seal.fill",
+                    accessibilityIdentifier: "VerifiedServingOfferButton"
+                ) {
+                    if store.createVerifiedServingOfferDraft() {
+                        onDraftReady()
+                    }
                 }
             }
         }
-        .navigationTitle("Capture")
+        .navigationTitle("Add Food")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+        }
+    }
+
+    private static func utcDateKey(for date: Date) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
     }
 }
 
@@ -496,6 +686,7 @@ private struct DraftReviewView: View {
 
     var body: some View {
         if let candidate = store.currentCandidate {
+            let trustStatus = store.currentDraft?.trustStatus ?? .estimated
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -512,11 +703,16 @@ private struct DraftReviewView: View {
                             .accessibilityIdentifier("DraftMacronutrientsLabel")
                     }
                     Spacer()
-                    SourceBadge(text: "Estimated", tint: .orange)
+                    SourceBadge(
+                        text: candidate.reviewBadgeText(trustStatus: trustStatus),
+                        tint: trustStatus.reviewTint
+                    )
                 }
 
                 Label(candidate.confidence.label, systemImage: "gauge.with.dots.needle.50percent")
                     .font(.subheadline)
+
+                PortionControlsView(candidate: candidate)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Assumptions")
@@ -552,6 +748,57 @@ private struct DraftReviewView: View {
             }
             .padding(.vertical, 8)
         }
+    }
+}
+
+private struct PortionControlsView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    var candidate: FoodAnalysisCandidate
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text("Portion")
+                .font(.headline)
+
+            HStack(spacing: 10) {
+                Button {
+                    update(to: max(1, candidate.portion.gramsMode / 2))
+                } label: {
+                    Label("Half", systemImage: "divide")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityIdentifier("PortionHalfButton")
+
+                Button {
+                    update(to: max(1, candidate.portion.gramsMode - 25))
+                } label: {
+                    Image(systemName: "minus.circle")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Decrease portion")
+                .accessibilityIdentifier("PortionDecreaseButton")
+
+                Text("\(candidate.portion.gramsMode) g")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(minWidth: 64)
+                    .accessibilityIdentifier("PortionValueLabel")
+
+                Button {
+                    update(to: candidate.portion.gramsMode + 25)
+                } label: {
+                    Image(systemName: "plus.circle")
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("Increase portion")
+                .accessibilityIdentifier("PortionIncreaseButton")
+
+                Spacer()
+            }
+        }
+    }
+
+    private func update(to grams: Int64) {
+        _ = store.updateCurrentDraftPortion(gramsMode: grams)
     }
 }
 
@@ -607,6 +854,23 @@ private struct WalletView: View {
                 }
             }
 
+            Section("Export") {
+                ShareLink(item: portableJSONText) {
+                    Label("Export portable JSON", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("ExportPortableJSONButton")
+
+                ShareLink(item: store.exportCSV()) {
+                    Label("Export CSV", systemImage: "tablecells")
+                }
+                .accessibilityIdentifier("ExportCSVButton")
+
+                Text("Exports include confirmed food data, templates, recipes, and redacted provenance only.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("ExportPrivacyLabel")
+            }
+
             Section("Developer proof") {
                 Text("Safe summaries show food labels, calories, source class, and trust labels. They do not include raw photos or protocol/private material.")
                     .font(.subheadline)
@@ -622,6 +886,14 @@ private struct WalletView: View {
             }
         }
         .navigationTitle("Wallet")
+    }
+
+    private var portableJSONText: String {
+        guard let data = try? store.exportPortableJSON(),
+              let text = String(data: data, encoding: .utf8) else {
+            return "{}"
+        }
+        return text
     }
 }
 
@@ -701,6 +973,53 @@ private struct SourceBadge: View {
             .padding(.vertical, 5)
             .foregroundStyle(tint)
             .background(tint.opacity(0.12), in: Capsule())
+    }
+}
+
+private extension FoodAnalysisCandidate {
+    func reviewBadgeText(trustStatus: FoodTrustStatus) -> String {
+        if trustStatus == .verified {
+            return "Verified"
+        }
+
+        let providers = Set(evidence.map(\.provider))
+        if providers.contains("visible_nutrition_label") {
+            return "Label read"
+        }
+        if providers.contains("open_food_facts_fixture") || providers.contains("open_food_facts") {
+            return "Barcode match"
+        }
+        if providers.contains("food_wallet_template") {
+            return "Template"
+        }
+        if providers.contains("food_wallet_recipe") {
+            return "Recipe"
+        }
+        if providers.contains("food_wallet_history") {
+            return "Recent"
+        }
+        if providers.contains("food_wallet_quick_text") {
+            return "Quick add"
+        }
+        if providers.contains("usda_fdc") {
+            return "USDA estimate"
+        }
+        return trustStatus.label
+    }
+}
+
+private extension FoodTrustStatus {
+    var reviewTint: Color {
+        switch self {
+        case .verified:
+            return .green
+        case .selfIssued:
+            return .blue
+        case .estimated:
+            return .orange
+        case .untrusted:
+            return .red
+        }
     }
 }
 

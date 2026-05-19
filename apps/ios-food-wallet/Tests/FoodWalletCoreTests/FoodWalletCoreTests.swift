@@ -1,5 +1,6 @@
 import FoodWalletCore
 import Foundation
+import GrainFoodWallet
 
 @main
 struct FoodWalletCoreTests {
@@ -25,6 +26,24 @@ struct FoodWalletCoreTests {
         }
         await run("storeConfirmsOnlyAfterDraftReview") {
             try await testStoreConfirmsOnlyAfterDraftReview()
+        }
+        await run("quickTextDraftCreatesSelfIssuedReviewableMeal") {
+            try await testQuickTextDraftCreatesSelfIssuedReviewableMeal()
+        }
+        await run("portionEditorScalesDraftNutritionRange") {
+            try await testPortionEditorScalesDraftNutritionRange()
+        }
+        await run("templatesRecipesAndRecentEntriesCreateDrafts") {
+            try await testTemplatesRecipesAndRecentEntriesCreateDrafts()
+        }
+        await run("copyDateEntriesRepeatsMealsIntoCurrentDay") {
+            try await testCopyDateEntriesRepeatsMealsIntoCurrentDay()
+        }
+        await run("packagedAndVisibleLabelDraftsExposeProviderEvidence") {
+            try await testPackagedAndVisibleLabelDraftsExposeProviderEvidence()
+        }
+        await run("portableExportIncludesSafeUserDataOnly") {
+            try await testPortableExportIncludesSafeUserDataOnly()
         }
         await run("storePublishesAnalysisStateWhilePhotoEstimateRuns") {
             try await testStorePublishesAnalysisStateWhilePhotoEstimateRuns()
@@ -181,6 +200,128 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testQuickTextDraftCreatesSelfIssuedReviewableMeal() async throws {
+        let store = FoodWalletStore()
+
+        let created = store.createQuickTextDraft("2 eggs and toast with butter")
+
+        try expect(created, "expected quick text to create a draft")
+        try expect(store.currentCandidate?.primaryLabel == "2 eggs and toast with butter", "expected typed label")
+        try expect(store.currentCandidate?.confidence == .medium, "expected medium confidence for parsed text")
+        try expect(store.currentDraft?.trustStatus == .selfIssued, "expected self-issued quick text draft")
+        try expect(store.currentDraft?.sourceClass == .measured, "expected measured source class")
+        try expect(store.currentDraft?.meal.amountGrams == 220, "expected default parsed grams")
+        try expect(store.currentDraft?.meal.kcal == 330, "expected parsed calories")
+        try expect(store.entries.isEmpty, "expected review boundary before save")
+
+        store.confirmDraft()
+
+        try expect(store.entries.count == 1, "expected saved quick text entry")
+        try expect(store.entries.first?.trustStatus == .selfIssued, "expected saved entry to remain self-issued")
+    }
+
+    @MainActor
+    private static func testPortionEditorScalesDraftNutritionRange() async throws {
+        let store = FoodWalletStore()
+        await store.analyze(example: .fujiApple)
+
+        let updated = store.updateCurrentDraftPortion(gramsMode: 85)
+
+        try expect(updated, "expected portion update to succeed")
+        try expect(store.currentCandidate?.portion.gramsMode == 85, "expected candidate grams to update")
+        try expect(store.currentCandidate?.nutrition.modeKcal == 51, "expected candidate kcal to scale")
+        try expect(store.currentDraft?.meal.amountGrams == 85, "expected draft grams to update")
+        try expect(store.currentDraft?.meal.kcal == 51, "expected draft kcal to update")
+        try expect(store.currentDraft?.meal.varianceKcal == 6, "expected scaled variance")
+    }
+
+    @MainActor
+    private static func testTemplatesRecipesAndRecentEntriesCreateDrafts() async throws {
+        let store = FoodWalletStore()
+
+        try expect(store.savedTemplates.contains { $0.id == "usual-breakfast" }, "expected default usual breakfast template")
+        try expect(store.savedRecipes.contains { $0.id == "tomato-cucumber-salad" }, "expected default salad recipe")
+
+        try expect(store.createTemplateDraft(id: "usual-breakfast"), "expected template draft")
+        try expect(store.currentDraft?.meal.label == "Usual breakfast", "expected template label")
+        try expect(store.currentDraft?.trustStatus == .selfIssued, "expected template to be self-issued")
+        store.confirmDraft()
+
+        try expect(store.createRecipeDraft(id: "tomato-cucumber-salad", consumedFraction: 0.5), "expected recipe draft")
+        try expect(store.currentDraft?.meal.label == "Tomato cucumber salad", "expected recipe label")
+        try expect(store.currentDraft?.meal.amountGrams == 210, "expected half recipe grams")
+        try expect(store.currentDraft?.meal.kcal == 140, "expected half recipe calories")
+        store.discardDraft()
+
+        try expect(store.createRecentEntryDraft(entryID: store.entries.first!.entryID), "expected recent entry draft")
+        try expect(store.currentDraft?.meal.label == "Usual breakfast", "expected recent entry label")
+        try expect(store.currentDraft?.trustStatus == .selfIssued, "expected recent repeat to be self-issued")
+    }
+
+    @MainActor
+    private static func testCopyDateEntriesRepeatsMealsIntoCurrentDay() async throws {
+        let clock = MutableFoodWalletClock(now: Date(timeIntervalSince1970: 1_700_000_000))
+        let store = FoodWalletStore(wallet: GrainFoodWallet(clock: clock))
+
+        try expect(store.createTemplateDraft(id: "usual-breakfast"), "expected previous-day template draft")
+        store.confirmDraft()
+        let sourceDateKey = store.entries.first!.dateKey
+
+        clock.nowDate = clock.nowDate.addingTimeInterval(86_400)
+        let copied = store.copyEntries(fromDateKey: sourceDateKey)
+
+        try expect(copied == 1, "expected one copied entry")
+        try expect(store.entries.count == 2, "expected original plus copied entry")
+        try expect(store.entries.first?.meal.label == "Usual breakfast", "expected copied meal label")
+        try expect(store.entries.first?.dateKey != sourceDateKey, "expected copied entry to use current date")
+    }
+
+    @MainActor
+    private static func testPackagedAndVisibleLabelDraftsExposeProviderEvidence() async throws {
+        let store = FoodWalletStore()
+
+        try expect(store.createPackagedFoodDraft(barcode: "fixture-kombucha-80"), "expected packaged draft")
+        try expect(store.currentCandidate?.primaryLabel == "Kombucha", "expected kombucha package label")
+        try expect(store.currentCandidate?.dishType == .packaged, "expected packaged dish type")
+        try expect(store.currentCandidate?.evidence.contains { $0.provider == "open_food_facts_fixture" } == true, "expected barcode evidence")
+        store.discardDraft()
+
+        try expect(store.createVisibleLabelDraft(label: "Kombucha", caloriesPerContainer: 80, grams: 473), "expected visible label draft")
+        try expect(store.currentCandidate?.nutrition.minKcal == 80, "expected exact label calories")
+        try expect(store.currentCandidate?.nutrition.maxKcal == 80, "expected exact label calories")
+        try expect(store.currentCandidate?.confidence == .high, "expected high confidence for explicit label")
+        try expect(store.currentCandidate?.evidence.contains { $0.provider == "visible_nutrition_label" } == true, "expected visible label evidence")
+    }
+
+    @MainActor
+    private static func testPortableExportIncludesSafeUserDataOnly() async throws {
+        let store = FoodWalletStore()
+
+        try expect(store.createQuickTextDraft("2 eggs and toast"), "expected quick text draft")
+        store.confirmDraft()
+        try expect(store.createRecipeDraft(id: "tomato-cucumber-salad", consumedFraction: 0.5), "expected recipe draft")
+        store.confirmDraft()
+
+        let bundle = try store.exportPortableBundle()
+        try expect(bundle.schema == "grain.food-wallet.export.v1", "expected export schema")
+        try expect(bundle.entries.count == 2, "expected two exported entries")
+        try expect(bundle.templates.contains { $0.id == "usual-breakfast" }, "expected templates in export")
+        try expect(bundle.recipes.contains { $0.id == "tomato-cucumber-salad" }, "expected recipes in export")
+        try expect(bundle.manifest.sha256.count == 64, "expected SHA-256 checksum")
+
+        let json = String(decoding: try store.exportPortableJSON(), as: UTF8.self)
+        let csv = store.exportCSV()
+        try expect(csv.contains("date,label,kcal_min,kcal_mode,kcal_max,grams,source_class,trust_status"), "expected CSV header")
+        try expect(csv.contains("Tomato cucumber salad"), "expected recipe entry in CSV")
+
+        let forbidden = ["rawPhoto", "photoBytes", "photoBase64", "imageBytes", "snapshotB64", "bundleB64", "privateKey", "trustPub", "COSE", "CBOR", "GR1"]
+        for token in forbidden {
+            try expect(!json.localizedCaseInsensitiveContains(token), "portable export leaked \(token)")
+            try expect(!csv.localizedCaseInsensitiveContains(token), "CSV export leaked \(token)")
+        }
+    }
+
+    @MainActor
     private static func testStorePublishesAnalysisStateWhilePhotoEstimateRuns() async throws {
         let store = FoodWalletStore(analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 100_000_000))
 
@@ -274,6 +415,22 @@ private struct FoodWalletTestFailure: Error, CustomStringConvertible {
 
     init(_ message: String) {
         self.message = message
+    }
+}
+
+private final class MutableFoodWalletClock: FoodWalletClock, @unchecked Sendable {
+    var nowDate: Date
+
+    init(now: Date) {
+        self.nowDate = now
+    }
+
+    func now() -> Date {
+        nowDate
+    }
+
+    func confirmedAt() -> Date {
+        nowDate
     }
 }
 

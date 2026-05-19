@@ -118,6 +118,8 @@ public final class FoodWalletStore: ObservableObject {
     @Published public private(set) var analysisState: FoodAnalysisState
     @Published public private(set) var entries: [FoodIntakeEntry]
     @Published public private(set) var safeSummary: SafeFoodSummary
+    @Published public private(set) var savedTemplates: [SavedFoodTemplate]
+    @Published public private(set) var savedRecipes: [SavedFoodRecipe]
     @Published public var selectedExample: FoodCaptureExample
     @Published public var subscription: SubscriptionState
     @Published public var privacy: PrivacyConsentState
@@ -132,6 +134,8 @@ public final class FoodWalletStore: ObservableObject {
         wallet: GrainFoodWallet = GrainFoodWallet(),
         subscription: SubscriptionState = .free,
         privacy: PrivacyConsentState = .notRequested,
+        savedTemplates: [SavedFoodTemplate] = SavedFoodTemplate.defaultTemplates,
+        savedRecipes: [SavedFoodRecipe] = SavedFoodRecipe.defaultRecipes,
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
     ) {
         self.analysisClient = analysisClient
@@ -140,6 +144,8 @@ public final class FoodWalletStore: ObservableObject {
         self.analysisState = .idle
         self.entries = []
         self.safeSummary = wallet.exportSafeSummary()
+        self.savedTemplates = savedTemplates
+        self.savedRecipes = savedRecipes
         self.selectedExample = .fujiApple
         self.subscription = subscription
         self.privacy = privacy
@@ -258,7 +264,291 @@ public final class FoodWalletStore: ObservableObject {
             return copy
         }
         currentCandidate = candidate
-        currentDraft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
+        if let draft = currentDraft {
+            currentDraft = makeDraft(
+                meal: candidate.mealEstimate(),
+                sourceClass: draft.sourceClass,
+                trustStatus: draft.trustStatus
+            )
+        } else {
+            currentDraft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
+        }
+    }
+
+    public func createQuickTextDraft(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+        let candidate = QuickTextFoodParser.candidate(for: trimmed)
+        presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
+        return true
+    }
+
+    public func updateCurrentDraftPortion(gramsMode: Int64) -> Bool {
+        guard let candidate = currentCandidate, let draft = currentDraft, gramsMode > 0 else {
+            return false
+        }
+        presentDraft(
+            candidate: candidate.scaled(toGrams: gramsMode),
+            sourceClass: draft.sourceClass,
+            trustStatus: draft.trustStatus
+        )
+        return true
+    }
+
+    public func createTemplateDraft(id: String) -> Bool {
+        guard let template = savedTemplates.first(where: { $0.id == id }) else {
+            return false
+        }
+        presentDraft(
+            candidate: FoodWalletStore.candidate(
+                id: "template-\(template.id)",
+                label: template.title,
+                genericLabel: template.title.lowercased(),
+                dishType: .mixed,
+                meal: template.mealEstimate,
+                confidence: .high,
+                assumptions: [
+                    FoodAssumption(id: "saved-template", label: "saved meal template"),
+                    FoodAssumption(id: "review-portion", label: "review portion before saving"),
+                ],
+                evidence: [
+                    ProviderEvidence(
+                        provider: "food_wallet_template",
+                        providerID: template.id,
+                        matchedName: template.title,
+                        servingBasis: "saved_template"
+                    ),
+                ]
+            ),
+            sourceClass: .measured,
+            trustStatus: .selfIssued
+        )
+        return true
+    }
+
+    public func createRecipeDraft(id: String, consumedFraction: Double) -> Bool {
+        guard let recipe = savedRecipes.first(where: { $0.id == id }) else {
+            return false
+        }
+        let meal = recipe.mealEstimate(consumedFraction: consumedFraction)
+        presentDraft(
+            candidate: FoodWalletStore.candidate(
+                id: "recipe-\(recipe.id)",
+                label: recipe.title,
+                genericLabel: recipe.title.lowercased(),
+                dishType: .mixed,
+                meal: meal,
+                confidence: .high,
+                assumptions: [
+                    FoodAssumption(id: "saved-recipe", label: "saved recipe ingredients"),
+                    FoodAssumption(id: "partial-portion", label: "logged partial portion"),
+                ],
+                evidence: [
+                    ProviderEvidence(
+                        provider: "food_wallet_recipe",
+                        providerID: recipe.id,
+                        matchedName: recipe.title,
+                        servingBasis: "recipe_yield"
+                    ),
+                ]
+            ),
+            sourceClass: .measured,
+            trustStatus: .selfIssued
+        )
+        return true
+    }
+
+    public func createRecentEntryDraft(entryID: String) -> Bool {
+        guard let entry = entries.first(where: { $0.entryID == entryID }) else {
+            return false
+        }
+        presentDraft(
+            candidate: FoodWalletStore.candidate(
+                id: "repeat-\(entry.entryID)",
+                label: entry.meal.label,
+                genericLabel: entry.meal.label.lowercased(),
+                dishType: .unknown,
+                meal: entry.meal,
+                confidence: .high,
+                assumptions: [
+                    FoodAssumption(id: "repeat-entry", label: "repeated from confirmed entry"),
+                ],
+                evidence: [
+                    ProviderEvidence(
+                        provider: "food_wallet_history",
+                        providerID: entry.entryID,
+                        matchedName: entry.meal.label,
+                        servingBasis: "confirmed_entry"
+                    ),
+                ]
+            ),
+            sourceClass: .measured,
+            trustStatus: .selfIssued
+        )
+        return true
+    }
+
+    public func createPackagedFoodDraft(barcode: String) -> Bool {
+        guard barcode == "fixture-kombucha-80" else {
+            return false
+        }
+        let meal = MealEstimate(
+            label: "Kombucha",
+            kcal: 80,
+            varianceKcal: 0,
+            amountGrams: 473,
+            servingGrams: 473,
+            servings: 1,
+            macronutrients: MealMacronutrients(
+                proteinGrams: 0,
+                carbohydrateGrams: 20,
+                fatGrams: 0,
+                fiberGrams: 0
+            )
+        )
+        presentDraft(
+            candidate: FoodWalletStore.candidate(
+                id: "barcode-fixture-kombucha-80",
+                label: "Kombucha",
+                genericLabel: "kombucha",
+                dishType: .packaged,
+                meal: meal,
+                confidence: .high,
+                assumptions: [
+                    FoodAssumption(id: "barcode-product", label: "barcode matched packaged product"),
+                    FoodAssumption(id: "review-serving", label: "confirm how much you drank"),
+                ],
+                evidence: [
+                    ProviderEvidence(
+                        provider: "open_food_facts_fixture",
+                        providerID: barcode,
+                        matchedName: "Kombucha bottle",
+                        servingBasis: "barcode_product"
+                    ),
+                ]
+            ),
+            sourceClass: .measured,
+            trustStatus: .selfIssued
+        )
+        return true
+    }
+
+    public func createVisibleLabelDraft(label: String, caloriesPerContainer: Int64, grams: Int64) -> Bool {
+        guard caloriesPerContainer > 0, grams > 0 else {
+            return false
+        }
+        let meal = MealEstimate(
+            label: label,
+            kcal: caloriesPerContainer,
+            varianceKcal: 0,
+            amountGrams: grams,
+            servingGrams: grams,
+            servings: 1,
+            macronutrients: MealMacronutrients(
+                proteinGrams: 0,
+                carbohydrateGrams: Double(caloriesPerContainer) / 4,
+                fatGrams: 0,
+                fiberGrams: 0
+            )
+        )
+        presentDraft(
+            candidate: FoodWalletStore.candidate(
+                id: "visible-label-\(label.lowercased().replacingOccurrences(of: " ", with: "-"))",
+                label: label,
+                genericLabel: label.lowercased(),
+                dishType: .packaged,
+                meal: meal,
+                confidence: .high,
+                assumptions: [
+                    FoodAssumption(id: "visible-label", label: "visible nutrition label calories"),
+                    FoodAssumption(id: "whole-container", label: "whole container label value"),
+                ],
+                evidence: [
+                    ProviderEvidence(
+                        provider: "visible_nutrition_label",
+                        providerID: "label-user-confirmed",
+                        matchedName: label,
+                        servingBasis: "per_container_label"
+                    ),
+                ]
+            ),
+            sourceClass: .measured,
+            trustStatus: .selfIssued
+        )
+        return true
+    }
+
+    public func createVerifiedServingOfferDraft() -> Bool {
+        let meal = MealEstimate(
+            label: "Verified lentil bowl",
+            kcal: 520,
+            varianceKcal: 0,
+            amountGrams: 420,
+            servingGrams: 420,
+            servings: 1,
+            macronutrients: MealMacronutrients(
+                proteinGrams: 26,
+                carbohydrateGrams: 68,
+                fatGrams: 14,
+                fiberGrams: 15
+            )
+        )
+        presentDraft(
+            candidate: FoodWalletStore.candidate(
+                id: "verified-serving-offer-demo",
+                label: meal.label,
+                genericLabel: "lentil bowl",
+                dishType: .mixed,
+                meal: meal,
+                confidence: .high,
+                assumptions: [
+                    FoodAssumption(id: "issuer-serving", label: "issuer-provided serving"),
+                    FoodAssumption(id: "grain-verified", label: "verified serving offer demo"),
+                ],
+                evidence: [
+                    ProviderEvidence(
+                        provider: "grain_serving_offer",
+                        providerID: "demo-serving-offer",
+                        matchedName: "Verified lentil bowl",
+                        servingBasis: "issuer_attested_serving"
+                    ),
+                ]
+            ),
+            sourceClass: .attested,
+            trustStatus: .verified
+        )
+        return true
+    }
+
+    public func copyEntries(fromDateKey dateKey: String) -> Int {
+        let selected = entries.filter { $0.dateKey == dateKey }
+        for entry in selected.reversed() {
+            let draft = wallet.makeSelfIssuedDraft(meal: entry.meal)
+            entries.insert(wallet.confirmDraft(draft), at: 0)
+        }
+        if !selected.isEmpty {
+            safeSummary = wallet.exportSafeSummary()
+        }
+        return selected.count
+    }
+
+    public func exportPortableBundle() throws -> FoodWalletExportBundle {
+        try FoodWalletExportFactory.portableBundle(
+            entries: entries,
+            templates: savedTemplates,
+            recipes: savedRecipes,
+            generatedAt: Date()
+        )
+    }
+
+    public func exportPortableJSON() throws -> Data {
+        try FoodWalletExportFactory.jsonData(exportPortableBundle())
+    }
+
+    public func exportCSV() -> String {
+        FoodWalletExportFactory.csv(entries: entries)
     }
 
     public func confirmDraft() {
@@ -385,10 +675,7 @@ public final class FoodWalletStore: ObservableObject {
         }
         slowAnalysisTask?.cancel()
         slowAnalysisTask = nil
-        let draft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
-        currentCandidate = candidate
-        currentDraft = draft
-        analysisState = .draftReady
+        presentDraft(candidate: candidate, sourceClass: .estimated, trustStatus: .estimated)
     }
 
     private func failAnalysis(_ error: Error, for operation: FoodAnalysisOperation) {
@@ -412,6 +699,76 @@ public final class FoodWalletStore: ObservableObject {
         case .idle, .failed, .draftReady, .blockedPrivacy:
             return false
         }
+    }
+
+    private func presentDraft(
+        candidate: FoodAnalysisCandidate,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus
+    ) {
+        slowAnalysisTask?.cancel()
+        slowAnalysisTask = nil
+        currentCandidate = candidate
+        currentDraft = makeDraft(
+            meal: candidate.mealEstimate(),
+            sourceClass: sourceClass,
+            trustStatus: trustStatus
+        )
+        analysisState = .draftReady
+    }
+
+    private func makeDraft(
+        meal: MealEstimate,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus
+    ) -> FoodIntakeDraft {
+        switch trustStatus {
+        case .verified:
+            return wallet.makeVerifiedDraft(meal: meal)
+        case .selfIssued:
+            return wallet.makeSelfIssuedDraft(meal: meal)
+        case .estimated, .untrusted:
+            return wallet.makeEstimatedDraft(meal: meal)
+        }
+    }
+
+    private static func candidate(
+        id: String,
+        label: String,
+        genericLabel: String,
+        dishType: DishType,
+        meal: MealEstimate,
+        confidence: EstimateConfidence,
+        assumptions: [FoodAssumption],
+        evidence: [ProviderEvidence]
+    ) -> FoodAnalysisCandidate {
+        let variance = max(0, meal.varianceKcal)
+        return FoodAnalysisCandidate(
+            id: id,
+            primaryLabel: label,
+            genericLabel: genericLabel,
+            dishType: dishType,
+            portion: PortionEstimate(
+                gramsMin: max(1, meal.amountGrams - max(1, meal.amountGrams / 6)),
+                gramsMode: meal.amountGrams,
+                gramsMax: meal.amountGrams + max(1, meal.amountGrams / 6)
+            ),
+            nutrition: NutritionRange(
+                minKcal: max(0, meal.kcal - variance),
+                modeKcal: meal.kcal,
+                maxKcal: meal.kcal + variance
+            ),
+            macronutrients: meal.macronutrients ?? MealMacronutrients(
+                proteinGrams: 0,
+                carbohydrateGrams: 0,
+                fatGrams: 0,
+                fiberGrams: 0
+            ),
+            confidence: confidence,
+            assumptions: assumptions,
+            evidence: evidence,
+            userConfirmationRequired: true
+        )
     }
 
     private static func failureCode(for error: Error) -> FoodAnalysisFailureCode {
