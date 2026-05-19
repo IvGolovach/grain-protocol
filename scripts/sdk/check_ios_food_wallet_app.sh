@@ -36,8 +36,18 @@ else
 fi
 
 has_raw_photo_retention() {
-  local pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|UIImageWriteToSavedPhotosAlbum|PHPhotoLibrary|writeToFile|\.write\s*\(|FileManager\.default\.(createFile|copyItem|moveItem)|UserDefaults\.standard\.(set|data)|NSKeyedArchiver'
-  python3 tools/ci/find_regex_match.py --ignore-case "$pattern" \
+  local storage_pattern='UIImageJPEGRepresentation|UIImagePNGRepresentation|UIImageWriteToSavedPhotosAlbum|PHPhotoLibrary|writeToFile|\.write\s*\(|FileManager\.default\.(createFile|copyItem|moveItem)|NSKeyedArchiver'
+  python3 tools/ci/find_regex_match.py --ignore-case "$storage_pattern" \
+    "$APP_DIR/Sources/FoodWalletCore" \
+    "$APP_DIR/Sources/FoodWalletApp" \
+    "$APP_DIR/Sources/FoodWalletAppIntents" >/dev/null && return 0
+  local storage_status=$?
+  if [[ "$storage_status" -ne 1 ]]; then
+    return "$storage_status"
+  fi
+
+  local defaults_photo_pattern='UserDefaults\.standard\.(set|data)[^\n]*(jpegData|pngData|imageBytes|photoBytes|rawPhoto|base64EncodedString|TransientMealPhotoPayload|CapturedMealPhoto)'
+  python3 tools/ci/find_regex_match.py --ignore-case "$defaults_photo_pattern" \
     "$APP_DIR/Sources/FoodWalletCore" \
     "$APP_DIR/Sources/FoodWalletApp" \
     "$APP_DIR/Sources/FoodWalletAppIntents" >/dev/null

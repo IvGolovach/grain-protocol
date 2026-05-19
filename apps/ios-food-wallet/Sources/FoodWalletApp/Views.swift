@@ -38,6 +38,7 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
 }
 
 private enum FoodWalletHaptics {
+    @MainActor
     static func selectionChanged() {
         #if os(iOS)
         UISelectionFeedbackGenerator().selectionChanged()
@@ -305,6 +306,14 @@ private struct AddFoodHubView: View {
         IngredientBuilderRow(),
     ]
     @State private var ingredientErrorMessage: String?
+    @State private var personalIngredientName: String?
+    @State private var personalServingGrams = ""
+    @State private var personalServingKcal = ""
+    @State private var personalProteinGrams = ""
+    @State private var personalCarbohydrateGrams = ""
+    @State private var personalFatGrams = ""
+    @State private var personalFiberGrams = ""
+    @State private var personalIngredientErrorMessage: String?
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
@@ -354,6 +363,20 @@ private struct AddFoodHubView: View {
                         .font(.caption)
                         .foregroundStyle(.red)
                         .accessibilityIdentifier("IngredientBuilderError")
+                }
+
+                if let personalIngredientName {
+                    PersonalIngredientResolutionView(
+                        ingredientName: personalIngredientName,
+                        servingGrams: $personalServingGrams,
+                        servingKcal: $personalServingKcal,
+                        proteinGrams: $personalProteinGrams,
+                        carbohydrateGrams: $personalCarbohydrateGrams,
+                        fatGrams: $personalFatGrams,
+                        fiberGrams: $personalFiberGrams,
+                        errorMessage: personalIngredientErrorMessage,
+                        onSave: savePersonalIngredient
+                    )
                 }
 
                 Button(action: createIngredientMealDraft) {
@@ -458,6 +481,7 @@ private struct AddFoodHubView: View {
         switch result {
         case .created:
             ingredientErrorMessage = nil
+            personalIngredientErrorMessage = nil
             onDraftReady()
         case .emptyTitle:
             ingredientErrorMessage = "Add a meal name."
@@ -466,8 +490,57 @@ private struct AddFoodHubView: View {
         case let .invalidGrams(name):
             ingredientErrorMessage = "Check grams for \(name)."
         case let .unknownIngredient(name):
-            ingredientErrorMessage = "Unknown ingredient: \(name)."
+            ingredientErrorMessage = "Add nutrition for \(name) once, then use it in meals."
+            preparePersonalIngredientForm(for: name)
         }
+    }
+
+    private func preparePersonalIngredientForm(for name: String) {
+        if personalIngredientName != name {
+            personalIngredientName = name
+            personalServingGrams = ""
+            personalServingKcal = ""
+            personalProteinGrams = ""
+            personalCarbohydrateGrams = ""
+            personalFatGrams = ""
+            personalFiberGrams = ""
+            personalIngredientErrorMessage = nil
+        }
+    }
+
+    private func savePersonalIngredient() {
+        guard let personalIngredientName else {
+            return
+        }
+        let result = store.savePersonalIngredient(
+            name: personalIngredientName,
+            servingGrams: decimalValue(personalServingGrams),
+            servingKcal: Int64(decimalValue(personalServingKcal).rounded()),
+            proteinGrams: decimalValue(personalProteinGrams),
+            carbohydrateGrams: decimalValue(personalCarbohydrateGrams),
+            fatGrams: decimalValue(personalFatGrams),
+            fiberGrams: personalFiberGrams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : decimalValue(personalFiberGrams)
+        )
+        switch result {
+        case .saved:
+            self.personalIngredientName = nil
+            personalIngredientErrorMessage = nil
+            createIngredientMealDraft()
+        case .emptyName:
+            personalIngredientErrorMessage = "Add an ingredient name."
+        case .invalidServingGrams:
+            personalIngredientErrorMessage = "Enter serving grams from the label."
+        case .invalidCalories:
+            personalIngredientErrorMessage = "Enter calories from the label."
+        case let .invalidMacro(name):
+            personalIngredientErrorMessage = "Check \(name) grams."
+        }
+    }
+
+    private func decimalValue(_ text: String) -> Double {
+        Double(text.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
     }
 }
 
@@ -484,6 +557,68 @@ private struct IngredientBuilderRowView: View {
                 .frame(width: 72)
                 .accessibilityIdentifier("IngredientGramsField-\(index)")
         }
+    }
+}
+
+private struct PersonalIngredientResolutionView: View {
+    let ingredientName: String
+    @Binding var servingGrams: String
+    @Binding var servingKcal: String
+    @Binding var proteinGrams: String
+    @Binding var carbohydrateGrams: String
+    @Binding var fatGrams: String
+    @Binding var fiberGrams: String
+    var errorMessage: String?
+    var onSave: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add custom ingredient")
+                .font(.headline)
+
+            Text("Use the nutrition label once. Food Wallet will reuse it next time.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(ingredientName)
+                .font(.subheadline.weight(.semibold))
+                .accessibilityIdentifier("PersonalIngredientNameLabel")
+
+            HStack(spacing: 10) {
+                TextField("serving g", text: $servingGrams)
+                    .accessibilityIdentifier("PersonalIngredientServingGramsField")
+                TextField("kcal", text: $servingKcal)
+                    .accessibilityIdentifier("PersonalIngredientCaloriesField")
+            }
+
+            HStack(spacing: 10) {
+                TextField("protein", text: $proteinGrams)
+                    .accessibilityIdentifier("PersonalIngredientProteinField")
+                TextField("carbs", text: $carbohydrateGrams)
+                    .accessibilityIdentifier("PersonalIngredientCarbsField")
+            }
+
+            HStack(spacing: 10) {
+                TextField("fat", text: $fatGrams)
+                    .accessibilityIdentifier("PersonalIngredientFatField")
+                TextField("fiber", text: $fiberGrams)
+                    .accessibilityIdentifier("PersonalIngredientFiberField")
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .accessibilityIdentifier("PersonalIngredientError")
+            }
+
+            Button(action: onSave) {
+                Label("Save custom ingredient", systemImage: "checkmark.circle.fill")
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("SavePersonalIngredientButton")
+        }
+        .padding(.vertical, 6)
     }
 }
 

@@ -36,15 +36,24 @@ struct FoodWalletAppMain: App {
 
 private enum FoodWalletAppConfiguration {
     private static let brokerEndpointEnvironmentKey = "GRAIN_FOOD_ANALYSIS_BROKER_URL"
+    private static let personalIngredientsDefaultsKey = "grain.food-wallet.personal-ingredients.v1"
     private static let deviceSmokeArgument = "--grain-device-smoke"
     private static let uiTestPhotoFlowArgument = "--grain-ui-test-photo-flow"
     private static let uiTestDelayedPhotoFlowArgument = "--grain-ui-test-delayed-photo-flow"
     private static let uiTestFailingPhotoFlowArgument = "--grain-ui-test-failing-photo-flow"
+    private static let uiTestResetPersonalIngredientsArgument = "--grain-ui-test-reset-personal-ingredients"
     private static let uiTestAnalysisDelayArgument = "--grain-analysis-delay-ms"
 
     @MainActor
     static func makeStore() -> FoodWalletStore {
-        FoodWalletStore(analysisClient: makeAnalysisClient())
+        if ProcessInfo.processInfo.arguments.contains(uiTestResetPersonalIngredientsArgument) {
+            UserDefaults.standard.removeObject(forKey: personalIngredientsDefaultsKey)
+        }
+        return FoodWalletStore(
+            analysisClient: makeAnalysisClient(),
+            personalIngredients: loadPersonalIngredients(),
+            onPersonalIngredientsChange: savePersonalIngredients
+        )
     }
 
     private static func makeAnalysisClient() -> any FoodAnalysisClient {
@@ -83,6 +92,25 @@ private enum FoodWalletAppConfiguration {
             return endpoint.appendingPathComponent("v1/food/analyze-photo")
         }
         return endpoint
+    }
+
+    private static func loadPersonalIngredients() -> [PersonalFoodIngredient] {
+        guard let data = UserDefaults.standard.data(forKey: personalIngredientsDefaultsKey) else {
+            return []
+        }
+        return (try? JSONDecoder().decode([PersonalFoodIngredient].self, from: data)) ?? []
+    }
+
+    @MainActor
+    private static func savePersonalIngredients(_ ingredients: [PersonalFoodIngredient]) {
+        guard !ingredients.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: personalIngredientsDefaultsKey)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(ingredients) else {
+            return
+        }
+        UserDefaults.standard.set(data, forKey: personalIngredientsDefaultsKey)
     }
 
     private static func uiTestDelayNanoseconds() -> UInt64 {

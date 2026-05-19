@@ -142,6 +142,54 @@ public enum FoodMealDraftCreationResult: Error, Equatable, Sendable, CustomStrin
     }
 }
 
+public struct PersonalFoodIngredient: Identifiable, Codable, Equatable, Sendable {
+    public var id: String
+    public var name: String
+    public var sourceServingGrams: Double
+    public var sourceServingKcal: Int64
+    public var kcalPer100Grams: Double
+    public var macronutrientsPer100Grams: MealMacronutrients
+
+    public init(
+        id: String,
+        name: String,
+        sourceServingGrams: Double,
+        sourceServingKcal: Int64,
+        kcalPer100Grams: Double,
+        macronutrientsPer100Grams: MealMacronutrients
+    ) {
+        self.id = id
+        self.name = name
+        self.sourceServingGrams = sourceServingGrams
+        self.sourceServingKcal = sourceServingKcal
+        self.kcalPer100Grams = kcalPer100Grams
+        self.macronutrientsPer100Grams = macronutrientsPer100Grams
+    }
+}
+
+public enum FoodPersonalIngredientSaveResult: Error, Equatable, Sendable, CustomStringConvertible {
+    case saved
+    case emptyName
+    case invalidServingGrams
+    case invalidCalories
+    case invalidMacro(String)
+
+    public var description: String {
+        switch self {
+        case .saved:
+            return "saved"
+        case .emptyName:
+            return "emptyName"
+        case .invalidServingGrams:
+            return "invalidServingGrams"
+        case .invalidCalories:
+            return "invalidCalories"
+        case let .invalidMacro(name):
+            return "invalidMacro(\(name))"
+        }
+    }
+}
+
 public struct FoodWalletExportBundle: Codable, Equatable, Sendable {
     public var schema: String
     public var version: Int
@@ -263,11 +311,13 @@ struct FoodIngredientCatalog {
         var aliases: [String]
         var kcalPer100Grams: Double
         var macronutrientsPer100Grams: MealMacronutrients
+        var provider: String = "food_wallet_ingredient_catalog"
     }
 
     static func candidate(
         title: String,
-        ingredients: [FoodMealIngredientInput]
+        ingredients: [FoodMealIngredientInput],
+        personalIngredients: [PersonalFoodIngredient] = []
     ) -> Result<FoodAnalysisCandidate, FoodMealDraftCreationResult> {
         let mealTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !mealTitle.isEmpty else {
@@ -283,7 +333,7 @@ struct FoodIngredientCatalog {
             guard ingredient.grams > 0 else {
                 return .failure(.invalidGrams(inputName.isEmpty ? "ingredient" : inputName))
             }
-            guard let entry = lookup(inputName) else {
+            guard let entry = lookup(inputName, personalIngredients: personalIngredients) else {
                 return .failure(.unknownIngredient(inputName))
             }
             resolved.append(ResolvedIngredient(entry: entry, inputName: inputName, grams: ingredient.grams))
@@ -307,6 +357,22 @@ struct FoodIngredientCatalog {
                 fiberGrams: (partial.fiberGrams ?? 0) + (macros.fiberGrams ?? 0)
             )
         }
+        var assumptions = [
+            FoodAssumption(id: "ingredient-catalog", label: "calculated from ingredient nutrition table"),
+            FoodAssumption(id: "review-portion", label: "review portion before saving"),
+        ]
+        if resolved.contains(where: { $0.entry.provider == "food_wallet_personal_ingredient" }) {
+            assumptions.append(FoodAssumption(
+                id: "personal-ingredient",
+                label: "uses nutrition label entered by user"
+            ))
+        }
+        if resolved.contains(where: { $0.entry.id == "protein-powder.casein" }) {
+            assumptions.append(FoodAssumption(
+                id: "protein-powder-varies",
+                label: "protein powder nutrition varies by brand; verify label"
+            ))
+        }
         return .success(FoodAnalysisCandidate(
             id: "ingredients-\(slug(mealTitle))",
             primaryLabel: mealTitle,
@@ -324,13 +390,10 @@ struct FoodIngredientCatalog {
             ),
             macronutrients: macronutrients,
             confidence: .medium,
-            assumptions: [
-                FoodAssumption(id: "ingredient-catalog", label: "calculated from ingredient nutrition table"),
-                FoodAssumption(id: "review-portion", label: "review portion before saving"),
-            ],
+            assumptions: assumptions,
             evidence: resolved.map { ingredient in
                 ProviderEvidence(
-                    provider: "food_wallet_ingredient_catalog",
+                    provider: ingredient.entry.provider,
                     providerID: ingredient.entry.id,
                     matchedName: ingredient.entry.label,
                     servingBasis: "\(ingredient.grams)g user-entered ingredient"
@@ -340,8 +403,68 @@ struct FoodIngredientCatalog {
         ))
     }
 
-    private static func lookup(_ input: String) -> Entry? {
+    static func personalIngredient(
+        name: String,
+        servingGrams: Double,
+        servingKcal: Int64,
+        proteinGrams: Double,
+        carbohydrateGrams: Double,
+        fatGrams: Double,
+        fiberGrams: Double?
+    ) -> Result<PersonalFoodIngredient, FoodPersonalIngredientSaveResult> {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return .failure(.emptyName)
+        }
+        guard servingGrams > 0 else {
+            return .failure(.invalidServingGrams)
+        }
+        guard servingKcal >= 0 else {
+            return .failure(.invalidCalories)
+        }
+        for (label, value) in [
+            ("protein", proteinGrams),
+            ("carbs", carbohydrateGrams),
+            ("fat", fatGrams),
+            ("fiber", fiberGrams ?? 0),
+        ] where value < 0 {
+            return .failure(.invalidMacro(label))
+        }
+
+        let factor = 100 / servingGrams
+        return .success(PersonalFoodIngredient(
+            id: "personal-\(slug(trimmed))",
+            name: trimmed,
+            sourceServingGrams: servingGrams,
+            sourceServingKcal: servingKcal,
+            kcalPer100Grams: Double(servingKcal) * factor,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: proteinGrams * factor,
+                carbohydrateGrams: carbohydrateGrams * factor,
+                fatGrams: fatGrams * factor,
+                fiberGrams: fiberGrams.map { $0 * factor }
+            )
+        ))
+    }
+
+    private static func lookup(
+        _ input: String,
+        personalIngredients: [PersonalFoodIngredient]
+    ) -> Entry? {
         let normalized = input.normalizedFoodIngredientName
+        if let personal = personalIngredients.first(where: { ingredient in
+            let normalizedPersonal = ingredient.name.normalizedFoodIngredientName
+            return normalized == normalizedPersonal || normalized.contains(normalizedPersonal)
+        }) {
+            return Entry(
+                id: personal.id,
+                label: personal.name,
+                aliases: [personal.name],
+                kcalPer100Grams: personal.kcalPer100Grams,
+                macronutrientsPer100Grams: personal.macronutrientsPer100Grams,
+                provider: "food_wallet_personal_ingredient"
+            )
+        }
         return entries.first { entry in
             entry.aliases.contains { alias in
                 normalized == alias || normalized.contains(alias)
@@ -403,6 +526,25 @@ struct FoodIngredientCatalog {
                 proteinGrams: 9,
                 carbohydrateGrams: 3.6,
                 fatGrams: 5,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "protein-powder.casein",
+            label: "Casein protein powder",
+            aliases: [
+                "casein",
+                "casein protein",
+                "casein protein powder",
+                "casein powder",
+                "micellar casein",
+                "protein powder",
+            ],
+            kcalPer100Grams: 360,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 80,
+                carbohydrateGrams: 10,
+                fatGrams: 3,
                 fiberGrams: 0
             )
         ),

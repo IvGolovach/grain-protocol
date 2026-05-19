@@ -120,12 +120,14 @@ public final class FoodWalletStore: ObservableObject {
     @Published public private(set) var safeSummary: SafeFoodSummary
     @Published public private(set) var savedTemplates: [SavedFoodTemplate]
     @Published public private(set) var savedRecipes: [SavedFoodRecipe]
+    @Published public private(set) var personalIngredients: [PersonalFoodIngredient]
     @Published public var selectedExample: FoodCaptureExample
     @Published public var subscription: SubscriptionState
     @Published public var privacy: PrivacyConsentState
 
     private let analysisClient: any FoodAnalysisClient
     private let slowAnalysisThresholdNanoseconds: UInt64
+    private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
     private var slowAnalysisTask: Task<Void, Never>?
     private var wallet: GrainFoodWallet
 
@@ -136,16 +138,20 @@ public final class FoodWalletStore: ObservableObject {
         privacy: PrivacyConsentState = .notRequested,
         savedTemplates: [SavedFoodTemplate] = SavedFoodTemplate.defaultTemplates,
         savedRecipes: [SavedFoodRecipe] = SavedFoodRecipe.defaultRecipes,
+        personalIngredients: [PersonalFoodIngredient] = [],
+        onPersonalIngredientsChange: @escaping @MainActor ([PersonalFoodIngredient]) -> Void = { _ in },
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
     ) {
         self.analysisClient = analysisClient
         self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
+        self.personalIngredientsDidChange = onPersonalIngredientsChange
         self.wallet = wallet
         self.analysisState = .idle
         self.entries = []
         self.safeSummary = wallet.exportSafeSummary()
         self.savedTemplates = savedTemplates
         self.savedRecipes = savedRecipes
+        self.personalIngredients = personalIngredients
         self.selectedExample = .fujiApple
         self.subscription = subscription
         self.privacy = privacy
@@ -289,10 +295,46 @@ public final class FoodWalletStore: ObservableObject {
         title: String,
         ingredients: [FoodMealIngredientInput]
     ) -> FoodMealDraftCreationResult {
-        switch FoodIngredientCatalog.candidate(title: title, ingredients: ingredients) {
+        switch FoodIngredientCatalog.candidate(
+            title: title,
+            ingredients: ingredients,
+            personalIngredients: personalIngredients
+        ) {
         case let .success(candidate):
             presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
             return .created
+        case let .failure(result):
+            return result
+        }
+    }
+
+    public func savePersonalIngredient(
+        name: String,
+        servingGrams: Double,
+        servingKcal: Int64,
+        proteinGrams: Double,
+        carbohydrateGrams: Double,
+        fatGrams: Double,
+        fiberGrams: Double? = nil
+    ) -> FoodPersonalIngredientSaveResult {
+        switch FoodIngredientCatalog.personalIngredient(
+            name: name,
+            servingGrams: servingGrams,
+            servingKcal: servingKcal,
+            proteinGrams: proteinGrams,
+            carbohydrateGrams: carbohydrateGrams,
+            fatGrams: fatGrams,
+            fiberGrams: fiberGrams
+        ) {
+        case let .success(ingredient):
+            if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
+                personalIngredients[existingIndex] = ingredient
+            } else {
+                personalIngredients.append(ingredient)
+            }
+            personalIngredients.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            personalIngredientsDidChange(personalIngredients)
+            return .saved
         case let .failure(result):
             return result
         }
@@ -546,6 +588,8 @@ public final class FoodWalletStore: ObservableObject {
         currentDraft = nil
         analysisState = .idle
         safeSummary = wallet.exportSafeSummary()
+        personalIngredients = []
+        personalIngredientsDidChange(personalIngredients)
     }
 
     public func runDeviceSmoke() async -> FoodWalletDeviceSmokeResult {

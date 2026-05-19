@@ -39,6 +39,12 @@ struct FoodWalletCoreTests {
         await run("ingredientMealBuilderCreatesReviewableDraft") {
             try await testIngredientMealBuilderCreatesReviewableDraft()
         }
+        await run("caseinProteinResolvesAsCuratedPowder") {
+            try await testCaseinProteinResolvesAsCuratedPowder()
+        }
+        await run("customIngredientCanResolveUnknownFood") {
+            try await testCustomIngredientCanResolveUnknownFood()
+        }
         await run("explicitTemplatesAndRecentEntriesCreateDrafts") {
             try await testTemplatesRecipesAndRecentEntriesCreateDrafts()
         }
@@ -276,6 +282,66 @@ struct FoodWalletCoreTests {
 
         try expect(store.entries.count == 1, "expected confirmed custom meal")
         try expect(store.entries.first?.meal.label == "Breakfast", "expected saved custom meal")
+    }
+
+    @MainActor
+    private static func testCaseinProteinResolvesAsCuratedPowder() async throws {
+        let store = FoodWalletStore()
+
+        let result = store.createIngredientMealDraft(
+            title: "Casein shake",
+            ingredients: [
+                FoodMealIngredientInput(name: "casein protein", grams: 30),
+            ]
+        )
+
+        try expect(result == .created, "expected casein protein to resolve, got \(result)")
+        try expect(store.currentDraft?.meal.label == "Casein shake", "expected custom shake label")
+        try expect(store.currentDraft?.meal.amountGrams == 30, "expected entered casein grams")
+        try expect(store.currentDraft?.meal.kcal == 108, "expected curated casein calories")
+        try expect(store.currentDraft?.meal.macronutrients?.proteinGrams == 24, "expected high-protein casein macros")
+        try expect(store.currentCandidate?.evidence.contains { $0.providerID == "protein-powder.casein" } == true, "expected curated casein evidence")
+        try expect(store.currentCandidate?.assumptions.contains { $0.id == "review-portion" } == true, "expected review boundary")
+    }
+
+    @MainActor
+    private static func testCustomIngredientCanResolveUnknownFood() async throws {
+        let store = FoodWalletStore()
+
+        let firstResult = store.createIngredientMealDraft(
+            title: "Granola bowl",
+            ingredients: [
+                FoodMealIngredientInput(name: "house granola", grams: 40),
+            ]
+        )
+        try expect(firstResult == .unknownIngredient("house granola"), "expected unknown custom ingredient before saving")
+
+        let saveResult = store.savePersonalIngredient(
+            name: "House granola",
+            servingGrams: 40,
+            servingKcal: 180,
+            proteinGrams: 5,
+            carbohydrateGrams: 24,
+            fatGrams: 7,
+            fiberGrams: 3
+        )
+        try expect(saveResult == .saved, "expected personal ingredient save, got \(saveResult)")
+        try expect(store.personalIngredients.count == 1, "expected one personal ingredient")
+
+        let secondResult = store.createIngredientMealDraft(
+            title: "Granola bowl",
+            ingredients: [
+                FoodMealIngredientInput(name: "house granola", grams: 40),
+                FoodMealIngredientInput(name: "greek yogurt", grams: 150),
+            ]
+        )
+
+        try expect(secondResult == .created, "expected saved personal ingredient to resolve, got \(secondResult)")
+        try expect(store.currentDraft?.meal.amountGrams == 190, "expected summed custom meal grams")
+        try expect(store.currentDraft?.meal.kcal == 326, "expected personal plus catalog calories")
+        try expect(store.currentDraft?.meal.macronutrients?.proteinGrams == 18.5, "expected personal plus catalog protein")
+        try expect(store.currentCandidate?.evidence.contains { $0.provider == "food_wallet_personal_ingredient" } == true, "expected personal ingredient evidence")
+        try expect(store.entries.isEmpty, "expected review boundary before save")
     }
 
     @MainActor
