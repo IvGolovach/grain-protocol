@@ -27,6 +27,7 @@ export class MockFoodAnalyzer implements FoodAnalyzer {
         ],
         total_kcal: 300 + byteSignal,
         kcal_variance: 64,
+        nutrition_label: null,
         serving_g: 220,
         amount_g: 220,
         servings: 1,
@@ -90,9 +91,14 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
     return {
       model: this.model,
       store: false,
-      max_output_tokens: 600,
+      max_output_tokens: 900,
       instructions: [
         "You estimate visible food from one user-provided photo.",
+        "When a Nutrition Facts label, menu label, package label, barcode-facing product panel, or other printed nutrition text is visible, read it with OCR and treat those explicit label facts as higher priority than generic visual portion estimates.",
+        "If a visible label states calories for the whole bottle, package, container, or plate, set total_kcal to that exact whole-container value, set kcal_variance to 0, and fill nutrition_label.calories_per_container.",
+        "If only per-serving calories and servings per container are visible, set total_kcal to calories_per_serving multiplied by servings_per_container, round to the nearest integer, set kcal_variance to 0, and fill the nutrition_label fields.",
+        "Do not rescale explicit package-label calories by bottle size, visual ounces, milliliters, grams, or generic USDA-style per-100g nutrition.",
+        "Set nutrition_label to null when no explicit visible nutrition label is present.",
         "Return only the requested structured JSON observation.",
         "Do not produce Grain ledger records, drafts, CIDs, signatures, or persistence fields.",
         "Never echo or describe raw image bytes."

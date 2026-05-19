@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { OpenAiFoodAnalyzer } from "../src/analyzers.js";
 import { FoodAnalysisCandidateResolver } from "../src/resolver.js";
 import { createBrokerServer } from "../src/server.js";
-import { FixtureNutritionProvider } from "../src/usda.js";
+import { FixtureNutritionProvider, type NutritionProvider } from "../src/usda.js";
 import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation } from "../src/types.js";
 
 const sampleRequest: FoodAnalyzePhotoRequest = {
@@ -39,6 +39,7 @@ async function main(): Promise<number> {
   await testMockEndpoint();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
+  await testVisibleNutritionLabelOverridesDatabasePortionScaling();
   await testUpstreamSchemaValidation();
 
   const failed = checks.filter((entry) => !entry.pass);
@@ -120,8 +121,80 @@ async function testOpenAiRequestShapeAndResolverBoundary(): Promise<void> {
   assert.equal(captured.text.format.type, "json_schema");
   assert.equal(captured.text.format.name, "grain_food_photo_observation_v1");
   assert.equal(captured.text.format.strict, true);
-  assert.equal(JSON.stringify(captured).includes("\"draft_v\""), false);
+  const capturedJson = JSON.stringify(captured);
+  assert.equal(capturedJson.includes("nutrition_label"), true);
+  assert.equal(capturedJson.includes("whole bottle"), true);
+  assert.equal(capturedJson.includes("\"draft_v\""), false);
   pass("OpenAI call uses store=false structured observation, resolver produces draft");
+}
+
+async function testVisibleNutritionLabelOverridesDatabasePortionScaling(): Promise<void> {
+  const analyzer: FoodAnalyzer = {
+    async analyze() {
+      return {
+        mode: "openai",
+        modelId: "gpt-test-vision",
+        observation: {
+          items: [{ label: "kombucha bottle nutrition label", confidence: 0.93 }],
+          total_kcal: 80,
+          kcal_variance: 0,
+          nutrition_label: {
+            is_visible: true,
+            calories_per_container: 80,
+            calories_per_serving: null,
+            servings_per_container: null,
+            serving_size_text: null,
+            container_size_text: "one bottle",
+            source_text: "80 calories per bottle"
+          },
+          serving_g: null,
+          amount_g: 473,
+          servings: 1,
+          confidence: 0.93,
+          rationale: "visible bottle label states 80 calories for the whole bottle"
+        }
+      };
+    }
+  };
+  const nutritionProvider: NutritionProvider = {
+    async lookup(query) {
+      if (!query.toLowerCase().includes("kombucha")) return null;
+      return {
+        provider: "usda_fdc",
+        providerID: "fixture-kombucha-generic",
+        matchedName: "Kombucha, generic",
+        servingBasis: "per_100g",
+        per100g: {
+          kcal: 63,
+          proteinGrams: 0,
+          carbohydrateGrams: 15,
+          fatGrams: 0,
+          fiberGrams: 0
+        }
+      };
+    }
+  };
+
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    const draft = body.draft as Record<string, unknown>;
+    assert.equal((draft.mean as Record<string, unknown>).kcal, 80);
+    assert.equal((draft.var as Record<string, unknown>).kcal, 0);
+
+    const candidate = body.candidate as Record<string, unknown>;
+    assert.equal(candidate.dishType, "packaged");
+    assert.equal(candidate.confidence, "high");
+    const nutrition = candidate.nutrition as Record<string, unknown>;
+    assert.equal(nutrition.minKcal, 80);
+    assert.equal(nutrition.modeKcal, 80);
+    assert.equal(nutrition.maxKcal, 80);
+    const evidence = candidate.evidence as Array<Record<string, unknown>>;
+    assert.equal(evidence.some((entry) => entry.provider === "visible_nutrition_label"), true);
+    assert.equal(evidence.some((entry) => entry.provider === "usda_fdc"), false);
+  }, nutritionProvider);
+  pass("visible nutrition label calories override generic database portion scaling");
 }
 
 async function testUpstreamSchemaValidation(): Promise<void> {
@@ -147,10 +220,14 @@ async function testUpstreamSchemaValidation(): Promise<void> {
   pass("server rejects invalid analyzer observations before resolving drafts");
 }
 
-async function withServer(analyzer: FoodAnalyzer | undefined, run: (baseUrl: string) => Promise<void>): Promise<void> {
+async function withServer(
+  analyzer: FoodAnalyzer | undefined,
+  run: (baseUrl: string) => Promise<void>,
+  nutritionProvider: NutritionProvider = new FixtureNutritionProvider()
+): Promise<void> {
   const server = createBrokerServer({
     analyzer,
-    candidateResolver: new FoodAnalysisCandidateResolver({ nutritionProvider: new FixtureNutritionProvider() })
+    candidateResolver: new FoodAnalysisCandidateResolver({ nutritionProvider })
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -177,6 +254,7 @@ function fakeObservation(): FoodObservation {
     items: [{ label: "oatmeal", confidence: 0.8 }],
     total_kcal: 512,
     kcal_variance: 49,
+    nutrition_label: null,
     serving_g: 250,
     amount_g: 250,
     servings: 1,

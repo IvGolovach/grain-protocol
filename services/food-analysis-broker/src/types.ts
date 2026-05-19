@@ -31,6 +31,15 @@ export type FoodObservation = {
   }>;
   total_kcal: number;
   kcal_variance: number;
+  nutrition_label: {
+    is_visible: boolean;
+    calories_per_container: number | null;
+    calories_per_serving: number | null;
+    servings_per_container: number | null;
+    serving_size_text: string | null;
+    container_size_text: string | null;
+    source_text: string | null;
+  } | null;
   serving_g: number | null;
   amount_g: number | null;
   servings: number | null;

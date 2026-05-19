@@ -59,7 +59,11 @@ final class FoodWalletUITests: XCTestCase {
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.otherElements["AnalysisLoadingView"].waitForExistence(timeout: 2))
+        let loadingView = app.descendants(matching: .any)["AnalysisLoadingView"]
+        XCTAssertTrue(loadingView.waitForExistence(timeout: 2))
+        XCTAssertGreaterThan(loadingView.frame.height, app.frame.height * 0.8)
+        XCTAssertGreaterThan(loadingView.frame.width, app.frame.width * 0.8)
+        XCTAssertFalse(app.buttons["TakeMealPhotoButton"].isHittable)
         XCTAssertTrue(app.staticTexts["AnalysisStatusLabel"].waitForExistence(timeout: 2))
         XCTAssertTrue([
             "Looking for food",

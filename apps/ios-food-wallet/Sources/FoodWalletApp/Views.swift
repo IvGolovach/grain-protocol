@@ -50,6 +50,52 @@ struct FoodWalletRootView: View {
     }
 
     var body: some View {
+        ZStack {
+            tabContent
+
+            if store.analysisState.isAnalyzing {
+                AnalysisProgressOverlay(state: store.analysisState) {
+                    store.cancelAnalysis()
+                }
+                .transition(.opacity)
+                .zIndex(1)
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: store.analysisState.isAnalyzing)
+        .tint(.green)
+        #if os(iOS)
+        .sheet(isPresented: $isShowingCamera) {
+            CameraCaptureView(
+                onPhotoCaptured: { photoPayload in
+                    isShowingCamera = false
+                    Task {
+                        await store.analyze(photoPayload: photoPayload)
+                    }
+                },
+                onCancel: {
+                    isShowingCamera = false
+                }
+            )
+        }
+        #endif
+        .alert(
+            "Camera unavailable",
+            isPresented: Binding(
+                get: { captureErrorMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        captureErrorMessage = nil
+                    }
+                }
+            )
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(captureErrorMessage ?? "")
+        }
+    }
+
+    private var tabContent: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
                 TodayView(onAddFood: startAddFoodFlow)
@@ -80,38 +126,6 @@ struct FoodWalletRootView: View {
             }
             .tabItem { Label(FoodWalletTab.pro.title, systemImage: FoodWalletTab.pro.symbol) }
             .tag(FoodWalletTab.pro)
-        }
-        .tint(.green)
-        .accessibilityIdentifier("FoodWalletRoot")
-        #if os(iOS)
-        .sheet(isPresented: $isShowingCamera) {
-            CameraCaptureView(
-                onPhotoCaptured: { photoPayload in
-                    isShowingCamera = false
-                    Task {
-                        await store.analyze(photoPayload: photoPayload)
-                    }
-                },
-                onCancel: {
-                    isShowingCamera = false
-                }
-            )
-        }
-        #endif
-        .alert(
-            "Camera unavailable",
-            isPresented: Binding(
-                get: { captureErrorMessage != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        captureErrorMessage = nil
-                    }
-                }
-            )
-        ) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(captureErrorMessage ?? "")
         }
     }
 
@@ -236,11 +250,7 @@ private struct CaptureView: View {
             }
 
             Section("Review draft") {
-                if store.analysisState.isAnalyzing {
-                    AnalysisProgressCard(state: store.analysisState) {
-                        store.cancelAnalysis()
-                    }
-                } else if let errorMessage = store.analysisState.errorMessage {
+                if let errorMessage = store.analysisState.errorMessage {
                     AnalysisFailureCard(
                         message: errorMessage,
                         onRetry: onCapturePhoto,
@@ -265,11 +275,12 @@ private struct CaptureView: View {
     }
 }
 
-private struct AnalysisProgressCard: View {
+private struct AnalysisProgressOverlay: View {
     var state: FoodAnalysisState
     var onCancel: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @State private var scanForward = false
     @State private var stepIndex = 0
     @State private var hasTakenLonger = false
@@ -289,50 +300,63 @@ private struct AnalysisProgressCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .center, spacing: 14) {
+        ZStack {
+            backgroundColor
+                .ignoresSafeArea()
+                .accessibilityElement()
+                .accessibilityLabel("Analysis in progress")
+                .accessibilityIdentifier("AnalysisLoadingView")
+
+            VStack(spacing: 28) {
+                Spacer(minLength: 32)
+
                 scanner
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
+                VStack(spacing: 10) {
+                    Text("Analyzing photo")
+                        .font(.title2.weight(.semibold))
+
+                    HStack(spacing: 9) {
                         ProgressView()
                             .tint(.green)
                             .accessibilityIdentifier("AnalysisLoadingIndicator")
                         Text(statusText)
-                            .font(.headline)
+                            .font(.headline.weight(.medium))
                             .accessibilityIdentifier("AnalysisStatusLabel")
                     }
 
                     Text("Food Wallet is turning this photo into a reviewable nutrition draft.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-            }
+                .frame(maxWidth: 320)
 
-            AnalysisStepList(steps: steps, activeIndex: stepIndex)
+                AnalysisStepList(steps: steps, activeIndex: stepIndex)
+                    .frame(maxWidth: 260)
 
-            if state.isSlow || hasTakenLonger {
-                HStack {
-                    Label("Still analyzing. You can cancel and try another photo.", systemImage: "clock")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Cancel", role: .cancel, action: onCancel)
-                        .accessibilityIdentifier("CancelAnalysisButton")
+                Spacer(minLength: 32)
+
+                if state.isSlow || hasTakenLonger {
+                    VStack(spacing: 12) {
+                        Label("Still analyzing", systemImage: "clock")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Cancel", role: .cancel, action: onCancel)
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("CancelAnalysisButton")
+                    }
+                    .transition(.opacity)
+                } else {
+                    Color.clear
+                        .frame(height: 52)
                 }
-                .transition(.opacity)
             }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(.green.opacity(0.18), lineWidth: 1)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("AnalysisLoadingView")
         .task(id: state) {
             stepIndex = 0
             hasTakenLonger = state.isSlow
@@ -359,14 +383,21 @@ private struct AnalysisProgressCard: View {
         }
     }
 
+    private var backgroundColor: Color {
+        if colorScheme == .dark {
+            return Color(.sRGB, red: 0.055, green: 0.07, blue: 0.06, opacity: 1)
+        }
+        return Color(.sRGB, red: 0.98, green: 0.985, blue: 0.975, opacity: 1)
+    }
+
     private var scanner: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 36, style: .continuous)
                 .fill(.green.opacity(0.11))
-                .frame(width: 72, height: 72)
+                .frame(width: 168, height: 168)
 
             Image(systemName: "viewfinder")
-                .font(.system(size: 30, weight: .medium))
+                .font(.system(size: 58, weight: .medium))
                 .foregroundStyle(.green)
 
             if !reduceMotion {
@@ -376,15 +407,15 @@ private struct AnalysisProgressCard: View {
                         startPoint: .leading,
                         endPoint: .trailing
                     ))
-                    .frame(width: 56, height: 3)
-                    .offset(y: scanForward ? 24 : -24)
+                    .frame(width: 124, height: 4)
+                    .offset(y: scanForward ? 56 : -56)
                     .animation(
                         .easeInOut(duration: 1.25).repeatForever(autoreverses: true),
                         value: scanForward
                     )
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
         .onAppear {
             scanForward = true
         }

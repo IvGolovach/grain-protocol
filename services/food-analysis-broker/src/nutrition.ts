@@ -45,6 +45,24 @@ export function estimateFromPer100g(per100g: Per100gNutrients, portion: PortionE
   };
 }
 
+export function estimateFromExplicitCalories(kcal: number, portion: PortionEstimate): NutritionEstimate {
+  validatePortion(portion);
+  const modeKcal = positiveInteger(kcal);
+  return {
+    portion,
+    nutrition: {
+      minKcal: modeKcal,
+      modeKcal,
+      maxKcal: modeKcal
+    },
+    macronutrients: {
+      proteinGrams: 0,
+      carbohydrateGrams: 0,
+      fatGrams: 0
+    }
+  };
+}
+
 export function fallbackEstimate(observation: {
   total_kcal: number;
   kcal_variance: number;

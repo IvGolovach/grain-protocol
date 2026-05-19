@@ -69,6 +69,7 @@ export function assertObservation(value: unknown): FoodObservation {
     items: parseItems(value.items),
     total_kcal: parseNonNegativeInteger(value.total_kcal, "total_kcal"),
     kcal_variance: parseNonNegativeInteger(value.kcal_variance, "kcal_variance"),
+    nutrition_label: parseNutritionLabel(value.nutrition_label),
     serving_g: parseNullableNonNegativeInteger(value.serving_g, "serving_g"),
     amount_g: parseNullableNonNegativeInteger(value.amount_g, "amount_g"),
     servings: parseNullableNonNegativeInteger(value.servings, "servings"),
@@ -77,6 +78,32 @@ export function assertObservation(value: unknown): FoodObservation {
   };
 
   return observation;
+}
+
+function parseNutritionLabel(value: unknown): FoodObservation["nutrition_label"] {
+  if (value === null) return null;
+  if (!isRecord(value)) {
+    throw new BrokerError(502, "UPSTREAM_ERROR", "nutrition_label was not a valid object or null");
+  }
+
+  return {
+    is_visible: parseBoolean(value.is_visible, "nutrition_label.is_visible"),
+    calories_per_container: parseNullableNonNegativeInteger(
+      value.calories_per_container,
+      "nutrition_label.calories_per_container"
+    ),
+    calories_per_serving: parseNullableNonNegativeInteger(
+      value.calories_per_serving,
+      "nutrition_label.calories_per_serving"
+    ),
+    servings_per_container: parseNullableNonNegativeNumber(
+      value.servings_per_container,
+      "nutrition_label.servings_per_container"
+    ),
+    serving_size_text: parseNullableString(value.serving_size_text, "nutrition_label.serving_size_text", 80),
+    container_size_text: parseNullableString(value.container_size_text, "nutrition_label.container_size_text", 80),
+    source_text: parseNullableString(value.source_text, "nutrition_label.source_text", 160)
+  };
 }
 
 function parseItems(value: unknown): FoodObservation["items"] {
@@ -130,9 +157,29 @@ function parseConfidence(value: unknown, field: string): number {
   return value;
 }
 
+function parseBoolean(value: unknown, field: string): boolean {
+  if (typeof value !== "boolean") {
+    throw new BrokerError(502, "UPSTREAM_ERROR", `${field} was not a boolean`);
+  }
+  return value;
+}
+
+function parseNullableString(value: unknown, field: string, maxLength: number): string | null {
+  if (value === null) return null;
+  return parseString(value, field, maxLength);
+}
+
 function parseNullableNonNegativeInteger(value: unknown, field: string): number | null {
   if (value === null) return null;
   return parseNonNegativeInteger(value, field);
+}
+
+function parseNullableNonNegativeNumber(value: unknown, field: string): number | null {
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    throw new BrokerError(502, "UPSTREAM_ERROR", `${field} was not a non-negative finite number`);
+  }
+  return value;
 }
 
 function parseNonNegativeInteger(value: unknown, field: string): number {
