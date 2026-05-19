@@ -92,16 +92,30 @@ public struct ProviderEvidence: Codable, Equatable, Sendable {
     public var providerID: String
     public var matchedName: String
     public var servingBasis: String
+    public var sourceLabelID: String?
+    public var matchType: String?
+    public var trustLabel: String?
 
-    public init(provider: String, providerID: String, matchedName: String, servingBasis: String) {
+    public init(
+        provider: String,
+        providerID: String,
+        matchedName: String,
+        servingBasis: String,
+        sourceLabelID: String? = nil,
+        matchType: String? = nil,
+        trustLabel: String? = nil
+    ) {
         self.provider = provider
         self.providerID = providerID
         self.matchedName = matchedName
         self.servingBasis = servingBasis
+        self.sourceLabelID = Self.clean(sourceLabelID)
+        self.matchType = Self.clean(matchType)
+        self.trustLabel = Self.clean(trustLabel)
     }
 
     public var source: FoodEvidenceSource {
-        FoodEvidenceSource(id: provider)
+        FoodEvidenceSource(id: sourceLabelID ?? provider)
     }
 
     public var sourceLabel: String {
@@ -110,6 +124,14 @@ public struct ProviderEvidence: Codable, Equatable, Sendable {
 
     public var normalizedProvider: String {
         FoodEvidenceSource.normalize(provider)
+    }
+
+    private static func clean(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 
@@ -135,6 +157,8 @@ public struct FoodEvidenceSource: Codable, Equatable, Sendable {
         switch normalize(id) {
         case "visible_nutrition_label":
             return "Label read"
+        case "barcode_provider":
+            return "Barcode match"
         case "open_food_facts", "open_food_facts_fixture":
             return "Barcode match"
         case "food_wallet_template":
@@ -538,8 +562,10 @@ public struct FoodAnalysisCandidate: Identifiable, Codable, Equatable, Sendable 
         }
 
         let providers = Set(evidence.map(\.normalizedProvider))
+        let sourceIDs = Set(evidence.map { FoodEvidenceSource.normalize($0.sourceLabelID ?? "") })
         for provider in [
             "visible_nutrition_label",
+            "barcode_provider",
             "open_food_facts",
             "open_food_facts_fixture",
             "food_wallet_template",
@@ -551,7 +577,7 @@ public struct FoodAnalysisCandidate: Identifiable, Codable, Equatable, Sendable 
             "usda_fdc",
             "curated_cache",
             "on_device_photo_heuristic",
-        ] where providers.contains(provider) {
+        ] where providers.contains(provider) || sourceIDs.contains(provider) {
             return FoodEvidenceSource.defaultLabel(for: provider)
         }
 

@@ -33,6 +33,12 @@ struct FoodWalletCoreTests {
         await run("brokerRejectsNonSuccessStatus") {
             try await testBrokerRejectsNonSuccessStatus()
         }
+        await run("brokerSearchPostsBarcodeEnvelope") {
+            try await testBrokerSearchPostsBarcodeEnvelope()
+        }
+        await run("storeCreatesReviewableDraftFromBrokerBarcodeSearch") {
+            try await testStoreCreatesReviewableDraftFromBrokerBarcodeSearch()
+        }
         await run("storeConfirmsOnlyAfterDraftReview") {
             try await testStoreConfirmsOnlyAfterDraftReview()
         }
@@ -299,6 +305,50 @@ struct FoodWalletCoreTests {
         try await expectError(.httpStatus(503)) {
             try await client.estimate(photoPayload: payload)
         }
+    }
+
+    private static func testBrokerSearchPostsBarcodeEnvelope() async throws {
+        let capture = BrokerRequestCapture()
+        let client = brokerClient { request in
+            capture.method = request.httpMethod
+            capture.contentType = request.value(forHTTPHeaderField: "Content-Type")
+            capture.path = request.url?.path
+            capture.body = try request.bodyData()
+            return BrokerResponse(statusCode: 200, body: brokerSearchEnvelopeJSON())
+        }
+
+        let results = try await client.searchFood(BrokerFoodSearchRequest(barcode: "0 12345-67890 5"))
+
+        try expect(results.count == 1, "expected one broker search result")
+        try expect(results[0].primaryLabel == "Ginger lemon kombucha", "expected decoded barcode product")
+        try expect(capture.method == "POST", "expected POST request")
+        try expect(capture.contentType == "application/json", "expected JSON request")
+        try expect(capture.path == "/v1/food/search", "expected search endpoint, got \(capture.path ?? "nil")")
+        let body = try JSONSerialization.jsonObject(with: capture.body) as? [String: Any]
+        try expect(body?["barcode"] as? String == "012345678905", "expected normalized barcode in request")
+        try expect(body?["limit"] as? Int == 8, "expected default search limit")
+    }
+
+    @MainActor
+    private static func testStoreCreatesReviewableDraftFromBrokerBarcodeSearch() async throws {
+        let result = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: brokerSearchEnvelopeJSON()).results[0]
+        let client = StaticFoodSearchClient(results: [result])
+        let store = FoodWalletStore(searchClient: client)
+
+        await store.searchBrokerFood(barcode: "012345678905")
+
+        try expect(store.foodSearchState == .ready(resultCount: 1), "expected ready search state")
+        try expect(store.brokerFoodSearchRows.count == 1, "expected one cached search row")
+        try expect(store.brokerFoodSearchRows.first?.sourceLabel == "Barcode match", "expected barcode source label")
+        try expect(store.createBrokerFoodSearchDraft(id: "food-search:fixture-kombucha-bottle"), "expected barcode result draft")
+        try expect(store.currentCandidate?.primaryLabel == "Ginger lemon kombucha", "expected barcode candidate")
+        try expect(store.currentCandidate?.dishType == .packaged, "expected packaged candidate")
+        try expect(store.currentCandidate?.userConfirmationRequired == true, "expected review boundary")
+        try expect(store.currentDraft?.sourceClass == .estimated, "expected estimated source class")
+        try expect(store.currentDraft?.trustStatus == .estimated, "expected estimated trust")
+        try expect(store.currentDraft?.meal.amountGrams == 473, "expected bottle grams")
+        try expect(store.currentDraft?.meal.kcal == 80, "expected serving kcal from per-100g data")
+        try expect(store.currentCandidate?.primarySourceLabel() == "Barcode match", "expected barcode provenance")
     }
 
     @MainActor
@@ -1099,6 +1149,7 @@ private struct BrokerResponse: Sendable {
 private final class BrokerRequestCapture: @unchecked Sendable {
     var method: String?
     var contentType: String?
+    var path: String?
     var body = Data()
 }
 
@@ -1135,6 +1186,14 @@ private struct FailingFoodAnalysisClient: FoodAnalysisClient {
     }
 }
 
+private struct StaticFoodSearchClient: BrokerFoodSearchClient {
+    var results: [BrokerFoodSearchResult]
+
+    func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
+        results
+    }
+}
+
 private func brokerClient(
     handler: @escaping @Sendable (URLRequest) throws -> BrokerResponse
 ) -> FoodAnalysisBrokerClient {
@@ -1142,7 +1201,7 @@ private func brokerClient(
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [BrokerURLProtocol.self]
     return FoodAnalysisBrokerClient(
-        endpoint: URL(string: "https://broker.example.test/analyze")!,
+        endpoint: URL(string: "https://broker.example.test/v1/food/analyze-photo")!,
         session: URLSession(configuration: configuration)
     )
 }
@@ -1180,6 +1239,58 @@ private func brokerEnvelopeJSON(userConfirmationRequired: Bool) -> Data {
             ],
             "userConfirmationRequired": \(confirmation)
           }
+        }
+        """.utf8
+    )
+}
+
+private func brokerSearchEnvelopeJSON() -> Data {
+    Data(
+        """
+        {
+          "ok": true,
+          "request_id": "barcode-fixture-001",
+          "barcode": "012345678905",
+          "results": [
+            {
+              "result_id": "food-search:fixture-kombucha-bottle",
+              "primary_label": "Ginger lemon kombucha",
+              "generic_label": "kombucha",
+              "brand_label": "Grain Fixture Kitchen",
+              "category": "packaged_beverage",
+              "source_label": "deterministic_fixture",
+              "trust_label": "barcode_fixture",
+              "match": {
+                "type": "barcode",
+                "score": 1
+              },
+              "serving": {
+                "basis": "per_100g",
+                "serving_size_g": 473,
+                "serving_label": "1 bottle (473 ml)"
+              },
+              "nutrition": {
+                "per_100g": {
+                  "kcal": 17,
+                  "protein_g": 0,
+                  "carbohydrate_g": 4.2,
+                  "fat_g": 0,
+                  "fiber_g": 0
+                }
+              },
+              "provider_evidence": [
+                {
+                  "provider": "deterministic_fixture",
+                  "provider_id": "012345678905",
+                  "matched_name": "Ginger lemon kombucha",
+                  "match_type": "barcode",
+                  "source_label": "curated_fixture",
+                  "trust_label": "barcode_fixture"
+                }
+              ],
+              "user_confirmation_required": true
+            }
+          ]
         }
         """.utf8
     )

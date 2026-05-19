@@ -57,6 +57,7 @@ private enum FoodWalletAppConfiguration {
 
         return FoodWalletStore(
             analysisClient: makeAnalysisClient(),
+            searchClient: makeFoodSearchClient(),
             entries: FoodWalletLocalLedgerStore.loadEntries(),
             savedTemplates: userLibrary.templates,
             savedRecipes: userLibrary.recipes,
@@ -90,6 +91,26 @@ private enum FoodWalletAppConfiguration {
         return FoodAnalysisBrokerClient(endpoint: analysisEndpoint(from: endpoint))
     }
 
+    private static func makeFoodSearchClient() -> (any BrokerFoodSearchClient)? {
+        if ProcessInfo.processInfo.arguments.contains("--grain-ui-test-barcode-flow") {
+            return MockBrokerFoodSearchClient()
+        }
+
+        guard
+            let endpointValue = configuredBrokerEndpoint(),
+            let endpoint = URL(string: endpointValue),
+            endpoint.scheme != nil,
+            endpoint.host != nil
+        else {
+            return nil
+        }
+
+        return FoodAnalysisBrokerClient(
+            analysisEndpoint: analysisEndpoint(from: endpoint),
+            searchEndpoint: searchEndpoint(from: endpoint)
+        )
+    }
+
     private static func configuredBrokerEndpoint() -> String? {
         if let value = ProcessInfo.processInfo.environment[brokerEndpointEnvironmentKey], !value.isEmpty {
             return value
@@ -100,6 +121,18 @@ private enum FoodWalletAppConfiguration {
     private static func analysisEndpoint(from endpoint: URL) -> URL {
         if endpoint.path == "" || endpoint.path == "/" {
             return endpoint.appendingPathComponent("v1/food/analyze-photo")
+        }
+        return endpoint
+    }
+
+    private static func searchEndpoint(from endpoint: URL) -> URL {
+        if endpoint.path == "" || endpoint.path == "/" {
+            return endpoint.appendingPathComponent("v1/food/search")
+        }
+        if endpoint.path.hasSuffix("/analyze-photo") {
+            var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+            components?.path = String(endpoint.path.dropLast("/analyze-photo".count)) + "/search"
+            return components?.url ?? endpoint
         }
         return endpoint
     }

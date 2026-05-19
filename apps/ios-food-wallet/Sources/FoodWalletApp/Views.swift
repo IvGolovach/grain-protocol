@@ -321,6 +321,7 @@ private struct AddFoodHubView: View {
     @State private var personalFatGrams = ""
     @State private var personalFiberGrams = ""
     @State private var personalIngredientErrorMessage: String?
+    @State private var isShowingBarcodeLookup = false
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
@@ -350,6 +351,9 @@ private struct AddFoodHubView: View {
                         canStartPhoto: store.canStartAnalysis,
                         hasQuickText: hasSearchQuery,
                         onPhoto: onTakePhoto,
+                        onBarcode: {
+                            isShowingBarcodeLookup = true
+                        },
                         onQuickAdd: startQuickAdd
                     )
 
@@ -359,7 +363,9 @@ private struct AddFoodHubView: View {
                         onSubmit: createQuickTextDraft
                     )
 
-                    AddFoodScopeBar(selectedScope: $selectedScope)
+                    if hasSearchQuery {
+                        AddFoodScopeBar(selectedScope: $selectedScope)
+                    }
 
                     if shouldShowFoodSearchResults {
                         ForEach(Array(filteredFoodSearchRows.prefix(3).enumerated()), id: \.element.id) { index, row in
@@ -388,7 +394,7 @@ private struct AddFoodHubView: View {
             } header: {
                 Text("Choose how to add")
             } footer: {
-                Text("Search recent meals, saved meals, recipes, and personal foods. Typed text creates a local draft for review.")
+                Text("Choose photo, barcode, quick add, or build a meal. Search appears after you type.")
             }
 
             if shouldShowBrowseResultsSection {
@@ -468,7 +474,7 @@ private struct AddFoodHubView: View {
                 }
             }
 
-            if let latestEntry {
+            if hasSearchQuery, let latestEntry {
                 Section("Repeat") {
                     CaptureAction(
                         title: "Repeat \(latestEntry.meal.label)",
@@ -481,19 +487,21 @@ private struct AddFoodHubView: View {
                 }
             }
 
-            Section("Previous day") {
-                if let previousDateKey {
-                    Button {
-                        if store.copyEntries(fromDateKey: previousDateKey) > 0 {
-                            dismiss()
+            if hasSearchQuery {
+                Section("Previous day") {
+                    if let previousDateKey {
+                        Button {
+                            if store.copyEntries(fromDateKey: previousDateKey) > 0 {
+                                dismiss()
+                            }
+                        } label: {
+                            Label("Copy previous day", systemImage: "calendar.badge.plus")
                         }
-                    } label: {
-                        Label("Copy previous day", systemImage: "calendar.badge.plus")
+                        .accessibilityIdentifier("CopyPreviousDayButton")
+                    } else {
+                        Label("No previous day yet", systemImage: "calendar")
+                            .foregroundStyle(.secondary)
                     }
-                    .accessibilityIdentifier("CopyPreviousDayButton")
-                } else {
-                    Label("No previous day yet", systemImage: "calendar")
-                        .foregroundStyle(.secondary)
                 }
             }
         }
@@ -527,6 +535,11 @@ private struct AddFoodHubView: View {
                     onCreateDraft: createIngredientMealDraft,
                     onSavePersonalIngredient: savePersonalIngredient
                 )
+            }
+        }
+        .sheet(isPresented: $isShowingBarcodeLookup) {
+            NavigationStack {
+                BarcodeLookupView(onDraftReady: onDraftReady)
             }
         }
     }
@@ -595,7 +608,7 @@ private struct AddFoodHubView: View {
     }
 
     private var shouldShowPresetSuggestions: Bool {
-        !hasSearchQuery && selectedScope == .all
+        false
     }
 
     private var shouldShowRecentResults: Bool {
@@ -625,12 +638,12 @@ private struct AddFoodHubView: View {
     }
 
     private var shouldShowBrowseResultsSection: Bool {
-        shouldShowPresetSuggestions ||
+        hasSearchQuery && (shouldShowPresetSuggestions ||
             shouldShowRecentResults ||
             shouldShowTemplateResults ||
             shouldShowRecipeResults ||
             shouldShowPersonalFoodResults ||
-            shouldShowEmptyResults
+            shouldShowEmptyResults)
     }
 
     private var resultsSectionTitle: String {
@@ -653,7 +666,7 @@ private struct AddFoodHubView: View {
 
     private func matches(_ primary: String, secondary: String? = nil) -> Bool {
         guard hasSearchQuery else {
-            return true
+            return false
         }
         return primary.localizedCaseInsensitiveContains(trimmedQuickText) ||
             (secondary?.localizedCaseInsensitiveContains(trimmedQuickText) ?? false)
@@ -872,6 +885,135 @@ private struct BuildMealEditorView: View {
     }
 }
 
+private struct BarcodeLookupView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var barcodeText = ""
+    @State private var errorMessage: String?
+    @State private var isLookingUp = false
+    @State private var detectedBarcode: String?
+
+    var onDraftReady: () -> Void
+
+    private var normalizedBarcode: String? {
+        BrokerFoodSearchRequest.normalizeBarcode(barcodeText)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 14) {
+                    BarcodeScannerView { barcode in
+                        handleDetectedBarcode(barcode)
+                    }
+                    .frame(minHeight: 190)
+
+                    if let detectedBarcode {
+                        Label("Detected \(detectedBarcode)", systemImage: "barcode")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("BarcodeDetectedValueLabel")
+                    }
+
+                    TextField("Enter UPC or EAN", text: $barcodeText)
+                        .textContentType(.oneTimeCode)
+                        #if os(iOS)
+                        .keyboardType(.numberPad)
+                        #endif
+                        .accessibilityIdentifier("BarcodeManualEntryField")
+
+                    Button(action: lookupManualBarcode) {
+                        if isLookingUp {
+                            Label("Looking up", systemImage: "hourglass")
+                        } else {
+                            Label("Look up barcode", systemImage: "arrow.right.circle.fill")
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .disabled(normalizedBarcode == nil || isLookingUp)
+                    .accessibilityIdentifier("BarcodeManualLookupButton")
+
+                    statusLabel
+                }
+                .padding(.vertical, 4)
+            } footer: {
+                Text("Packaged foods use broker-side databases. You still review serving size before saving.")
+            }
+        }
+        .navigationTitle("Barcode")
+        .accessibilityIdentifier("BarcodeScannerSheet")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .accessibilityIdentifier("BarcodeCancelButton")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var statusLabel: some View {
+        if isLookingUp {
+            Text("Checking food databases")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("BarcodeLookupStatusLabel")
+        } else if let errorMessage {
+            Text(errorMessage)
+                .font(.caption)
+                .foregroundStyle(.red)
+                .accessibilityIdentifier("BarcodeLookupErrorLabel")
+        } else {
+            Text("Use the camera or type the digits printed under the barcode.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("BarcodeLookupStatusLabel")
+        }
+    }
+
+    private func handleDetectedBarcode(_ value: String) {
+        let normalized = BrokerFoodSearchRequest.normalizeBarcode(value) ?? value
+        detectedBarcode = normalized
+        barcodeText = normalized
+        Task {
+            await lookupBarcode(normalized)
+        }
+    }
+
+    private func lookupManualBarcode() {
+        guard let normalizedBarcode else {
+            errorMessage = "Enter 8 to 14 barcode digits."
+            return
+        }
+        Task {
+            await lookupBarcode(normalizedBarcode)
+        }
+    }
+
+    @MainActor
+    private func lookupBarcode(_ barcode: String) async {
+        guard !isLookingUp else {
+            return
+        }
+        isLookingUp = true
+        errorMessage = nil
+        await store.searchBrokerFood(barcode: barcode)
+        defer {
+            isLookingUp = false
+        }
+
+        guard case .ready = store.foodSearchState,
+              let firstResult = store.brokerFoodSearchRows.first,
+              store.createBrokerFoodSearchDraft(id: firstResult.id) else {
+            errorMessage = "No trusted match yet. Try photo or quick add."
+            return
+        }
+        onDraftReady()
+    }
+}
+
 private enum AddFoodFocus: Hashable {
     case search
 }
@@ -971,6 +1113,7 @@ private struct AddFoodShortcutGrid: View {
     var canStartPhoto: Bool
     var hasQuickText: Bool
     var onPhoto: () -> Void
+    var onBarcode: () -> Void
     var onQuickAdd: () -> Void
 
     private let columns = [
@@ -987,6 +1130,14 @@ private struct AddFoodShortcutGrid: View {
                 accessibilityIdentifier: "AddFoodModePhotoButton",
                 isEnabled: canStartPhoto,
                 action: onPhoto
+            )
+
+            AddFoodShortcutButton(
+                title: "Barcode",
+                subtitle: "Scan packaged food",
+                symbol: "barcode.viewfinder",
+                accessibilityIdentifier: "AddFoodModeBarcodeButton",
+                action: onBarcode
             )
 
             AddFoodShortcutButton(

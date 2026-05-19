@@ -20,12 +20,26 @@ public enum FoodAnalysisBrokerClientError: Error, Equatable, Sendable, CustomStr
     }
 }
 
-public struct FoodAnalysisBrokerClient: FoodAnalysisClient {
-    private let endpoint: URL
+public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClient {
+    private let analysisEndpoint: URL
+    private let searchEndpoint: URL
     private let session: URLSession
 
     public init(endpoint: URL, session: URLSession = .shared) {
-        self.endpoint = endpoint
+        self.analysisEndpoint = endpoint
+        self.searchEndpoint = Self.derivedSearchEndpoint(from: endpoint)
+        self.session = session
+    }
+
+    public init(analysisEndpoint: URL, searchEndpoint: URL, session: URLSession = .shared) {
+        self.analysisEndpoint = analysisEndpoint
+        self.searchEndpoint = searchEndpoint
+        self.session = session
+    }
+
+    public init(baseURL: URL, session: URLSession = .shared) {
+        self.analysisEndpoint = Self.analysisEndpoint(from: baseURL)
+        self.searchEndpoint = Self.searchEndpoint(from: baseURL)
         self.session = session
     }
 
@@ -40,7 +54,7 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient {
     public func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
         try validate(photoPayload: photoPayload)
 
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: analysisEndpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -59,6 +73,31 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient {
             throw FoodAnalysisBrokerClientError.unsafeCandidate("broker response must require user confirmation")
         }
         return candidate
+    }
+
+    public func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
+        var urlRequest = URLRequest(url: searchEndpoint)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.httpBody = try JSONEncoder().encode(request)
+
+        let (data, response) = try await session.data(for: urlRequest)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw FoodAnalysisBrokerClientError.invalidResponse
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            throw FoodAnalysisBrokerClientError.httpStatus(httpResponse.statusCode)
+        }
+
+        let envelope = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: data)
+        guard envelope.ok else {
+            throw FoodAnalysisBrokerClientError.invalidResponse
+        }
+        for result in envelope.results where !result.userConfirmationRequired {
+            throw FoodAnalysisBrokerClientError.unsafeCandidate("broker search result must require user confirmation")
+        }
+        return envelope.results
     }
 
     private func validate(photoPayload: TransientMealPhotoPayload) throws {
@@ -97,6 +136,30 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient {
             throw FoodAnalysisBrokerClientError.invalidResponse
         }
         return candidate
+    }
+
+    private static func analysisEndpoint(from endpoint: URL) -> URL {
+        if endpoint.path == "" || endpoint.path == "/" {
+            return endpoint.appendingPathComponent("v1/food/analyze-photo")
+        }
+        return endpoint
+    }
+
+    private static func searchEndpoint(from endpoint: URL) -> URL {
+        if endpoint.path == "" || endpoint.path == "/" {
+            return endpoint.appendingPathComponent("v1/food/search")
+        }
+        return endpoint
+    }
+
+    private static func derivedSearchEndpoint(from endpoint: URL) -> URL {
+        let path = endpoint.path
+        guard path.hasSuffix("/analyze-photo") else {
+            return searchEndpoint(from: endpoint)
+        }
+        var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+        components?.path = String(path.dropLast("/analyze-photo".count)) + "/search"
+        return components?.url ?? endpoint
     }
 }
 

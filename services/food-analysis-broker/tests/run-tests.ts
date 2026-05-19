@@ -6,6 +6,12 @@ import assert from "node:assert/strict";
 import { OpenAiFoodAnalyzer } from "../src/analyzers.js";
 import { FoodAnalysisCandidateResolver } from "../src/resolver.js";
 import { createBrokerServer } from "../src/server.js";
+import {
+  CompositeFoodSearchProvider,
+  FixtureFoodSearchProvider,
+  OpenFoodFactsSearchProvider,
+  UsdaBrandedFoodSearchProvider
+} from "../src/search.js";
 import { FixtureNutritionProvider, type NutritionProvider } from "../src/usda.js";
 import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation } from "../src/types.js";
 
@@ -40,6 +46,9 @@ async function main(): Promise<number> {
   await testFoodSearchCommonFoodFixture();
   await testFoodSearchFixtureEndpoint();
   await testFoodSearchBarcodeFixture();
+  await testOpenFoodFactsBarcodeProvider();
+  await testUsdaBrandedBarcodeProvider();
+  await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
   await testVisibleNutritionLabelOverridesDatabasePortionScaling();
@@ -174,6 +183,114 @@ async function testFoodSearchBarcodeFixture(): Promise<void> {
     assert.equal(evidence[0].trust_label, "barcode_fixture");
   });
   pass("food search resolves barcode-like packaged kombucha fixture");
+}
+
+async function testOpenFoodFactsBarcodeProvider(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async (url: string | URL, init?: RequestInit) => {
+      assert.equal(String(url), "https://off.example.test/api/v2/product/012345678905.json?fields=code%2Cproduct_name%2Cgeneric_name%2Cbrands%2Ccategories_tags%2Cserving_quantity%2Cserving_size%2Cnutriments");
+      assert.equal((init?.headers as Record<string, string>)["User-Agent"], "MealMarkTests/1.0 (test@example.com)");
+      return new Response(JSON.stringify({
+        status: 1,
+        product: {
+          code: "012345678905",
+          product_name: "Ginger Lemon Kombucha",
+          generic_name: "kombucha",
+          brands: "Example Ferments",
+          categories_tags: ["en:beverages", "en:kombuchas"],
+          serving_quantity: "473",
+          serving_size: "1 bottle (473 ml)",
+          nutriments: {
+            "energy-kcal_100g": 17,
+            proteins_100g: 0,
+            carbohydrates_100g: 4.2,
+            fat_100g: 0,
+            fiber_100g: 0
+          }
+        }
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ barcode: "012345678905" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "Ginger Lemon Kombucha");
+  assert.equal(results[0].brand_label, "Example Ferments");
+  assert.equal(results[0].source_label, "open_food_facts");
+  assert.equal(results[0].trust_label, "barcode_provider");
+  assert.equal(results[0].serving.serving_size_g, 473);
+  assert.equal(results[0].nutrition.per_100g.kcal, 17);
+  assert.equal(results[0].provider_evidence[0].provider, "open_food_facts");
+  assert.equal(results[0].provider_evidence[0].provider_id, "012345678905");
+  pass("Open Food Facts barcode provider maps product data to search result");
+}
+
+async function testUsdaBrandedBarcodeProvider(): Promise<void> {
+  const provider = new UsdaBrandedFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (url: string | URL, init?: RequestInit) => {
+      assert.equal(String(url), "https://fdc.example.test/fdc/v1/foods/search?api_key=test-fdc-key");
+      assert.equal((init?.headers as Record<string, string>)["content-type"], "application/json");
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.query, "012345678905");
+      assert.deepEqual(body.dataType, ["Branded"]);
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 2105222,
+            description: "GINGER LEMON KOMBUCHA",
+            brandName: "Example Ferments",
+            brandOwner: "Example Ferments LLC",
+            gtinUpc: "012345678905",
+            foodCategory: "Beverages",
+            servingSize: 473,
+            servingSizeUnit: "ml",
+            foodNutrients: [
+              { nutrientName: "Energy", unitName: "KCAL", value: 17 },
+              { nutrientName: "Protein", unitName: "G", value: 0 },
+              { nutrientName: "Carbohydrate, by difference", unitName: "G", value: 4.2 },
+              { nutrientName: "Total lipid (fat)", unitName: "G", value: 0 },
+              { nutrientName: "Fiber, total dietary", unitName: "G", value: 0 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ barcode: "012345678905" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "GINGER LEMON KOMBUCHA");
+  assert.equal(results[0].brand_label, "Example Ferments");
+  assert.equal(results[0].source_label, "usda_fdc");
+  assert.equal(results[0].trust_label, "barcode_provider");
+  assert.equal(results[0].provider_evidence[0].provider, "usda_fdc");
+  assert.equal(results[0].provider_evidence[0].provider_id, "2105222");
+  assert.equal(results[0].provider_evidence[0].match_type, "barcode");
+  pass("USDA branded barcode provider maps GTIN result to search result");
+}
+
+async function testCompositeFoodSearchProviderFallsBackAfterProviderFailure(): Promise<void> {
+  const provider = new CompositeFoodSearchProvider([
+    {
+      async search() {
+        throw new Error("upstream unavailable");
+      }
+    },
+    new FixtureFoodSearchProvider()
+  ]);
+
+  const results = await provider.search({ barcode: "012345678905" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].result_id, "food-search:fixture-kombucha-bottle");
+  assert.equal(results[0].trust_label, "barcode_fixture");
+  pass("composite food search falls back after provider failure");
 }
 
 async function testPayloadCap(): Promise<void> {

@@ -114,6 +114,11 @@ final class FoodWalletUITests: XCTestCase {
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["AddFoodModeChooser"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["AddFoodModeBarcodeButton"].exists)
+        XCTAssertFalse(app.staticTexts["Suggestions"].exists)
+        XCTAssertFalse(app.buttons["QuickSuggestion-apple"].exists)
+        XCTAssertFalse(app.buttons["RepeatLastMealButton"].exists)
+        XCTAssertFalse(app.buttons["CopyPreviousDayButton"].exists)
         XCTAssertFalse(app.buttons["VisibleLabelKombuchaButton"].exists)
         XCTAssertFalse(app.buttons["BarcodeKombuchaButton"].exists)
         XCTAssertFalse(app.buttons["Template-usual-breakfast"].exists)
@@ -155,8 +160,14 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["AddFoodModeChooser"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["AddFoodModePhotoButton"].exists)
+        XCTAssertTrue(app.buttons["AddFoodModeBarcodeButton"].exists)
         XCTAssertTrue(app.buttons["AddFoodModeQuickAddButton"].exists)
         XCTAssertTrue(app.buttons["AddFoodModeBuildMealButton"].exists)
+        XCTAssertFalse(app.staticTexts["Suggestions"].exists)
+        XCTAssertFalse(app.buttons["QuickSuggestion-2-eggs-and-toast"].exists)
+        XCTAssertFalse(app.buttons["RepeatLastMealButton"].exists)
+        XCTAssertFalse(app.buttons["CopyPreviousDayButton"].exists)
+        XCTAssertFalse(app.buttons["AddFoodScope-all"].exists)
         XCTAssertFalse(app.textFields["MealTitleField"].exists)
 
         let searchField = addFoodSearchField()
@@ -179,6 +190,30 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Casein protein powder")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 30 g • 97-119 kcal")
         XCTAssertEqual(app.staticTexts["DraftMacronutrientsLabel"].label, "P 24g • C 3g • F 0.9g")
+    }
+
+    func testAddFoodBarcodeManualFallbackCreatesDraft() throws {
+        launch(arguments: ["--grain-ui-test-barcode-flow"])
+
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
+        app.buttons["AddFoodModeBarcodeButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Barcode"].waitForExistence(timeout: 5))
+        let barcodeField = app.textFields["BarcodeManualEntryField"]
+        XCTAssertTrue(barcodeField.waitForExistence(timeout: 5))
+        barcodeField.tap()
+        barcodeField.typeText("012345678905")
+        app.buttons["BarcodeManualLookupButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Ginger lemon kombucha")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 473 g • 72-88 kcal")
+        XCTAssertEqual(app.staticTexts["DraftMacronutrientsLabel"].label, "P 0g • C 19.9g • F 0g")
+        XCTAssertFalse(app.switches.matching(identifier: "Assumption-barcode-match").firstMatch.exists)
     }
 
     func testAddFoodHubBuildsMealFromIngredients() throws {

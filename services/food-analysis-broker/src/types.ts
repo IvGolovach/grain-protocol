@@ -152,9 +152,9 @@ export type FoodSearchRequest = {
 };
 
 export type FoodSearchMatchType = "name" | "barcode";
-export type FoodSearchSourceLabel = "deterministic_fixture";
-export type FoodSearchEvidenceSourceLabel = "curated_fixture";
-export type FoodSearchTrustLabel = "fixture_verified" | "barcode_fixture";
+export type FoodSearchSourceLabel = "deterministic_fixture" | "open_food_facts" | "usda_fdc";
+export type FoodSearchEvidenceSourceLabel = "curated_fixture" | "open_food_facts_product" | "usda_branded_food";
+export type FoodSearchTrustLabel = "fixture_verified" | "barcode_fixture" | "barcode_provider";
 
 export type FoodSearchPer100gNutrition = {
   kcal: number;
@@ -185,7 +185,7 @@ export type FoodSearchResult = {
     per_100g: FoodSearchPer100gNutrition;
   };
   provider_evidence: Array<{
-    provider: "deterministic_fixture";
+    provider: FoodSearchSourceLabel;
     provider_id: string;
     matched_name: string;
     match_type: FoodSearchMatchType;

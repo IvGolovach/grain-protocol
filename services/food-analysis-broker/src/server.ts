@@ -5,7 +5,7 @@ import { analyzerFromEnv } from "./analyzers.js";
 import { BrokerError, errorShape, internalError } from "./errors.js";
 import { FoodAnalysisCandidateResolver, GrainDraftResolver } from "./resolver.js";
 import { MAX_JSON_BODY_BYTES } from "./schema.js";
-import { FixtureFoodSearchProvider } from "./search.js";
+import { foodSearchProviderFromEnv } from "./search.js";
 import { assertObservation, parseAnalyzePhotoRequest, parseFoodSearchRequest } from "./validation.js";
 import type {
   CandidateResolver,
@@ -27,7 +27,7 @@ export type BrokerServerOptions = {
 export function createBrokerServer(options: BrokerServerOptions = {}): Server {
   const analyzer = options.analyzer ?? analyzerFromEnv();
   const candidateResolver = options.candidateResolver ?? new FoodAnalysisCandidateResolver();
-  const searchProvider = options.searchProvider ?? new FixtureFoodSearchProvider();
+  const searchProvider = options.searchProvider ?? foodSearchProviderFromEnv();
   const resolver = options.resolver ?? new GrainDraftResolver();
   const maxBodyBytes = options.maxBodyBytes ?? MAX_JSON_BODY_BYTES;
 

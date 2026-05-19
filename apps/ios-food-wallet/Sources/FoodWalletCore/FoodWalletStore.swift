@@ -109,6 +109,14 @@ public enum FoodAnalysisState: Equatable, Sendable {
     }
 }
 
+public enum FoodSearchState: Equatable, Sendable {
+    case idle
+    case loading
+    case ready(resultCount: Int)
+    case empty
+    case failed(String)
+}
+
 @MainActor
 public final class FoodWalletStore: ObservableObject {
     private static let defaultSlowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
@@ -121,19 +129,24 @@ public final class FoodWalletStore: ObservableObject {
     @Published public private(set) var savedTemplates: [SavedFoodTemplate]
     @Published public private(set) var savedRecipes: [SavedFoodRecipe]
     @Published public private(set) var personalIngredients: [PersonalFoodIngredient]
+    @Published public private(set) var foodSearchState: FoodSearchState
+    @Published public private(set) var brokerFoodSearchRows: [AddFoodSuggestionRow]
     @Published public var selectedExample: FoodCaptureExample
     @Published public var subscription: SubscriptionState
     @Published public var privacy: PrivacyConsentState
 
     private let analysisClient: any FoodAnalysisClient
+    private let searchClient: (any BrokerFoodSearchClient)?
     private let slowAnalysisThresholdNanoseconds: UInt64
     private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
     private let entriesDidChange: @MainActor ([FoodIntakeEntry]) -> Void
     private var slowAnalysisTask: Task<Void, Never>?
     private var wallet: GrainFoodWallet
+    private var brokerFoodSearchResults: [String: BrokerFoodSearchResult] = [:]
 
     public init(
         analysisClient: any FoodAnalysisClient = MockFoodAnalysisClient(),
+        searchClient: (any BrokerFoodSearchClient)? = nil,
         wallet: GrainFoodWallet = GrainFoodWallet(),
         entries: [FoodIntakeEntry] = [],
         subscription: SubscriptionState = .free,
@@ -146,6 +159,7 @@ public final class FoodWalletStore: ObservableObject {
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
     ) {
         self.analysisClient = analysisClient
+        self.searchClient = searchClient
         self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
         self.personalIngredientsDidChange = onPersonalIngredientsChange
         self.entriesDidChange = onEntriesChange
@@ -157,6 +171,8 @@ public final class FoodWalletStore: ObservableObject {
         self.savedTemplates = savedTemplates
         self.savedRecipes = savedRecipes
         self.personalIngredients = personalIngredients
+        self.foodSearchState = .idle
+        self.brokerFoodSearchRows = []
         self.selectedExample = .fujiApple
         self.subscription = subscription
         self.privacy = privacy
@@ -308,6 +324,33 @@ public final class FoodWalletStore: ObservableObject {
             return false
         }
         presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
+        return true
+    }
+
+    public func searchBrokerFood(query: String) async {
+        await searchBrokerFood(requestFactory: {
+            try BrokerFoodSearchRequest(query: query)
+        })
+    }
+
+    public func searchBrokerFood(barcode: String) async {
+        await searchBrokerFood(requestFactory: {
+            try BrokerFoodSearchRequest(barcode: barcode)
+        })
+    }
+
+    public func clearBrokerFoodSearch() {
+        brokerFoodSearchRows = []
+        brokerFoodSearchResults = [:]
+        foodSearchState = .idle
+    }
+
+    public func createBrokerFoodSearchDraft(id: String) -> Bool {
+        guard let result = brokerFoodSearchResults[id],
+              let candidate = try? result.candidate() else {
+            return false
+        }
+        presentDraft(candidate: candidate, sourceClass: .estimated, trustStatus: .estimated)
         return true
     }
 
@@ -798,6 +841,28 @@ public final class FoodWalletStore: ObservableObject {
             trustStatus: trustStatus
         )
         analysisState = .draftReady
+    }
+
+    private func searchBrokerFood(requestFactory: () throws -> BrokerFoodSearchRequest) async {
+        guard let searchClient else {
+            brokerFoodSearchRows = []
+            brokerFoodSearchResults = [:]
+            foodSearchState = .failed("Food lookup is unavailable. Try photo or quick add.")
+            return
+        }
+
+        foodSearchState = .loading
+        do {
+            let request = try requestFactory()
+            let results = try await searchClient.searchFood(request)
+            brokerFoodSearchResults = Dictionary(uniqueKeysWithValues: results.map { ($0.resultID, $0) })
+            brokerFoodSearchRows = results.map { $0.addFoodSuggestionRow() }
+            foodSearchState = results.isEmpty ? .empty : .ready(resultCount: results.count)
+        } catch {
+            brokerFoodSearchRows = []
+            brokerFoodSearchResults = [:]
+            foodSearchState = .failed("No trusted barcode match was found. Try a photo or enter the food manually.")
+        }
     }
 
     private func makeDraft(
