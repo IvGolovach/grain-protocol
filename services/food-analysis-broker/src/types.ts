@@ -143,6 +143,66 @@ export type FoodAnalyzePhotoSuccess = {
   };
 };
 
+export type FoodSearchRequest = {
+  request_id?: string;
+  query?: string;
+  barcode?: string;
+  limit?: number;
+  locale?: string;
+};
+
+export type FoodSearchMatchType = "name" | "barcode";
+export type FoodSearchSourceLabel = "deterministic_fixture";
+export type FoodSearchEvidenceSourceLabel = "curated_fixture";
+export type FoodSearchTrustLabel = "fixture_verified" | "barcode_fixture";
+
+export type FoodSearchPer100gNutrition = {
+  kcal: number;
+  protein_g: number;
+  carbohydrate_g: number;
+  fat_g: number;
+  fiber_g?: number;
+};
+
+export type FoodSearchResult = {
+  result_id: string;
+  primary_label: string;
+  generic_label: string;
+  brand_label: string | null;
+  category: string;
+  source_label: FoodSearchSourceLabel;
+  trust_label: FoodSearchTrustLabel;
+  match: {
+    type: FoodSearchMatchType;
+    score: number;
+  };
+  serving: {
+    basis: "per_100g";
+    serving_size_g: number | null;
+    serving_label: string | null;
+  };
+  nutrition: {
+    per_100g: FoodSearchPer100gNutrition;
+  };
+  provider_evidence: Array<{
+    provider: "deterministic_fixture";
+    provider_id: string;
+    matched_name: string;
+    match_type: FoodSearchMatchType;
+    source_label: FoodSearchEvidenceSourceLabel;
+    trust_label: FoodSearchTrustLabel;
+  }>;
+  user_confirmation_required: true;
+};
+
+export type FoodSearchSuccess = {
+  ok: true;
+  request_id: string;
+  query?: string;
+  barcode?: string;
+  results: FoodSearchResult[];
+};
+
 export type ErrorCode =
   | "BAD_JSON"
   | "BAD_REQUEST"
@@ -190,4 +250,8 @@ export type CandidateResolver = {
     photoSha25616: string;
     modelId: string;
   }): Promise<FoodAnalysisCandidate>;
+};
+
+export type FoodSearchProvider = {
+  search(request: FoodSearchRequest): Promise<FoodSearchResult[]>;
 };

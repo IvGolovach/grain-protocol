@@ -161,7 +161,7 @@ if [ "${GRAIN_IOS_ALLOW_DEVICE_REGISTRATION:-0}" = "1" ]; then
   build_args=(-allowProvisioningDeviceRegistration "${build_args[@]}")
 fi
 
-echo "Building FoodWallet for device $DEVICE_ID"
+echo "Building MealMark display app for device $DEVICE_ID"
 "$DEVELOPER_DIR/usr/bin/xcodebuild" "${build_args[@]}"
 
 if [ ! -d "$APP_PATH" ]; then
@@ -194,7 +194,7 @@ if ! grep -q "GRAIN_IOS_FOOD_WALLET_DEVICE_SMOKE: PASS" "$SMOKE_LOG"; then
   exit 1
 fi
 
-echo "Launching FoodWallet normally"
+echo "Launching MealMark normally"
 "$XCRUN" devicectl device process launch \
   --device "$DEVICE_ID" \
   --terminate-existing \

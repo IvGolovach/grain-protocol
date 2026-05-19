@@ -115,4 +115,4 @@ if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then
   exit 1
 fi
 
-echo "iOS Food Wallet app check: PASS"
+echo "iOS MealMark app check: PASS"

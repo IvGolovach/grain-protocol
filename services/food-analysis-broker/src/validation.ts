@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { BrokerError } from "./errors.js";
 import { MAX_IMAGE_BYTES } from "./schema.js";
-import type { FoodAnalyzePhotoRequest, FoodObservation, SupportedImageMediaType } from "./types.js";
+import type { FoodAnalyzePhotoRequest, FoodObservation, FoodSearchRequest, SupportedImageMediaType } from "./types.js";
 
 const MEDIA_TYPES = new Set<SupportedImageMediaType>(["image/jpeg", "image/png", "image/webp"]);
 
@@ -58,6 +58,38 @@ export function parseAnalyzePhotoRequest(value: unknown): {
   const requestId = request.request_id || randomUUID();
   const photoSha25616 = createHash("sha256").update(imageBytes).digest("hex").slice(0, 16);
   return { request, imageBytes, photoSha25616, requestId };
+}
+
+export function parseFoodSearchRequest(value: unknown): {
+  request: FoodSearchRequest;
+  requestId: string;
+} {
+  if (!isRecord(value)) {
+    throw new BrokerError(400, "BAD_REQUEST", "request body must be a JSON object");
+  }
+
+  const request = value as FoodSearchRequest;
+  validateOptionalString("request_id", request.request_id, 96);
+  validateOptionalString("query", request.query, 160);
+  validateOptionalString("barcode", request.barcode, 64);
+  validateOptionalString("locale", request.locale, 32);
+  if (request.limit !== undefined && (!Number.isSafeInteger(request.limit) || request.limit < 1 || request.limit > 20)) {
+    throw new BrokerError(400, "BAD_REQUEST", "limit must be an integer from 1 to 20");
+  }
+  if (!request.query?.trim() && !request.barcode?.trim()) {
+    throw new BrokerError(400, "BAD_REQUEST", "query or barcode is required");
+  }
+
+  return {
+    request: {
+      ...(request.request_id ? { request_id: request.request_id } : {}),
+      ...(request.query?.trim() ? { query: request.query.trim() } : {}),
+      ...(request.barcode?.trim() ? { barcode: request.barcode.trim() } : {}),
+      ...(request.limit === undefined ? {} : { limit: request.limit }),
+      ...(request.locale ? { locale: request.locale } : {})
+    },
+    requestId: request.request_id || randomUUID()
+  };
 }
 
 export function assertObservation(value: unknown): FoodObservation {

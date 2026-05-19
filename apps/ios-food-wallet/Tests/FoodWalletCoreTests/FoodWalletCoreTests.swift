@@ -12,6 +12,15 @@ struct FoodWalletCoreTests {
         await run("mockRisottoEstimateUsesMixedDishRangeAndAssumptions") {
             try await testMockRisottoEstimateUsesMixedDishRangeAndAssumptions()
         }
+        await run("providerEvidenceNormalizesSourceLabels") {
+            try await testProviderEvidenceNormalizesSourceLabels()
+        }
+        await run("mealMarkProvenanceSnapshotPreservesCandidateEvidence") {
+            try await testMealMarkProvenanceSnapshotPreservesCandidateEvidence()
+        }
+        await run("addFoodSuggestionRowNormalizesSearchText") {
+            try await testAddFoodSuggestionRowNormalizesSearchText()
+        }
         await run("mockPhotoEstimateCreatesDraftWithoutRetainingPhoto") {
             try await testMockPhotoEstimateCreatesDraftWithoutRetainingPhoto()
         }
@@ -30,8 +39,14 @@ struct FoodWalletCoreTests {
         await run("quickTextDraftCreatesSelfIssuedReviewableMeal") {
             try await testQuickTextDraftCreatesSelfIssuedReviewableMeal()
         }
+        await run("addFoodSearchSuggestionsPreferCatalogMatches") {
+            try await testAddFoodSearchSuggestionsPreferCatalogMatches()
+        }
         await run("portionEditorScalesDraftNutritionRange") {
             try await testPortionEditorScalesDraftNutritionRange()
+        }
+        await run("portionEditorPreservesProviderEvidenceAndDraftProvenance") {
+            try await testPortionEditorPreservesProviderEvidenceAndDraftProvenance()
         }
         await run("startsWithoutDemoSavedMealsOrRecipes") {
             try await testStartsWithoutDemoSavedMealsOrRecipes()
@@ -68,6 +83,15 @@ struct FoodWalletCoreTests {
         }
         await run("portableExportIncludesSafeUserDataOnly") {
             try await testPortableExportIncludesSafeUserDataOnly()
+        }
+        await run("portableExportIncludesUserLibraryEvidenceMetadata") {
+            try await testPortableExportIncludesUserLibraryEvidenceMetadata()
+        }
+        await run("userLibraryCodecMigratesLegacyPersonalIngredients") {
+            try testUserLibraryCodecMigratesLegacyPersonalIngredients()
+        }
+        await run("userLibraryCodecDefaultsMissingCollections") {
+            try testUserLibraryCodecDefaultsMissingCollections()
         }
         await run("storeRestoresDurableEntriesAndPublishesLedgerChanges") {
             try await testStoreRestoresDurableEntriesAndPublishesLedgerChanges()
@@ -172,6 +196,47 @@ struct FoodWalletCoreTests {
         try expect(candidate.evidence.contains { $0.provider == "usda_fdc" }, "expected USDA evidence")
     }
 
+    private static func testProviderEvidenceNormalizesSourceLabels() async throws {
+        let evidence = ProviderEvidence(
+            provider: "USDA FDC",
+            providerID: "generic-apple",
+            matchedName: "Apple, raw",
+            servingBasis: "per_100g"
+        )
+
+        try expect(evidence.normalizedProvider == "usda_fdc", "expected normalized provider id")
+        try expect(evidence.sourceLabel == "USDA estimate", "expected USDA source label")
+        try expect(FoodEvidenceSource(id: "open-food-facts").label == "Barcode match", "expected barcode source label")
+    }
+
+    private static func testMealMarkProvenanceSnapshotPreservesCandidateEvidence() async throws {
+        let candidate = try await MockFoodAnalysisClient().estimate(example: .mushroomRisotto)
+        let wallet = GrainFoodWallet()
+        let draft = wallet.makeEstimatedDraft(meal: candidate.mealEstimate())
+
+        let snapshot = MealMarkProvenanceSnapshot(candidate: candidate, draft: draft)
+
+        try expect(snapshot.id == "food-draft-1", "expected draft-backed snapshot id")
+        try expect(snapshot.candidateID == candidate.id, "expected candidate id in provenance")
+        try expect(snapshot.sourceClass == "estimated", "expected estimated source class")
+        try expect(snapshot.trustStatus == "estimated", "expected estimated trust status")
+        try expect(snapshot.primarySourceLabel == "USDA estimate", "expected prioritized source label")
+        try expect(snapshot.sourceLabels == ["Curated estimate", "USDA estimate"], "expected all source labels")
+        try expect(snapshot.evidence == candidate.evidence, "expected provider evidence to be preserved")
+    }
+
+    private static func testAddFoodSuggestionRowNormalizesSearchText() async throws {
+        let candidate = try await MockFoodAnalysisClient().estimate(example: .mushroomRisotto)
+        let row = candidate.addFoodSuggestionRow(kind: .providerMatch)
+
+        try expect(row.title == "Mushroom risotto", "expected candidate title")
+        try expect(row.subtitle == "about 320 g | 520-760 kcal", "expected compact nutrition subtitle")
+        try expect(row.sourceLabel == "USDA estimate", "expected source label on search row")
+        try expect(row.matches(AddFoodSearchQuery("mushroom usda")), "expected title and source search to match")
+        try expect(row.matches(AddFoodSearchQuery("rice cheese")), "expected evidence search to match")
+        try expect(!row.matches(AddFoodSearchQuery("banana")), "expected unrelated search to miss")
+    }
+
     @MainActor
     private static func testMockPhotoEstimateCreatesDraftWithoutRetainingPhoto() async throws {
         let client = MockFoodAnalysisClient()
@@ -272,6 +337,25 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testAddFoodSearchSuggestionsPreferCatalogMatches() async throws {
+        let store = FoodWalletStore()
+        let rows = store.addFoodSearchSuggestions(for: "casein protein")
+
+        guard let first = rows.first else {
+            throw FoodWalletTestFailure("expected casein protein search result")
+        }
+        try expect(first.title == "Casein protein powder", "expected catalog-backed casein result")
+        try expect(first.sourceLabel == "Ingredient catalog", "expected provenance label")
+        try expect(first.subtitle == "1 scoop (30 g) | 108 kcal", "expected serving kcal summary")
+        try expect(first.evidence.contains { $0.providerID == "protein-powder.casein" }, "expected ingredient evidence")
+
+        try expect(store.createFoodSearchSuggestionDraft(id: first.id), "expected catalog result draft")
+        try expect(store.currentCandidate?.primaryLabel == "Casein protein powder", "expected matched draft label")
+        try expect(store.currentDraft?.meal.kcal == 108, "expected catalog serving kcal")
+        try expect(store.currentCandidate?.macronutrients.shortLabel == "P 24g • C 3g • F 0.9g", "expected serving macros")
+    }
+
+    @MainActor
     private static func testPortionEditorScalesDraftNutritionRange() async throws {
         let store = FoodWalletStore()
         await store.analyze(example: .fujiApple)
@@ -284,6 +368,29 @@ struct FoodWalletCoreTests {
         try expect(store.currentDraft?.meal.amountGrams == 85, "expected draft grams to update")
         try expect(store.currentDraft?.meal.kcal == 51, "expected draft kcal to update")
         try expect(store.currentDraft?.meal.varianceKcal == 6, "expected scaled variance")
+    }
+
+    @MainActor
+    private static func testPortionEditorPreservesProviderEvidenceAndDraftProvenance() async throws {
+        let store = FoodWalletStore()
+        await store.analyze(photo: .uiTestFujiApple)
+
+        guard let originalEvidence = store.currentCandidate?.evidence else {
+            throw FoodWalletTestFailure("expected provider evidence before portion edit")
+        }
+        let originalSourceClass = store.currentDraft?.sourceClass
+        let originalTrustStatus = store.currentDraft?.trustStatus
+
+        let updated = store.updateCurrentDraftPortion(gramsMode: 255)
+
+        try expect(updated, "expected portion update to succeed")
+        try expect(store.currentCandidate?.evidence == originalEvidence, "expected portion edit to preserve provider evidence")
+        try expect(store.currentCandidate?.assumptions.contains { $0.id == "user-portion" } == true, "expected user portion assumption")
+        try expect(store.currentDraft?.sourceClass == originalSourceClass, "expected draft source class to be preserved")
+        try expect(store.currentDraft?.trustStatus == originalTrustStatus, "expected draft trust status to be preserved")
+        store.confirmDraft()
+        try expect(store.entries.first?.sourceClass == originalSourceClass, "expected saved entry source class to be preserved")
+        try expect(store.entries.first?.trustStatus == originalTrustStatus, "expected saved entry trust status to be preserved")
     }
 
     @MainActor
@@ -601,6 +708,86 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testPortableExportIncludesUserLibraryEvidenceMetadata() async throws {
+        let store = FoodWalletStore(
+            savedTemplates: [sampleSavedTemplate()],
+            savedRecipes: [sampleSavedRecipe()]
+        )
+        try expect(store.savePersonalIngredient(
+            name: "House granola",
+            servingGrams: 40,
+            servingKcal: 180,
+            proteinGrams: 5,
+            carbohydrateGrams: 24,
+            fatGrams: 7,
+            fiberGrams: 3
+        ) == .saved, "expected personal ingredient save")
+
+        try expect(store.createTemplateDraft(id: "usual-breakfast"), "expected template draft")
+        store.confirmDraft()
+
+        let bundle = try store.exportPortableBundle(generatedAt: Date(timeIntervalSince1970: 1_700_001_000))
+        try expect(bundle.templates.count == 1, "expected template metadata")
+        try expect(bundle.recipes.count == 1, "expected recipe metadata")
+        try expect(bundle.personalFoods?.count == 1, "expected personal food metadata")
+        try expect(bundle.manifest.templateCount == 1, "expected template manifest count")
+        try expect(bundle.manifest.recipeCount == 1, "expected recipe manifest count")
+        try expect(bundle.manifest.personalFoodCount == 1, "expected personal food manifest count")
+        try expect(bundle.templates.first?.evidenceProvider == "food_wallet_template", "expected template evidence provider")
+        try expect(bundle.recipes.first?.ingredientDetails?.first?.label == "Plain Greek yogurt", "expected recipe ingredient details")
+        try expect(bundle.personalFoods?.first?.evidenceProvider == "food_wallet_personal_ingredient", "expected personal food evidence provider")
+        try expect(bundle.personalFoods?.first?.servingBasis == "user_entered_nutrition_label", "expected personal food serving basis")
+        try expect(FoodWalletExportFactory.verifyIntegrity(bundle), "expected user-library bundle integrity")
+
+        let json = String(decoding: try FoodWalletExportFactory.jsonData(bundle), as: UTF8.self)
+        for token in ["rawPhoto", "photoBytes", "photoBase64", "imageBytes", "snapshotB64", "bundleB64", "privateKey", "trustPub", "COSE", "CBOR", "GR1"] {
+            try expect(!json.localizedCaseInsensitiveContains(token), "user library export leaked \(token)")
+        }
+    }
+
+    private static func testUserLibraryCodecMigratesLegacyPersonalIngredients() throws {
+        let legacyIngredient = PersonalFoodIngredient(
+            id: "personal-house-granola",
+            name: "House granola",
+            sourceServingGrams: 40,
+            sourceServingKcal: 180,
+            kcalPer100Grams: 450,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 12.5,
+                carbohydrateGrams: 60,
+                fatGrams: 17.5,
+                fiberGrams: 7.5
+            )
+        )
+        let legacyData = try JSONEncoder().encode([legacyIngredient])
+        let decoded = try FoodWalletUserLibraryCodec.decode(legacyData)
+
+        try expect(decoded.schema == "grain.food-wallet.user-library.v1", "expected migrated library schema")
+        try expect(decoded.version == 1, "expected migrated library version")
+        try expect(decoded.templates.isEmpty, "expected empty migrated templates")
+        try expect(decoded.recipes.isEmpty, "expected empty migrated recipes")
+        try expect(decoded.personalIngredients == [legacyIngredient], "expected migrated personal ingredients")
+    }
+
+    private static func testUserLibraryCodecDefaultsMissingCollections() throws {
+        let data = Data(
+            """
+            {
+              "schema": "grain.food-wallet.user-library.v1",
+              "version": 1,
+              "personal_ingredients": []
+            }
+            """.utf8
+        )
+        let decoded = try FoodWalletUserLibraryCodec.decode(data)
+
+        try expect(decoded.templates.isEmpty, "expected missing templates to default empty")
+        try expect(decoded.recipes.isEmpty, "expected missing recipes to default empty")
+        try expect(decoded.personalIngredients.isEmpty, "expected explicit empty personal ingredients")
+        try expect(decoded.isEmpty, "expected defaulted user library to be empty")
+    }
+
+    @MainActor
     private static func testStoreRestoresDurableEntriesAndPublishesLedgerChanges() async throws {
         let seed = FoodWalletStore()
         try expect(seed.createQuickTextDraft("2 eggs and toast"), "expected seed draft")
@@ -810,6 +997,44 @@ private struct FoodWalletTestFailure: Error, CustomStringConvertible {
     init(_ message: String) {
         self.message = message
     }
+}
+
+private func sampleSavedTemplate() -> SavedFoodTemplate {
+    SavedFoodTemplate(
+        id: "usual-breakfast",
+        title: "Usual breakfast",
+        subtitle: "Greek yogurt, oats, berries, coffee",
+        kcal: 420,
+        varianceKcal: 35,
+        amountGrams: 360,
+        servingGrams: 360,
+        macronutrients: MealMacronutrients(
+            proteinGrams: 31,
+            carbohydrateGrams: 54,
+            fatGrams: 10,
+            fiberGrams: 8
+        )
+    )
+}
+
+private func sampleSavedRecipe() -> SavedFoodRecipe {
+    SavedFoodRecipe(
+        id: "granola-bowl",
+        title: "Granola bowl",
+        subtitle: "Batch recipe",
+        totalGrams: 520,
+        totalKcal: 720,
+        macronutrients: MealMacronutrients(
+            proteinGrams: 35,
+            carbohydrateGrams: 92,
+            fatGrams: 24,
+            fiberGrams: 18
+        ),
+        ingredients: [
+            SavedFoodRecipeIngredient(id: "greek-yogurt", label: "Plain Greek yogurt", grams: 300, kcal: 291),
+            SavedFoodRecipeIngredient(id: "oats", label: "Rolled oats", grams: 80, kcal: 311),
+        ]
+    )
 }
 
 private final class MutableFoodWalletClock: FoodWalletClock, @unchecked Sendable {

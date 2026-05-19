@@ -34,10 +34,18 @@ final class FoodWalletUITests: XCTestCase {
         return element.exists
     }
 
+    private func addFoodSearchField() -> XCUIElement {
+        let searchField = app.searchFields["FoodSearchField"]
+        if searchField.exists {
+            return searchField
+        }
+        return app.textFields["FoodSearchField"]
+    }
+
     func testAppleEstimateCanBeSavedAndViewed() throws {
         launch()
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
@@ -75,7 +83,7 @@ final class FoodWalletUITests: XCTestCase {
             "5000"
         ])
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
@@ -98,7 +106,7 @@ final class FoodWalletUITests: XCTestCase {
     func testAddFoodHubCreatesQuickTextDraftAndAdjustsPortion() throws {
         launch(arguments: [])
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
@@ -127,10 +135,41 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["MealRowNutrition-2 eggs and toast"].label, "110 g • 165 kcal")
     }
 
+    func testAddFoodStartsWithSearchAndNoDeadFixtureActions() throws {
+        launch(arguments: [])
+
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
+
+        let searchField = addFoodSearchField()
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(searchField.isHittable)
+        XCTAssertLessThan(searchField.frame.minY, app.buttons["HubTakePhotoButton"].frame.minY)
+
+        searchField.tap()
+        searchField.typeText("casein protein")
+        let caseinResult = app.buttons["FoodSearchResult-casein-protein"]
+        XCTAssertTrue(caseinResult.waitForExistence(timeout: 5))
+
+        XCTAssertFalse(app.buttons["AnalyzeFujiAppleButton"].exists)
+        XCTAssertFalse(app.buttons["AnalyzeMushroomRisottoButton"].exists)
+        XCTAssertFalse(app.buttons["VisibleLabelKombuchaButton"].exists)
+        XCTAssertFalse(app.buttons["BarcodeKombuchaButton"].exists)
+
+        caseinResult.tap()
+        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Casein protein powder")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 30 g • 97-119 kcal")
+        XCTAssertEqual(app.staticTexts["DraftMacronutrientsLabel"].label, "P 24g • C 3g • F 0.9g")
+    }
+
     func testAddFoodHubBuildsMealFromIngredients() throws {
         launch(arguments: [])
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
@@ -170,7 +209,7 @@ final class FoodWalletUITests: XCTestCase {
     func testAddFoodHubResolvesCaseinProteinIngredient() throws {
         launch(arguments: [])
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
@@ -193,7 +232,7 @@ final class FoodWalletUITests: XCTestCase {
     func testAddFoodHubCanSaveUnknownIngredientFromLabel() throws {
         launch(arguments: [])
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
@@ -233,7 +272,7 @@ final class FoodWalletUITests: XCTestCase {
     func testCaptureScreenDoesNotExposeSampleAnalysisButtons() throws {
         launch(arguments: [])
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Capture"].tap()
         XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
 
@@ -244,7 +283,7 @@ final class FoodWalletUITests: XCTestCase {
     func testWalletOffersSafeExportsAfterSavingEntry() throws {
         launch()
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         app.buttons["SaveToFoodWalletButton"].tap()
@@ -260,7 +299,7 @@ final class FoodWalletUITests: XCTestCase {
     func testConfirmedEntryPersistsAcrossRelaunch() throws {
         launch()
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         app.buttons["SaveToFoodWalletButton"].tap()
@@ -268,7 +307,7 @@ final class FoodWalletUITests: XCTestCase {
 
         launch(resetFoodWalletStorage: false)
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.staticTexts["MealRowLabel-Fuji apple"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["MealRowNutrition-Fuji apple"].label, "170 g • 102 kcal")
@@ -277,7 +316,7 @@ final class FoodWalletUITests: XCTestCase {
     func testRestorePreviewDoesNotMutateUntilApplied() throws {
         launch()
 
-        XCTAssertTrue(app.staticTexts["Food Wallet"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         app.buttons["SaveToFoodWalletButton"].tap()

@@ -1,6 +1,6 @@
-# Food Wallet Privacy Policy Draft
+# MealMark Privacy Policy Draft
 
-Food Wallet helps you create a private food history. The app is designed so AI
+MealMark helps you create a private food history. The app is designed so AI
 can help create drafts, while you decide what becomes a saved record.
 
 ## Local Food Records
@@ -11,11 +11,11 @@ and confirmation time.
 
 ## Photos
 
-Meal photos are used to create food estimate drafts. Food Wallet does not store raw meal photos by default.
+Meal photos are used to create food estimate drafts. MealMark does not store raw meal photos by default.
 Photos are not included in safe summaries, exports, or protocol proof views.
 If you choose remote analysis, the app sends the selected photo to the Food
 Wallet backend broker for that analysis request. The photo is treated as
-transient request data and is not retained by Food Wallet after the estimate is
+transient request data and is not retained by MealMark after the estimate is
 created.
 
 ## AI Analysis
@@ -29,8 +29,8 @@ request completes.
 
 ## Subscriptions
 
-Food Wallet Pro may use Apple StoreKit subscriptions. Apple processes payments
-and subscription management. Food Wallet should use entitlement status only to
+MealMark Pro may use Apple StoreKit subscriptions. Apple processes payments
+and subscription management. MealMark should use entitlement status only to
 unlock Pro features.
 
 ## Export
@@ -41,11 +41,11 @@ bundles, or hidden AI request data.
 
 ## Accounts
 
-The first version does not require a Food Wallet account. If account sync is
+The first version does not require a MealMark account. If account sync is
 added later, the app must provide in-app account deletion and delete associated
 account data unless retention is legally required.
 
 ## No Medical Claims
 
-Food Wallet estimates food and nutrition for personal tracking. It does not
+MealMark estimates food and nutrition for personal tracking. It does not
 provide medical advice, diagnosis, treatment, or guaranteed nutrition accuracy.

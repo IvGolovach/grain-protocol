@@ -5,12 +5,21 @@ import { analyzerFromEnv } from "./analyzers.js";
 import { BrokerError, errorShape, internalError } from "./errors.js";
 import { FoodAnalysisCandidateResolver, GrainDraftResolver } from "./resolver.js";
 import { MAX_JSON_BODY_BYTES } from "./schema.js";
-import { assertObservation, parseAnalyzePhotoRequest } from "./validation.js";
-import type { CandidateResolver, FoodAnalyzer, FoodAnalyzePhotoSuccess, ObservationResolver } from "./types.js";
+import { FixtureFoodSearchProvider } from "./search.js";
+import { assertObservation, parseAnalyzePhotoRequest, parseFoodSearchRequest } from "./validation.js";
+import type {
+  CandidateResolver,
+  FoodAnalyzer,
+  FoodAnalyzePhotoSuccess,
+  FoodSearchProvider,
+  FoodSearchSuccess,
+  ObservationResolver
+} from "./types.js";
 
 export type BrokerServerOptions = {
   analyzer?: FoodAnalyzer;
   candidateResolver?: CandidateResolver;
+  searchProvider?: FoodSearchProvider;
   resolver?: ObservationResolver;
   maxBodyBytes?: number;
 };
@@ -18,13 +27,14 @@ export type BrokerServerOptions = {
 export function createBrokerServer(options: BrokerServerOptions = {}): Server {
   const analyzer = options.analyzer ?? analyzerFromEnv();
   const candidateResolver = options.candidateResolver ?? new FoodAnalysisCandidateResolver();
+  const searchProvider = options.searchProvider ?? new FixtureFoodSearchProvider();
   const resolver = options.resolver ?? new GrainDraftResolver();
   const maxBodyBytes = options.maxBodyBytes ?? MAX_JSON_BODY_BYTES;
 
   return createServer(async (req, res) => {
     const requestId = req.headers["x-request-id"]?.toString() || randomUUID();
     try {
-      await routeRequest(req, res, { analyzer, candidateResolver, resolver, maxBodyBytes, requestId });
+      await routeRequest(req, res, { analyzer, candidateResolver, searchProvider, resolver, maxBodyBytes, requestId });
     } catch (err) {
       if (err instanceof BrokerError) {
         writeJson(res, err.status, errorShape(err, requestId));
@@ -41,12 +51,14 @@ async function routeRequest(
   context: {
     analyzer: FoodAnalyzer;
     candidateResolver: CandidateResolver;
+    searchProvider: FoodSearchProvider;
     resolver: ObservationResolver;
     maxBodyBytes: number;
     requestId: string;
   }
 ): Promise<void> {
-  if (req.url !== "/v1/food/analyze-photo") {
+  const pathname = req.url?.split("?")[0] ?? "/";
+  if (pathname !== "/v1/food/analyze-photo" && pathname !== "/v1/food/search") {
     throw new BrokerError(404, "NOT_FOUND", "route not found");
   }
   if (req.method !== "POST") {
@@ -62,6 +74,20 @@ async function routeRequest(
     parsed = JSON.parse(rawBody);
   } catch {
     throw new BrokerError(400, "BAD_JSON", "request body must be valid JSON");
+  }
+
+  if (pathname === "/v1/food/search") {
+    const { request, requestId } = parseFoodSearchRequest(parsed);
+    const results = await context.searchProvider.search(request);
+    const body: FoodSearchSuccess = {
+      ok: true,
+      request_id: request.request_id ?? requestId,
+      ...(request.query ? { query: request.query } : {}),
+      ...(request.barcode ? { barcode: request.barcode } : {}),
+      results
+    };
+    writeJson(res, 200, body);
+    return;
   }
 
   const { request, imageBytes, photoSha25616, requestId } = parseAnalyzePhotoRequest(parsed);

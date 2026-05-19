@@ -1,7 +1,8 @@
-# Grain Food Wallet iOS App
+# MealMark iOS App
 
-This is the first first-party iOS app surface for the Grain Food Wallet
-contract. It is intentionally product-shaped rather than a protocol demo.
+This is the first first-party iOS app surface built on the Grain Food Wallet
+contract. It is intentionally product-shaped rather than a protocol demo, and
+the consumer-facing app name is MealMark.
 
 The current build is a Swift package app surface with:
 
@@ -23,7 +24,7 @@ camera photo or sample capture
 -> food analysis candidate
 -> editable assumptions
 -> user-confirmed draft
--> Food Wallet entry
+-> MealMark entry
 -> safe summary
 ```
 
@@ -168,8 +169,8 @@ scripts/sdk/run_ios_food_wallet_device.sh
 
 The script detects the first connected developer-mode iPhone, detects the first
 local Apple Development team, generates `FoodWallet.xcodeproj`, builds and
-installs `FoodWallet.app`, runs `--grain-device-smoke`, and then launches the
-app normally.
+installs `FoodWallet.app` with the MealMark display name, runs
+`--grain-device-smoke`, and then launches the app normally.
 
 Useful overrides:
 

@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import GrainFoodWallet
 
-public struct SavedFoodTemplate: Identifiable, Equatable, Sendable {
+public struct SavedFoodTemplate: Identifiable, Codable, Equatable, Sendable {
     public var id: String
     public var title: String
     public var subtitle: String
@@ -50,7 +50,7 @@ public struct SavedFoodTemplate: Identifiable, Equatable, Sendable {
     public static let defaultTemplates: [SavedFoodTemplate] = []
 }
 
-public struct SavedFoodRecipeIngredient: Identifiable, Equatable, Sendable {
+public struct SavedFoodRecipeIngredient: Identifiable, Codable, Equatable, Sendable {
     public var id: String
     public var label: String
     public var grams: Int64
@@ -64,7 +64,7 @@ public struct SavedFoodRecipeIngredient: Identifiable, Equatable, Sendable {
     }
 }
 
-public struct SavedFoodRecipe: Identifiable, Equatable, Sendable {
+public struct SavedFoodRecipe: Identifiable, Codable, Equatable, Sendable {
     public var id: String
     public var title: String
     public var subtitle: String
@@ -199,6 +199,7 @@ public struct FoodWalletExportBundle: Codable, Equatable, Sendable {
     public var entries: [FoodWalletExportEntry]
     public var templates: [FoodWalletExportTemplate]
     public var recipes: [FoodWalletExportRecipe]
+    public var personalFoods: [FoodWalletExportPersonalFood]?
     public var privacy: FoodWalletExportPrivacy
     public var manifest: FoodWalletExportManifest
 }
@@ -255,16 +256,55 @@ public struct FoodWalletExportEntry: Codable, Equatable, Sendable {
 public struct FoodWalletExportTemplate: Codable, Equatable, Sendable {
     public var id: String
     public var title: String
+    public var subtitle: String?
     public var kcal: Int64
+    public var varianceKcal: Int64?
     public var amountGrams: Int64
+    public var servingGrams: Int64?
+    public var servings: Int64?
+    public var proteinGrams: Double?
+    public var carbohydrateGrams: Double?
+    public var fatGrams: Double?
+    public var fiberGrams: Double?
+    public var evidenceProvider: String?
+    public var servingBasis: String?
 }
 
 public struct FoodWalletExportRecipe: Codable, Equatable, Sendable {
     public var id: String
     public var title: String
+    public var subtitle: String?
     public var totalKcal: Int64
     public var totalGrams: Int64
     public var ingredients: [String]
+    public var ingredientDetails: [FoodWalletExportRecipeIngredient]?
+    public var proteinGrams: Double?
+    public var carbohydrateGrams: Double?
+    public var fatGrams: Double?
+    public var fiberGrams: Double?
+    public var evidenceProvider: String?
+    public var servingBasis: String?
+}
+
+public struct FoodWalletExportRecipeIngredient: Codable, Equatable, Sendable {
+    public var id: String
+    public var label: String
+    public var grams: Int64
+    public var kcal: Int64
+}
+
+public struct FoodWalletExportPersonalFood: Codable, Equatable, Sendable {
+    public var id: String
+    public var name: String
+    public var sourceServingGrams: Double
+    public var sourceServingKcal: Int64
+    public var kcalPer100Grams: Double
+    public var proteinGramsPer100: Double
+    public var carbohydrateGramsPer100: Double
+    public var fatGramsPer100: Double
+    public var fiberGramsPer100: Double?
+    public var evidenceProvider: String
+    public var servingBasis: String
 }
 
 public struct FoodWalletExportPrivacy: Codable, Equatable, Sendable {
@@ -277,6 +317,7 @@ public struct FoodWalletExportManifest: Codable, Equatable, Sendable {
     public var entryCount: Int
     public var templateCount: Int
     public var recipeCount: Int
+    public var personalFoodCount: Int?
     public var contentSha256: String
     public var contentDigestID: String
     public var sourceClassSummary: [String: Int]
@@ -287,6 +328,7 @@ public struct FoodWalletExportManifest: Codable, Equatable, Sendable {
         case entryCount
         case templateCount
         case recipeCount
+        case personalFoodCount
         case contentSha256
         case contentDigestID = "contentDigestId"
         case sourceClassSummary
@@ -362,6 +404,52 @@ public struct FoodWalletLocalLedgerState: Codable, Equatable, Sendable {
     public var entries: [FoodWalletExportEntry]
 }
 
+public struct FoodWalletUserLibraryState: Codable, Equatable, Sendable {
+    public var schema: String
+    public var version: Int
+    public var templates: [SavedFoodTemplate]
+    public var recipes: [SavedFoodRecipe]
+    public var personalIngredients: [PersonalFoodIngredient]
+
+    public init(
+        schema: String = "grain.food-wallet.user-library.v1",
+        version: Int = 1,
+        templates: [SavedFoodTemplate] = [],
+        recipes: [SavedFoodRecipe] = [],
+        personalIngredients: [PersonalFoodIngredient] = []
+    ) {
+        self.schema = schema
+        self.version = version
+        self.templates = templates
+        self.recipes = recipes
+        self.personalIngredients = personalIngredients
+    }
+
+    public var isEmpty: Bool {
+        templates.isEmpty && recipes.isEmpty && personalIngredients.isEmpty
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schema
+        case version
+        case templates
+        case recipes
+        case personalIngredients
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schema = try container.decodeIfPresent(String.self, forKey: .schema) ?? "grain.food-wallet.user-library.v1"
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        templates = try container.decodeIfPresent([SavedFoodTemplate].self, forKey: .templates) ?? []
+        recipes = try container.decodeIfPresent([SavedFoodRecipe].self, forKey: .recipes) ?? []
+        personalIngredients = try container.decodeIfPresent(
+            [PersonalFoodIngredient].self,
+            forKey: .personalIngredients
+        ) ?? []
+    }
+}
+
 public extension FoodAnalysisCandidate {
     func scaled(toGrams gramsMode: Int64) -> FoodAnalysisCandidate {
         let safeGrams = max(1, gramsMode)
@@ -421,7 +509,13 @@ struct FoodIngredientCatalog {
         var aliases: [String]
         var kcalPer100Grams: Double
         var macronutrientsPer100Grams: MealMacronutrients
+        var defaultServingGrams: Int64 = 100
+        var servingLabel: String? = nil
         var provider: String = "food_wallet_ingredient_catalog"
+
+        var searchableText: String {
+            ([label] + aliases).joined(separator: " ")
+        }
     }
 
     static func candidate(
@@ -557,6 +651,57 @@ struct FoodIngredientCatalog {
         ))
     }
 
+    static func suggestionRows(
+        for text: String,
+        personalIngredients: [PersonalFoodIngredient] = [],
+        limit: Int = 8
+    ) -> [AddFoodSuggestionRow] {
+        let query = AddFoodSearchQuery(text)
+        guard !query.isEmpty else {
+            return []
+        }
+
+        let catalogRows = entries
+            .compactMap { entry -> (score: Int, row: AddFoodSuggestionRow)? in
+                guard let score = matchScore(query: query, entry: entry) else {
+                    return nil
+                }
+                return (score, suggestionRow(entry: entry))
+            }
+        let personalRows = personalIngredients
+            .compactMap { ingredient -> (score: Int, row: AddFoodSuggestionRow)? in
+                let entry = entry(from: ingredient)
+                guard let score = matchScore(query: query, entry: entry) else {
+                    return nil
+                }
+                return (score, suggestionRow(entry: entry))
+            }
+
+        return (catalogRows + personalRows)
+            .sorted { left, right in
+                if left.score != right.score {
+                    return left.score > right.score
+                }
+                return left.row.title.localizedCaseInsensitiveCompare(right.row.title) == .orderedAscending
+            }
+            .prefix(limit)
+            .map(\.row)
+    }
+
+    static func candidate(
+        suggestionID: String,
+        personalIngredients: [PersonalFoodIngredient] = []
+    ) -> FoodAnalysisCandidate? {
+        let entryID = suggestionID.replacingOccurrences(of: "ingredient:", with: "")
+        if let entry = entries.first(where: { $0.id == entryID }) {
+            return singleFoodCandidate(entry: entry)
+        }
+        if let personal = personalIngredients.first(where: { "personal:\($0.id)" == suggestionID || $0.id == entryID }) {
+            return singleFoodCandidate(entry: entry(from: personal))
+        }
+        return nil
+    }
+
     private static func lookup(
         _ input: String,
         personalIngredients: [PersonalFoodIngredient]
@@ -580,6 +725,119 @@ struct FoodIngredientCatalog {
                 normalized == alias || normalized.contains(alias)
             }
         }
+    }
+
+    private static func suggestionRow(entry: Entry) -> AddFoodSuggestionRow {
+        let meal = mealEstimate(entry: entry)
+        return AddFoodSuggestionRow(
+            id: "ingredient:\(entry.id)",
+            kind: entry.provider == "food_wallet_personal_ingredient" ? .personalIngredient : .providerMatch,
+            title: entry.label,
+            subtitle: "\(entry.servingLabel ?? "\(entry.defaultServingGrams) g") | \(meal.kcal) kcal",
+            sourceLabel: FoodEvidenceSource.defaultLabel(for: entry.provider),
+            evidence: [
+                ProviderEvidence(
+                    provider: entry.provider,
+                    providerID: entry.id,
+                    matchedName: entry.label,
+                    servingBasis: entry.servingLabel ?? "\(entry.defaultServingGrams)g default serving"
+                ),
+            ],
+            confidence: .medium,
+            nutrition: NutritionRange(
+                minKcal: max(0, meal.kcal - meal.varianceKcal),
+                modeKcal: meal.kcal,
+                maxKcal: meal.kcal + meal.varianceKcal
+            ),
+            portion: PortionEstimate(
+                gramsMin: max(1, entry.defaultServingGrams - max(1, entry.defaultServingGrams / 10)),
+                gramsMode: entry.defaultServingGrams,
+                gramsMax: entry.defaultServingGrams + max(1, entry.defaultServingGrams / 10)
+            ),
+            searchText: entry.searchableText
+        )
+    }
+
+    private static func singleFoodCandidate(entry: Entry) -> FoodAnalysisCandidate {
+        let meal = mealEstimate(entry: entry)
+        let variance = meal.varianceKcal
+        return FoodAnalysisCandidate(
+            id: "ingredient-\(slug(entry.id))",
+            primaryLabel: entry.label,
+            genericLabel: entry.label.lowercased(),
+            dishType: .single,
+            portion: PortionEstimate(
+                gramsMin: max(1, entry.defaultServingGrams - max(1, entry.defaultServingGrams / 10)),
+                gramsMode: entry.defaultServingGrams,
+                gramsMax: entry.defaultServingGrams + max(1, entry.defaultServingGrams / 10)
+            ),
+            nutrition: NutritionRange(
+                minKcal: max(0, meal.kcal - variance),
+                modeKcal: meal.kcal,
+                maxKcal: meal.kcal + variance
+            ),
+            macronutrients: meal.macronutrients ?? MealMacronutrients(
+                proteinGrams: 0,
+                carbohydrateGrams: 0,
+                fatGrams: 0,
+                fiberGrams: 0
+            ),
+            confidence: .medium,
+            assumptions: [
+                FoodAssumption(id: "catalog-match", label: "matched local nutrition catalog"),
+                FoodAssumption(id: "review-portion", label: "review portion before saving"),
+            ],
+            evidence: [
+                ProviderEvidence(
+                    provider: entry.provider,
+                    providerID: entry.id,
+                    matchedName: entry.label,
+                    servingBasis: entry.servingLabel ?? "\(entry.defaultServingGrams)g default serving"
+                ),
+            ],
+            userConfirmationRequired: true
+        )
+    }
+
+    private static func mealEstimate(entry: Entry) -> MealEstimate {
+        let factor = Double(entry.defaultServingGrams) / 100
+        let kcal = Int64((entry.kcalPer100Grams * factor).rounded())
+        return MealEstimate(
+            label: entry.label,
+            kcal: kcal,
+            varianceKcal: max(1, Int64((Double(kcal) * 0.10).rounded())),
+            amountGrams: entry.defaultServingGrams,
+            servingGrams: entry.defaultServingGrams,
+            servings: 1,
+            macronutrients: entry.macronutrientsPer100Grams.scaled(by: factor)
+        )
+    }
+
+    private static func entry(from ingredient: PersonalFoodIngredient) -> Entry {
+        Entry(
+            id: "personal:\(ingredient.id)",
+            label: ingredient.name,
+            aliases: [ingredient.name],
+            kcalPer100Grams: ingredient.kcalPer100Grams,
+            macronutrientsPer100Grams: ingredient.macronutrientsPer100Grams,
+            defaultServingGrams: max(1, Int64(ingredient.sourceServingGrams.rounded())),
+            servingLabel: "\(Int64(ingredient.sourceServingGrams.rounded())) g saved serving",
+            provider: "food_wallet_personal_ingredient"
+        )
+    }
+
+    private static func matchScore(query: AddFoodSearchQuery, entry: Entry) -> Int? {
+        let searchable = AddFoodSearchQuery.normalize(entry.searchableText)
+        guard query.tokens.allSatisfy({ searchable.contains($0) }) else {
+            return nil
+        }
+        if entry.aliases.contains(where: { AddFoodSearchQuery.normalize($0) == query.normalizedValue }) {
+            return 100
+        }
+        if AddFoodSearchQuery.normalize(entry.label) == query.normalizedValue {
+            return 95
+        }
+        return 70 + query.tokens.count
     }
 
     private static func slug(_ value: String) -> String {
@@ -656,7 +914,9 @@ struct FoodIngredientCatalog {
                 carbohydrateGrams: 10,
                 fatGrams: 3,
                 fiberGrams: 0
-            )
+            ),
+            defaultServingGrams: 30,
+            servingLabel: "1 scoop (30 g)"
         ),
         Entry(
             id: "oats.rolled",
@@ -961,9 +1221,11 @@ public enum FoodWalletExportFactory {
         entries: [FoodIntakeEntry],
         templates: [SavedFoodTemplate],
         recipes: [SavedFoodRecipe],
-        generatedAt: Date
+        generatedAt: Date,
+        personalFoods: [PersonalFoodIngredient] = []
     ) throws -> FoodWalletExportBundle {
         let exportEntries = entries.map(FoodWalletExportEntry.init(entry:))
+        let exportPersonalFoods = personalFoods.map(FoodWalletExportPersonalFood.init(ingredient:))
         let sourceCounts = counts(entries.map { $0.sourceClass.rawValue })
         let trustCounts = counts(entries.map { $0.trustStatus.rawValue })
         var bundle = FoodWalletExportBundle(
@@ -982,6 +1244,7 @@ public enum FoodWalletExportFactory {
             entries: exportEntries,
             templates: templates.map(FoodWalletExportTemplate.init(template:)),
             recipes: recipes.map(FoodWalletExportRecipe.init(recipe:)),
+            personalFoods: exportPersonalFoods.isEmpty ? nil : exportPersonalFoods,
             privacy: FoodWalletExportPrivacy(
                 photoRetentionPolicy: "no_photo_storage",
                 excludesProtocolCustodyMaterial: true,
@@ -991,6 +1254,7 @@ public enum FoodWalletExportFactory {
                 entryCount: entries.count,
                 templateCount: templates.count,
                 recipeCount: recipes.count,
+                personalFoodCount: exportPersonalFoods.isEmpty ? nil : exportPersonalFoods.count,
                 contentSha256: "",
                 contentDigestID: "",
                 sourceClassSummary: sourceCounts,
@@ -1068,6 +1332,16 @@ public enum FoodWalletExportFactory {
         guard bundle.manifest.recipeCount == bundle.recipes.count else {
             throw FoodWalletImportError.invalidManifest("recipe count mismatch")
         }
+        let personalFoods = bundle.personalFoods ?? []
+        if personalFoods.isEmpty {
+            if let personalFoodCount = bundle.manifest.personalFoodCount, personalFoodCount != 0 {
+                throw FoodWalletImportError.invalidManifest("personal food count mismatch")
+            }
+        } else {
+            guard bundle.manifest.personalFoodCount == personalFoods.count else {
+                throw FoodWalletImportError.invalidManifest("personal food count mismatch")
+            }
+        }
         let contentData = try canonicalContentData(for: bundle)
         let digest = sha256Hex(contentData)
         guard digest == bundle.manifest.contentSha256 else {
@@ -1112,6 +1386,9 @@ public enum FoodWalletExportFactory {
         for entry in bundle.entries {
             try validate(entry)
         }
+        for personalFood in personalFoods {
+            try validate(personalFood)
+        }
     }
 
     public static func importPreview(
@@ -1155,6 +1432,30 @@ public enum FoodWalletExportFactory {
         }
         guard FoodTrustStatus(rawValue: entry.trustStatus) != nil else {
             throw FoodWalletImportError.invalidEntry("unknown trust status")
+        }
+    }
+
+    private static func validate(_ personalFood: FoodWalletExportPersonalFood) throws {
+        guard !personalFood.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing personal food id")
+        }
+        guard !personalFood.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw FoodWalletImportError.invalidEntry("missing personal food name")
+        }
+        guard personalFood.sourceServingGrams > 0,
+              personalFood.sourceServingKcal >= 0,
+              personalFood.kcalPer100Grams >= 0,
+              personalFood.proteinGramsPer100 >= 0,
+              personalFood.carbohydrateGramsPer100 >= 0,
+              personalFood.fatGramsPer100 >= 0,
+              (personalFood.fiberGramsPer100 ?? 0) >= 0 else {
+            throw FoodWalletImportError.invalidEntry("invalid personal food nutrition")
+        }
+        guard personalFood.evidenceProvider == "food_wallet_personal_ingredient" else {
+            throw FoodWalletImportError.invalidEntry("unknown personal food evidence provider")
+        }
+        guard personalFood.servingBasis == "user_entered_nutrition_label" else {
+            throw FoodWalletImportError.invalidEntry("unknown personal food serving basis")
         }
     }
 
@@ -1314,6 +1615,55 @@ public enum FoodWalletLocalLedgerCodec {
     }
 }
 
+public enum FoodWalletUserLibraryCodec {
+    public static func encode(_ state: FoodWalletUserLibraryState) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(state)
+    }
+
+    public static func encode(
+        templates: [SavedFoodTemplate],
+        recipes: [SavedFoodRecipe],
+        personalIngredients: [PersonalFoodIngredient]
+    ) throws -> Data {
+        try encode(FoodWalletUserLibraryState(
+            templates: templates,
+            recipes: recipes,
+            personalIngredients: personalIngredients
+        ))
+    }
+
+    public static func decode(_ data: Data) throws -> FoodWalletUserLibraryState {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        do {
+            let state = try decoder.decode(FoodWalletUserLibraryState.self, from: data)
+            try validate(state)
+            return state
+        } catch let error as FoodWalletImportError {
+            throw error
+        } catch {
+            if let legacyPersonalIngredients = try? decoder.decode([PersonalFoodIngredient].self, from: data) {
+                let state = FoodWalletUserLibraryState(personalIngredients: legacyPersonalIngredients)
+                try validate(state)
+                return state
+            }
+            throw FoodWalletImportError.invalidJSON
+        }
+    }
+
+    private static func validate(_ state: FoodWalletUserLibraryState) throws {
+        guard state.schema == "grain.food-wallet.user-library.v1" else {
+            throw FoodWalletImportError.unsupportedSchema(state.schema)
+        }
+        guard state.version == 1 else {
+            throw FoodWalletImportError.unsupportedVersion(state.version)
+        }
+    }
+}
+
 private extension FoodIntakeEntry {
     init(exportEntry: FoodWalletExportEntry) throws {
         guard !exportEntry.entryID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -1362,8 +1712,18 @@ private extension FoodWalletExportTemplate {
     init(template: SavedFoodTemplate) {
         id = template.id
         title = template.title
+        subtitle = template.subtitle
         kcal = template.kcal
+        varianceKcal = template.varianceKcal
         amountGrams = template.amountGrams
+        servingGrams = template.servingGrams
+        servings = template.servings
+        proteinGrams = template.macronutrients.proteinGrams
+        carbohydrateGrams = template.macronutrients.carbohydrateGrams
+        fatGrams = template.macronutrients.fatGrams
+        fiberGrams = template.macronutrients.fiberGrams
+        evidenceProvider = "food_wallet_template"
+        servingBasis = "saved_template"
     }
 }
 
@@ -1371,8 +1731,41 @@ private extension FoodWalletExportRecipe {
     init(recipe: SavedFoodRecipe) {
         id = recipe.id
         title = recipe.title
+        subtitle = recipe.subtitle
         totalKcal = recipe.totalKcal
         totalGrams = recipe.totalGrams
         ingredients = recipe.ingredients.map(\.label)
+        ingredientDetails = recipe.ingredients.map(FoodWalletExportRecipeIngredient.init(ingredient:))
+        proteinGrams = recipe.macronutrients.proteinGrams
+        carbohydrateGrams = recipe.macronutrients.carbohydrateGrams
+        fatGrams = recipe.macronutrients.fatGrams
+        fiberGrams = recipe.macronutrients.fiberGrams
+        evidenceProvider = "food_wallet_recipe"
+        servingBasis = "recipe_yield"
+    }
+}
+
+private extension FoodWalletExportRecipeIngredient {
+    init(ingredient: SavedFoodRecipeIngredient) {
+        id = ingredient.id
+        label = ingredient.label
+        grams = ingredient.grams
+        kcal = ingredient.kcal
+    }
+}
+
+private extension FoodWalletExportPersonalFood {
+    init(ingredient: PersonalFoodIngredient) {
+        id = ingredient.id
+        name = ingredient.name
+        sourceServingGrams = ingredient.sourceServingGrams
+        sourceServingKcal = ingredient.sourceServingKcal
+        kcalPer100Grams = ingredient.kcalPer100Grams
+        proteinGramsPer100 = ingredient.macronutrientsPer100Grams.proteinGrams
+        carbohydrateGramsPer100 = ingredient.macronutrientsPer100Grams.carbohydrateGrams
+        fatGramsPer100 = ingredient.macronutrientsPer100Grams.fatGrams
+        fiberGramsPer100 = ingredient.macronutrientsPer100Grams.fiberGrams
+        evidenceProvider = "food_wallet_personal_ingredient"
+        servingBasis = "user_entered_nutrition_label"
     }
 }

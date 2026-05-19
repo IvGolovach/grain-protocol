@@ -37,7 +37,6 @@ struct FoodWalletAppMain: App {
 
 private enum FoodWalletAppConfiguration {
     private static let brokerEndpointEnvironmentKey = "GRAIN_FOOD_ANALYSIS_BROKER_URL"
-    private static let personalIngredientsDefaultsKey = "grain.food-wallet.personal-ingredients.v1"
     private static let deviceSmokeArgument = "--grain-device-smoke"
     private static let uiTestPhotoFlowArgument = "--grain-ui-test-photo-flow"
     private static let uiTestDelayedPhotoFlowArgument = "--grain-ui-test-delayed-photo-flow"
@@ -49,18 +48,21 @@ private enum FoodWalletAppConfiguration {
     @MainActor
     static func makeStore() -> FoodWalletStore {
         if ProcessInfo.processInfo.arguments.contains(uiTestResetPersonalIngredientsArgument) {
-            UserDefaults.standard.removeObject(forKey: personalIngredientsDefaultsKey)
+            FoodWalletUserLibraryStore.savePersonalIngredients([])
         }
         if ProcessInfo.processInfo.arguments.contains(uiTestResetFoodWalletStorageArgument) {
             FoodWalletLocalLedgerStore.remove()
         }
+        let userLibrary = FoodWalletUserLibraryStore.load()
 
         return FoodWalletStore(
             analysisClient: makeAnalysisClient(),
             entries: FoodWalletLocalLedgerStore.loadEntries(),
-            personalIngredients: loadPersonalIngredients(),
+            savedTemplates: userLibrary.templates,
+            savedRecipes: userLibrary.recipes,
+            personalIngredients: userLibrary.personalIngredients,
             onEntriesChange: FoodWalletLocalLedgerStore.save,
-            onPersonalIngredientsChange: savePersonalIngredients
+            onPersonalIngredientsChange: FoodWalletUserLibraryStore.savePersonalIngredients
         )
     }
 
@@ -102,25 +104,6 @@ private enum FoodWalletAppConfiguration {
         return endpoint
     }
 
-    private static func loadPersonalIngredients() -> [PersonalFoodIngredient] {
-        guard let data = UserDefaults.standard.data(forKey: personalIngredientsDefaultsKey) else {
-            return []
-        }
-        return (try? JSONDecoder().decode([PersonalFoodIngredient].self, from: data)) ?? []
-    }
-
-    @MainActor
-    private static func savePersonalIngredients(_ ingredients: [PersonalFoodIngredient]) {
-        guard !ingredients.isEmpty else {
-            UserDefaults.standard.removeObject(forKey: personalIngredientsDefaultsKey)
-            return
-        }
-        guard let data = try? JSONEncoder().encode(ingredients) else {
-            return
-        }
-        UserDefaults.standard.set(data, forKey: personalIngredientsDefaultsKey)
-    }
-
     private static func uiTestDelayNanoseconds() -> UInt64 {
         let arguments = ProcessInfo.processInfo.arguments
         guard
@@ -133,6 +116,49 @@ private enum FoodWalletAppConfiguration {
         return delayMilliseconds * 1_000_000
     }
 
+}
+
+private enum FoodWalletUserLibraryStore {
+    private static let defaultsKey = "grain.food-wallet.user-library.v1"
+    private static let legacyPersonalIngredientsDefaultsKey = "grain.food-wallet.personal-ingredients.v1"
+
+    static func load() -> FoodWalletUserLibraryState {
+        if let data = UserDefaults.standard.data(forKey: defaultsKey),
+           let state = try? FoodWalletUserLibraryCodec.decode(data) {
+            return state
+        }
+        if let data = UserDefaults.standard.data(forKey: legacyPersonalIngredientsDefaultsKey),
+           let state = try? FoodWalletUserLibraryCodec.decode(data) {
+            save(state)
+            UserDefaults.standard.removeObject(forKey: legacyPersonalIngredientsDefaultsKey)
+            return state
+        }
+        return FoodWalletUserLibraryState()
+    }
+
+    @MainActor
+    static func savePersonalIngredients(_ ingredients: [PersonalFoodIngredient]) {
+        var state = load()
+        state.personalIngredients = ingredients
+        save(state)
+    }
+
+    static func save(_ state: FoodWalletUserLibraryState) {
+        guard !state.isEmpty else {
+            remove()
+            return
+        }
+        guard let data = try? FoodWalletUserLibraryCodec.encode(state) else {
+            return
+        }
+        UserDefaults.standard.set(data, forKey: defaultsKey)
+        UserDefaults.standard.removeObject(forKey: legacyPersonalIngredientsDefaultsKey)
+    }
+
+    static func remove() {
+        UserDefaults.standard.removeObject(forKey: defaultsKey)
+        UserDefaults.standard.removeObject(forKey: legacyPersonalIngredientsDefaultsKey)
+    }
 }
 
 enum FoodWalletLocalLedgerStore {
@@ -166,11 +192,13 @@ enum FoodWalletLocalLedgerStore {
         guard !entries.isEmpty else {
             return nil
         }
+        let userLibrary = FoodWalletUserLibraryStore.load()
         return try? FoodWalletExportFactory.portableBundle(
             entries: entries,
-            templates: [],
-            recipes: [],
-            generatedAt: Date()
+            templates: userLibrary.templates,
+            recipes: userLibrary.recipes,
+            generatedAt: Date(),
+            personalFoods: userLibrary.personalIngredients
         )
     }
 

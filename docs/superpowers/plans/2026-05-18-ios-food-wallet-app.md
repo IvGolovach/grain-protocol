@@ -1,8 +1,8 @@
-# iOS Food Wallet App Implementation Plan
+# MealMark iOS App Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a working SwiftUI Food Wallet app surface that turns mock photo analysis into user-confirmed Grain Food Wallet records.
+**Goal:** Build a working SwiftUI MealMark app surface that turns mock photo analysis into user-confirmed Grain Food Wallet records.
 
 **Architecture:** The first app is a Swift package in `apps/ios-food-wallet`. `FoodWalletCore` owns analysis models, local app state, Grain Food Wallet integration, privacy, and subscription state. `FoodWalletApp` owns SwiftUI screens. `FoodWalletAppIntents` exposes a narrow Shortcuts/Siri surface.
 
@@ -34,7 +34,7 @@
 - [ ] Add Today, Capture, Draft, History, Wallet, and Pro tabs.
 - [ ] Add photo estimate buttons for Fuji apple and mushroom risotto.
 - [ ] Add assumptions editor with simple toggles and portion controls.
-- [ ] Add confirmation flow that saves to Food Wallet.
+- [ ] Add confirmation flow that saves to MealMark.
 - [ ] Run `swift build --package-path apps/ios-food-wallet`.
 
 ### Task 3: App Intents

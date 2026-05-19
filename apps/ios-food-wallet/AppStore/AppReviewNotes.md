@@ -1,6 +1,6 @@
 # App Review Notes Draft
 
-Food Wallet is a food logging app. It creates estimated food drafts from user
+MealMark is a food logging app. It creates estimated food drafts from user
 actions and saves only user-confirmed records.
 
 ## What To Test
@@ -8,7 +8,7 @@ actions and saves only user-confirmed records.
 1. Open the app.
 2. Tap Capture.
 3. Analyze the Fuji apple sample.
-4. Save the draft to Food Wallet.
+4. Save the draft to MealMark.
 5. Analyze the mushroom risotto sample.
 6. Review assumptions and save.
 7. Open History and Wallet to see confirmed records and safe-summary language.
@@ -20,8 +20,8 @@ The current build uses deterministic mock analysis. In production, photo
 analysis will be user-initiated and will require explicit consent before a
 selected image is sent to a backend broker and AI provider.
 
-Food Wallet does not retain raw meal photos by default. It stores only derived
-food estimate fields and user-confirmed Food Wallet records.
+MealMark does not retain raw meal photos by default. It stores only derived
+food estimate fields and user-confirmed MealMark records.
 
 ## Subscription
 
@@ -35,7 +35,7 @@ submission with live products.
 
 ## Medical Disclaimer
 
-Food Wallet provides food estimates for personal tracking. It is not medical advice,
+MealMark provides food estimates for personal tracking. It is not medical advice,
 diagnosis, treatment, or a medical nutrition device.
 
 ## Demo Notes

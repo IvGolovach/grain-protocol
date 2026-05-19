@@ -99,6 +99,297 @@ public struct ProviderEvidence: Codable, Equatable, Sendable {
         self.matchedName = matchedName
         self.servingBasis = servingBasis
     }
+
+    public var source: FoodEvidenceSource {
+        FoodEvidenceSource(id: provider)
+    }
+
+    public var sourceLabel: String {
+        source.label
+    }
+
+    public var normalizedProvider: String {
+        FoodEvidenceSource.normalize(provider)
+    }
+}
+
+public struct FoodEvidenceSource: Codable, Equatable, Sendable {
+    public var id: String
+    public var label: String
+
+    public init(id: String, label: String? = nil) {
+        let normalizedID = Self.normalize(id)
+        self.id = normalizedID
+        self.label = Self.clean(label) ?? Self.defaultLabel(for: normalizedID)
+    }
+
+    public static func normalize(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "_", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+    }
+
+    public static func defaultLabel(for id: String) -> String {
+        switch normalize(id) {
+        case "visible_nutrition_label":
+            return "Label read"
+        case "open_food_facts", "open_food_facts_fixture":
+            return "Barcode match"
+        case "food_wallet_template":
+            return "Template"
+        case "food_wallet_recipe":
+            return "Recipe"
+        case "food_wallet_history":
+            return "Recent"
+        case "food_wallet_quick_text":
+            return "Quick add"
+        case "food_wallet_ingredient_catalog":
+            return "Ingredient catalog"
+        case "food_wallet_personal_ingredient":
+            return "Personal ingredient"
+        case "usda_fdc":
+            return "USDA estimate"
+        case "curated_cache":
+            return "Curated estimate"
+        case "on_device_photo_heuristic":
+            return "Photo estimate"
+        case "grain_serving_offer":
+            return "Grain serving"
+        case "deterministic_fixture":
+            return "Food search match"
+        case "curated_fixture":
+            return "Curated food data"
+        case "broker_test":
+            return "Broker test"
+        case "":
+            return "Unknown source"
+        default:
+            return normalize(id)
+                .split(separator: "_")
+                .map { word in
+                    word.prefix(1).uppercased() + word.dropFirst()
+                }
+                .joined(separator: " ")
+        }
+    }
+
+    private static func clean(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+public struct MealMarkProvenanceSnapshot: Identifiable, Codable, Equatable, Sendable {
+    public var candidateID: String
+    public var draftID: String?
+    public var entryID: String?
+    public var sourceClass: String
+    public var trustStatus: String
+    public var primarySourceLabel: String
+    public var sourceLabels: [String]
+    public var evidence: [ProviderEvidence]
+
+    public var id: String {
+        entryID ?? draftID ?? candidateID
+    }
+
+    public init(
+        candidateID: String,
+        draftID: String? = nil,
+        entryID: String? = nil,
+        sourceClass: String,
+        trustStatus: String,
+        primarySourceLabel: String,
+        sourceLabels: [String],
+        evidence: [ProviderEvidence]
+    ) {
+        self.candidateID = candidateID
+        self.draftID = Self.clean(draftID)
+        self.entryID = Self.clean(entryID)
+        self.sourceClass = sourceClass
+        self.trustStatus = trustStatus
+        self.primarySourceLabel = Self.clean(primarySourceLabel) ?? "Unknown source"
+        self.sourceLabels = Self.uniqueNonEmpty(sourceLabels)
+        if self.sourceLabels.isEmpty {
+            self.sourceLabels = [self.primarySourceLabel]
+        }
+        self.evidence = evidence
+    }
+
+    public init(candidate: FoodAnalysisCandidate, draft: FoodIntakeDraft, entryID: String? = nil) {
+        self.init(
+            candidateID: candidate.id,
+            draftID: draft.draftID,
+            entryID: entryID,
+            sourceClass: draft.sourceClass.rawValue,
+            trustStatus: draft.trustStatus.rawValue,
+            primarySourceLabel: candidate.primarySourceLabel(trustStatus: draft.trustStatus),
+            sourceLabels: candidate.sourceLabels,
+            evidence: candidate.evidence
+        )
+    }
+
+    public init(candidate: FoodAnalysisCandidate, entry: FoodIntakeEntry) {
+        self.init(
+            candidateID: candidate.id,
+            draftID: entry.draftID,
+            entryID: entry.entryID,
+            sourceClass: entry.sourceClass.rawValue,
+            trustStatus: entry.trustStatus.rawValue,
+            primarySourceLabel: candidate.primarySourceLabel(trustStatus: entry.trustStatus),
+            sourceLabels: candidate.sourceLabels,
+            evidence: candidate.evidence
+        )
+    }
+
+    private static func clean(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func uniqueNonEmpty(_ values: [String]) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for value in values {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !seen.contains(trimmed) else {
+                continue
+            }
+            seen.insert(trimmed)
+            result.append(trimmed)
+        }
+        return result
+    }
+}
+
+public enum AddFoodSuggestionKind: String, Codable, Equatable, Sendable {
+    case analysisCandidate = "analysis_candidate"
+    case providerMatch = "provider_match"
+    case recentEntry = "recent_entry"
+    case savedTemplate = "saved_template"
+    case savedRecipe = "saved_recipe"
+    case personalIngredient = "personal_ingredient"
+    case quickText = "quick_text"
+    case manual
+}
+
+public struct AddFoodSearchQuery: Codable, Equatable, Sendable {
+    public var rawValue: String
+
+    public init(_ rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public var normalizedValue: String {
+        Self.normalize(rawValue)
+    }
+
+    public var tokens: [String] {
+        normalizedValue.split(separator: " ").map(String.init)
+    }
+
+    public var isEmpty: Bool {
+        normalizedValue.isEmpty
+    }
+
+    public func matches(_ row: AddFoodSuggestionRow) -> Bool {
+        guard !isEmpty else {
+            return true
+        }
+        let haystack = row.normalizedSearchText
+        return tokens.allSatisfy { haystack.contains($0) }
+    }
+
+    public static func normalize(_ value: String) -> String {
+        value
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+}
+
+public struct AddFoodSuggestionRow: Identifiable, Codable, Equatable, Sendable {
+    public var id: String
+    public var kind: AddFoodSuggestionKind
+    public var title: String
+    public var subtitle: String?
+    public var sourceLabel: String
+    public var evidence: [ProviderEvidence]
+    public var confidence: EstimateConfidence?
+    public var nutrition: NutritionRange?
+    public var portion: PortionEstimate?
+    public var searchText: String
+
+    public init(
+        id: String,
+        kind: AddFoodSuggestionKind,
+        title: String,
+        subtitle: String? = nil,
+        sourceLabel: String,
+        evidence: [ProviderEvidence] = [],
+        confidence: EstimateConfidence? = nil,
+        nutrition: NutritionRange? = nil,
+        portion: PortionEstimate? = nil,
+        searchText: String? = nil
+    ) {
+        self.id = id
+        self.kind = kind
+        self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.subtitle = Self.clean(subtitle)
+        self.sourceLabel = Self.clean(sourceLabel) ?? "Unknown source"
+        self.evidence = evidence
+        self.confidence = confidence
+        self.nutrition = nutrition
+        self.portion = portion
+        self.searchText = Self.clean(searchText) ?? Self.defaultSearchText(
+            title: self.title,
+            subtitle: self.subtitle,
+            sourceLabel: self.sourceLabel,
+            evidence: evidence
+        )
+    }
+
+    public var normalizedSearchText: String {
+        AddFoodSearchQuery.normalize(searchText)
+    }
+
+    public func matches(_ query: AddFoodSearchQuery) -> Bool {
+        query.matches(self)
+    }
+
+    private static func clean(_ value: String?) -> String? {
+        guard let value else {
+            return nil
+        }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private static func defaultSearchText(
+        title: String,
+        subtitle: String?,
+        sourceLabel: String,
+        evidence: [ProviderEvidence]
+    ) -> String {
+        var parts = [title, sourceLabel].compactMap(Self.clean)
+        if let subtitle = Self.clean(subtitle) {
+            parts.append(subtitle)
+        }
+        let evidenceText = evidence.flatMap { item in
+            [item.provider, item.providerID, item.matchedName, item.servingBasis, item.sourceLabel]
+        }
+        return (parts + evidenceText).joined(separator: " ")
+    }
 }
 
 public struct FoodPhotoFeatures: Codable, Equatable, Sendable {
@@ -226,6 +517,77 @@ public struct FoodAnalysisCandidate: Identifiable, Codable, Equatable, Sendable 
 
     public var sourceClass: FoodSourceClass {
         .estimated
+    }
+
+    public var sourceLabels: [String] {
+        var seen: Set<String> = []
+        var labels: [String] = []
+        for label in evidence.map(\.sourceLabel) {
+            guard !seen.contains(label) else {
+                continue
+            }
+            seen.insert(label)
+            labels.append(label)
+        }
+        return labels
+    }
+
+    public func primarySourceLabel(trustStatus: FoodTrustStatus = .estimated) -> String {
+        if trustStatus == .verified {
+            return trustStatus.label
+        }
+
+        let providers = Set(evidence.map(\.normalizedProvider))
+        for provider in [
+            "visible_nutrition_label",
+            "open_food_facts",
+            "open_food_facts_fixture",
+            "food_wallet_template",
+            "food_wallet_recipe",
+            "food_wallet_history",
+            "food_wallet_quick_text",
+            "food_wallet_ingredient_catalog",
+            "food_wallet_personal_ingredient",
+            "usda_fdc",
+            "curated_cache",
+            "on_device_photo_heuristic",
+        ] where providers.contains(provider) {
+            return FoodEvidenceSource.defaultLabel(for: provider)
+        }
+
+        return sourceLabels.first ?? trustStatus.label
+    }
+
+    public func provenanceSnapshot(
+        draftID: String? = nil,
+        entryID: String? = nil,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus
+    ) -> MealMarkProvenanceSnapshot {
+        MealMarkProvenanceSnapshot(
+            candidateID: id,
+            draftID: draftID,
+            entryID: entryID,
+            sourceClass: sourceClass.rawValue,
+            trustStatus: trustStatus.rawValue,
+            primarySourceLabel: primarySourceLabel(trustStatus: trustStatus),
+            sourceLabels: sourceLabels,
+            evidence: evidence
+        )
+    }
+
+    public func addFoodSuggestionRow(kind: AddFoodSuggestionKind = .analysisCandidate) -> AddFoodSuggestionRow {
+        AddFoodSuggestionRow(
+            id: id,
+            kind: kind,
+            title: primaryLabel,
+            subtitle: "\(portion.label) | \(nutrition.label)",
+            sourceLabel: primarySourceLabel(),
+            evidence: evidence,
+            confidence: confidence,
+            nutrition: nutrition,
+            portion: portion
+        )
     }
 
     public func mealEstimate() -> MealEstimate {

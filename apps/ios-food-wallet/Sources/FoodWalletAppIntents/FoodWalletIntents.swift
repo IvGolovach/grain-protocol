@@ -7,7 +7,7 @@ public enum FoodWalletDestination: String, AppEnum {
     case history
     case wallet
 
-    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "Food Wallet Destination")
+    public static let typeDisplayRepresentation = TypeDisplayRepresentation(name: "MealMark Destination")
 
     public static let caseDisplayRepresentations: [FoodWalletDestination: DisplayRepresentation] = [
         .today: "Today",
@@ -18,8 +18,8 @@ public enum FoodWalletDestination: String, AppEnum {
 }
 
 public struct OpenFoodWalletIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Open Food Wallet"
-    public static let description = IntentDescription("Open Food Wallet to a useful destination.")
+    public static let title: LocalizedStringResource = "Open MealMark"
+    public static let description = IntentDescription("Open MealMark to a useful destination.")
     public static let openAppWhenRun = true
 
     @Parameter(title: "Destination")
@@ -40,7 +40,7 @@ public struct OpenFoodWalletIntent: AppIntent {
 
 public struct StartFoodCaptureIntent: AppIntent {
     public static let title: LocalizedStringResource = "Start Food Capture"
-    public static let description = IntentDescription("Open Food Wallet to capture or analyze food.")
+    public static let description = IntentDescription("Open MealMark to capture or analyze food.")
     public static let openAppWhenRun = true
 
     public init() {}
@@ -52,7 +52,7 @@ public struct StartFoodCaptureIntent: AppIntent {
 
 public struct QuickLogFoodIntent: AppIntent {
     public static let title: LocalizedStringResource = "Quick Log Food"
-    public static let description = IntentDescription("Open Food Wallet with a quick food logging workflow.")
+    public static let description = IntentDescription("Open MealMark with a quick food logging workflow.")
     public static let openAppWhenRun = true
 
     @Parameter(title: "Food")
@@ -87,7 +87,7 @@ public struct FoodWalletShortcuts: AppShortcutsProvider {
             intent: OpenFoodWalletIntent(destination: .today),
             phrases: [
                 "Open today's food in \(.applicationName)",
-                "Show my food wallet in \(.applicationName)",
+                "Show my meals in \(.applicationName)",
             ],
             shortTitle: "Open Today",
             systemImageName: "list.bullet.rectangle"

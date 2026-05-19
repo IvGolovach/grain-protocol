@@ -8,7 +8,7 @@ Connect setup when the subscription lane is implemented:
 
 Subscription group:
 
-- `Food Wallet Plus`
+- `MealMark Plus`
 
 Free features:
 

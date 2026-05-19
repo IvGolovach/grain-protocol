@@ -296,6 +296,21 @@ public final class FoodWalletStore: ObservableObject {
         return true
     }
 
+    public func addFoodSearchSuggestions(for text: String) -> [AddFoodSuggestionRow] {
+        FoodIngredientCatalog.suggestionRows(for: text, personalIngredients: personalIngredients)
+    }
+
+    public func createFoodSearchSuggestionDraft(id: String) -> Bool {
+        guard let candidate = FoodIngredientCatalog.candidate(
+            suggestionID: id,
+            personalIngredients: personalIngredients
+        ) else {
+            return false
+        }
+        presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
+        return true
+    }
+
     public func createIngredientMealDraft(
         title: String,
         ingredients: [FoodMealIngredientInput]
@@ -555,7 +570,8 @@ public final class FoodWalletStore: ObservableObject {
             entries: entries,
             templates: savedTemplates,
             recipes: savedRecipes,
-            generatedAt: generatedAt
+            generatedAt: generatedAt,
+            personalFoods: personalIngredients
         )
     }
 

@@ -70,7 +70,7 @@ public struct PrivacyPromise: Equatable, Sendable {
         ),
         PrivacyPromise(
             title: "You confirm every entry",
-            detail: "AI estimates never become Food Wallet records until you save them."
+            detail: "AI estimates never become MealMark records until you save them."
         ),
         PrivacyPromise(
             title: "Safe summaries stay safe",

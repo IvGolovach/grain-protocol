@@ -5,7 +5,7 @@
   <key>CFBundleDevelopmentRegion</key>
   <string>$(DEVELOPMENT_LANGUAGE)</string>
   <key>CFBundleDisplayName</key>
-  <string>Food Wallet</string>
+  <string>MealMark</string>
   <key>CFBundleExecutable</key>
   <string>$(EXECUTABLE_NAME)</string>
   <key>CFBundleIdentifier</key>
@@ -28,11 +28,11 @@
     <true/>
   </dict>
   <key>NSCameraUsageDescription</key>
-  <string>Food Wallet uses the camera to scan verified food codes and, when you choose, capture a meal photo for an estimate.</string>
+  <string>MealMark uses the camera to scan verified food codes and, when you choose, capture a meal photo for an estimate.</string>
   <key>NSLocalNetworkUsageDescription</key>
-  <string>Food Wallet can connect to your local development broker to analyze meal photos during testing.</string>
+  <string>MealMark can connect to your local development broker to analyze meal photos during testing.</string>
   <key>NSPhotoLibraryUsageDescription</key>
-  <string>Food Wallet lets you choose a meal photo for an estimate. Selected photos create a draft and are not stored by Food Wallet.</string>
+  <string>MealMark lets you choose a meal photo for an estimate. Selected photos create a draft and are not stored by MealMark.</string>
   <key>UILaunchScreen</key>
   <dict/>
 </dict>

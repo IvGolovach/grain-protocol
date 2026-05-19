@@ -1,6 +1,6 @@
 # App Privacy Answers Draft
 
-This draft is conservative for the first Food Wallet app surface. Update it
+This draft is conservative for the first MealMark app surface. Update it
 before App Store submission if production analytics, sync, crash reporting,
 accounts, or third-party SDKs are added.
 

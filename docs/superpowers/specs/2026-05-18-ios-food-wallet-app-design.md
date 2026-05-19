@@ -1,10 +1,10 @@
-# iOS Food Wallet App Design
+# MealMark iOS App Design
 
 ## Goal
 
-Build the first App Store-oriented Grain Food Wallet iOS app: a private,
-camera-first food tracker where AI creates editable estimates and Grain stores
-only user-confirmed food records.
+Build MealMark, the first App Store-oriented iOS app on the Grain Food Wallet
+contract: a private, camera-first food tracker where AI creates editable
+estimates and Grain stores only user-confirmed food records.
 
 ## Product Shape
 
@@ -35,7 +35,7 @@ material from app UI.
 - Capture: photo estimate, verified scan placeholder, manual entry, repeat.
 - AI Draft: dish label, portion range, kcal range, confidence, assumptions.
 - Assumptions Editor: chips and toggles for portion, ingredients, cooking style.
-- Confirm: final summary and `Save to Food Wallet`.
+- Confirm: final summary and `Save to MealMark`.
 - History: confirmed meals by day with estimated/measured/verified filters.
 - Wallet: local-first status, export, privacy, subscriptions, developer proof.
 
@@ -95,7 +95,7 @@ Do not paywall ownership of user data or basic export.
 
 Expose a small first App Intents surface:
 
-- Open Food Wallet to a destination.
+- Open MealMark to a destination.
 - Start Food Capture.
 - Log a recent quick food estimate.
 
@@ -108,7 +108,7 @@ The first implementation must provide:
 
 - Swift package build and tests.
 - Food analysis fixtures for apple and risotto.
-- Smoke test for photo draft to confirmed Food Wallet entry.
+- Smoke test for photo draft to confirmed MealMark entry.
 - Guard checks for no raw protocol/private material in safe summaries.
 - App Intents compilation.
 - Documentation for App Store privacy and subscription posture.

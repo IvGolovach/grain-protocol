@@ -37,6 +37,9 @@ const checks: Array<{ name: string; pass: boolean; detail?: string }> = [];
 
 async function main(): Promise<number> {
   await testMockEndpoint();
+  await testFoodSearchCommonFoodFixture();
+  await testFoodSearchFixtureEndpoint();
+  await testFoodSearchBarcodeFixture();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
   await testVisibleNutritionLabelOverridesDatabasePortionScaling();
@@ -69,6 +72,108 @@ async function testMockEndpoint(): Promise<void> {
     assert.equal(candidate.confidence, "low");
     pass("mock endpoint returns draft without raw image material");
   });
+}
+
+async function testFoodSearchCommonFoodFixture(): Promise<void> {
+  await withServer(undefined, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/search`, {
+      request_id: "common-food-fixture-001",
+      query: "white rice",
+      limit: 3
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, true);
+
+    const results = body.results as Array<Record<string, unknown>>;
+    const rice = results.find((result) => result.result_id === "food-search:fixture-white-rice");
+    assertRecord(rice);
+    assert.equal(rice.primary_label, "Cooked white rice");
+    assert.equal(rice.category, "common_food");
+    assert.equal(rice.source_label, "deterministic_fixture");
+    assert.equal(rice.trust_label, "fixture_verified");
+    const evidence = rice.provider_evidence as Array<Record<string, unknown>>;
+    assert.equal(evidence[0].provider_id, "fixture-white-rice");
+    assert.equal(evidence[0].match_type, "name");
+  });
+  pass("food search returns normalized common-food fixture results");
+}
+
+async function testFoodSearchFixtureEndpoint(): Promise<void> {
+  await withServer(undefined, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/search`, {
+      request_id: "search-fixture-001",
+      query: "casein protein",
+      limit: 5
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, true);
+    assert.equal(body.request_id, "search-fixture-001");
+
+    const results = body.results as Array<Record<string, unknown>>;
+    assert.equal(Array.isArray(results), true);
+    const casein = results.find((result) => result.result_id === "food-search:fixture-casein-protein");
+    assertRecord(casein);
+    assert.equal(casein.primary_label, "Casein protein powder");
+    assert.equal(casein.generic_label, "casein protein powder");
+    assert.equal(casein.category, "supplement");
+    assert.equal(casein.source_label, "deterministic_fixture");
+    assert.equal(casein.trust_label, "fixture_verified");
+
+    const match = casein.match as Record<string, unknown>;
+    assert.equal(match.type, "name");
+    assert.equal(match.score, 0.98);
+    const serving = casein.serving as Record<string, unknown>;
+    assert.equal(serving.basis, "per_100g");
+    assert.equal(serving.serving_size_g, 30);
+    const nutrition = casein.nutrition as Record<string, unknown>;
+    const per100g = nutrition.per_100g as Record<string, unknown>;
+    assert.equal(per100g.protein_g, 80);
+
+    const evidence = casein.provider_evidence as Array<Record<string, unknown>>;
+    assert.equal(Array.isArray(evidence), true);
+    assert.equal(evidence.length, 1);
+    assert.equal(evidence[0].provider, "deterministic_fixture");
+    assert.equal(evidence[0].provider_id, "fixture-casein-protein");
+    assert.equal(evidence[0].matched_name, "Casein protein powder");
+    assert.equal(evidence[0].source_label, "curated_fixture");
+    assert.equal(evidence[0].trust_label, "fixture_verified");
+  });
+  pass("food search returns normalized casein fixture results with provider evidence");
+}
+
+async function testFoodSearchBarcodeFixture(): Promise<void> {
+  await withServer(undefined, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/search`, {
+      request_id: "barcode-fixture-001",
+      barcode: "012345678905"
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, true);
+    assert.equal(body.barcode, "012345678905");
+
+    const results = body.results as Array<Record<string, unknown>>;
+    assert.equal(results.length, 1);
+    const result = results[0];
+    assert.equal(result.result_id, "food-search:fixture-kombucha-bottle");
+    assert.equal(result.primary_label, "Ginger lemon kombucha");
+    assert.equal(result.brand_label, "Grain Fixture Kitchen");
+    assert.equal(result.category, "packaged_beverage");
+    assert.equal(result.source_label, "deterministic_fixture");
+    assert.equal(result.trust_label, "barcode_fixture");
+
+    const match = result.match as Record<string, unknown>;
+    assert.equal(match.type, "barcode");
+    assert.equal(match.score, 1);
+    const evidence = result.provider_evidence as Array<Record<string, unknown>>;
+    assert.equal(evidence[0].provider_id, "012345678905");
+    assert.equal(evidence[0].match_type, "barcode");
+    assert.equal(evidence[0].source_label, "curated_fixture");
+    assert.equal(evidence[0].trust_label, "barcode_fixture");
+  });
+  pass("food search resolves barcode-like packaged kombucha fixture");
 }
 
 async function testPayloadCap(): Promise<void> {
