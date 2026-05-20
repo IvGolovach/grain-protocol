@@ -6,13 +6,11 @@ actions and saves only user-confirmed records.
 ## What To Test
 
 1. Open the app.
-2. Tap Capture.
-3. Analyze the Fuji apple sample.
-4. Save the draft to MealMark.
-5. Analyze the mushroom risotto sample.
-6. Review assumptions and save.
-7. Open History and Wallet to see confirmed records and safe-summary language.
-8. Open Pro to see the subscription posture.
+2. Tap Today, then Add food.
+3. Create a manual food draft, or use Photo/Barcode when the broker is configured.
+4. Review the draft and save it to MealMark.
+5. Open History and Wallet to see confirmed records, edit/delete behavior, exports, and safe-summary language.
+6. Open Pro to see the subscription posture.
 
 ## AI And Photos
 
@@ -38,7 +36,7 @@ submission with live products.
 MealMark provides food estimates for personal tracking. It is not medical advice,
 diagnosis, treatment, or a medical nutrition device.
 
-## Demo Notes
+## Review Notes
 
-The first app build includes sample apple and risotto analysis flows. Verified
-QR/code demo and production StoreKit products are separate release-lane work.
+Deterministic food fixtures are diagnostics-only and are not exposed as normal
+user flows. Production StoreKit products are separate release-lane work.

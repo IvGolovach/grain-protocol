@@ -38,6 +38,15 @@ final class FoodWalletUITests: XCTestCase {
         app.textFields["QuickTextField"]
     }
 
+    private func clearAndType(_ field: XCUIElement, text: String) {
+        field.tap()
+        let currentValue = field.value as? String ?? ""
+        if !currentValue.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: currentValue.count))
+        }
+        field.typeText(text)
+    }
+
     private func openBuildMealScreen() {
         let buildMealButton = app.buttons["AddFoodModeBuildMealButton"]
         XCTAssertTrue(buildMealButton.waitForExistence(timeout: 5))
@@ -115,6 +124,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["AddFoodModeChooser"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["AddFoodModeBarcodeButton"].exists)
+        XCTAssertFalse(app.buttons["AddFoodModeQuickAddButton"].exists)
         XCTAssertFalse(app.staticTexts["Suggestions"].exists)
         XCTAssertFalse(app.buttons["QuickSuggestion-apple"].exists)
         XCTAssertFalse(app.buttons["RepeatLastMealButton"].exists)
@@ -125,7 +135,6 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Recipe-tomato-cucumber-salad"].exists)
         XCTAssertFalse(app.textFields["MealTitleField"].exists)
 
-        app.buttons["AddFoodModeQuickAddButton"].tap()
         let quickText = app.textFields["QuickTextField"]
         XCTAssertTrue(quickText.waitForExistence(timeout: 5))
         quickText.tap()
@@ -137,14 +146,16 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "2 eggs and toast")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 220 g • 295-365 kcal")
         XCTAssertFalse(app.switches.matching(identifier: "Assumption-user-portion").firstMatch.exists)
+        XCTAssertFalse(app.buttons["PortionHalfButton"].exists)
 
         let gramsField = app.textFields["PortionGramsField"]
-        XCTAssertTrue(gramsField.waitForExistence(timeout: 5))
+        XCTAssertTrue(scrollToElement(gramsField))
         gramsField.tap()
         gramsField.typeText("150")
         app.buttons["ApplyPortionGramsButton"].tap()
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 150 g • 201-249 kcal")
 
+        XCTAssertTrue(scrollToElement(app.buttons["SaveToFoodWalletButton"]))
         app.buttons["SaveToFoodWalletButton"].tap()
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.staticTexts["MealRowLabel-2 eggs and toast"].waitForExistence(timeout: 5))
@@ -161,7 +172,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.otherElements["AddFoodModeChooser"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["AddFoodModePhotoButton"].exists)
         XCTAssertTrue(app.buttons["AddFoodModeBarcodeButton"].exists)
-        XCTAssertTrue(app.buttons["AddFoodModeQuickAddButton"].exists)
+        XCTAssertFalse(app.buttons["AddFoodModeQuickAddButton"].exists)
         XCTAssertTrue(app.buttons["AddFoodModeBuildMealButton"].exists)
         XCTAssertFalse(app.staticTexts["Suggestions"].exists)
         XCTAssertFalse(app.buttons["QuickSuggestion-2-eggs-and-toast"].exists)
@@ -364,6 +375,51 @@ final class FoodWalletUITests: XCTestCase {
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.staticTexts["MealRowLabel-Fuji apple"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["MealRowNutrition-Fuji apple"].label, "170 g • 102 kcal")
+    }
+
+    func testConfirmedEntryCanBeEditedFromSwipeAction() throws {
+        launch()
+
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        app.buttons["SaveToFoodWalletButton"].tap()
+
+        app.tabBars.buttons["History"].tap()
+        let rowLabel = app.staticTexts["MealRowLabel-Fuji apple"]
+        XCTAssertTrue(rowLabel.waitForExistence(timeout: 5))
+        rowLabel.swipeLeft()
+        XCTAssertTrue(app.buttons["EditMealButton-food-entry-1"].waitForExistence(timeout: 5))
+        app.buttons["EditMealButton-food-entry-1"].tap()
+
+        let gramsField = app.textFields["EditMealGramsField"]
+        XCTAssertTrue(gramsField.waitForExistence(timeout: 5))
+        clearAndType(gramsField, text: "200")
+        app.buttons["SaveEditedMealButton"].tap()
+
+        XCTAssertTrue(app.staticTexts["MealRowNutrition-Fuji apple"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["MealRowNutrition-Fuji apple"].label, "200 g • 120 kcal")
+    }
+
+    func testConfirmedEntryCanBeDeletedFromSwipeAction() throws {
+        launch()
+
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        app.buttons["SaveToFoodWalletButton"].tap()
+
+        app.tabBars.buttons["History"].tap()
+        let rowLabel = app.staticTexts["MealRowLabel-Fuji apple"]
+        XCTAssertTrue(rowLabel.waitForExistence(timeout: 5))
+        rowLabel.swipeLeft()
+        XCTAssertTrue(app.buttons["DeleteMealButton-food-entry-1"].waitForExistence(timeout: 5))
+        app.buttons["DeleteMealButton-food-entry-1"].tap()
+
+        XCTAssertTrue(app.staticTexts["History is empty"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Wallet"].tap()
+        XCTAssertTrue(app.staticTexts["ConfirmedEntriesValue"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["ConfirmedEntriesValue"].label, "0")
     }
 
     func testRestorePreviewDoesNotMutateUntilApplied() throws {

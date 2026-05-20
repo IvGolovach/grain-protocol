@@ -70,8 +70,36 @@ public struct BrokerFoodSearchRequest: Encodable, Equatable, Sendable {
         guard let value else {
             return nil
         }
-        let digits = value.filter(\.isNumber)
-        return (8...14).contains(digits.count) ? String(digits) : nil
+        let digits = String(value.unicodeScalars.compactMap { scalar in
+            (48...57).contains(scalar.value) ? Character(scalar) : nil
+        })
+        return (8...14).contains(digits.count) ? digits : nil
+    }
+
+    public static func preferredCameraBarcode(
+        from values: [String?],
+        allowsShortBarcode: Bool = false
+    ) -> String? {
+        let candidates = values.compactMap(normalizeBarcode)
+            .filter { allowsShortBarcode || $0.count >= 12 }
+        return candidates.max { lhs, rhs in
+            cameraBarcodeRank(lhs) < cameraBarcodeRank(rhs)
+        }
+    }
+
+    private static func cameraBarcodeRank(_ value: String) -> Int {
+        switch value.count {
+        case 13:
+            return value.hasPrefix("0") ? 500 : 470
+        case 12:
+            return 490
+        case 14:
+            return 450
+        case 8:
+            return 120
+        default:
+            return 0
+        }
     }
 }
 

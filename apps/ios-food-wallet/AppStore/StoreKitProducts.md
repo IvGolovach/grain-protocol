@@ -15,7 +15,7 @@ Free features:
 - manual logging;
 - basic photo drafts;
 - local history;
-- verified scan demo;
+- verified scan proof;
 - basic export.
 
 Pro features:

@@ -33,6 +33,7 @@ type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 20;
 const DEFAULT_TIMEOUT_MS = 2500;
+const DEFAULT_OPEN_FOOD_FACTS_USER_AGENT = "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)";
 const OPEN_FOOD_FACTS_FIELDS = [
   "code",
   "product_name",
@@ -180,23 +181,24 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
   }
 
   async search(request: FoodSearchRequest): Promise<FoodSearchResult[]> {
-    const barcode = normalizeBarcode(request.barcode ?? request.query);
-    if (!barcode) return [];
+    const barcodes = barcodeLookupCandidates(request.barcode ?? request.query);
+    for (const barcode of barcodes) {
+      const url = new URL(`/api/v2/product/${barcode}.json`, this.baseUrl);
+      url.searchParams.set("fields", OPEN_FOOD_FACTS_FIELDS);
+      const response = await fetchWithTimeout(this.fetchFn, url, {
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": this.userAgent
+        }
+      }, this.timeoutMs);
+      if (!response.ok) continue;
 
-    const url = new URL(`/api/v2/product/${barcode}.json`, this.baseUrl);
-    url.searchParams.set("fields", OPEN_FOOD_FACTS_FIELDS);
-    const response = await fetchWithTimeout(this.fetchFn, url, {
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": this.userAgent
-      }
-    }, this.timeoutMs);
-    if (!response.ok) return [];
-
-    const body = await response.json() as OpenFoodFactsResponse;
-    if (body.status !== 1 || !body.product) return [];
-    const result = openFoodFactsResult(barcode, body.product);
-    return result ? [result] : [];
+      const body = await response.json() as OpenFoodFactsResponse;
+      if (body.status !== 1 || !body.product) continue;
+      const result = openFoodFactsResult(barcode, body.product);
+      if (result) return [result];
+    }
+    return [];
   }
 }
 
@@ -219,46 +221,47 @@ export class UsdaBrandedFoodSearchProvider implements FoodSearchProvider {
   }
 
   async search(request: FoodSearchRequest): Promise<FoodSearchResult[]> {
-    const barcode = normalizeBarcode(request.barcode ?? request.query);
-    if (!barcode) return [];
+    const barcodes = barcodeLookupCandidates(request.barcode ?? request.query);
+    if (barcodes.length === 0) return [];
 
     const url = new URL("foods/search", ensureTrailingSlash(this.baseUrl));
     url.searchParams.set("api_key", this.apiKey);
-    const response = await fetchWithTimeout(this.fetchFn, url, {
-      method: "POST",
-      headers: {
-        "accept": "application/json",
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        query: barcode,
-        dataType: ["Branded"],
-        pageSize: 5
-      })
-    }, this.timeoutMs);
-    if (!response.ok) return [];
+    for (const barcode of barcodes) {
+      const response = await fetchWithTimeout(this.fetchFn, url, {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          query: barcode,
+          dataType: ["Branded"],
+          pageSize: 25
+        })
+      }, this.timeoutMs);
+      if (!response.ok) continue;
 
-    const body = await response.json() as UsdaSearchResponse;
-    const foods = Array.isArray(body.foods) ? body.foods : [];
-    const exact = foods.find((food) => normalizeBarcode(food.gtinUpc) === barcode) ?? foods[0];
-    if (!exact) return [];
-    const result = usdaBrandedResult(barcode, exact);
-    return result ? [result] : [];
+      const body = await response.json() as UsdaSearchResponse;
+      const foods = Array.isArray(body.foods) ? body.foods : [];
+      const exact = foods.find((food) => haveSharedBarcodeCandidate(barcodes, barcodeLookupCandidates(food.gtinUpc)));
+      if (!exact) continue;
+      const result = usdaBrandedResult(barcode, exact);
+      if (result) return [result];
+    }
+    return [];
   }
 }
 
 export function foodSearchProviderFromEnv(env: NodeJS.ProcessEnv = process.env): FoodSearchProvider {
   const providers: FoodSearchProvider[] = [];
   const timeoutMs = parsePositiveInteger(env.FOOD_SEARCH_TIMEOUT_MS) ?? DEFAULT_TIMEOUT_MS;
-  if (env.FOOD_SEARCH_LIVE === "1") {
-    const userAgent = env.OPEN_FOOD_FACTS_USER_AGENT?.trim();
-    if (userAgent) {
-      providers.push(new OpenFoodFactsSearchProvider({
-        baseUrl: env.OPEN_FOOD_FACTS_BASE_URL,
-        userAgent,
-        timeoutMs
-      }));
-    }
+  if (env.FOOD_SEARCH_LIVE !== "0") {
+    providers.push(new OpenFoodFactsSearchProvider({
+      baseUrl: env.OPEN_FOOD_FACTS_BASE_URL,
+      userAgent: cleanText(env.OPEN_FOOD_FACTS_USER_AGENT) ?? DEFAULT_OPEN_FOOD_FACTS_USER_AGENT,
+      timeoutMs
+    }));
+
     const apiKey = foodDataCentralAPIKey(env);
     if (apiKey) {
       providers.push(new UsdaBrandedFoodSearchProvider({
@@ -347,10 +350,10 @@ type OpenFoodFactsResponse = {
 function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFactsResponse["product"]>): FoodSearchResult | null {
   const productName = cleanText(product.product_name) ?? cleanText(product.generic_name);
   const nutriments = product.nutriments ?? {};
-  const kcal = numeric(nutriments["energy-kcal_100g"] ?? nutriments["energy_kcal_100g"]);
+  const servingSizeG = numeric(product.serving_quantity) ?? servingGramsFromLabel(product.serving_size);
+  const kcal = openFoodFactsKcalPer100g(nutriments, servingSizeG);
   if (!productName || kcal === null) return null;
 
-  const servingSizeG = numeric(product.serving_quantity) ?? servingGramsFromLabel(product.serving_size);
   const category = openFoodFactsCategory(product.categories_tags);
   return {
     result_id: `food-search:open-food-facts:${barcode}`,
@@ -372,10 +375,10 @@ function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFacts
     nutrition: {
       per_100g: {
         kcal,
-        protein_g: numeric(nutriments.proteins_100g ?? nutriments.protein_100g) ?? 0,
-        carbohydrate_g: numeric(nutriments.carbohydrates_100g ?? nutriments.carbohydrate_100g) ?? 0,
-        fat_g: numeric(nutriments.fat_100g) ?? 0,
-        fiber_g: numeric(nutriments.fiber_100g) ?? undefined
+        protein_g: openFoodFactsNutrientPer100g(nutriments, ["proteins", "protein"], servingSizeG) ?? 0,
+        carbohydrate_g: openFoodFactsNutrientPer100g(nutriments, ["carbohydrates", "carbohydrate"], servingSizeG) ?? 0,
+        fat_g: openFoodFactsNutrientPer100g(nutriments, ["fat"], servingSizeG) ?? 0,
+        fiber_g: openFoodFactsNutrientPer100g(nutriments, ["fiber"], servingSizeG) ?? undefined
       }
     },
     provider_evidence: [
@@ -468,8 +471,75 @@ function clampLimit(value: number | undefined): number {
 
 function normalizeBarcode(value: string | undefined): string {
   if (!value) return "";
-  const normalized = value.replace(/[\s-]+/gu, "");
+  const normalized = value.replace(/[^\d]/gu, "");
   return /^\d{8,14}$/u.test(normalized) ? normalized : "";
+}
+
+function barcodeLookupCandidates(value: string | undefined): string[] {
+  const barcode = normalizeBarcode(value);
+  if (!barcode) return [];
+  const candidates: string[] = [];
+  addBarcodeCandidate(candidates, barcode);
+  const expandedUpcE = expandUpcE(barcode);
+  if (expandedUpcE) {
+    addBarcodeCandidate(candidates, expandedUpcE);
+  }
+  return Array.from(new Set(candidates.filter((candidate) => /^\d{8,14}$/u.test(candidate))));
+}
+
+function addBarcodeCandidate(candidates: string[], barcode: string): void {
+  candidates.push(barcode);
+  if (barcode.length === 13 && barcode.startsWith("0")) {
+    candidates.push(barcode.slice(1));
+  }
+  if (barcode.length === 12) {
+    candidates.push(`0${barcode}`);
+    candidates.push(`00${barcode}`);
+  }
+  if (barcode.length === 14 && barcode.startsWith("0")) {
+    candidates.push(barcode.replace(/^0+/u, ""));
+  }
+}
+
+function expandUpcE(value: string): string | null {
+  if (!/^[01]\d{7}$/u.test(value)) return null;
+  const numberSystem = value[0];
+  const x1 = value[1];
+  const x2 = value[2];
+  const x3 = value[3];
+  const x4 = value[4];
+  const x5 = value[5];
+  const x6 = value[6];
+  const checkDigit = value[7];
+  let body: string;
+  if (["0", "1", "2"].includes(x6)) {
+    body = `${numberSystem}${x1}${x2}${x6}0000${x3}${x4}${x5}`;
+  } else if (x6 === "3") {
+    body = `${numberSystem}${x1}${x2}${x3}00000${x4}${x5}`;
+  } else if (x6 === "4") {
+    body = `${numberSystem}${x1}${x2}${x3}${x4}00000${x5}`;
+  } else {
+    body = `${numberSystem}${x1}${x2}${x3}${x4}${x5}0000${x6}`;
+  }
+  const expanded = `${body}${checkDigit}`;
+  return isValidGtin(expanded) ? expanded : null;
+}
+
+function isValidGtin(value: string): boolean {
+  if (!/^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/u.test(value)) return false;
+  const digits = [...value].map((digit) => Number(digit));
+  const checkDigit = digits.pop();
+  if (checkDigit === undefined) return false;
+  let sum = 0;
+  for (let index = digits.length - 1, weight = 3; index >= 0; index -= 1, weight = weight === 3 ? 1 : 3) {
+    sum += digits[index] * weight;
+  }
+  return (10 - (sum % 10)) % 10 === checkDigit;
+}
+
+function haveSharedBarcodeCandidate(left: string[], right: string[]): boolean {
+  const rightSet = new Set(right);
+  return left.some((candidate) => rightSet.has(candidate));
 }
 
 function cleanText(value: unknown): string | null {
@@ -485,6 +555,43 @@ function numeric(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function openFoodFactsKcalPer100g(nutriments: Record<string, unknown>, servingSizeG: number | null): number | null {
+  const kcal = numeric(nutriments["energy-kcal_100g"] ?? nutriments["energy_kcal_100g"]);
+  if (kcal !== null) return roundNutrition(kcal);
+  const kilojoules = numeric(nutriments["energy-kj_100g"] ?? nutriments["energy_100g"]);
+  if (kilojoules !== null) return roundNutrition(kilojoules / 4.184);
+  const kcalServing = numeric(nutriments["energy-kcal_serving"] ?? nutriments["energy_kcal_serving"]);
+  if (kcalServing !== null && servingSizeG !== null && servingSizeG > 0) {
+    return roundNutrition((kcalServing * 100) / servingSizeG);
+  }
+  const kilojoulesServing = numeric(nutriments["energy-kj_serving"] ?? nutriments["energy_serving"]);
+  if (kilojoulesServing !== null && servingSizeG !== null && servingSizeG > 0) {
+    return roundNutrition((kilojoulesServing / 4.184 * 100) / servingSizeG);
+  }
+  return null;
+}
+
+function openFoodFactsNutrientPer100g(
+  nutriments: Record<string, unknown>,
+  names: string[],
+  servingSizeG: number | null
+): number | null {
+  for (const name of names) {
+    const direct = numeric(nutriments[`${name}_100g`]);
+    if (direct !== null) return roundNutrition(direct);
+  }
+  if (servingSizeG === null || servingSizeG <= 0) return null;
+  for (const name of names) {
+    const serving = numeric(nutriments[`${name}_serving`]);
+    if (serving !== null) return roundNutrition((serving * 100) / servingSizeG);
+  }
+  return null;
+}
+
+function roundNutrition(value: number): number {
+  return Math.round(value * 10) / 10;
 }
 
 function servingGramsFromLabel(value: string | undefined): number | null {

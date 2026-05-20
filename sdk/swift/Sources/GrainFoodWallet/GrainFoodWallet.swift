@@ -194,6 +194,38 @@ public final class GrainFoodWallet {
         nextDraftNumber = Self.nextSequence(after: entries.map(\.draftID), prefix: "food-draft-")
     }
 
+    @discardableResult
+    public func updateEntry(
+        entryID: String,
+        meal: MealEstimate,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus
+    ) -> FoodIntakeEntry? {
+        guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
+            return nil
+        }
+        let current = entries[index]
+        let updated = FoodIntakeEntry(
+            entryID: current.entryID,
+            draftID: current.draftID,
+            meal: meal,
+            sourceClass: sourceClass,
+            trustStatus: trustStatus,
+            confirmedAt: current.confirmedAt,
+            dateKey: current.dateKey
+        )
+        entries[index] = updated
+        return updated
+    }
+
+    @discardableResult
+    public func deleteEntry(entryID: String) -> FoodIntakeEntry? {
+        guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
+            return nil
+        }
+        return entries.remove(at: index)
+    }
+
     public func makeEstimatedDraft(meal: MealEstimate) -> FoodIntakeDraft {
         makeDraft(meal: meal, sourceClass: .estimated, trustStatus: .estimated)
     }

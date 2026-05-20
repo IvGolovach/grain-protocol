@@ -24,7 +24,11 @@ struct FoodWalletAppMain: App {
             return
         }
 
-        let result = await store.runDeviceSmoke()
+        let smokeStore = FoodWalletStore(
+            analysisClient: MockFoodAnalysisClient(),
+            searchClient: MockBrokerFoodSearchClient()
+        )
+        let result = await smokeStore.runDeviceSmoke()
         if result.passed {
             print("GRAIN_IOS_FOOD_WALLET_DEVICE_SMOKE: PASS entries=\(result.entryCount) kcal=\(result.totalKcal)")
             Foundation.exit(0)
@@ -63,7 +67,8 @@ private enum FoodWalletAppConfiguration {
             savedRecipes: userLibrary.recipes,
             personalIngredients: userLibrary.personalIngredients,
             onEntriesChange: FoodWalletLocalLedgerStore.save,
-            onPersonalIngredientsChange: FoodWalletUserLibraryStore.savePersonalIngredients
+            onPersonalIngredientsChange: FoodWalletUserLibraryStore.savePersonalIngredients,
+            onEntriesReload: FoodWalletLocalLedgerStore.loadEntries
         )
     }
 
@@ -85,7 +90,7 @@ private enum FoodWalletAppConfiguration {
             endpoint.scheme != nil,
             endpoint.host != nil
         else {
-            return MockFoodAnalysisClient()
+            return UnavailableFoodAnalysisClient()
         }
 
         return FoodAnalysisBrokerClient(endpoint: analysisEndpoint(from: endpoint))

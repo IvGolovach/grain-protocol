@@ -2,6 +2,7 @@
 
 import { once } from "node:events";
 import assert from "node:assert/strict";
+import { createServer } from "node:http";
 
 import { OpenAiFoodAnalyzer } from "../src/analyzers.js";
 import { FoodAnalysisCandidateResolver } from "../src/resolver.js";
@@ -10,10 +11,11 @@ import {
   CompositeFoodSearchProvider,
   FixtureFoodSearchProvider,
   OpenFoodFactsSearchProvider,
-  UsdaBrandedFoodSearchProvider
+  UsdaBrandedFoodSearchProvider,
+  foodSearchProviderFromEnv
 } from "../src/search.js";
 import { FixtureNutritionProvider, type NutritionProvider } from "../src/usda.js";
-import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation } from "../src/types.js";
+import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation, FoodSearchProvider } from "../src/types.js";
 
 const sampleRequest: FoodAnalyzePhotoRequest = {
   request_id: "test-request-001",
@@ -47,7 +49,13 @@ async function main(): Promise<number> {
   await testFoodSearchFixtureEndpoint();
   await testFoodSearchBarcodeFixture();
   await testOpenFoodFactsBarcodeProvider();
+  await testOpenFoodFactsBarcodeProviderExpandsUpcE();
+  await testOpenFoodFactsBarcodeProviderDerivesEnergyFromKilojoules();
+  await testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing();
   await testUsdaBrandedBarcodeProvider();
+  await testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates();
+  await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
+  await testFoodSearchProviderFromEnvCanDisableExternalProviders();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
@@ -228,6 +236,102 @@ async function testOpenFoodFactsBarcodeProvider(): Promise<void> {
   pass("Open Food Facts barcode provider maps product data to search result");
 }
 
+async function testOpenFoodFactsBarcodeProviderExpandsUpcE(): Promise<void> {
+  const requestedUrls: string[] = [];
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async (url: string | URL) => {
+      requestedUrls.push(String(url));
+      if (String(url).includes("/api/v2/product/042100005264.json")) {
+        return new Response(JSON.stringify({
+          status: 1,
+          product: {
+            code: "042100005264",
+            product_name: "Small Pack Gum",
+            generic_name: "gum",
+            brands: "Tiny Pack",
+            nutriments: {
+              "energy-kcal_100g": 250,
+              proteins_100g: 0,
+              carbohydrates_100g: 95,
+              fat_100g: 0
+            }
+          }
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      return new Response(JSON.stringify({ status: 0 }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ barcode: "04252614" });
+
+  assert.equal(requestedUrls.some((url) => url.includes("/api/v2/product/04252614.json")), true);
+  assert.equal(requestedUrls.some((url) => url.includes("/api/v2/product/042100005264.json")), true);
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "Small Pack Gum");
+  assert.equal(results[0].provider_evidence[0].provider_id, "042100005264");
+  pass("Open Food Facts barcode provider expands UPC-E candidates before giving up");
+}
+
+async function testOpenFoodFactsBarcodeProviderDerivesEnergyFromKilojoules(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "1234567890123",
+        product_name: "Sparkling Tea",
+        generic_name: "tea",
+        nutriments: {
+          "energy-kj_100g": 418.4,
+          proteins_100g: 0,
+          carbohydrates_100g: 24,
+          fat_100g: 0
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "1234567890123" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].nutrition.per_100g.kcal, 100);
+  pass("Open Food Facts barcode provider derives kcal from kJ per 100g");
+}
+
+async function testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "1234567890124",
+        product_name: "Canned Soda",
+        generic_name: "soda",
+        serving_quantity: "355",
+        serving_size: "1 can (355 ml)",
+        nutriments: {
+          "energy-kcal_serving": 20,
+          carbohydrates_serving: 5.5,
+          fat_serving: 0,
+          proteins_serving: 0
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "1234567890124" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].serving.serving_size_g, 355);
+  assert.equal(results[0].nutrition.per_100g.kcal, 5.6);
+  assert.equal(results[0].nutrition.per_100g.carbohydrate_g, 1.5);
+  pass("Open Food Facts barcode provider derives per-100g nutrition from serving values");
+}
+
 async function testUsdaBrandedBarcodeProvider(): Promise<void> {
   const provider = new UsdaBrandedFoodSearchProvider({
     apiKey: "test-fdc-key",
@@ -273,6 +377,99 @@ async function testUsdaBrandedBarcodeProvider(): Promise<void> {
   assert.equal(results[0].provider_evidence[0].provider_id, "2105222");
   assert.equal(results[0].provider_evidence[0].match_type, "barcode");
   pass("USDA branded barcode provider maps GTIN result to search result");
+}
+
+async function testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates(): Promise<void> {
+  const provider = new UsdaBrandedFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (_url: string | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      if (body.query !== "042100005264") {
+        return new Response(JSON.stringify({ foods: [] }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 3105222,
+            description: "SMALL PACK GUM",
+            brandName: "Tiny Pack",
+            gtinUpc: "042100005264",
+            foodCategory: "Candy",
+            servingSize: 2,
+            servingSizeUnit: "g",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 250 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 0 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 95 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 0 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ barcode: "04252614" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "SMALL PACK GUM");
+  assert.equal(results[0].source_label, "usda_fdc");
+  pass("USDA branded barcode provider matches expanded UPC-E canonical candidates");
+}
+
+async function testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault(): Promise<void> {
+  const server = createServer((req, res) => {
+    assert.equal(req.url, "/api/v2/product/4860019001346.json?fields=code%2Cproduct_name%2Cgeneric_name%2Cbrands%2Ccategories_tags%2Cserving_quantity%2Cserving_size%2Cnutriments");
+    assert.equal(req.headers["user-agent"], "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)");
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({
+      status: 1,
+      product: {
+        code: "4860019001346",
+        product_name: "BORJOMI",
+        generic_name: "mineral water",
+        brands: "Borjomi",
+        categories_tags: ["en:beverages", "en:waters", "en:mineral-waters"],
+        serving_quantity: "500",
+        serving_size: "500 ml",
+        nutriments: {
+          "energy-kcal_100g": 0,
+          proteins_100g: 0,
+          carbohydrates_100g: 0,
+          fat_100g: 0,
+          fiber_100g: 0
+        }
+      }
+    }));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert(address && typeof address === "object");
+  try {
+    const provider = foodSearchProviderFromEnv({
+      OPEN_FOOD_FACTS_BASE_URL: `http://127.0.0.1:${address.port}`
+    });
+    const results = await provider.search({ barcode: "4860019001346" });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].primary_label, "BORJOMI");
+    assert.equal(results[0].source_label, "open_food_facts");
+    assert.equal(results[0].nutrition.per_100g.kcal, 0);
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+  pass("food search env provider uses Open Food Facts by default");
+}
+
+async function testFoodSearchProviderFromEnvCanDisableExternalProviders(): Promise<void> {
+  const provider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "0" });
+  const results = await provider.search({ barcode: "012345678905" });
+  assert.equal(results.length, 1);
+  assert.equal(results[0].source_label, "deterministic_fixture");
+  assert.equal(results[0].trust_label, "barcode_fixture");
+  pass("food search env provider can disable external providers for deterministic tests");
 }
 
 async function testCompositeFoodSearchProviderFallsBackAfterProviderFailure(): Promise<void> {
@@ -445,11 +642,13 @@ async function testUpstreamSchemaValidation(): Promise<void> {
 async function withServer(
   analyzer: FoodAnalyzer | undefined,
   run: (baseUrl: string) => Promise<void>,
-  nutritionProvider: NutritionProvider = new FixtureNutritionProvider()
+  nutritionProvider: NutritionProvider = new FixtureNutritionProvider(),
+  searchProvider: FoodSearchProvider = new FixtureFoodSearchProvider()
 ): Promise<void> {
   const server = createBrokerServer({
     analyzer,
-    candidateResolver: new FoodAnalysisCandidateResolver({ nutritionProvider })
+    candidateResolver: new FoodAnalysisCandidateResolver({ nutritionProvider }),
+    searchProvider
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");

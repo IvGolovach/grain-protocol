@@ -36,8 +36,20 @@ struct FoodWalletCoreTests {
         await run("brokerSearchPostsBarcodeEnvelope") {
             try await testBrokerSearchPostsBarcodeEnvelope()
         }
+        await run("brokerSearchRejectsInvalidBarcodeInput") {
+            try testBrokerSearchRejectsInvalidBarcodeInput()
+        }
+        await run("barcodeNormalizationMatchesBrokerContract") {
+            try testBarcodeNormalizationMatchesBrokerContract()
+        }
+        await run("cameraBarcodeSelectionPrefersStableRetailCodes") {
+            try testCameraBarcodeSelectionPrefersStableRetailCodes()
+        }
         await run("storeCreatesReviewableDraftFromBrokerBarcodeSearch") {
             try await testStoreCreatesReviewableDraftFromBrokerBarcodeSearch()
+        }
+        await run("storeReportsUnavailableBarcodeLookupWithoutBroker") {
+            try await testStoreReportsUnavailableBarcodeLookupWithoutBroker()
         }
         await run("storeConfirmsOnlyAfterDraftReview") {
             try await testStoreConfirmsOnlyAfterDraftReview()
@@ -84,6 +96,12 @@ struct FoodWalletCoreTests {
         await run("entryChangeCallbackFiresForDurableMutations") {
             try await testEntryChangeCallbackFiresForDurableMutations()
         }
+        await run("storeEditsConfirmedEntryAndPublishesDerivedState") {
+            try await testStoreEditsConfirmedEntryAndPublishesDerivedState()
+        }
+        await run("storeDeletesConfirmedEntryAndPublishesDerivedState") {
+            try await testStoreDeletesConfirmedEntryAndPublishesDerivedState()
+        }
         await run("portableBundleHasDeterministicIntegrityMetadataAndSummaries") {
             try await testPortableBundleHasDeterministicIntegrityMetadataAndSummaries()
         }
@@ -125,6 +143,9 @@ struct FoodWalletCoreTests {
         }
         await run("storeResetClearsSafeSummary") {
             try await testStoreResetClearsSafeSummary()
+        }
+        await run("storeRefreshesLocalEntriesWithoutPublishingWriteback") {
+            try await testStoreRefreshesLocalEntriesWithoutPublishingWriteback()
         }
         await run("deniedPrivacyBlocksSelectedAnalysis") {
             try await testDeniedPrivacyBlocksSelectedAnalysis()
@@ -329,6 +350,47 @@ struct FoodWalletCoreTests {
         try expect(body?["limit"] as? Int == 8, "expected default search limit")
     }
 
+    private static func testBrokerSearchRejectsInvalidBarcodeInput() throws {
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("abc 123") == nil, "expected short barcode to be rejected")
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("0 12345-67890 5") == "012345678905", "expected UPC digits")
+        do {
+            _ = try BrokerFoodSearchRequest(barcode: "abc 123")
+            throw FoodWalletTestFailure("expected invalid barcode error")
+        } catch let error as BrokerFoodSearchError {
+            try expect(
+                error == .invalidRequest("query or barcode is required"),
+                "expected invalid barcode error, got \(error)"
+            )
+        }
+    }
+
+    private static func testBarcodeNormalizationMatchesBrokerContract() throws {
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("4860019001346") == "4860019001346", "expected EAN-13 digits")
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("0 12345 67890 5") == "012345678905", "expected spaced UPC-A digits")
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("00-123456-789012") == "00123456789012", "expected GTIN-14 digits")
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("１２３４５６７８") == nil, "expected non-ASCII digits to be rejected")
+        try expect(BrokerFoodSearchRequest.normalizeBarcode("abc4860019001346") == "4860019001346", "expected scanner text payload to strip labels")
+    }
+
+    private static func testCameraBarcodeSelectionPrefersStableRetailCodes() throws {
+        try expect(
+            BrokerFoodSearchRequest.preferredCameraBarcode(from: ["00513166"]) == nil,
+            "expected automatic scanner flow to wait instead of emitting a short EAN-8 candidate"
+        )
+        try expect(
+            BrokerFoodSearchRequest.preferredCameraBarcode(from: ["00513166"], allowsShortBarcode: true) == "00513166",
+            "expected tapped short barcode to remain usable"
+        )
+        try expect(
+            BrokerFoodSearchRequest.preferredCameraBarcode(from: ["00513166", "0 33617 00002 6"]) == "033617000026",
+            "expected scanner flow to prefer full UPC-A over short secondary code"
+        )
+        try expect(
+            BrokerFoodSearchRequest.preferredCameraBarcode(from: ["033617000026", "0033617000026"]) == "0033617000026",
+            "expected EAN-13 provider form to win when both UPC-A and EAN-13 are visible"
+        )
+    }
+
     @MainActor
     private static func testStoreCreatesReviewableDraftFromBrokerBarcodeSearch() async throws {
         let result = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: brokerSearchEnvelopeJSON()).results[0]
@@ -349,6 +411,19 @@ struct FoodWalletCoreTests {
         try expect(store.currentDraft?.meal.amountGrams == 473, "expected bottle grams")
         try expect(store.currentDraft?.meal.kcal == 80, "expected serving kcal from per-100g data")
         try expect(store.currentCandidate?.primarySourceLabel() == "Barcode match", "expected barcode provenance")
+    }
+
+    @MainActor
+    private static func testStoreReportsUnavailableBarcodeLookupWithoutBroker() async throws {
+        let store = FoodWalletStore(searchClient: nil)
+
+        await store.searchBrokerFood(barcode: "012345678905")
+
+        try expect(store.brokerFoodSearchRows.isEmpty, "expected no broker rows")
+        try expect(
+            store.foodSearchState == .failed("Food lookup is unavailable. Try photo or enter the food manually."),
+            "expected unavailable lookup state"
+        )
     }
 
     @MainActor
@@ -703,6 +778,58 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStoreEditsConfirmedEntryAndPublishesDerivedState() async throws {
+        var snapshots: [[FoodIntakeEntry]] = []
+        let store = FoodWalletStore(onEntriesChange: { entries in
+            snapshots.append(entries)
+        })
+
+        try expect(store.createVisibleLabelDraft(label: "Bottle label", caloriesPerContainer: 80, grams: 473), "expected label draft")
+        store.confirmDraft()
+        let original = store.entries.first!
+
+        try expect(store.updateEntry(entryID: original.entryID, label: "Bottle label", gramsMode: 946), "expected edit")
+
+        let edited = store.entries.first!
+        try expect(edited.entryID == original.entryID, "expected stable entry id")
+        try expect(edited.draftID == original.draftID, "expected stable draft id")
+        try expect(edited.confirmedAt == original.confirmedAt, "expected stable confirmation date")
+        try expect(edited.dateKey == original.dateKey, "expected stable date key")
+        try expect(edited.sourceClass == original.sourceClass, "expected source class to be preserved")
+        try expect(edited.trustStatus == original.trustStatus, "expected trust status to be preserved")
+        try expect(edited.meal.amountGrams == 946, "expected edited grams")
+        try expect(edited.meal.kcal == 160, "expected edited kcal")
+        try expect(store.safeSummary.totals.sumMeanKcal == 160, "expected safe summary to update")
+        try expect(store.todayTotalLabel == "160 kcal", "expected today label to update")
+        try expect(store.exportCSV().contains("946"), "expected CSV to include edited grams")
+        try expect(snapshots.count == 2, "expected confirm and edit callbacks")
+        try expect(snapshots.last?.first?.meal.amountGrams == 946, "expected edit callback with updated grams")
+    }
+
+    @MainActor
+    private static func testStoreDeletesConfirmedEntryAndPublishesDerivedState() async throws {
+        var snapshots: [[FoodIntakeEntry]] = []
+        let store = FoodWalletStore(onEntriesChange: { entries in
+            snapshots.append(entries)
+        })
+
+        try expect(store.createQuickTextDraft("apple"), "expected first draft")
+        store.confirmDraft()
+        let deletedID = store.entries.first!.entryID
+        try expect(store.createQuickTextDraft("toast"), "expected second draft")
+        store.confirmDraft()
+
+        try expect(store.deleteEntry(entryID: deletedID), "expected delete")
+        try expect(store.entries.count == 1, "expected one entry after delete")
+        try expect(!store.entries.contains { $0.entryID == deletedID }, "expected deleted id to be absent")
+        try expect(store.safeSummary.totals.entryCount == 1, "expected safe summary count to update")
+        try expect(!store.exportCSV().contains("apple"), "expected CSV to omit deleted label")
+        try expect(snapshots.count == 3, "expected two confirm callbacks and one delete callback")
+        try expect(snapshots.last?.count == 1, "expected delete callback with one entry")
+        try expect(!store.deleteEntry(entryID: "missing-entry"), "expected missing delete to fail")
+    }
+
+    @MainActor
     private static func testPortableBundleHasDeterministicIntegrityMetadataAndSummaries() async throws {
         let store = FoodWalletStore()
         try expect(store.createQuickTextDraft("apple"), "expected quick text draft")
@@ -1038,6 +1165,29 @@ struct FoodWalletCoreTests {
         await store.analyze(example: .fujiApple)
         store.confirmDraft()
         try expect(store.safeSummary.totals.entryCount == 1, "expected one summary entry after post-reset confirm")
+    }
+
+    @MainActor
+    private static func testStoreRefreshesLocalEntriesWithoutPublishingWriteback() async throws {
+        let source = FoodWalletStore()
+        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        source.confirmDraft()
+        let restoredEntries = source.entries
+        var writebackCount = 0
+        let store = FoodWalletStore(
+            onEntriesChange: { _ in
+                writebackCount += 1
+            },
+            onEntriesReload: {
+                restoredEntries
+            }
+        )
+
+        await store.refreshLocalState()
+
+        try expect(store.entries.count == 1, "expected refresh to load durable entries")
+        try expect(store.safeSummary.totals.entryCount == 1, "expected refresh to rebuild safe summary")
+        try expect(writebackCount == 0, "expected refresh to avoid writeback callback")
     }
 
     @MainActor

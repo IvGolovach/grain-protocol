@@ -140,6 +140,7 @@ public final class FoodWalletStore: ObservableObject {
     private let slowAnalysisThresholdNanoseconds: UInt64
     private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
     private let entriesDidChange: @MainActor ([FoodIntakeEntry]) -> Void
+    private let entriesReload: (@MainActor () -> [FoodIntakeEntry])?
     private var slowAnalysisTask: Task<Void, Never>?
     private var wallet: GrainFoodWallet
     private var brokerFoodSearchResults: [String: BrokerFoodSearchResult] = [:]
@@ -156,6 +157,7 @@ public final class FoodWalletStore: ObservableObject {
         personalIngredients: [PersonalFoodIngredient] = [],
         onEntriesChange: @escaping @MainActor ([FoodIntakeEntry]) -> Void = { _ in },
         onPersonalIngredientsChange: @escaping @MainActor ([PersonalFoodIngredient]) -> Void = { _ in },
+        onEntriesReload: (@MainActor () -> [FoodIntakeEntry])? = nil,
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
     ) {
         self.analysisClient = analysisClient
@@ -163,6 +165,7 @@ public final class FoodWalletStore: ObservableObject {
         self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
         self.personalIngredientsDidChange = onPersonalIngredientsChange
         self.entriesDidChange = onEntriesChange
+        self.entriesReload = onEntriesReload
         self.wallet = wallet
         self.analysisState = .idle
         self.entries = entries
@@ -421,6 +424,44 @@ public final class FoodWalletStore: ObservableObject {
         return true
     }
 
+    public func updateEntry(entryID: String, label: String, gramsMode: Int64) -> Bool {
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedLabel.isEmpty, gramsMode > 0 else {
+            return false
+        }
+        guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
+            return false
+        }
+
+        let current = entries[index]
+        let updatedMeal = Self.editedMeal(
+            current.meal,
+            label: trimmedLabel,
+            gramsMode: gramsMode
+        )
+        let updatedEntry = FoodIntakeEntry(
+            entryID: current.entryID,
+            draftID: current.draftID,
+            meal: updatedMeal,
+            sourceClass: current.sourceClass,
+            trustStatus: current.trustStatus,
+            confirmedAt: current.confirmedAt,
+            dateKey: current.dateKey
+        )
+        entries[index] = updatedEntry
+        publishEntryMutation()
+        return true
+    }
+
+    public func deleteEntry(entryID: String) -> Bool {
+        guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
+            return false
+        }
+        entries.remove(at: index)
+        publishEntryMutation()
+        return true
+    }
+
     public func createTemplateDraft(id: String) -> Bool {
         guard let template = savedTemplates.first(where: { $0.id == id }) else {
             return false
@@ -576,7 +617,7 @@ public final class FoodWalletStore: ObservableObject {
         )
         presentDraft(
             candidate: FoodWalletStore.candidate(
-                id: "verified-serving-offer-demo",
+                id: "verified-serving-offer",
                 label: meal.label,
                 genericLabel: "lentil bowl",
                 dishType: .mixed,
@@ -584,12 +625,12 @@ public final class FoodWalletStore: ObservableObject {
                 confidence: .high,
                 assumptions: [
                     FoodAssumption(id: "issuer-serving", label: "issuer-provided serving"),
-                    FoodAssumption(id: "grain-verified", label: "verified serving offer demo"),
+                    FoodAssumption(id: "grain-verified", label: "verified serving offer"),
                 ],
                 evidence: [
                     ProviderEvidence(
                         provider: "grain_serving_offer",
-                        providerID: "demo-serving-offer",
+                        providerID: "local-serving-offer",
                         matchedName: "Verified lentil bowl",
                         servingBasis: "issuer_attested_serving"
                     ),
@@ -704,6 +745,17 @@ public final class FoodWalletStore: ObservableObject {
         personalIngredients = []
         personalIngredientsDidChange(personalIngredients)
         entriesDidChange(entries)
+    }
+
+    public func refreshLocalState() async {
+        guard let entriesReload else {
+            wallet.replaceEntries(entries)
+            safeSummary = wallet.exportSafeSummary()
+            return
+        }
+        entries = entriesReload()
+        wallet.replaceEntries(entries)
+        safeSummary = wallet.exportSafeSummary()
     }
 
     public func runDeviceSmoke() async -> FoodWalletDeviceSmokeResult {
@@ -843,11 +895,17 @@ public final class FoodWalletStore: ObservableObject {
         analysisState = .draftReady
     }
 
+    private func publishEntryMutation() {
+        wallet.replaceEntries(entries)
+        safeSummary = wallet.exportSafeSummary()
+        entriesDidChange(entries)
+    }
+
     private func searchBrokerFood(requestFactory: () throws -> BrokerFoodSearchRequest) async {
         guard let searchClient else {
             brokerFoodSearchRows = []
             brokerFoodSearchResults = [:]
-            foodSearchState = .failed("Food lookup is unavailable. Try photo or quick add.")
+            foodSearchState = .failed("Food lookup is unavailable. Try photo or enter the food manually.")
             return
         }
 
@@ -861,7 +919,7 @@ public final class FoodWalletStore: ObservableObject {
         } catch {
             brokerFoodSearchRows = []
             brokerFoodSearchResults = [:]
-            foodSearchState = .failed("No trusted barcode match was found. Try a photo or enter the food manually.")
+            foodSearchState = .failed(Self.foodSearchFailureMessage(for: error))
         }
     }
 
@@ -919,6 +977,20 @@ public final class FoodWalletStore: ObservableObject {
         )
     }
 
+    private static func editedMeal(_ meal: MealEstimate, label: String, gramsMode: Int64) -> MealEstimate {
+        let oldGrams = max(1, meal.amountGrams)
+        let factor = Double(max(1, gramsMode)) / Double(oldGrams)
+        return MealEstimate(
+            label: label,
+            kcal: max(0, Int64((Double(meal.kcal) * factor).rounded())),
+            varianceKcal: max(0, Int64((Double(meal.varianceKcal) * factor).rounded())),
+            amountGrams: max(1, gramsMode),
+            servingGrams: max(1, gramsMode),
+            servings: meal.servings,
+            macronutrients: meal.macronutrients?.scaled(by: factor)
+        )
+    }
+
     private static func failureCode(for error: Error) -> FoodAnalysisFailureCode {
         guard let brokerError = error as? FoodAnalysisBrokerClientError else {
             return .unknown
@@ -934,5 +1006,42 @@ public final class FoodWalletStore: ObservableObject {
         case .unsafeCandidate:
             return .unsafeCandidate
         }
+    }
+
+    private static func foodSearchFailureMessage(for error: Error) -> String {
+        if let requestError = error as? BrokerFoodSearchError {
+            switch requestError {
+            case let .invalidRequest(reason):
+                if reason.localizedCaseInsensitiveContains("barcode") {
+                    return "Enter 8 to 14 UPC or EAN digits."
+                }
+                return "MealMark could not search that food. Check the text and try again."
+            case .invalidResponse:
+                return "Food lookup returned data MealMark could not read."
+            case let .httpStatus(status):
+                return "Food lookup returned HTTP \(status). Try again."
+            case .unsafeResult:
+                return "Food lookup returned a result that still needs safer review."
+            }
+        }
+
+        if let brokerError = error as? FoodAnalysisBrokerClientError {
+            switch brokerError {
+            case let .httpStatus(status):
+                return "Food lookup service returned HTTP \(status). Try again."
+            case .invalidResponse:
+                return "Food lookup service returned data MealMark could not read."
+            case .unsafeCandidate:
+                return "Food lookup returned a result that still needs safer review."
+            case .invalidPayload:
+                return "MealMark could not send this lookup request."
+            }
+        }
+
+        if error is URLError {
+            return "Food lookup could not reach the broker. Check that it is running on this network."
+        }
+
+        return "Food lookup failed. Try again, use photo, or enter the food manually."
     }
 }

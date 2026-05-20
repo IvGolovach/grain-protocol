@@ -8,10 +8,10 @@ The current build is a Swift package app surface with:
 
 - SwiftUI Today, Capture, History, Wallet, and Pro tabs;
 - real iPhone camera capture with transient in-memory photo analysis input;
-- deterministic mock photo analysis for a captured Fuji apple and mushroom
-  risotto;
+- deterministic mock analysis fixtures for local tests and device smoke;
 - calorie, portion, and macro estimates before confirmation;
-- editable assumptions before confirmation;
+- numeric portion review before confirmation;
+- edit/delete gestures for confirmed meals;
 - `GrainFoodWallet` draft and confirmation flow;
 - safe summary checks;
 - App Intents for opening capture, today, and quick logging;
@@ -20,9 +20,9 @@ The current build is a Swift package app surface with:
 ## Product Loop
 
 ```text
-camera photo or sample capture
+camera photo, barcode, ingredient-built meal, or typed food
 -> food analysis candidate
--> editable assumptions
+-> reviewable draft
 -> user-confirmed draft
 -> MealMark entry
 -> safe summary
@@ -65,22 +65,23 @@ All OpenAI, USDA, and commercial nutrition-provider credentials live on the
 broker. The app must not call `api.openai.com` directly, ship `OPENAI_API_KEY`,
 ship USDA/data.gov keys, or read provider keys from the iOS bundle.
 
-The app can run without that broker today using `MockFoodAnalysisClient`. Device
-verification for a live flow should point the app at a non-production broker
-with test provider credentials, capture one meal photo, confirm that the result
-requires user review, and then verify logs/storage contain no raw image bytes.
+Deterministic mocks are reserved for tests and smoke runs. Device verification
+for a live flow should point the app at a non-production broker with test
+provider credentials, capture one meal photo, confirm that the result requires
+user review, and then verify logs/storage contain no raw image bytes.
 
 ## Live API Setup
 
-The iOS app can keep using mocks for deterministic local and CI runs. Register
-and configure live providers on the broker, not in the app:
+The iOS app can keep using mocks for deterministic local and CI runs. Configure
+live providers on the broker, not in the app:
 
 - OpenAI Responses API: create an OpenAI API key and use vision input with
   Structured Outputs to produce the `FoodAnalysisCandidate` schema.
 - USDA FoodData Central: create a data.gov API key for generic food and
   prepared-food nutrition lookup.
-- Open Food Facts: use a clear application `User-Agent` for public packaged
-  food reads; account/auth is only needed for contribution flows.
+- Open Food Facts: enabled by default for public packaged-food barcode reads
+  with a clear application `User-Agent`; account/auth is only needed for
+  contribution flows.
 - Optional commercial providers: Edamam, Nutritionix, FatSecret, LogMeal,
   Passio, or Spoonacular can improve packaged, restaurant, barcode, recipe, or
   food-image coverage. Keep their keys server-side and gate each provider by
@@ -88,8 +89,8 @@ and configure live providers on the broker, not in the app:
 
 The broker returns structured estimates with calorie range, portion range,
 macros, assumptions, evidence, confidence, and a mandatory confirmation flag. If
-no live provider is configured, it uses deterministic local development fixtures
-or a low-confidence model-only estimate that still requires user confirmation.
+no keyed provider is configured, public Open Food Facts barcode lookup and
+deterministic local development fixtures still require user confirmation.
 
 Run the broker guard after touching the backend service:
 
@@ -99,6 +100,13 @@ scripts/sdk/check_food_analysis_broker.sh
 
 The guard does not require provider accounts; live credentials stay in the local
 environment or a deployment secret manager.
+
+For local iPhone testing, start the broker on the LAN with public barcode lookup
+enabled and optional Keychain-backed OpenAI/USDA credentials:
+
+```sh
+scripts/sdk/run_food_analysis_broker_local.sh
+```
 
 ## Nutrition Resolver Plan
 
@@ -121,7 +129,7 @@ Free:
 - manual logging;
 - basic photo drafts;
 - local history;
-- verified scan demo;
+- verified scan proof;
 - basic export.
 
 Pro:
@@ -141,7 +149,7 @@ Before TestFlight/App Store submission, add:
 - signing, bundle id, entitlements, and privacy strings;
 - StoreKit products and sandbox verification;
 - privacy policy URL and App Privacy details;
-- review notes with sample QR/demo mode;
+- review notes for real user flows and diagnostics-only fixture behavior;
 - explicit AI/photo consent copy;
 - no medical claims.
 
@@ -178,5 +186,6 @@ Useful overrides:
 GRAIN_IOS_DEVICE_ID=<device-id> \
 GRAIN_IOS_DEVELOPMENT_TEAM=<team-id> \
 GRAIN_IOS_BUNDLE_ID=dev.grain.foodwallet \
+GRAIN_FOOD_ANALYSIS_BROKER_URL=http://<mac-lan-ip>:8788 \
 scripts/sdk/run_ios_food_wallet_device.sh
 ```
