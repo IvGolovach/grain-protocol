@@ -138,6 +138,7 @@ public struct FoodWalletQRPayload: Codable, Equatable, Sendable {
     public var title: String
     public var contentSha256: String
     public var issuer: FoodWalletQRIssuer?
+    public var signature: FoodWalletExportSignature?
     public var recipe: FoodWalletExportRecipe?
     public var personalFood: FoodWalletExportPersonalFood?
 
@@ -148,6 +149,7 @@ public struct FoodWalletQRPayload: Codable, Equatable, Sendable {
         case title
         case contentSha256
         case issuer
+        case signature
         case recipe
         case personalFood
     }
@@ -185,6 +187,7 @@ public enum FoodWalletQRImportError: Error, Equatable, Sendable, CustomStringCon
     case invalidPayload
     case integrityMismatch
     case unsupportedPayload
+    case protocolServingOfferRequiresTrust
 
     public var description: String {
         switch self {
@@ -194,6 +197,8 @@ public enum FoodWalletQRImportError: Error, Equatable, Sendable, CustomStringCon
             return "integrityMismatch"
         case .unsupportedPayload:
             return "unsupportedPayload"
+        case .protocolServingOfferRequiresTrust:
+            return "protocolServingOfferRequiresTrust"
         }
     }
 }
@@ -2244,33 +2249,33 @@ public enum FoodWalletExportFactory {
 
 public enum FoodWalletQRFactory {
     public static func payload(recipe: SavedFoodRecipe) throws -> FoodWalletQRPayload {
-        var payload = FoodWalletQRPayload(
+        let payload = FoodWalletQRPayload(
             schema: "grain.food-wallet.qr.v1",
             version: 1,
             kind: .recipe,
             title: recipe.title,
             contentSha256: "",
-            issuer: Self.defaultIssuer,
+            issuer: nil,
+            signature: nil,
             recipe: FoodWalletExportRecipe(recipe: recipe),
             personalFood: nil
         )
-        payload.contentSha256 = try contentDigest(payload)
-        return payload
+        return try signedPayload(payload)
     }
 
     public static func payload(personalFood: PersonalFoodIngredient) throws -> FoodWalletQRPayload {
-        var payload = FoodWalletQRPayload(
+        let payload = FoodWalletQRPayload(
             schema: "grain.food-wallet.qr.v1",
             version: 1,
             kind: .personalFood,
             title: personalFood.name,
             contentSha256: "",
-            issuer: Self.defaultIssuer,
+            issuer: nil,
+            signature: nil,
             recipe: nil,
             personalFood: FoodWalletExportPersonalFood(ingredient: personalFood)
         )
-        payload.contentSha256 = try contentDigest(payload)
-        return payload
+        return try signedPayload(payload)
     }
 
     public static func payloadText(_ payload: FoodWalletQRPayload) throws -> String {
@@ -2278,6 +2283,9 @@ public enum FoodWalletQRFactory {
     }
 
     public static func payload(from text: String) throws -> FoodWalletQRPayload {
+        if text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("GR1:") {
+            return try FoodWalletProtocolQRCodeFactory.payload(fromGR1: text)
+        }
         guard let data = text.data(using: .utf8) else {
             throw FoodWalletQRImportError.invalidPayload
         }
@@ -2310,20 +2318,58 @@ public enum FoodWalletQRFactory {
                     return false
                 }
             }
-            return try contentDigest(payload) == payload.contentSha256
+            guard try contentDigest(payload) == payload.contentSha256 else {
+                return false
+            }
+            guard let signature = payload.signature else {
+                return false
+            }
+            return try verify(signature: signature, contentData: contentData(for: payload))
         } catch {
             return false
         }
     }
 
-    private static func contentDigest(_ payload: FoodWalletQRPayload) throws -> String {
-        var unsigned = payload
-        unsigned.contentSha256 = ""
-        return sha256Hex(try jsonData(unsigned))
+    private static func signedPayload(_ payload: FoodWalletQRPayload) throws -> FoodWalletQRPayload {
+        let privateKey = P256.Signing.PrivateKey()
+        var signed = payload
+        signed.signature = nil
+        signed.contentSha256 = ""
+        let publicKey = privateKey.publicKey.x963Representation
+        let keyID = "p256:\(sha256Hex(publicKey).prefix(16))"
+        signed.issuer = FoodWalletQRIssuer(label: "MealMark self-issued", keyID: keyID)
+        let contentData = try contentData(for: signed)
+        signed.contentSha256 = sha256Hex(contentData)
+        let signature = try privateKey.signature(for: contentData)
+        signed.signature = FoodWalletExportSignature(
+            algorithm: "p256-sha256",
+            signer: signed.issuer?.label ?? "MealMark self-issued",
+            publicKeyX963Base64: publicKey.base64EncodedString(),
+            signatureDerBase64: signature.derRepresentation.base64EncodedString()
+        )
+        return signed
     }
 
-    private static var defaultIssuer: FoodWalletQRIssuer {
-        FoodWalletQRIssuer(label: "MealMark self-issued", keyID: "mealmark.local")
+    private static func contentDigest(_ payload: FoodWalletQRPayload) throws -> String {
+        sha256Hex(try contentData(for: payload))
+    }
+
+    private static func contentData(for payload: FoodWalletQRPayload) throws -> Data {
+        var unsigned = payload
+        unsigned.contentSha256 = ""
+        unsigned.signature = nil
+        return try jsonData(unsigned)
+    }
+
+    private static func verify(signature: FoodWalletExportSignature, contentData: Data) throws -> Bool {
+        guard signature.algorithm == "p256-sha256",
+              let publicKeyData = Data(base64Encoded: signature.publicKeyX963Base64),
+              let signatureData = Data(base64Encoded: signature.signatureDerBase64) else {
+            return false
+        }
+        let publicKey = try P256.Signing.PublicKey(x963Representation: publicKeyData)
+        let ecdsaSignature = try P256.Signing.ECDSASignature(derRepresentation: signatureData)
+        return publicKey.isValidSignature(ecdsaSignature, for: contentData)
     }
 
     private static func jsonData(_ payload: FoodWalletQRPayload) throws -> Data {

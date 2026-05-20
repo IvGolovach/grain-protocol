@@ -2,60 +2,297 @@ import FoodWalletCore
 import SwiftUI
 
 #if os(iOS)
+import AVFoundation
 import UIKit
 
 struct CameraCaptureView: UIViewControllerRepresentable {
     var onPhotoCaptured: (TransientMealPhotoPayload) -> Void
     var onCancel: () -> Void
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onPhotoCaptured: onPhotoCaptured, onCancel: onCancel)
+    func makeUIViewController(context: Context) -> MealMarkCameraViewController {
+        MealMarkCameraViewController(onPhotoCaptured: onPhotoCaptured, onCancel: onCancel)
     }
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let controller = UIImagePickerController()
-        controller.sourceType = .camera
-        controller.cameraCaptureMode = .photo
-        controller.delegate = context.coordinator
-        return controller
+    func updateUIViewController(_ uiViewController: MealMarkCameraViewController, context: Context) {}
+}
+
+final class MealMarkCameraViewController: UIViewController {
+    private let onPhotoCaptured: (TransientMealPhotoPayload) -> Void
+    private let onCancel: () -> Void
+    private nonisolated(unsafe) let session = AVCaptureSession()
+    private nonisolated(unsafe) let photoOutput = AVCapturePhotoOutput()
+    private let sessionQueue = DispatchQueue(label: "dev.grain.mealmark.camera-session")
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+    private var photoDelegate: PhotoCaptureDelegate?
+    private nonisolated(unsafe) var isConfigured = false
+
+    private let closeButton = UIButton(type: .system)
+    private let shutterButton = UIButton(type: .system)
+    private let titleLabel = UILabel()
+    private let helperLabel = UILabel()
+
+    init(
+        onPhotoCaptured: @escaping (TransientMealPhotoPayload) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.onPhotoCaptured = onPhotoCaptured
+        self.onCancel = onCancel
+        super.init(nibName: nil, bundle: nil)
+        modalPresentationStyle = .fullScreen
     }
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
 
-    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        private let onPhotoCaptured: (TransientMealPhotoPayload) -> Void
-        private let onCancel: () -> Void
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.backgroundColor = .black
+        configurePreview()
+        configureOverlay()
+        requestAccessAndConfigure()
+    }
 
-        init(onPhotoCaptured: @escaping (TransientMealPhotoPayload) -> Void, onCancel: @escaping () -> Void) {
-            self.onPhotoCaptured = onPhotoCaptured
-            self.onCancel = onCancel
-        }
-
-        func imagePickerController(
-            _ picker: UIImagePickerController,
-            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-        ) {
-            defer {
-                picker.dismiss(animated: true)
-            }
-
-            guard let image = info[.originalImage] as? UIImage else {
-                onCancel()
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        sessionQueue.async { [weak self] in
+            guard let self, self.isConfigured, !self.session.isRunning else {
                 return
             }
+            self.session.startRunning()
+        }
+    }
 
-            guard let photoPayload = TransientMealPhotoPayload.transientCapture(from: image) else {
-                onCancel()
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        sessionQueue.async { [weak self] in
+            guard let self, self.session.isRunning else {
                 return
             }
-
-            onPhotoCaptured(photoPayload)
+            self.session.stopRunning()
         }
+    }
 
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            picker.dismiss(animated: true)
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        previewLayer?.frame = view.bounds
+    }
+
+    private func configurePreview() {
+        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        previewLayer.videoGravity = .resizeAspectFill
+        previewLayer.frame = view.bounds
+        view.layer.addSublayer(previewLayer)
+        self.previewLayer = previewLayer
+    }
+
+    private func configureOverlay() {
+        let topGradient = GradientView(topColor: UIColor.black.withAlphaComponent(0.78), bottomColor: .clear)
+        topGradient.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(topGradient)
+
+        let bottomGradient = GradientView(topColor: .clear, bottomColor: UIColor.black.withAlphaComponent(0.86))
+        bottomGradient.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(bottomGradient)
+
+        closeButton.setImage(UIImage(systemName: "xmark"), for: .normal)
+        closeButton.tintColor = .white
+        closeButton.backgroundColor = UIColor.black.withAlphaComponent(0.42)
+        closeButton.layer.cornerRadius = 28
+        closeButton.accessibilityLabel = "Close camera"
+        closeButton.accessibilityIdentifier = "MealMarkCameraCloseButton"
+        closeButton.addTarget(self, action: #selector(cancel), for: .touchUpInside)
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(closeButton)
+
+        titleLabel.text = "Meal photo"
+        titleLabel.textColor = .white
+        titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        titleLabel.textAlignment = .center
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(titleLabel)
+
+        helperLabel.text = "Capture food or a readable nutrition label"
+        helperLabel.textColor = UIColor.white.withAlphaComponent(0.72)
+        helperLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        helperLabel.textAlignment = .center
+        helperLabel.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(helperLabel)
+
+        shutterButton.backgroundColor = .white
+        shutterButton.layer.cornerRadius = 37
+        shutterButton.layer.borderColor = UIColor.white.withAlphaComponent(0.35).cgColor
+        shutterButton.layer.borderWidth = 7
+        shutterButton.accessibilityLabel = "Take meal photo"
+        shutterButton.accessibilityIdentifier = "MealMarkCameraShutterButton"
+        shutterButton.addTarget(self, action: #selector(capturePhoto), for: .touchUpInside)
+        shutterButton.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(shutterButton)
+
+        NSLayoutConstraint.activate([
+            topGradient.topAnchor.constraint(equalTo: view.topAnchor),
+            topGradient.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            topGradient.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            topGradient.heightAnchor.constraint(equalToConstant: 160),
+
+            bottomGradient.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bottomGradient.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomGradient.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            bottomGradient.heightAnchor.constraint(equalToConstant: 220),
+
+            closeButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            closeButton.widthAnchor.constraint(equalToConstant: 56),
+            closeButton.heightAnchor.constraint(equalTo: closeButton.widthAnchor),
+
+            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: closeButton.centerYAnchor),
+            titleLabel.leadingAnchor.constraint(greaterThanOrEqualTo: closeButton.trailingAnchor, constant: 16),
+
+            helperLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            helperLabel.bottomAnchor.constraint(equalTo: shutterButton.topAnchor, constant: -28),
+            helperLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 28),
+            helperLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -28),
+
+            shutterButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            shutterButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -34),
+            shutterButton.widthAnchor.constraint(equalToConstant: 74),
+            shutterButton.heightAnchor.constraint(equalTo: shutterButton.widthAnchor),
+        ])
+    }
+
+    private func requestAccessAndConfigure() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            configureSession()
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                if granted {
+                    DispatchQueue.main.async {
+                        self?.configureSession()
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self?.onCancel()
+                    }
+                }
+            }
+        case .denied, .restricted:
+            onCancel()
+        @unknown default:
             onCancel()
         }
+    }
+
+    private func configureSession() {
+        sessionQueue.async { [weak self] in
+            guard let self, !self.isConfigured else {
+                return
+            }
+            self.session.beginConfiguration()
+            self.session.sessionPreset = .photo
+
+            guard
+                let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+                let input = try? AVCaptureDeviceInput(device: camera),
+                self.session.canAddInput(input),
+                self.session.canAddOutput(self.photoOutput)
+            else {
+                self.session.commitConfiguration()
+                DispatchQueue.main.async {
+                    self.onCancel()
+                }
+                return
+            }
+
+            self.session.addInput(input)
+            self.session.addOutput(self.photoOutput)
+            self.isConfigured = true
+            self.session.commitConfiguration()
+            self.session.startRunning()
+        }
+    }
+
+    @objc private func cancel() {
+        onCancel()
+    }
+
+    @objc private func capturePhoto() {
+        shutterButton.isEnabled = false
+        let settings = AVCapturePhotoSettings()
+        let delegate = PhotoCaptureDelegate { [weak self] image in
+            DispatchQueue.main.async {
+                guard let self else {
+                    return
+                }
+                self.shutterButton.isEnabled = true
+                self.photoDelegate = nil
+                guard
+                    let image,
+                    let payload = TransientMealPhotoPayload.transientCapture(from: image)
+                else {
+                    self.onCancel()
+                    return
+                }
+                self.onPhotoCaptured(payload)
+            }
+        }
+        photoDelegate = delegate
+        photoOutput.capturePhoto(with: settings, delegate: delegate)
+    }
+
+    private final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
+        private let completion: (UIImage?) -> Void
+
+        init(completion: @escaping (UIImage?) -> Void) {
+            self.completion = completion
+        }
+
+        func photoOutput(
+            _ output: AVCapturePhotoOutput,
+            didFinishProcessingPhoto photo: AVCapturePhoto,
+            error: Error?
+        ) {
+            guard error == nil,
+                  let data = photo.fileDataRepresentation(),
+                  let image = UIImage(data: data) else {
+                completion(nil)
+                return
+            }
+            completion(image)
+        }
+    }
+}
+
+private final class GradientView: UIView {
+    private let topColor: UIColor
+    private let bottomColor: UIColor
+
+    init(topColor: UIColor, bottomColor: UIColor) {
+        self.topColor = topColor
+        self.bottomColor = bottomColor
+        super.init(frame: .zero)
+        isUserInteractionEnabled = false
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    override class var layerClass: AnyClass {
+        CAGradientLayer.self
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let layer = layer as? CAGradientLayer else {
+            return
+        }
+        layer.colors = [topColor.cgColor, bottomColor.cgColor]
+        layer.startPoint = CGPoint(x: 0.5, y: 0)
+        layer.endPoint = CGPoint(x: 0.5, y: 1)
     }
 }
 

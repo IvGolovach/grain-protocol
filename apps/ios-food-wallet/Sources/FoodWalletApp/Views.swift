@@ -63,7 +63,6 @@ struct FoodWalletRootView: View {
     @State private var isShowingCaptureReview = false
     @State private var addFoodHubDetent = PresentationDetent.medium
     @State private var captureErrorMessage: String?
-    @State private var isShowingPhotoSourceDialog = false
     #if os(iOS)
     @State private var isShowingPhotoLibrary = false
     @State private var selectedMealPhotoItem: PhotosPickerItem?
@@ -159,7 +158,7 @@ struct FoodWalletRootView: View {
             .presentationDragIndicator(.visible)
         }
         #if os(iOS)
-        .sheet(isPresented: $isShowingCamera) {
+        .fullScreenCover(isPresented: $isShowingCamera) {
             CameraCaptureView(
                 onPhotoCaptured: { photoPayload in
                     isShowingCamera = false
@@ -169,25 +168,6 @@ struct FoodWalletRootView: View {
                     isShowingCamera = false
                 }
             )
-        }
-        .confirmationDialog(
-            "Add food photo",
-            isPresented: $isShowingPhotoSourceDialog,
-            titleVisibility: .visible
-        ) {
-            Button("Take Photo") {
-                startCameraCaptureFlow()
-            }
-            .accessibilityIdentifier("PhotoSourceTakePhotoButton")
-
-            Button("Choose from Library") {
-                isShowingPhotoLibrary = true
-            }
-            .accessibilityIdentifier("PhotoSourceChoosePhotoButton")
-
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Use the camera now, or choose an existing food photo.")
         }
         .photosPicker(
             isPresented: $isShowingPhotoLibrary,
@@ -271,7 +251,7 @@ struct FoodWalletRootView: View {
     private func startPhotoCaptureFlow() {
         isShowingCaptureReview = false
         #if os(iOS)
-        isShowingPhotoSourceDialog = true
+        startCameraCaptureFlow()
         #else
         captureErrorMessage = "Photo capture is available in the iOS app target."
         #endif
@@ -1400,8 +1380,14 @@ private struct BarcodeLookupView: View {
             qrPreview = try store.previewQRCodePayload(text)
             detectedQRCodeText = text
             errorMessage = nil
+        } catch FoodWalletQRImportError.protocolServingOfferRequiresTrust {
+            errorMessage = "This is a Grain GR1 serving offer. MealMark can read that protocol family, but adding it needs issuer trust material."
         } catch {
-            errorMessage = "This QR is not a valid MealMark food QR. Try scanning again or enter the food manually."
+            if text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("GR1:") {
+                errorMessage = "This is a Grain GR1 serving offer, but MealMark could not import the embedded food record yet."
+            } else {
+                errorMessage = "This QR is not a valid signed MealMark food QR. Try scanning again or enter the food manually."
+            }
         }
     }
 
@@ -1475,7 +1461,7 @@ private struct QRCodeImportPreviewCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("MealMark food QR", systemImage: "qrcode.viewfinder")
+            Label("MealMark signed food QR", systemImage: "qrcode.viewfinder")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.blue)
                 .accessibilityIdentifier("QRCodeImportStatusLabel")
@@ -2319,10 +2305,10 @@ private struct QRCodePayloadCard: View {
     var payloadText: String?
 
     var body: some View {
-        Section("Grain QR") {
+        Section("Signed Grain QR") {
             if let payloadText {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Share this food as a portable MealMark record.")
+                    Text("Share this food as a signed GR1 serving offer. It opens offline and still requires review before saving.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 

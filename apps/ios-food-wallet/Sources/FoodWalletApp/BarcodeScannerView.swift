@@ -171,7 +171,9 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
             guard let value else {
                 return false
             }
-            return value.contains("\"grain.food-wallet.qr.v1\"") || value.contains("grain.food-wallet.qr.v1")
+            return value.hasPrefix("GR1:") ||
+                value.contains("\"grain.food-wallet.qr.v1\"") ||
+                value.contains("grain.food-wallet.qr.v1")
         }
 
         func emitScannerError(_ message: String) {

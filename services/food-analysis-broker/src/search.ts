@@ -407,6 +407,27 @@ function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFacts
   if (!productName || kcal === null) return null;
 
   const category = openFoodFactsCategory(product.categories_tags);
+  const protein = openFoodFactsNutrientPer100g(nutriments, ["proteins", "protein"], servingSizeG);
+  const carbohydrate = openFoodFactsNutrientPer100g(nutriments, ["carbohydrates", "carbohydrate"], servingSizeG);
+  const fat = openFoodFactsNutrientPer100g(nutriments, ["fat"], servingSizeG);
+  const per100g = {
+    kcal,
+    protein_g: protein ?? 0,
+    carbohydrate_g: carbohydrate ?? 0,
+    fat_g: fat ?? 0,
+    fiber_g: openFoodFactsNutrientPer100g(nutriments, ["fiber"], servingSizeG) ?? undefined
+  };
+  if (packagedNutritionQualityIssue({
+    label: productName,
+    category,
+    per100g,
+    missingMacros: {
+      protein: protein === null,
+      carbohydrate: carbohydrate === null,
+      fat: fat === null
+    }
+  })) return null;
+
   return {
     result_id: `food-search:open-food-facts:${barcode}`,
     primary_label: productName,
@@ -425,13 +446,7 @@ function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFacts
       serving_label: cleanText(product.serving_size)
     },
     nutrition: {
-      per_100g: {
-        kcal,
-        protein_g: openFoodFactsNutrientPer100g(nutriments, ["proteins", "protein"], servingSizeG) ?? 0,
-        carbohydrate_g: openFoodFactsNutrientPer100g(nutriments, ["carbohydrates", "carbohydrate"], servingSizeG) ?? 0,
-        fat_g: openFoodFactsNutrientPer100g(nutriments, ["fat"], servingSizeG) ?? 0,
-        fiber_g: openFoodFactsNutrientPer100g(nutriments, ["fiber"], servingSizeG) ?? undefined
-      }
+      per_100g: per100g
     },
     provider_evidence: [
       {
@@ -476,12 +491,34 @@ function usdaBrandedResult(barcode: string, food: UsdaSearchFood): FoodSearchRes
 
   const servingSizeG = numeric(food.servingSize);
   const servingLabel = servingSizeG === null ? null : `${servingSizeG} ${food.servingSizeUnit ?? "g"}`;
+  const protein = usdaNutrient(food, "203", "protein");
+  const carbohydrate = usdaNutrient(food, "205", "carbohydrate");
+  const fat = usdaNutrient(food, "204", "lipid");
+  const category = cleanText(food.foodCategory) ?? "branded_food";
+  const per100g = {
+    kcal,
+    protein_g: protein ?? 0,
+    carbohydrate_g: carbohydrate ?? 0,
+    fat_g: fat ?? 0,
+    fiber_g: usdaNutrient(food, "291", "fiber") ?? undefined
+  };
+  if (packagedNutritionQualityIssue({
+    label,
+    category,
+    per100g,
+    missingMacros: {
+      protein: protein === null,
+      carbohydrate: carbohydrate === null,
+      fat: fat === null
+    }
+  })) return null;
+
   return {
     result_id: `food-search:usda-fdc:${fdcID}`,
     primary_label: label,
     generic_label: label.toLowerCase(),
     brand_label: cleanText(food.brandName) ?? cleanText(food.brandOwner),
-    category: cleanText(food.foodCategory) ?? "branded_food",
+    category,
     source_label: "usda_fdc",
     trust_label: "barcode_provider",
     match: {
@@ -494,13 +531,7 @@ function usdaBrandedResult(barcode: string, food: UsdaSearchFood): FoodSearchRes
       serving_label: servingLabel
     },
     nutrition: {
-      per_100g: {
-        kcal,
-        protein_g: usdaNutrient(food, "203", "protein") ?? 0,
-        carbohydrate_g: usdaNutrient(food, "205", "carbohydrate") ?? 0,
-        fat_g: usdaNutrient(food, "204", "lipid") ?? 0,
-        fiber_g: usdaNutrient(food, "291", "fiber") ?? undefined
-      }
+      per_100g: per100g
     },
     provider_evidence: [
       {
@@ -721,6 +752,55 @@ function openFoodFactsCategory(value: unknown): string {
   if (!Array.isArray(value)) return "packaged_food";
   const last = value.map((item) => cleanText(item)).filter((item): item is string => item !== null).at(-1);
   return last?.replace(/^[a-z]{2}:/u, "").replace(/-/gu, "_") ?? "packaged_food";
+}
+
+function packagedNutritionQualityIssue(input: {
+  label: string;
+  category: string;
+  per100g: FoodSearchPer100gNutrition;
+  missingMacros: {
+    protein: boolean;
+    carbohydrate: boolean;
+    fat: boolean;
+  };
+}): string | null {
+  const descriptor = `${input.label} ${input.category}`.toLowerCase().replace(/_/gu, " ");
+  const kcal = input.per100g.kcal;
+  if (!Number.isFinite(kcal) || kcal < 0) return "invalid energy";
+
+  const isBeverage = /\b(beverage|drink|waters?|soda|cola|tea|coffee|juice|kombucha|seltzer|sparkling|mineral waters?)\b/u
+    .test(descriptor);
+  const explicitlyZeroEnergy = /\b(zero|diet|unsweetened|waters?|seltzer|sparkling water|mineral waters?)\b/u
+    .test(descriptor);
+  if (kcal === 0 && !explicitlyZeroEnergy) return "zero energy without zero-calorie context";
+
+  if (!isBeverage && (input.missingMacros.protein || input.missingMacros.carbohydrate || input.missingMacros.fat)) {
+    return "incomplete macronutrients";
+  }
+
+  if (/\b(cream cheese|cheese spread|cheese)\b/u.test(descriptor) &&
+      !/\b(fat free|nonfat|reduced fat|light)\b/u.test(descriptor) &&
+      kcal < 120) {
+    return "implausibly low energy for cheese";
+  }
+  if (/\b(butter|oil|mayonnaise|mayo|peanut butter|almond butter)\b/u.test(descriptor) && kcal < 250) {
+    return "implausibly low energy for dense fat food";
+  }
+  if (/\b(beef|pork|lamb|salmon|bacon|sausage)\b/u.test(descriptor) && kcal < 70) {
+    return "implausibly low energy for meat or fish";
+  }
+
+  const macroKcal = input.per100g.protein_g * 4 +
+    input.per100g.carbohydrate_g * 4 +
+    input.per100g.fat_g * 9;
+  if (macroKcal > 20 && kcal > 20) {
+    const relativeDelta = Math.abs(macroKcal - kcal) / Math.max(macroKcal, kcal);
+    if (relativeDelta > 0.45) {
+      return "energy and macronutrients disagree";
+    }
+  }
+
+  return null;
 }
 
 function usdaNutrient(food: UsdaSearchFood, nutrientNumber: string, nameNeedle: string): number | null {

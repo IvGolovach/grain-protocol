@@ -488,26 +488,23 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func qrPayloadTextForRecipe(id: String) -> String? {
-        guard let recipe = savedRecipe(id: id),
-              let payload = try? FoodWalletQRFactory.payload(recipe: recipe),
-              FoodWalletQRFactory.verify(payload) else {
+        guard let recipe = savedRecipe(id: id) else {
             return nil
         }
-        return try? FoodWalletQRFactory.payloadText(payload)
+        return try? FoodWalletProtocolQRCodeFactory.qrText(recipe: recipe)
     }
 
     public func qrPayloadTextForPersonalIngredient(id: String) -> String? {
-        guard let ingredient = personalIngredient(id: id),
-              let payload = try? FoodWalletQRFactory.payload(personalFood: ingredient),
-              FoodWalletQRFactory.verify(payload) else {
+        guard let ingredient = personalIngredient(id: id) else {
             return nil
         }
-        return try? FoodWalletQRFactory.payloadText(payload)
+        return try? FoodWalletProtocolQRCodeFactory.qrText(personalFood: ingredient)
     }
 
     public func previewQRCodePayload(_ text: String) throws -> FoodWalletQRImportPreview {
+        let isProtocolQR = text.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("GR1:")
         let payload = try FoodWalletQRFactory.payload(from: text)
-        let signedBy = payload.issuer?.label ?? "Unsigned MealMark QR"
+        let signedBy = Self.qrSignedByLabel(payload)
         switch payload.kind {
         case .recipe:
             guard let exportRecipe = payload.recipe else {
@@ -520,7 +517,7 @@ public final class FoodWalletStore: ObservableObject {
                 nutritionLabel: "\(recipe.totalKcal) kcal",
                 macronutrientsLabel: recipe.macronutrients.shortLabel,
                 signedByLabel: signedBy,
-                sourceLabel: "MealMark food QR",
+                sourceLabel: isProtocolQR ? "Signed Grain GR1 serving offer" : "MealMark signed food QR",
                 ingredients: recipe.ingredients.map { "\($0.label) • \($0.grams) g" }
             )
         case .personalFood:
@@ -535,7 +532,7 @@ public final class FoodWalletStore: ObservableObject {
                 nutritionLabel: "\(ingredient.sourceServingKcal) kcal",
                 macronutrientsLabel: ingredient.macronutrientsPer100Grams.scaled(by: Double(grams) / 100).shortLabel,
                 signedByLabel: signedBy,
-                sourceLabel: "MealMark food QR",
+                sourceLabel: isProtocolQR ? "Signed Grain GR1 serving offer" : "MealMark signed food QR",
                 ingredients: []
             )
         }
@@ -544,7 +541,7 @@ public final class FoodWalletStore: ObservableObject {
     @discardableResult
     public func createQRCodeDraft(payloadText: String) throws -> Bool {
         let payload = try FoodWalletQRFactory.payload(from: payloadText)
-        let signedBy = payload.issuer?.label ?? "Unsigned MealMark QR"
+        let signedBy = Self.qrSignedByLabel(payload)
         switch payload.kind {
         case .recipe:
             guard let exportRecipe = payload.recipe else {
@@ -1265,7 +1262,7 @@ public final class FoodWalletStore: ObservableObject {
         ingredients: [String]
     ) -> FoodAnalysisCandidate {
         var assumptions = [
-            FoodAssumption(id: "mealmark-qr", label: "imported from MealMark food QR"),
+            FoodAssumption(id: "mealmark-qr", label: "imported from signed MealMark food QR"),
             FoodAssumption(id: "review-portion", label: "review serving before saving"),
         ]
         if !ingredients.isEmpty {
@@ -1294,6 +1291,13 @@ public final class FoodWalletStore: ObservableObject {
                 ),
             ]
         )
+    }
+
+    private static func qrSignedByLabel(_ payload: FoodWalletQRPayload) -> String {
+        guard let issuer = payload.issuer else {
+            return "Unsigned MealMark QR"
+        }
+        return "\(issuer.label) • \(issuer.keyID)"
     }
 
     private static func editedMeal(_ meal: MealEstimate, label: String, gramsMode: Int64) -> MealEstimate {

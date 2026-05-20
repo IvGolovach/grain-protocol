@@ -53,8 +53,11 @@ async function main(): Promise<number> {
   await testOpenFoodFactsBarcodeProviderExpandsUpcE();
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromKilojoules();
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing();
+  await testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
+  await testOpenFoodFactsBarcodeProviderAcceptsPlausibleCreamCheeseNutrition();
   await testUsdaBrandedBarcodeProvider();
   await testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates();
+  await testUsdaBrandedBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
   await testUsdaGenericFoodSearchProvider();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
   await testFoodSearchProviderFromEnvCanDisableExternalProviders();
@@ -336,6 +339,69 @@ async function testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing(): Promi
   pass("Open Food Facts barcode provider derives per-100g nutrition from serving values");
 }
 
+async function testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "071111111111",
+        product_name: "Spicy Jalapeno Cream Cheese",
+        generic_name: "cream cheese spread",
+        brands: "Example Dairy",
+        categories_tags: ["en:dairies", "en:cheeses", "en:cream-cheeses"],
+        serving_quantity: "31",
+        serving_size: "2 tbsp (31 g)",
+        nutriments: {
+          "energy-kcal_100g": 52,
+          proteins_100g: 2.9,
+          carbohydrates_100g: 1.9,
+          fat_100g: 5.2
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "071111111111" });
+
+  assert.equal(results.length, 0);
+  pass("Open Food Facts barcode provider rejects implausibly low cream-cheese nutrition");
+}
+
+async function testOpenFoodFactsBarcodeProviderAcceptsPlausibleCreamCheeseNutrition(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "071111111112",
+        product_name: "Spicy Jalapeno Cream Cheese",
+        generic_name: "cream cheese spread",
+        brands: "Example Dairy",
+        categories_tags: ["en:dairies", "en:cheeses", "en:cream-cheeses"],
+        serving_quantity: "31",
+        serving_size: "2 tbsp (31 g)",
+        nutriments: {
+          "energy-kcal_100g": 323,
+          proteins_100g: 6,
+          carbohydrates_100g: 6,
+          fat_100g: 31
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "071111111112" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "Spicy Jalapeno Cream Cheese");
+  assert.equal(results[0].serving.serving_size_g, 31);
+  assert.equal(results[0].nutrition.per_100g.kcal, 323);
+  pass("Open Food Facts barcode provider accepts plausible cream-cheese nutrition");
+}
+
 async function testUsdaBrandedBarcodeProvider(): Promise<void> {
   const provider = new UsdaBrandedFoodSearchProvider({
     apiKey: "test-fdc-key",
@@ -420,6 +486,47 @@ async function testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates(): Promi
   assert.equal(results[0].primary_label, "SMALL PACK GUM");
   assert.equal(results[0].source_label, "usda_fdc");
   pass("USDA branded barcode provider matches expanded UPC-E canonical candidates");
+}
+
+async function testUsdaBrandedBarcodeProviderRejectsImplausibleCreamCheeseNutrition(): Promise<void> {
+  const seenQueries = new Set<string>();
+  const provider = new UsdaBrandedFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (_url: string | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      const query = body.query;
+      if (typeof query !== "string") {
+        throw new Error("expected USDA barcode query string");
+      }
+      seenQueries.add(query);
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 4105222,
+            description: "SPICY JALAPENO CREAM CHEESE",
+            brandName: "Example Dairy",
+            gtinUpc: "071111111111",
+            foodCategory: "Cheese",
+            servingSize: 31,
+            servingSizeUnit: "g",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 52 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 2.9 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 1.9 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 5.2 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ barcode: "071111111111" });
+
+  assert.equal(results.length, 0);
+  assert.equal(seenQueries.has("071111111111"), true);
+  pass("USDA branded barcode provider rejects implausibly low cream-cheese nutrition");
 }
 
 async function testUsdaGenericFoodSearchProvider(): Promise<void> {

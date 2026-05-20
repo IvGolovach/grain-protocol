@@ -40,6 +40,7 @@ targets:
         GRAIN_FOOD_ANALYSIS_BROKER_URL: ""
         PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet
         PRODUCT_NAME: FoodWallet
+        TARGETED_DEVICE_FAMILY: "1"
 
   FoodWalletUITests:
     type: bundle.ui-testing

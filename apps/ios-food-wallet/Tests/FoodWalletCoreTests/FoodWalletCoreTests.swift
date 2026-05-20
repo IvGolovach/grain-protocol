@@ -738,14 +738,16 @@ struct FoodWalletCoreTests {
         guard let qrText = store.qrPayloadTextForRecipe(id: recipe.id) else {
             throw FoodWalletTestFailure("expected recipe QR payload")
         }
-        let qrData = Data(qrText.utf8)
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        let decoded = try decoder.decode(FoodWalletQRPayload.self, from: qrData)
+        try expect(qrText.hasPrefix("GR1:"), "expected saved recipe QR to use Grain GR1 transport")
+        let decoded = try FoodWalletProtocolQRCodeFactory.payload(fromGR1: qrText)
         try expect(FoodWalletQRFactory.verify(decoded), "expected recipe QR payload to verify")
         try expect(decoded.kind == .recipe, "expected recipe QR payload kind")
         try expect(decoded.issuer?.label == "MealMark self-issued", "expected QR issuer label")
+        try expect(decoded.issuer?.keyID.hasPrefix("p256:") == true, "expected QR issuer key fingerprint")
+        try expect(decoded.signature?.algorithm == "p256-sha256", "expected QR signature algorithm")
+        try expect(decoded.signature?.publicKeyX963Base64.isEmpty == false, "expected QR public key")
         try expect(!qrText.localizedCaseInsensitiveContains("rawPhoto"), "QR payload must not contain raw photo data")
+        try expect(!qrText.localizedCaseInsensitiveContains("privateKey"), "QR payload must not contain private key material")
 
         let updateResult = store.updateSavedRecipe(
             id: recipe.id,
@@ -780,7 +782,8 @@ struct FoodWalletCoreTests {
         let importStore = FoodWalletStore()
         let preview = try importStore.previewQRCodePayload(qrText)
         try expect(preview.title == "Breakfast QR", "expected QR preview title")
-        try expect(preview.signedByLabel == "MealMark self-issued", "expected QR signer label")
+        try expect(preview.signedByLabel.hasPrefix("MealMark self-issued • p256:"), "expected signed QR signer label")
+        try expect(preview.sourceLabel == "Signed Grain GR1 serving offer", "expected protocol QR preview label")
         try expect(preview.ingredients.contains { $0.contains("Whole egg") }, "expected QR ingredient preview")
 
         try importStore.createQRCodeDraft(payloadText: qrText)
@@ -789,15 +792,36 @@ struct FoodWalletCoreTests {
         try expect(importStore.currentDraft?.trustStatus == .selfIssued, "expected self-issued QR draft")
         try expect(importStore.currentCandidate?.evidence.contains { $0.provider == "mealmark_qr" } == true, "expected QR evidence")
 
-        var tampered = qrText.replacingOccurrences(of: "\"title\":\"Breakfast QR\"", with: "\"title\":\"Tampered\"")
-        if tampered == qrText {
-            tampered = qrText.replacingOccurrences(of: "Breakfast QR", with: "Tampered")
-        }
+        let replacement: Character = qrText.last == "0" ? "1" : "0"
+        let tampered = String(qrText.dropLast()) + String(replacement)
         do {
             _ = try importStore.previewQRCodePayload(tampered)
             throw FoodWalletTestFailure("expected tampered QR to fail")
+        } catch is FoodWalletQRImportError {
+            // Expected.
+        }
+
+        let localPayload = try FoodWalletQRFactory.payload(recipe: recipe)
+        let localText = try FoodWalletQRFactory.payloadText(localPayload)
+        var signatureTampered = localText.replacingOccurrences(of: "\"signature_der_base64\":\"", with: "\"signature_der_base64\":\"AA")
+        if signatureTampered == localText {
+            signatureTampered = localText.replacingOccurrences(of: "\"signatureDerBase64\":\"", with: "\"signatureDerBase64\":\"AA")
+        }
+        do {
+            _ = try importStore.previewQRCodePayload(signatureTampered)
+            throw FoodWalletTestFailure("expected tampered QR signature to fail")
         } catch FoodWalletQRImportError.integrityMismatch {
             // Expected.
+        }
+
+        let protocolOnlyQR = "GR1:6BF-NDJ%B0BD1H2 R2346ATPP*QZOCE+T37W9*R%UD2+OS$CYV4WLOZY84IJ7QTUED/HLSGH-ZHS$C9Y8KKAVQI*RE273Z%J8LA3E2HUS9*K$CJQH30LI0THM68/+6%1H7NG%-VQ+QVQ7P9JQQO% II+QWT7K-5A7EW9HME9R-0CZ7%OEE22AP472BT 2JP51WJCMVRN5%FN%T6.35ZL7ZW01%IY$139QUDTOLBPAD7.8MOORAL%:AZ VSCL$/AMUB5JN:/N0:I: HVQMF*F1PJEKE$9RB19-4O-.NF0N00VH.SC*DPUPHIIMNUJTF7Z0B10BF3Q5"
+        do {
+            _ = try importStore.previewQRCodePayload(protocolOnlyQR)
+            throw FoodWalletTestFailure("expected non-MealMark protocol GR1 QR to require trust material")
+        } catch FoodWalletQRImportError.protocolServingOfferRequiresTrust {
+            // Expected.
+        } catch FoodWalletQRImportError.invalidPayload {
+            // Older protocol vectors may use fields MealMark does not import, but they still must not enter the app-local QR path.
         }
     }
 
