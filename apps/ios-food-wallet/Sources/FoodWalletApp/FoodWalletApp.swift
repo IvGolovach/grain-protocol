@@ -53,7 +53,7 @@ private enum FoodWalletAppConfiguration {
     @MainActor
     static func makeStore() -> FoodWalletStore {
         if ProcessInfo.processInfo.arguments.contains(uiTestResetPersonalIngredientsArgument) {
-            FoodWalletUserLibraryStore.savePersonalIngredients([])
+            FoodWalletUserLibraryStore.remove()
         }
         if ProcessInfo.processInfo.arguments.contains(uiTestResetFoodWalletStorageArgument) {
             FoodWalletLocalLedgerStore.remove()
@@ -68,7 +68,8 @@ private enum FoodWalletAppConfiguration {
             savedRecipes: userLibrary.recipes,
             personalIngredients: userLibrary.personalIngredients,
             onEntriesChange: FoodWalletLocalLedgerStore.save,
-            onPersonalIngredientsChange: FoodWalletUserLibraryStore.savePersonalIngredients,
+            onPersonalIngredientsChange: { _ in },
+            onUserLibraryChange: FoodWalletUserLibraryStore.save,
             onEntriesReload: FoodWalletLocalLedgerStore.loadEntries
         )
     }

@@ -59,7 +59,7 @@ struct CameraCaptureView: UIViewControllerRepresentable {
     }
 }
 
-private extension TransientMealPhotoPayload {
+extension TransientMealPhotoPayload {
     static func transientCapture(from image: UIImage) -> TransientMealPhotoPayload? {
         let normalizedImage = image.foodWalletScaledForAnalysis()
         guard let jpegData = normalizedImage.foodWalletJPEGDataForAnalysis() else {

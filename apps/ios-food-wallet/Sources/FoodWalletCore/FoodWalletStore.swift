@@ -144,6 +144,7 @@ public final class FoodWalletStore: ObservableObject {
     private let slowAnalysisThresholdNanoseconds: UInt64
     private let analysisTimeoutNanoseconds: UInt64
     private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
+    private let userLibraryDidChange: @MainActor (FoodWalletUserLibraryState) -> Void
     private let entriesDidChange: @MainActor ([FoodIntakeEntry]) -> Void
     private let entriesReload: (@MainActor () -> [FoodIntakeEntry])?
     private var slowAnalysisTask: Task<Void, Never>?
@@ -164,6 +165,7 @@ public final class FoodWalletStore: ObservableObject {
         personalIngredients: [PersonalFoodIngredient] = [],
         onEntriesChange: @escaping @MainActor ([FoodIntakeEntry]) -> Void = { _ in },
         onPersonalIngredientsChange: @escaping @MainActor ([PersonalFoodIngredient]) -> Void = { _ in },
+        onUserLibraryChange: @escaping @MainActor (FoodWalletUserLibraryState) -> Void = { _ in },
         onEntriesReload: (@MainActor () -> [FoodIntakeEntry])? = nil,
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000,
         analysisTimeoutNanoseconds: UInt64 = 30_000_000_000
@@ -173,6 +175,7 @@ public final class FoodWalletStore: ObservableObject {
         self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
         self.analysisTimeoutNanoseconds = analysisTimeoutNanoseconds
         self.personalIngredientsDidChange = onPersonalIngredientsChange
+        self.userLibraryDidChange = onUserLibraryChange
         self.entriesDidChange = onEntriesChange
         self.entriesReload = onEntriesReload
         self.wallet = wallet
@@ -207,6 +210,10 @@ public final class FoodWalletStore: ObservableObject {
         entries.filter { Calendar.autoupdatingCurrent.isDateInToday($0.confirmedAt) }
     }
 
+    public var todayNutritionSummary: FoodWalletDailyNutritionSummary {
+        FoodWalletDailyNutritionSummary(entries: todayEntries)
+    }
+
     public var hasDraft: Bool {
         currentDraft != nil && currentCandidate != nil
     }
@@ -229,6 +236,14 @@ public final class FoodWalletStore: ObservableObject {
 
     public func provenanceSnapshot(entryID: String) -> MealMarkProvenanceSnapshot? {
         entryProvenanceByEntryID[entryID]
+    }
+
+    public func savedRecipe(id: String) -> SavedFoodRecipe? {
+        savedRecipes.first { $0.id == id }
+    }
+
+    public func personalIngredient(id: String) -> PersonalFoodIngredient? {
+        personalIngredients.first { $0.id == id }
     }
 
     public func grantAIConsent() {
@@ -335,6 +350,14 @@ public final class FoodWalletStore: ObservableObject {
         FoodIngredientCatalog.suggestionRows(for: text, personalIngredients: personalIngredients)
     }
 
+    public func ingredientSuggestions(for text: String, limit: Int = 5) -> [AddFoodSuggestionRow] {
+        FoodIngredientCatalog.suggestionRows(
+            for: text,
+            personalIngredients: personalIngredients,
+            limit: limit
+        )
+    }
+
     public func createFoodSearchSuggestionDraft(id: String) -> Bool {
         guard let candidate = FoodIngredientCatalog.candidate(
             suggestionID: id,
@@ -377,17 +400,71 @@ public final class FoodWalletStore: ObservableObject {
         title: String,
         ingredients: [FoodMealIngredientInput]
     ) -> FoodMealDraftCreationResult {
-        switch FoodIngredientCatalog.candidate(
+        let recipeResult = FoodIngredientCatalog.savedRecipe(
+            title: title,
+            ingredients: ingredients,
+            personalIngredients: personalIngredients
+        )
+        let candidateResult = FoodIngredientCatalog.candidate(
+            title: title,
+            ingredients: ingredients,
+            personalIngredients: personalIngredients
+        )
+
+        switch (recipeResult, candidateResult) {
+        case let (.success(recipe), .success(candidate)):
+            upsertSavedRecipe(recipe)
+            presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
+            return .created
+        case let (.failure(result), _), let (_, .failure(result)):
+            return result
+        }
+    }
+
+    public func updateSavedRecipe(
+        id: String,
+        title: String,
+        ingredients: [FoodMealIngredientInput]
+    ) -> FoodMealDraftCreationResult {
+        switch FoodIngredientCatalog.savedRecipe(
             title: title,
             ingredients: ingredients,
             personalIngredients: personalIngredients
         ) {
-        case let .success(candidate):
-            presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
+        case var .success(recipe):
+            recipe.id = id
+            upsertSavedRecipe(recipe)
             return .created
         case let .failure(result):
             return result
         }
+    }
+
+    public func deleteSavedRecipe(id: String) -> Bool {
+        guard let index = savedRecipes.firstIndex(where: { $0.id == id }) else {
+            return false
+        }
+        savedRecipes.remove(at: index)
+        publishUserLibraryMutation()
+        return true
+    }
+
+    public func qrPayloadTextForRecipe(id: String) -> String? {
+        guard let recipe = savedRecipe(id: id),
+              let payload = try? FoodWalletQRFactory.payload(recipe: recipe),
+              FoodWalletQRFactory.verify(payload) else {
+            return nil
+        }
+        return try? FoodWalletQRFactory.payloadText(payload)
+    }
+
+    public func qrPayloadTextForPersonalIngredient(id: String) -> String? {
+        guard let ingredient = personalIngredient(id: id),
+              let payload = try? FoodWalletQRFactory.payload(personalFood: ingredient),
+              FoodWalletQRFactory.verify(payload) else {
+            return nil
+        }
+        return try? FoodWalletQRFactory.payloadText(payload)
     }
 
     public func savePersonalIngredient(
@@ -414,8 +491,7 @@ public final class FoodWalletStore: ObservableObject {
             } else {
                 personalIngredients.append(ingredient)
             }
-            personalIngredients.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            personalIngredientsDidChange(personalIngredients)
+            publishUserLibraryMutation()
             return .saved
         case let .failure(result):
             return result
@@ -763,8 +839,10 @@ public final class FoodWalletStore: ObservableObject {
         currentDraft = nil
         analysisState = .idle
         safeSummary = wallet.exportSafeSummary()
+        savedTemplates = []
+        savedRecipes = []
         personalIngredients = []
-        personalIngredientsDidChange(personalIngredients)
+        publishUserLibraryMutation()
         entriesDidChange(entries)
     }
 
@@ -946,6 +1024,26 @@ public final class FoodWalletStore: ObservableObject {
         wallet.replaceEntries(entries)
         safeSummary = wallet.exportSafeSummary()
         entriesDidChange(entries)
+    }
+
+    private func upsertSavedRecipe(_ recipe: SavedFoodRecipe) {
+        if let existingIndex = savedRecipes.firstIndex(where: { $0.id == recipe.id }) {
+            savedRecipes[existingIndex] = recipe
+        } else {
+            savedRecipes.append(recipe)
+        }
+        publishUserLibraryMutation()
+    }
+
+    private func publishUserLibraryMutation() {
+        savedRecipes.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+        personalIngredients.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        personalIngredientsDidChange(personalIngredients)
+        userLibraryDidChange(FoodWalletUserLibraryState(
+            templates: savedTemplates,
+            recipes: savedRecipes,
+            personalIngredients: personalIngredients
+        ))
     }
 
     private func searchBrokerFood(requestFactory: () throws -> BrokerFoodSearchRequest) async {

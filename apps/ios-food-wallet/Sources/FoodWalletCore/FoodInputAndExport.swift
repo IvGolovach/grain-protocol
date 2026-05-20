@@ -64,6 +64,78 @@ public struct SavedFoodRecipeIngredient: Identifiable, Codable, Equatable, Senda
     }
 }
 
+public struct FoodWalletDailyNutritionSummary: Equatable, Sendable {
+    public var entryCount: Int
+    public var kcal: Int64
+    public var varianceKcal: Int64
+    public var proteinGrams: Double
+    public var carbohydrateGrams: Double
+    public var fatGrams: Double
+    public var fiberGrams: Double?
+
+    public init(entries: [FoodIntakeEntry]) {
+        entryCount = entries.count
+        kcal = entries.reduce(0) { $0 + $1.meal.kcal }
+        varianceKcal = entries.reduce(0) { $0 + $1.meal.varianceKcal }
+        proteinGrams = entries.reduce(0) { $0 + ($1.meal.macronutrients?.proteinGrams ?? 0) }
+        carbohydrateGrams = entries.reduce(0) { $0 + ($1.meal.macronutrients?.carbohydrateGrams ?? 0) }
+        fatGrams = entries.reduce(0) { $0 + ($1.meal.macronutrients?.fatGrams ?? 0) }
+        let fiberValues = entries.compactMap { $0.meal.macronutrients?.fiberGrams }
+        fiberGrams = fiberValues.isEmpty ? nil : fiberValues.reduce(0, +)
+    }
+
+    public var kcalRangeLabel: String {
+        guard entryCount > 0 else {
+            return "0 kcal"
+        }
+        guard varianceKcal > 0 else {
+            return "\(kcal) kcal"
+        }
+        return "\(max(0, kcal - varianceKcal))-\(kcal + varianceKcal) kcal"
+    }
+
+    public var macroLabel: String {
+        "P \(Self.format(proteinGrams))g • C \(Self.format(carbohydrateGrams))g • F \(Self.format(fatGrams))g"
+    }
+
+    public static func display(_ value: Double) -> String {
+        format(value)
+    }
+
+    private static func format(_ value: Double) -> String {
+        let rounded = (value * 10).rounded() / 10
+        if rounded == rounded.rounded() {
+            return "\(Int(rounded))"
+        }
+        return "\(rounded)"
+    }
+}
+
+public enum FoodWalletQRPayloadKind: String, Codable, Equatable, Sendable {
+    case recipe
+    case personalFood = "personal_food"
+}
+
+public struct FoodWalletQRPayload: Codable, Equatable, Sendable {
+    public var schema: String
+    public var version: Int
+    public var kind: FoodWalletQRPayloadKind
+    public var title: String
+    public var contentSha256: String
+    public var recipe: FoodWalletExportRecipe?
+    public var personalFood: FoodWalletExportPersonalFood?
+
+    enum CodingKeys: String, CodingKey {
+        case schema
+        case version
+        case kind
+        case title
+        case contentSha256
+        case recipe
+        case personalFood
+    }
+}
+
 public struct SavedFoodRecipe: Identifiable, Codable, Equatable, Sendable {
     public var id: String
     public var title: String
@@ -503,6 +575,15 @@ struct FoodIngredientCatalog {
         }
     }
 
+    struct ResolvedMeal: Equatable, Sendable {
+        var title: String
+        var ingredients: [ResolvedIngredient]
+        var totalGrams: Int64
+        var totalKcal: Int64
+        var varianceKcal: Int64
+        var macronutrients: MealMacronutrients
+    }
+
     struct Entry: Equatable, Sendable {
         var id: String
         var label: String
@@ -523,79 +604,45 @@ struct FoodIngredientCatalog {
         ingredients: [FoodMealIngredientInput],
         personalIngredients: [PersonalFoodIngredient] = []
     ) -> Result<FoodAnalysisCandidate, FoodMealDraftCreationResult> {
-        let mealTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !mealTitle.isEmpty else {
-            return .failure(.emptyTitle)
-        }
-
-        var resolved: [ResolvedIngredient] = []
-        for ingredient in ingredients {
-            let inputName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
-            if inputName.isEmpty && ingredient.grams <= 0 {
-                continue
-            }
-            guard ingredient.grams > 0 else {
-                return .failure(.invalidGrams(inputName.isEmpty ? "ingredient" : inputName))
-            }
-            guard let entry = lookup(inputName, personalIngredients: personalIngredients) else {
-                return .failure(.unknownIngredient(inputName))
-            }
-            resolved.append(ResolvedIngredient(entry: entry, inputName: inputName, grams: ingredient.grams))
-        }
-
-        guard !resolved.isEmpty else {
-            return .failure(.noIngredients)
-        }
-
-        let totalGrams = resolved.reduce(Int64(0)) { $0 + $1.grams }
-        let totalKcal = resolved.reduce(Int64(0)) { $0 + $1.kcal }
-        let variance = max(8, Int64((Double(totalKcal) * 0.10).rounded()))
-        let macronutrients = resolved.reduce(
-            MealMacronutrients(proteinGrams: 0, carbohydrateGrams: 0, fatGrams: 0, fiberGrams: 0)
-        ) { partial, ingredient in
-            let macros = ingredient.macronutrients
-            return MealMacronutrients(
-                proteinGrams: partial.proteinGrams + macros.proteinGrams,
-                carbohydrateGrams: partial.carbohydrateGrams + macros.carbohydrateGrams,
-                fatGrams: partial.fatGrams + macros.fatGrams,
-                fiberGrams: (partial.fiberGrams ?? 0) + (macros.fiberGrams ?? 0)
-            )
-        }
+        switch resolveMeal(title: title, ingredients: ingredients, personalIngredients: personalIngredients) {
+        case let .failure(error):
+            return .failure(error)
+        case let .success(meal):
         var assumptions = [
             FoodAssumption(id: "ingredient-catalog", label: "calculated from ingredient nutrition table"),
             FoodAssumption(id: "review-portion", label: "review portion before saving"),
         ]
-        if resolved.contains(where: { $0.entry.provider == "food_wallet_personal_ingredient" }) {
+        if meal.ingredients.contains(where: { $0.entry.provider == "food_wallet_personal_ingredient" }) {
             assumptions.append(FoodAssumption(
                 id: "personal-ingredient",
                 label: "uses nutrition label entered by user"
             ))
         }
-        if resolved.contains(where: { $0.entry.id == "protein-powder.casein" }) {
+        if meal.ingredients.contains(where: { $0.entry.id == "protein-powder.casein" }) {
             assumptions.append(FoodAssumption(
                 id: "protein-powder-varies",
                 label: "protein powder nutrition varies by brand; verify label"
             ))
         }
         return .success(FoodAnalysisCandidate(
-            id: "ingredients-\(slug(mealTitle))",
-            primaryLabel: mealTitle,
-            genericLabel: mealTitle.lowercased(),
-            dishType: resolved.count > 1 ? .mixed : .single,
+            id: "ingredients-\(slug(meal.title))",
+            primaryLabel: meal.title,
+            genericLabel: meal.title.lowercased(),
+            dishType: meal.ingredients.count > 1 ? .mixed : .single,
             portion: PortionEstimate(
-                gramsMin: max(1, totalGrams - max(1, totalGrams / 10)),
-                gramsMode: totalGrams,
-                gramsMax: totalGrams + max(1, totalGrams / 10)
+                gramsMin: max(1, meal.totalGrams - max(1, meal.totalGrams / 10)),
+                gramsMode: meal.totalGrams,
+                gramsMax: meal.totalGrams + max(1, meal.totalGrams / 10)
             ),
             nutrition: NutritionRange(
-                minKcal: max(0, totalKcal - variance),
-                modeKcal: totalKcal,
-                maxKcal: totalKcal + variance
+                minKcal: max(0, meal.totalKcal - meal.varianceKcal),
+                modeKcal: meal.totalKcal,
+                maxKcal: meal.totalKcal + meal.varianceKcal
             ),
-            macronutrients: macronutrients,
+            macronutrients: meal.macronutrients,
             confidence: .medium,
             assumptions: assumptions,
-            evidence: resolved.map { ingredient in
+            evidence: meal.ingredients.map { ingredient in
                 ProviderEvidence(
                     provider: ingredient.entry.provider,
                     providerID: ingredient.entry.id,
@@ -605,6 +652,39 @@ struct FoodIngredientCatalog {
             },
             userConfirmationRequired: true
         ))
+        }
+    }
+
+    static func savedRecipe(
+        title: String,
+        ingredients: [FoodMealIngredientInput],
+        personalIngredients: [PersonalFoodIngredient] = []
+    ) -> Result<SavedFoodRecipe, FoodMealDraftCreationResult> {
+        switch resolveMeal(title: title, ingredients: ingredients, personalIngredients: personalIngredients) {
+        case let .failure(error):
+            return .failure(error)
+        case let .success(meal):
+            let subtitle = meal.ingredients
+                .prefix(3)
+                .map { $0.entry.label }
+                .joined(separator: ", ")
+            return .success(SavedFoodRecipe(
+                id: "recipe-\(slug(meal.title))",
+                title: meal.title,
+                subtitle: subtitle.isEmpty ? "Custom meal" : subtitle,
+                totalGrams: meal.totalGrams,
+                totalKcal: meal.totalKcal,
+                macronutrients: meal.macronutrients,
+                ingredients: meal.ingredients.map { ingredient in
+                    SavedFoodRecipeIngredient(
+                        id: ingredient.entry.id,
+                        label: ingredient.entry.label,
+                        grams: ingredient.grams,
+                        kcal: ingredient.kcal
+                    )
+                }
+            ))
+        }
     }
 
     static func personalIngredient(
@@ -702,6 +782,59 @@ struct FoodIngredientCatalog {
         return nil
     }
 
+    private static func resolveMeal(
+        title: String,
+        ingredients: [FoodMealIngredientInput],
+        personalIngredients: [PersonalFoodIngredient]
+    ) -> Result<ResolvedMeal, FoodMealDraftCreationResult> {
+        let mealTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !mealTitle.isEmpty else {
+            return .failure(.emptyTitle)
+        }
+
+        var resolved: [ResolvedIngredient] = []
+        for ingredient in ingredients {
+            let inputName = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if inputName.isEmpty && ingredient.grams <= 0 {
+                continue
+            }
+            guard ingredient.grams > 0 else {
+                return .failure(.invalidGrams(inputName.isEmpty ? "ingredient" : inputName))
+            }
+            guard let entry = lookup(inputName, personalIngredients: personalIngredients) else {
+                return .failure(.unknownIngredient(inputName))
+            }
+            resolved.append(ResolvedIngredient(entry: entry, inputName: inputName, grams: ingredient.grams))
+        }
+
+        guard !resolved.isEmpty else {
+            return .failure(.noIngredients)
+        }
+
+        let totalGrams = resolved.reduce(Int64(0)) { $0 + $1.grams }
+        let totalKcal = resolved.reduce(Int64(0)) { $0 + $1.kcal }
+        let variance = max(8, Int64((Double(totalKcal) * 0.10).rounded()))
+        let macronutrients = resolved.reduce(
+            MealMacronutrients(proteinGrams: 0, carbohydrateGrams: 0, fatGrams: 0, fiberGrams: 0)
+        ) { partial, ingredient in
+            let macros = ingredient.macronutrients
+            return MealMacronutrients(
+                proteinGrams: partial.proteinGrams + macros.proteinGrams,
+                carbohydrateGrams: partial.carbohydrateGrams + macros.carbohydrateGrams,
+                fatGrams: partial.fatGrams + macros.fatGrams,
+                fiberGrams: (partial.fiberGrams ?? 0) + (macros.fiberGrams ?? 0)
+            )
+        }
+        return .success(ResolvedMeal(
+            title: mealTitle,
+            ingredients: resolved,
+            totalGrams: totalGrams,
+            totalKcal: totalKcal,
+            varianceKcal: variance,
+            macronutrients: macronutrients
+        ))
+    }
+
     private static func lookup(
         _ input: String,
         personalIngredients: [PersonalFoodIngredient]
@@ -720,9 +853,18 @@ struct FoodIngredientCatalog {
                 provider: "food_wallet_personal_ingredient"
             )
         }
+        if let exact = entries.first(where: { entry in
+            entry.label.normalizedFoodIngredientName == normalized ||
+            entry.aliases.contains { alias in
+                alias.normalizedFoodIngredientName == normalized
+            }
+        }) {
+            return exact
+        }
         return entries.first { entry in
             entry.aliases.contains { alias in
-                normalized == alias || normalized.contains(alias)
+                let normalizedAlias = alias.normalizedFoodIngredientName
+                return !normalizedAlias.isEmpty && normalized.contains(normalizedAlias)
             }
         }
     }
@@ -831,6 +973,10 @@ struct FoodIngredientCatalog {
         guard query.tokens.allSatisfy({ searchable.contains($0) }) else {
             return nil
         }
+        if "milk".hasPrefix(query.normalizedValue),
+           let milkPriority = milkSuggestionPriority(entry.id) {
+            return 120 + milkPriority
+        }
         if entry.aliases.contains(where: { AddFoodSearchQuery.normalize($0) == query.normalizedValue }) {
             return 100
         }
@@ -838,6 +984,27 @@ struct FoodIngredientCatalog {
             return 95
         }
         return 70 + query.tokens.count
+    }
+
+    private static func milkSuggestionPriority(_ id: String) -> Int? {
+        switch id {
+        case "milk.whole":
+            return 6
+        case "milk.2-percent":
+            return 5
+        case "milk.skim":
+            return 4
+        case "milk.1-percent":
+            return 3
+        case "milk.oat":
+            return 2
+        case "milk.soy.unsweetened":
+            return 1
+        case "milk.almond.unsweetened":
+            return 0
+        default:
+            return nil
+        }
     }
 
     private static func slug(_ value: String) -> String {
@@ -1065,7 +1232,7 @@ struct FoodIngredientCatalog {
         Entry(
             id: "milk.whole",
             label: "Whole milk",
-            aliases: ["milk"],
+            aliases: ["milk", "whole milk", "full fat milk"],
             kcalPer100Grams: 61,
             macronutrientsPer100Grams: MealMacronutrients(
                 proteinGrams: 3.2,
@@ -1073,6 +1240,308 @@ struct FoodIngredientCatalog {
                 fatGrams: 3.3,
                 fiberGrams: 0
             )
+        ),
+        Entry(
+            id: "milk.2-percent",
+            label: "2% milk",
+            aliases: ["milk", "2 milk", "2% milk", "reduced fat milk"],
+            kcalPer100Grams: 50,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 3.4,
+                carbohydrateGrams: 4.9,
+                fatGrams: 2,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "milk.1-percent",
+            label: "1% milk",
+            aliases: ["milk", "1 milk", "1% milk", "low fat milk"],
+            kcalPer100Grams: 42,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 3.4,
+                carbohydrateGrams: 5,
+                fatGrams: 1,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "milk.skim",
+            label: "Skim milk",
+            aliases: ["milk", "skim milk", "nonfat milk", "fat free milk"],
+            kcalPer100Grams: 34,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 3.4,
+                carbohydrateGrams: 5,
+                fatGrams: 0.1,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "milk.oat",
+            label: "Oat milk",
+            aliases: ["milk", "oat milk", "oat beverage"],
+            kcalPer100Grams: 48,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 1,
+                carbohydrateGrams: 6.7,
+                fatGrams: 1.7,
+                fiberGrams: 0.8
+            )
+        ),
+        Entry(
+            id: "milk.almond.unsweetened",
+            label: "Unsweetened almond milk",
+            aliases: ["milk", "almond milk", "unsweetened almond milk"],
+            kcalPer100Grams: 15,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.6,
+                carbohydrateGrams: 0.6,
+                fatGrams: 1.2,
+                fiberGrams: 0.4
+            )
+        ),
+        Entry(
+            id: "milk.soy.unsweetened",
+            label: "Unsweetened soy milk",
+            aliases: ["milk", "soy milk", "unsweetened soy milk"],
+            kcalPer100Grams: 33,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 3.3,
+                carbohydrateGrams: 1.7,
+                fatGrams: 1.8,
+                fiberGrams: 0.6
+            )
+        ),
+        Entry(
+            id: "cheese.cheddar",
+            label: "Cheddar cheese",
+            aliases: ["cheese", "cheddar", "cheddar cheese"],
+            kcalPer100Grams: 403,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 24.9,
+                carbohydrateGrams: 1.3,
+                fatGrams: 33.1,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "cottage-cheese.lowfat",
+            label: "Low-fat cottage cheese",
+            aliases: ["cottage cheese", "low fat cottage cheese"],
+            kcalPer100Grams: 82,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 11.5,
+                carbohydrateGrams: 3.4,
+                fatGrams: 2.3,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "peanut-butter",
+            label: "Peanut butter",
+            aliases: ["peanut butter", "pb"],
+            kcalPer100Grams: 588,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 25,
+                carbohydrateGrams: 20,
+                fatGrams: 50,
+                fiberGrams: 6
+            )
+        ),
+        Entry(
+            id: "honey",
+            label: "Honey",
+            aliases: ["honey"],
+            kcalPer100Grams: 304,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.3,
+                carbohydrateGrams: 82.4,
+                fatGrams: 0,
+                fiberGrams: 0.2
+            )
+        ),
+        Entry(
+            id: "broccoli",
+            label: "Broccoli",
+            aliases: ["broccoli"],
+            kcalPer100Grams: 34,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 2.8,
+                carbohydrateGrams: 6.6,
+                fatGrams: 0.4,
+                fiberGrams: 2.6
+            )
+        ),
+        Entry(
+            id: "spinach.raw",
+            label: "Raw spinach",
+            aliases: ["spinach", "raw spinach"],
+            kcalPer100Grams: 23,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 2.9,
+                carbohydrateGrams: 3.6,
+                fatGrams: 0.4,
+                fiberGrams: 2.2
+            )
+        ),
+        Entry(
+            id: "carrot",
+            label: "Carrot",
+            aliases: ["carrot", "carrots"],
+            kcalPer100Grams: 41,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 0.9,
+                carbohydrateGrams: 9.6,
+                fatGrams: 0.2,
+                fiberGrams: 2.8
+            )
+        ),
+        Entry(
+            id: "potato.baked",
+            label: "Baked potato",
+            aliases: ["potato", "baked potato"],
+            kcalPer100Grams: 93,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 2.5,
+                carbohydrateGrams: 21.2,
+                fatGrams: 0.1,
+                fiberGrams: 2.2
+            )
+        ),
+        Entry(
+            id: "sweet-potato",
+            label: "Sweet potato",
+            aliases: ["sweet potato", "yam"],
+            kcalPer100Grams: 86,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 1.6,
+                carbohydrateGrams: 20.1,
+                fatGrams: 0.1,
+                fiberGrams: 3
+            )
+        ),
+        Entry(
+            id: "quinoa.cooked",
+            label: "Cooked quinoa",
+            aliases: ["quinoa", "cooked quinoa"],
+            kcalPer100Grams: 120,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 4.4,
+                carbohydrateGrams: 21.3,
+                fatGrams: 1.9,
+                fiberGrams: 2.8
+            )
+        ),
+        Entry(
+            id: "pasta.cooked",
+            label: "Cooked pasta",
+            aliases: ["pasta", "cooked pasta", "spaghetti"],
+            kcalPer100Grams: 158,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 5.8,
+                carbohydrateGrams: 30.9,
+                fatGrams: 0.9,
+                fiberGrams: 1.8
+            )
+        ),
+        Entry(
+            id: "salmon.cooked",
+            label: "Cooked salmon",
+            aliases: ["salmon", "cooked salmon"],
+            kcalPer100Grams: 206,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 22.1,
+                carbohydrateGrams: 0,
+                fatGrams: 12.4,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "tuna.canned-water",
+            label: "Canned tuna in water",
+            aliases: ["tuna", "canned tuna"],
+            kcalPer100Grams: 116,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 25.5,
+                carbohydrateGrams: 0,
+                fatGrams: 0.8,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "tofu.firm",
+            label: "Firm tofu",
+            aliases: ["tofu", "firm tofu"],
+            kcalPer100Grams: 144,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 15.7,
+                carbohydrateGrams: 3.9,
+                fatGrams: 8.7,
+                fiberGrams: 2.3
+            )
+        ),
+        Entry(
+            id: "beans.black.cooked",
+            label: "Cooked black beans",
+            aliases: ["black beans", "beans", "cooked black beans"],
+            kcalPer100Grams: 132,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 8.9,
+                carbohydrateGrams: 23.7,
+                fatGrams: 0.5,
+                fiberGrams: 8.7
+            )
+        ),
+        Entry(
+            id: "lentils.cooked",
+            label: "Cooked lentils",
+            aliases: ["lentils", "cooked lentils"],
+            kcalPer100Grams: 116,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 9,
+                carbohydrateGrams: 20.1,
+                fatGrams: 0.4,
+                fiberGrams: 7.9
+            )
+        ),
+        Entry(
+            id: "tortilla.flour",
+            label: "Flour tortilla",
+            aliases: ["tortilla", "flour tortilla"],
+            kcalPer100Grams: 304,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 8,
+                carbohydrateGrams: 49,
+                fatGrams: 8,
+                fiberGrams: 2.7
+            )
+        ),
+        Entry(
+            id: "hummus",
+            label: "Hummus",
+            aliases: ["hummus"],
+            kcalPer100Grams: 166,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 7.9,
+                carbohydrateGrams: 14.3,
+                fatGrams: 9.6,
+                fiberGrams: 6
+            )
+        ),
+        Entry(
+            id: "protein-powder.whey",
+            label: "Whey protein powder",
+            aliases: ["whey", "whey protein", "whey protein powder", "protein powder"],
+            kcalPer100Grams: 400,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 78,
+                carbohydrateGrams: 8,
+                fatGrams: 6,
+                fiberGrams: 0
+            ),
+            defaultServingGrams: 30,
+            servingLabel: "1 scoop (30 g)"
         ),
     ]
 }
@@ -1536,6 +2005,78 @@ public enum FoodWalletExportFactory {
             return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
         }
         return value
+    }
+}
+
+public enum FoodWalletQRFactory {
+    public static func payload(recipe: SavedFoodRecipe) throws -> FoodWalletQRPayload {
+        var payload = FoodWalletQRPayload(
+            schema: "grain.food-wallet.qr.v1",
+            version: 1,
+            kind: .recipe,
+            title: recipe.title,
+            contentSha256: "",
+            recipe: FoodWalletExportRecipe(recipe: recipe),
+            personalFood: nil
+        )
+        payload.contentSha256 = try contentDigest(payload)
+        return payload
+    }
+
+    public static func payload(personalFood: PersonalFoodIngredient) throws -> FoodWalletQRPayload {
+        var payload = FoodWalletQRPayload(
+            schema: "grain.food-wallet.qr.v1",
+            version: 1,
+            kind: .personalFood,
+            title: personalFood.name,
+            contentSha256: "",
+            recipe: nil,
+            personalFood: FoodWalletExportPersonalFood(ingredient: personalFood)
+        )
+        payload.contentSha256 = try contentDigest(payload)
+        return payload
+    }
+
+    public static func payloadText(_ payload: FoodWalletQRPayload) throws -> String {
+        String(decoding: try jsonData(payload), as: UTF8.self)
+    }
+
+    public static func verify(_ payload: FoodWalletQRPayload) -> Bool {
+        do {
+            guard payload.schema == "grain.food-wallet.qr.v1", payload.version == 1 else {
+                return false
+            }
+            switch payload.kind {
+            case .recipe:
+                guard payload.recipe != nil, payload.personalFood == nil else {
+                    return false
+                }
+            case .personalFood:
+                guard payload.personalFood != nil, payload.recipe == nil else {
+                    return false
+                }
+            }
+            return try contentDigest(payload) == payload.contentSha256
+        } catch {
+            return false
+        }
+    }
+
+    private static func contentDigest(_ payload: FoodWalletQRPayload) throws -> String {
+        var unsigned = payload
+        unsigned.contentSha256 = ""
+        return sha256Hex(try jsonData(unsigned))
+    }
+
+    private static func jsonData(_ payload: FoodWalletQRPayload) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(payload)
+    }
+
+    private static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 }
 

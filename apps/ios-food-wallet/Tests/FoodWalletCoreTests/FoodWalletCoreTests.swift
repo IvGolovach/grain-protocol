@@ -78,6 +78,12 @@ struct FoodWalletCoreTests {
         await run("ingredientMealBuilderCreatesReviewableDraft") {
             try await testIngredientMealBuilderCreatesReviewableDraft()
         }
+        await run("ingredientSuggestionsIncludeMilkVariants") {
+            try await testIngredientSuggestionsIncludeMilkVariants()
+        }
+        await run("buildMealSavesReusableRecipeAndQRCode") {
+            try await testBuildMealSavesReusableRecipeAndQRCode()
+        }
         await run("caseinProteinResolvesAsCuratedPowder") {
             try await testCaseinProteinResolvesAsCuratedPowder()
         }
@@ -621,6 +627,82 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testIngredientSuggestionsIncludeMilkVariants() async throws {
+        let store = FoodWalletStore()
+
+        let rows = store.ingredientSuggestions(for: "MIL")
+        let titles = rows.map(\.title)
+
+        try expect(titles.contains("Whole milk"), "expected whole milk suggestion")
+        try expect(titles.contains("2% milk"), "expected 2% milk suggestion")
+        try expect(titles.contains("Skim milk"), "expected skim milk suggestion")
+
+        let result = store.createIngredientMealDraft(
+            title: "Cereal",
+            ingredients: [
+                FoodMealIngredientInput(name: "2% milk", grams: 240),
+            ]
+        )
+        try expect(result == .created, "expected selected 2% milk to resolve, got \(result)")
+        try expect(store.currentCandidate?.evidence.first?.providerID == "milk.2-percent", "expected 2% milk catalog provider")
+    }
+
+    @MainActor
+    private static func testBuildMealSavesReusableRecipeAndQRCode() async throws {
+        var publishedLibrary: FoodWalletUserLibraryState?
+        let store = FoodWalletStore(
+            onUserLibraryChange: { state in
+                publishedLibrary = state
+            }
+        )
+
+        let result = store.createIngredientMealDraft(
+            title: "Breakfast",
+            ingredients: [
+                FoodMealIngredientInput(name: "eggs", grams: 100),
+                FoodMealIngredientInput(name: "toast", grams: 40),
+                FoodMealIngredientInput(name: "butter", grams: 10),
+            ]
+        )
+
+        try expect(result == .created, "expected reusable recipe draft, got \(result)")
+        try expect(store.savedRecipes.count == 1, "expected build meal to save one recipe")
+        guard let recipe = store.savedRecipes.first else {
+            throw FoodWalletTestFailure("expected saved recipe")
+        }
+        try expect(recipe.title == "Breakfast", "expected saved recipe title")
+        try expect(publishedLibrary?.recipes.count == 1, "expected user library publish")
+
+        store.discardDraft()
+        try expect(store.createRecipeDraft(id: recipe.id, consumedFraction: 1), "expected saved recipe to create later draft")
+        try expect(store.currentDraft?.meal.label == "Breakfast", "expected reusable recipe draft label")
+
+        guard let qrText = store.qrPayloadTextForRecipe(id: recipe.id) else {
+            throw FoodWalletTestFailure("expected recipe QR payload")
+        }
+        let qrData = Data(qrText.utf8)
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let decoded = try decoder.decode(FoodWalletQRPayload.self, from: qrData)
+        try expect(FoodWalletQRFactory.verify(decoded), "expected recipe QR payload to verify")
+        try expect(decoded.kind == .recipe, "expected recipe QR payload kind")
+        try expect(!qrText.localizedCaseInsensitiveContains("rawPhoto"), "QR payload must not contain raw photo data")
+
+        let updateResult = store.updateSavedRecipe(
+            id: recipe.id,
+            title: "Breakfast v2",
+            ingredients: [
+                FoodMealIngredientInput(name: "eggs", grams: 120),
+                FoodMealIngredientInput(name: "toast", grams: 40),
+            ]
+        )
+        try expect(updateResult == .created, "expected saved recipe update, got \(updateResult)")
+        try expect(store.savedRecipes.first?.title == "Breakfast v2", "expected updated recipe title")
+        try expect(store.deleteSavedRecipe(id: recipe.id), "expected saved recipe delete")
+        try expect(store.savedRecipes.isEmpty, "expected saved recipe to be removed")
+    }
+
+    @MainActor
     private static func testCaseinProteinResolvesAsCuratedPowder() async throws {
         let store = FoodWalletStore()
 
@@ -933,7 +1015,8 @@ struct FoodWalletCoreTests {
         try expect(bundle.schema == "grain.food-wallet.bundle.v1", "expected portable bundle schema")
         try expect(bundle.entries.count == 2, "expected two exported entries")
         try expect(bundle.templates.isEmpty, "expected no fake templates in export")
-        try expect(bundle.recipes.isEmpty, "expected no fake recipes in export")
+        try expect(bundle.recipes.count == 1, "expected build meal recipe metadata in export")
+        try expect(bundle.recipes.first?.title == "Tomato cucumber salad", "expected saved recipe title in export")
         try expect(bundle.manifest.contentSha256.count == 64, "expected SHA-256 checksum")
         try expect(FoodWalletExportFactory.verifyIntegrity(bundle), "expected export integrity")
 

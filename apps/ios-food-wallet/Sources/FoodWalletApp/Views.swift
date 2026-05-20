@@ -5,6 +5,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 #if os(iOS)
+import CoreImage.CIFilterBuiltins
+import PhotosUI
 import UIKit
 #endif
 
@@ -61,6 +63,11 @@ struct FoodWalletRootView: View {
     @State private var isShowingCaptureReview = false
     @State private var addFoodHubDetent = PresentationDetent.medium
     @State private var captureErrorMessage: String?
+    @State private var isShowingPhotoSourceDialog = false
+    #if os(iOS)
+    @State private var isShowingPhotoLibrary = false
+    @State private var selectedMealPhotoItem: PhotosPickerItem?
+    #endif
 
     private var usesUITestPhotoFlow: Bool {
         let arguments = ProcessInfo.processInfo.arguments
@@ -126,7 +133,7 @@ struct FoodWalletRootView: View {
                     }
                 )
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
+                    ToolbarItem(placement: .confirmationAction) {
                         Button("Done") {
                             isShowingCaptureReview = false
                         }
@@ -142,17 +149,39 @@ struct FoodWalletRootView: View {
             CameraCaptureView(
                 onPhotoCaptured: { photoPayload in
                     isShowingCamera = false
-                    Task {
-                        await store.analyze(photoPayload: photoPayload)
-                        await MainActor.run {
-                            isShowingCaptureReview = true
-                        }
-                    }
+                    analyze(photoPayload: photoPayload)
                 },
                 onCancel: {
                     isShowingCamera = false
                 }
             )
+        }
+        .confirmationDialog(
+            "Add food photo",
+            isPresented: $isShowingPhotoSourceDialog,
+            titleVisibility: .visible
+        ) {
+            Button("Take Photo") {
+                startCameraCaptureFlow()
+            }
+            .accessibilityIdentifier("PhotoSourceTakePhotoButton")
+
+            Button("Choose from Library") {
+                isShowingPhotoLibrary = true
+            }
+            .accessibilityIdentifier("PhotoSourceChoosePhotoButton")
+
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Use the camera now, or choose an existing food photo.")
+        }
+        .photosPicker(
+            isPresented: $isShowingPhotoLibrary,
+            selection: $selectedMealPhotoItem,
+            matching: .images
+        )
+        .onChange(of: selectedMealPhotoItem) { item in
+            loadSelectedMealPhoto(item)
         }
         #endif
         .alert(
@@ -228,14 +257,56 @@ struct FoodWalletRootView: View {
     private func startPhotoCaptureFlow() {
         isShowingCaptureReview = false
         #if os(iOS)
+        isShowingPhotoSourceDialog = true
+        #else
+        captureErrorMessage = "Photo capture is available in the iOS app target."
+        #endif
+    }
+
+    #if os(iOS)
+    private func startCameraCaptureFlow() {
+        isShowingCaptureReview = false
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
             isShowingCamera = true
         } else {
             captureErrorMessage = "This device does not expose a camera to MealMark. Use a real iPhone for camera capture."
         }
-        #else
-        captureErrorMessage = "Camera capture is available in the iOS app target on a real iPhone."
-        #endif
+    }
+
+    private func loadSelectedMealPhoto(_ item: PhotosPickerItem?) {
+        guard let item else {
+            return
+        }
+        selectedMealPhotoItem = nil
+        Task {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self),
+                      let image = UIImage(data: data),
+                      let payload = TransientMealPhotoPayload.transientCapture(from: image) else {
+                    await MainActor.run {
+                        captureErrorMessage = "MealMark could not read this photo. Choose another image or take a new picture."
+                    }
+                    return
+                }
+                await MainActor.run {
+                    analyze(photoPayload: payload)
+                }
+            } catch {
+                await MainActor.run {
+                    captureErrorMessage = "MealMark could not load this photo. Choose another image or take a new picture."
+                }
+            }
+        }
+    }
+    #endif
+
+    private func analyze(photoPayload: TransientMealPhotoPayload) {
+        Task {
+            await store.analyze(photoPayload: photoPayload)
+            await MainActor.run {
+                isShowingCaptureReview = true
+            }
+        }
     }
 
     private func showCaptureReviewSoon() {
@@ -255,16 +326,7 @@ private struct TodayView: View {
         ZStack(alignment: .top) {
             List {
                 Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("MealMark")
-                            .font(.largeTitle.bold())
-                        Text(store.todayTotalLabel)
-                            .font(.title2.weight(.semibold))
-                        Text("AI drafts become records only after you confirm them.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 8)
+                    TodaySummaryCard(summary: store.todayNutritionSummary)
                 }
 
                 Section {
@@ -322,45 +384,76 @@ private struct TodayView: View {
     }
 }
 
+private struct TodaySummaryCard: View {
+    var summary: FoodWalletDailyNutritionSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(summary.entryCount == 0 ? "Nothing logged yet" : "You logged")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            Text(summary.kcalRangeLabel)
+                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .accessibilityIdentifier("TodayCaloriesSummary")
+
+            HStack(spacing: 8) {
+                macroPill(title: "Protein", value: "\(FoodWalletDailyNutritionSummary.display(summary.proteinGrams)) g")
+                macroPill(title: "Carbs", value: "\(FoodWalletDailyNutritionSummary.display(summary.carbohydrateGrams)) g")
+                macroPill(title: "Fat", value: "\(FoodWalletDailyNutritionSummary.display(summary.fatGrams)) g")
+            }
+        }
+        .padding(.vertical, 10)
+        .accessibilityIdentifier("TodayNutritionSummaryCard")
+    }
+
+    private func macroPill(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.headline.weight(.semibold))
+            Text(title)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
 private struct TodayAddFoodButton: View {
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: "plus")
-                    .font(.title3.weight(.bold))
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2.weight(.bold))
                     .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.green, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Add food")
                         .font(.headline.weight(.semibold))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(.white)
                     Text("Photo, barcode, or build a meal")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.84))
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
                 }
 
                 Spacer(minLength: 8)
-
-                Image(systemName: "chevron.right")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
             }
-            .frame(maxWidth: .infinity, minHeight: 64)
-            .padding(.horizontal, 2)
+            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+            .padding(.horizontal, 18)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("AddFoodButton")
         .accessibilityLabel("Add food")
-        .mealMarkGlassSurface(cornerRadius: 22, tint: Color.green.opacity(0.08), isInteractive: true)
+        .background(Color.blue, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 
@@ -489,6 +582,28 @@ private struct AddFoodHubView: View {
                 .padding(.vertical, 4)
             }
 
+            if shouldShowLibraryResults {
+                Section("My meals") {
+                    ForEach(Array(store.savedRecipes.prefix(6)), id: \.id) { recipe in
+                        NavigationLink {
+                            SavedMealDetailView(recipeID: recipe.id, onDraftReady: onDraftReady)
+                        } label: {
+                            SavedRecipeLibraryRow(recipe: recipe)
+                        }
+                        .accessibilityIdentifier("SavedRecipe-\(recipe.id)")
+                    }
+
+                    ForEach(Array(store.personalIngredients.prefix(4)), id: \.id) { ingredient in
+                        NavigationLink {
+                            PersonalFoodDetailView(ingredientID: ingredient.id, onDraftReady: onDraftReady)
+                        } label: {
+                            PersonalFoodLibraryRow(ingredient: ingredient)
+                        }
+                        .accessibilityIdentifier("SavedPersonalFood-\(ingredient.id)")
+                    }
+                }
+            }
+
             if shouldShowReusableResults {
                 Section("Recent") {
                     ForEach(Array(reusableRecentEntries.prefix(3)), id: \.entryID) { entry in
@@ -613,6 +728,15 @@ private struct AddFoodHubView: View {
                     dismiss()
                 }
             }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusedField = nil
+                    MealMarkKeyboard.dismiss()
+                }
+                .padding(.bottom, 6)
+                .accessibilityIdentifier("AddFoodKeyboardDoneButton")
+            }
         }
         .navigationDestination(isPresented: $isShowingBuildMeal) {
             BuildMealEditorView(
@@ -679,7 +803,11 @@ private struct AddFoodHubView: View {
     }
 
     private var reusablePersonalIngredients: [PersonalFoodIngredient] {
-        hasSearchQuery ? [] : store.personalIngredients
+        []
+    }
+
+    private var shouldShowLibraryResults: Bool {
+        !hasSearchQuery && (!store.savedRecipes.isEmpty || !store.personalIngredients.isEmpty)
     }
 
     private var shouldShowReusableResults: Bool {
@@ -882,6 +1010,7 @@ private struct AddFoodHubView: View {
 }
 
 private struct BuildMealEditorView: View {
+    @EnvironmentObject private var store: FoodWalletStore
     @Binding var mealTitle: String
     @Binding var ingredientRows: [IngredientBuilderRow]
     var ingredientErrorMessage: String?
@@ -907,7 +1036,15 @@ private struct BuildMealEditorView: View {
                 ForEach(ingredientRows.indices, id: \.self) { index in
                     IngredientBuilderRowView(
                         index: index,
-                        row: $ingredientRows[index]
+                        row: $ingredientRows[index],
+                        suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 4),
+                        onSelectSuggestion: { suggestion in
+                            ingredientRows[index].name = suggestion.title
+                            if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                               let gramsMode = suggestion.portion?.gramsMode {
+                                ingredientRows[index].grams = "\(gramsMode)"
+                            }
+                        }
                     )
                 }
 
@@ -961,6 +1098,7 @@ private struct BuildMealEditorView: View {
                 Button("Done") {
                     MealMarkKeyboard.dismiss()
                 }
+                .padding(.bottom, 6)
                 .accessibilityIdentifier("BuildMealKeyboardDoneButton")
             }
         }
@@ -1053,6 +1191,7 @@ private struct BarcodeLookupView: View {
                     }
                 }
                 .disabled(isLookingUp)
+                .padding(.bottom, 6)
                 .accessibilityIdentifier("BarcodeKeyboardSearchButton")
             }
         }
@@ -1255,7 +1394,7 @@ private struct AddFoodShortcutGrid: View {
                 HStack(spacing: 10) {
                     AddFoodShortcutButton(
                         title: "Photo",
-                        subtitle: canStartPhoto ? "Analyze" : "Unavailable",
+                        subtitle: canStartPhoto ? "Camera or Library" : "Unavailable",
                         symbol: "camera.fill",
                         accessibilityIdentifier: "AddFoodModePhotoButton",
                         isEnabled: canStartPhoto,
@@ -1493,21 +1632,506 @@ private struct AddFoodResultRow: View {
 private struct IngredientBuilderRowView: View {
     var index: Int
     @Binding var row: IngredientBuilderRow
+    var suggestions: [AddFoodSuggestionRow] = []
+    var onSelectSuggestion: (AddFoodSuggestionRow) -> Void = { _ in }
 
     var body: some View {
-        HStack(spacing: 10) {
-            TextField("Ingredient", text: $row.name)
-                .accessibilityIdentifier("IngredientNameField-\(index)")
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                TextField("Ingredient", text: $row.name)
+                    .accessibilityIdentifier("IngredientNameField-\(index)")
 
-            TextField("g", text: $row.grams)
-                #if os(iOS)
-                .keyboardType(.numberPad)
-                #endif
-                .frame(width: 72)
-                .accessibilityIdentifier("IngredientGramsField-\(index)")
+                TextField("g", text: $row.grams)
+                    #if os(iOS)
+                    .keyboardType(.numberPad)
+                    #endif
+                    .frame(width: 72)
+                    .accessibilityIdentifier("IngredientGramsField-\(index)")
+            }
+
+            if shouldShowSuggestions {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(suggestions.prefix(4).enumerated()), id: \.element.id) { _, suggestion in
+                            Button {
+                                onSelectSuggestion(suggestion)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(suggestion.title)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    Text(suggestion.subtitle ?? suggestion.sourceLabel)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("IngredientSuggestion-\(index)-\(Self.slug(suggestion.title))")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var shouldShowSuggestions: Bool {
+        let trimmed = row.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            return false
+        }
+        return !suggestions.isEmpty
+    }
+
+    private static func slug(_ value: String) -> String {
+        value.lowercased()
+            .replacingOccurrences(of: "%", with: "")
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    }
+}
+
+private struct SavedRecipeLibraryRow: View {
+    var recipe: SavedFoodRecipe
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "book.closed")
+                .font(.headline)
+                .foregroundStyle(.blue)
+                .frame(width: 30, height: 30)
+                .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(recipe.title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text("\(recipe.totalGrams) g • \(recipe.totalKcal) kcal • \(recipe.subtitle)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct PersonalFoodLibraryRow: View {
+    var ingredient: PersonalFoodIngredient
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "person.crop.circle.badge.checkmark")
+                .font(.headline)
+                .foregroundStyle(.purple)
+                .frame(width: 30, height: 30)
+                .background(Color.purple.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(ingredient.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text("\(Int64(ingredient.sourceServingGrams.rounded())) g • \(ingredient.sourceServingKcal) kcal")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
     }
 }
+
+private struct SavedMealDetailView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var isEditing = false
+    var recipeID: String
+    var onDraftReady: () -> Void
+
+    private var recipe: SavedFoodRecipe? {
+        store.savedRecipe(id: recipeID)
+    }
+
+    var body: some View {
+        Group {
+            if let recipe {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(recipe.title)
+                                .font(.title2.bold())
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("SavedMealDetailTitle")
+                            Text("\(recipe.totalGrams) g • \(recipe.totalKcal) kcal")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text(recipe.macronutrients.shortLabel)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+
+                    Section("Ingredients") {
+                        ForEach(recipe.ingredients) { ingredient in
+                            LabeledContent(
+                                ingredient.label,
+                                value: "\(ingredient.grams) g • \(ingredient.kcal) kcal"
+                            )
+                        }
+                    }
+
+                    Section {
+                        Button {
+                            if store.createRecipeDraft(id: recipe.id, consumedFraction: 1) {
+                                onDraftReady()
+                                dismiss()
+                            }
+                        } label: {
+                            Label("Log meal", systemImage: "plus.circle.fill")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .accessibilityIdentifier("LogSavedMealButton")
+                    }
+
+                    QRCodePayloadCard(
+                        title: recipe.title,
+                        payloadText: store.qrPayloadTextForRecipe(id: recipe.id)
+                    )
+
+                    Section {
+                        Button {
+                            isEditing = true
+                        } label: {
+                            Label("Edit recipe", systemImage: "pencil")
+                        }
+                        .accessibilityIdentifier("EditSavedMealButton")
+
+                        Button(role: .destructive) {
+                            _ = store.deleteSavedRecipe(id: recipe.id)
+                            dismiss()
+                        } label: {
+                            Label("Delete recipe", systemImage: "trash")
+                        }
+                        .accessibilityIdentifier("DeleteSavedMealButton")
+                    }
+                }
+                .navigationTitle("Saved Meal")
+                .mealMarkNavigationBarTitleDisplayModeInline()
+                .sheet(isPresented: $isEditing) {
+                    SavedRecipeEditorView(recipe: recipe)
+                }
+            } else {
+                EmptyStateView(
+                    title: "Saved meal not found",
+                    symbol: "exclamationmark.magnifyingglass",
+                    message: "This meal is no longer in your library."
+                )
+            }
+        }
+    }
+}
+
+private struct PersonalFoodDetailView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    var ingredientID: String
+    var onDraftReady: () -> Void
+
+    private var ingredient: PersonalFoodIngredient? {
+        store.personalIngredient(id: ingredientID)
+    }
+
+    var body: some View {
+        Group {
+            if let ingredient {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(ingredient.name)
+                                .font(.title2.bold())
+                                .accessibilityIdentifier("PersonalFoodDetailTitle")
+                            Text("\(Int64(ingredient.sourceServingGrams.rounded())) g • \(ingredient.sourceServingKcal) kcal")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text(ingredient.macronutrientsPer100Grams.shortLabel)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 6)
+                    }
+
+                    Section {
+                        Button {
+                            let servingGrams = max(1, Int64(ingredient.sourceServingGrams.rounded()))
+                            let result = store.createIngredientMealDraft(
+                                title: ingredient.name,
+                                ingredients: [
+                                    FoodMealIngredientInput(name: ingredient.name, grams: servingGrams),
+                                ]
+                            )
+                            if result == .created {
+                                onDraftReady()
+                                dismiss()
+                            }
+                        } label: {
+                            Label("Log food", systemImage: "plus.circle.fill")
+                                .frame(maxWidth: .infinity, minHeight: 44)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .accessibilityIdentifier("LogPersonalFoodButton")
+                    }
+
+                    QRCodePayloadCard(
+                        title: ingredient.name,
+                        payloadText: store.qrPayloadTextForPersonalIngredient(id: ingredient.id)
+                    )
+                }
+                .navigationTitle("Personal Food")
+                .mealMarkNavigationBarTitleDisplayModeInline()
+            } else {
+                EmptyStateView(
+                    title: "Food not found",
+                    symbol: "exclamationmark.magnifyingglass",
+                    message: "This personal food is no longer available."
+                )
+            }
+        }
+    }
+}
+
+private struct SavedRecipeEditorView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var mealTitle: String
+    @State private var ingredientRows: [IngredientBuilderRow]
+    @State private var errorMessage: String?
+    private let recipeID: String
+
+    init(recipe: SavedFoodRecipe) {
+        recipeID = recipe.id
+        _mealTitle = State(initialValue: recipe.title)
+        _ingredientRows = State(initialValue: recipe.ingredients.map {
+            IngredientBuilderRow(name: $0.label, grams: "\($0.grams)")
+        })
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Ingredients") {
+                    TextField("Meal name", text: $mealTitle)
+                        .accessibilityIdentifier("SavedRecipeTitleField")
+
+                    ForEach(ingredientRows.indices, id: \.self) { index in
+                        IngredientBuilderRowView(
+                            index: index,
+                            row: $ingredientRows[index],
+                            suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 4),
+                            onSelectSuggestion: { suggestion in
+                                ingredientRows[index].name = suggestion.title
+                                if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                                   let gramsMode = suggestion.portion?.gramsMode {
+                                    ingredientRows[index].grams = "\(gramsMode)"
+                                }
+                            }
+                        )
+                    }
+
+                    Button {
+                        ingredientRows.append(IngredientBuilderRow())
+                    } label: {
+                        Label("Add ingredient", systemImage: "plus.circle")
+                    }
+                    .accessibilityIdentifier("SavedRecipeAddIngredientButton")
+                }
+
+                if let errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .accessibilityIdentifier("SavedRecipeEditError")
+                    }
+                }
+            }
+            .mealMarkScrollDismissesKeyboard()
+            .navigationTitle("Edit recipe")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .accessibilityIdentifier("CancelSavedRecipeEditButton")
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(!canSave)
+                    .accessibilityIdentifier("SaveSavedRecipeEditButton")
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        MealMarkKeyboard.dismiss()
+                    }
+                    .padding(.bottom, 6)
+                    .accessibilityIdentifier("SavedRecipeKeyboardDoneButton")
+                }
+            }
+        }
+    }
+
+    private var canSave: Bool {
+        !mealTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            ingredientRows.contains { row in
+                !row.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                    (Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) > 0
+            }
+    }
+
+    private func save() {
+        let inputs = ingredientRows.map { row in
+            FoodMealIngredientInput(
+                name: row.name,
+                grams: Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+            )
+        }
+        let result = store.updateSavedRecipe(id: recipeID, title: mealTitle, ingredients: inputs)
+        switch result {
+        case .created:
+            dismiss()
+        case .emptyTitle:
+            errorMessage = "Add a meal name."
+        case .noIngredients:
+            errorMessage = "Add at least one ingredient."
+        case let .invalidGrams(name):
+            errorMessage = "Check grams for \(name)."
+        case let .unknownIngredient(name):
+            errorMessage = "Add nutrition for \(name) before saving this recipe."
+        }
+    }
+}
+
+private struct QRCodePayloadCard: View {
+    var title: String
+    var payloadText: String?
+
+    var body: some View {
+        Section("Grain QR") {
+            if let payloadText {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Share this food as a portable MealMark record.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    #if os(iOS)
+                    QRCodeImageView(payloadText: payloadText)
+                        .accessibilityIdentifier("SavedMealQRCode")
+
+                    if let imageURL = QRCodeRenderer.pngFileURL(payload: payloadText, title: title) {
+                        ShareLink(item: imageURL) {
+                            Label("Share QR image", systemImage: "square.and.arrow.up")
+                                .frame(maxWidth: .infinity, minHeight: 42)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.blue)
+                        .accessibilityIdentifier("ShareQRCodeImageButton")
+                    }
+                    #endif
+
+                    ShareLink(item: payloadText) {
+                        Label("Share QR data", systemImage: "doc.on.doc")
+                            .frame(maxWidth: .infinity, minHeight: 42)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("ShareQRCodeDataButton")
+                }
+                .padding(.vertical, 4)
+            } else {
+                Text("QR is unavailable for this item.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+#if os(iOS)
+private struct QRCodeImageView: View {
+    var payloadText: String
+
+    var body: some View {
+        if let image = QRCodeRenderer.image(payload: payloadText) {
+            Image(uiImage: image)
+                .interpolation(.none)
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 220)
+                .padding(14)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(Color.secondary.opacity(0.12))
+                }
+        } else {
+            EmptyStateView(
+                title: "QR unavailable",
+                symbol: "qrcode",
+                message: "MealMark could not render this code."
+            )
+        }
+    }
+}
+
+private enum QRCodeRenderer {
+    private static let context = CIContext()
+
+    static func image(payload: String) -> UIImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(payload.utf8)
+        filter.correctionLevel = "M"
+        guard let outputImage = filter.outputImage else {
+            return nil
+        }
+        let scaled = outputImage.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
+        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else {
+            return nil
+        }
+        return UIImage(cgImage: cgImage)
+    }
+
+    static func pngFileURL(payload: String, title: String) -> URL? {
+        guard let data = image(payload: payload)?.pngData() else {
+            return nil
+        }
+        let filename = "mealmark-\(slug(title)).png"
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        do {
+            try data.write(to: url, options: [.atomic])
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    private static func slug(_ value: String) -> String {
+        let slug = value.lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return slug.isEmpty ? "food" : slug
+    }
+}
+#endif
 
 private struct PersonalIngredientResolutionView: View {
     let ingredientName: String
@@ -2139,6 +2763,7 @@ private struct PortionControlsView: View {
                 Button("Done") {
                     commitAndDismiss()
                 }
+                .padding(.bottom, 6)
                 .accessibilityIdentifier("PortionKeyboardDoneButton")
             }
         }
@@ -2335,24 +2960,30 @@ private struct HistoryView: View {
     var body: some View {
         ZStack(alignment: .top) {
             List {
-                Section("Confirmed records") {
-                    if store.entries.isEmpty {
+                if store.entries.isEmpty {
+                    Section {
                         EmptyStateView(
                             title: "History is empty",
                             symbol: "calendar",
                             message: "Confirmed MealMark records will appear here."
                         )
-                    } else {
-                        ForEach(store.entries, id: \.entryID) { entry in
-                            NavigationLink {
-                                MealDetailView(entryID: entry.entryID)
-                            } label: {
-                                MealRow(entry: entry)
+                    }
+                } else {
+                    ForEach(historyGroups) { group in
+                        Section {
+                            ForEach(group.entries, id: \.entryID) { entry in
+                                NavigationLink {
+                                    MealDetailView(entryID: entry.entryID)
+                                } label: {
+                                    MealRow(entry: entry, showsTime: true)
+                                }
+                                .mealEntrySwipeActions(
+                                    entry: entry,
+                                    onEdit: { editingEntry = EditableMealEntry(entry: entry) }
+                                )
                             }
-                            .mealEntrySwipeActions(
-                                entry: entry,
-                                onEdit: { editingEntry = EditableMealEntry(entry: entry) }
-                            )
+                        } header: {
+                            HistoryDayHeaderView(group: group)
                         }
                     }
                 }
@@ -2375,6 +3006,20 @@ private struct HistoryView: View {
         }
     }
 
+    private var historyGroups: [HistoryDayGroup] {
+        Dictionary(grouping: store.entries, by: \.dateKey)
+            .map { dateKey, entries in
+                HistoryDayGroup(
+                    dateKey: dateKey,
+                    entries: entries.sorted { $0.confirmedAt > $1.confirmedAt }
+                )
+            }
+            .sorted {
+                ($0.entries.first?.confirmedAt ?? .distantPast) >
+                    ($1.entries.first?.confirmedAt ?? .distantPast)
+            }
+    }
+
     private func refreshLocalState() async {
         guard !isRefreshing else {
             return
@@ -2384,6 +3029,55 @@ private struct HistoryView: View {
         try? await Task.sleep(nanoseconds: 650_000_000)
         isRefreshing = false
     }
+}
+
+private struct HistoryDayGroup: Identifiable {
+    var dateKey: String
+    var entries: [FoodIntakeEntry]
+    var id: String { dateKey }
+}
+
+private struct HistoryDayHeaderView: View {
+    var group: HistoryDayGroup
+
+    private var totalKcal: Int64 {
+        group.entries.reduce(0) { $0 + $1.meal.kcal }
+    }
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            Text("\(group.entries.count) items • \(totalKcal) kcal")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+        }
+        .textCase(nil)
+        .accessibilityIdentifier("HistoryDayHeader-\(group.dateKey)")
+    }
+
+    private var title: String {
+        guard let date = Self.dateFormatter.date(from: group.dateKey) else {
+            return group.dateKey
+        }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            return "Today"
+        }
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        }
+        return date.formatted(date: .abbreviated, time: .omitted)
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 private struct EditableMealEntry: Identifiable {
@@ -2495,6 +3189,7 @@ private struct EditMealEntryView: View {
                         focusedField = nil
                         MealMarkKeyboard.dismiss()
                     }
+                    .padding(.bottom, 6)
                     .accessibilityIdentifier("EditMealKeyboardDoneButton")
                 }
             }
@@ -2636,6 +3331,7 @@ private struct MealDetailView: View {
 
                     Section("Record") {
                         LabeledContent("Date", value: entry.dateKey)
+                        LabeledContent("Saved", value: entry.confirmedAt.formatted(date: .abbreviated, time: .shortened))
                         LabeledContent("Entry ID", value: entry.entryID)
                     }
                 }
@@ -3012,13 +3708,22 @@ private struct ProView: View {
 
 private struct MealRow: View {
     var entry: FoodIntakeEntry
+    var showsTime = false
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(entry.meal.label)
-                    .font(.headline)
-                    .accessibilityIdentifier("MealRowLabel-\(entry.meal.label)")
+                HStack(spacing: 8) {
+                    Text(entry.meal.label)
+                        .font(.headline)
+                        .accessibilityIdentifier("MealRowLabel-\(entry.meal.label)")
+                    if showsTime {
+                        Text(entry.confirmedAt.formatted(date: .omitted, time: .shortened))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("MealRowTime-\(entry.entryID)")
+                    }
+                }
                 Text("\(entry.meal.amountGrams) g • \(entry.meal.kcal) kcal")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
