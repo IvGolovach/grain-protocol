@@ -245,6 +245,22 @@ public struct BrokerFoodSearchResult: Decodable, Equatable, Sendable {
         )
     }
 
+    public func personalIngredient() -> PersonalFoodIngredient {
+        PersonalFoodIngredient(
+            id: "personal-provider-\(Self.slug(resultID))",
+            name: primaryLabel,
+            sourceServingGrams: Double(servingGrams),
+            sourceServingKcal: modeKcal,
+            kcalPer100Grams: nutrition.per100g.kcal,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: nutrition.per100g.proteinG,
+                carbohydrateGrams: nutrition.per100g.carbohydrateG,
+                fatGrams: nutrition.per100g.fatG,
+                fiberGrams: nutrition.per100g.fiberG
+            )
+        )
+    }
+
     private var servingGrams: Int64 {
         max(1, Int64((serving.servingSizeG ?? 100).rounded()))
     }
@@ -302,6 +318,14 @@ public struct BrokerFoodSearchResult: Decodable, Equatable, Sendable {
         }
         return .unknown
     }
+
+    private static func slug(_ value: String) -> String {
+        let slug = value
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return slug.isEmpty ? "food" : slug
+    }
 }
 
 private extension BrokerFoodSearchResult.Evidence {
@@ -322,11 +346,95 @@ public struct MockBrokerFoodSearchClient: BrokerFoodSearchClient {
     public init() {}
 
     public func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
-        guard request.barcode == "012345678905" else {
+        let json = Self.fixtureJSON(for: request)
+        guard let json else {
             return []
         }
-        let data = Data(Self.kombuchaSearchJSON.utf8)
+        let data = Data(json.utf8)
         return try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: data).results
+    }
+
+    private static func fixtureJSON(for request: BrokerFoodSearchRequest) -> String? {
+        if request.barcode == "012345678905" {
+            return kombuchaSearchJSON
+        }
+        let query = request.query?.lowercased() ?? ""
+        if query.contains("beef") {
+            return commonFoodJSON(
+                resultID: "food-search:fixture-ground-beef",
+                label: "Cooked ground beef",
+                genericLabel: "ground beef",
+                category: "common_food",
+                servingSizeG: 100,
+                servingLabel: "100 g",
+                kcal: 254,
+                protein: 25.9,
+                carbs: 0,
+                fat: 17.2,
+                fiber: 0
+            )
+        }
+        if query.contains("pork") {
+            return commonFoodJSON(
+                resultID: "food-search:fixture-pork-tenderloin",
+                label: "Cooked pork tenderloin",
+                genericLabel: "pork tenderloin",
+                category: "common_food",
+                servingSizeG: 100,
+                servingLabel: "100 g",
+                kcal: 143,
+                protein: 26.2,
+                carbs: 0,
+                fat: 3.5,
+                fiber: 0
+            )
+        }
+        return nil
+    }
+
+    private static func commonFoodJSON(
+        resultID: String,
+        label: String,
+        genericLabel: String,
+        category: String,
+        servingSizeG: Int,
+        servingLabel: String,
+        kcal: Double,
+        protein: Double,
+        carbs: Double,
+        fat: Double,
+        fiber: Double
+    ) -> String {
+        """
+        {
+          "ok": true,
+          "results": [
+            {
+              "result_id": "\(resultID)",
+              "primary_label": "\(label)",
+              "generic_label": "\(genericLabel)",
+              "brand_label": null,
+              "category": "\(category)",
+              "source_label": "deterministic_fixture",
+              "trust_label": "fixture_verified",
+              "match": {"type": "name", "score": 0.96},
+              "serving": {"basis": "per_100g", "serving_size_g": \(servingSizeG), "serving_label": "\(servingLabel)"},
+              "nutrition": {"per_100g": {"kcal": \(kcal), "protein_g": \(protein), "carbohydrate_g": \(carbs), "fat_g": \(fat), "fiber_g": \(fiber)}},
+              "provider_evidence": [
+                {
+                  "provider": "deterministic_fixture",
+                  "provider_id": "\(resultID)",
+                  "matched_name": "\(label)",
+                  "match_type": "name",
+                  "source_label": "curated_fixture",
+                  "trust_label": "fixture_verified"
+                }
+              ],
+              "user_confirmation_required": true
+            }
+          ]
+        }
+        """
     }
 
     private static let kombuchaSearchJSON = """

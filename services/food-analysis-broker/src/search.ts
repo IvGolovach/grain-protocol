@@ -252,6 +252,53 @@ export class UsdaBrandedFoodSearchProvider implements FoodSearchProvider {
   }
 }
 
+export class UsdaGenericFoodSearchProvider implements FoodSearchProvider {
+  private readonly apiKey: string;
+  private readonly baseUrl: string;
+  private readonly fetchFn: FetchFn;
+  private readonly timeoutMs: number;
+
+  constructor(options: {
+    apiKey: string;
+    baseUrl?: string;
+    fetchFn?: FetchFn;
+    timeoutMs?: number;
+  }) {
+    this.apiKey = options.apiKey;
+    this.baseUrl = options.baseUrl ?? "https://api.nal.usda.gov/fdc/v1";
+    this.fetchFn = options.fetchFn ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  }
+
+  async search(request: FoodSearchRequest): Promise<FoodSearchResult[]> {
+    const query = cleanText(request.query);
+    if (!query || normalizeBarcode(query)) return [];
+
+    const url = new URL("foods/search", ensureTrailingSlash(this.baseUrl));
+    url.searchParams.set("api_key", this.apiKey);
+    const response = await fetchWithTimeout(this.fetchFn, url, {
+      method: "POST",
+      headers: {
+        "accept": "application/json",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        query,
+        dataType: ["Foundation", "SR Legacy", "Survey (FNDDS)"],
+        pageSize: clampLimit(request.limit)
+      })
+    }, this.timeoutMs);
+    if (!response.ok) return [];
+
+    const body = await response.json() as UsdaSearchResponse;
+    const foods = Array.isArray(body.foods) ? body.foods : [];
+    return foods
+      .map((food) => usdaGenericResult(query, food))
+      .filter((result): result is FoodSearchResult => result !== null)
+      .slice(0, clampLimit(request.limit));
+  }
+}
+
 export function foodSearchProviderFromEnv(env: NodeJS.ProcessEnv = process.env): FoodSearchProvider {
   const providers: FoodSearchProvider[] = [];
   const timeoutMs = parsePositiveInteger(env.FOOD_SEARCH_TIMEOUT_MS) ?? DEFAULT_TIMEOUT_MS;
@@ -264,6 +311,11 @@ export function foodSearchProviderFromEnv(env: NodeJS.ProcessEnv = process.env):
 
     const apiKey = foodDataCentralAPIKey(env);
     if (apiKey) {
+      providers.push(new UsdaGenericFoodSearchProvider({
+        apiKey,
+        baseUrl: env.USDA_FDC_BASE_URL,
+        timeoutMs
+      }));
       providers.push(new UsdaBrandedFoodSearchProvider({
         apiKey,
         baseUrl: env.USDA_FDC_BASE_URL,
@@ -464,6 +516,52 @@ function usdaBrandedResult(barcode: string, food: UsdaSearchFood): FoodSearchRes
   };
 }
 
+function usdaGenericResult(query: string, food: UsdaSearchFood): FoodSearchResult | null {
+  const label = cleanText(food.description);
+  const fdcID = food.fdcId?.toString();
+  const kcal = usdaNutrient(food, "208", "energy");
+  if (!label || !fdcID || kcal === null) return null;
+
+  return {
+    result_id: `food-search:usda-fdc:${fdcID}`,
+    primary_label: titleCaseFoodLabel(label),
+    generic_label: label.toLowerCase(),
+    brand_label: null,
+    category: cleanText(food.foodCategory) ?? "common_food",
+    source_label: "usda_fdc",
+    trust_label: "provider_estimate",
+    match: {
+      type: "name",
+      score: scoreUsdaGenericMatch(query, label)
+    },
+    serving: {
+      basis: "per_100g",
+      serving_size_g: 100,
+      serving_label: "100 g"
+    },
+    nutrition: {
+      per_100g: {
+        kcal,
+        protein_g: usdaNutrient(food, "203", "protein") ?? 0,
+        carbohydrate_g: usdaNutrient(food, "205", "carbohydrate") ?? 0,
+        fat_g: usdaNutrient(food, "204", "lipid") ?? 0,
+        fiber_g: usdaNutrient(food, "291", "fiber") ?? undefined
+      }
+    },
+    provider_evidence: [
+      {
+        provider: "usda_fdc",
+        provider_id: fdcID,
+        matched_name: label,
+        match_type: "name",
+        source_label: "usda_generic_food",
+        trust_label: "provider_estimate"
+      }
+    ],
+    user_confirmation_required: true
+  };
+}
+
 function clampLimit(value: number | undefined): number {
   if (value === undefined) return DEFAULT_LIMIT;
   return Math.min(MAX_LIMIT, Math.max(1, value));
@@ -546,6 +644,25 @@ function cleanText(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function titleCaseFoodLabel(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/(\s+|,\s*)/u)
+    .map((part) => /^[a-z]/u.test(part) ? part[0].toUpperCase() + part.slice(1) : part)
+    .join("")
+    .replace(/\s*,\s*/gu, ", ");
+}
+
+function scoreUsdaGenericMatch(query: string, label: string): number {
+  const queryTerms = tokenize(query);
+  const labelTerms = tokenize(label);
+  if (queryTerms.length === 0 || labelTerms.length === 0) return 0.7;
+  const matched = queryTerms.filter((term) => labelTerms.includes(term)).length;
+  const base = matched / queryTerms.length;
+  const exactBoost = label.toLowerCase() === query.trim().toLowerCase() ? 0.15 : 0;
+  return roundScore(Math.max(0.7, Math.min(0.98, base + exactBoost)));
 }
 
 function numeric(value: unknown): number | null {

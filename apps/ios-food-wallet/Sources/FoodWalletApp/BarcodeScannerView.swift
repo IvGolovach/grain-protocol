@@ -23,6 +23,7 @@ enum BarcodeScannerAvailability {
 
 struct BarcodeScannerView: View {
     var onBarcode: (String) -> Void
+    var onQRCode: (String) -> Void = { _ in }
     var onScannerError: (String) -> Void = { _ in }
 
     var body: some View {
@@ -30,6 +31,7 @@ struct BarcodeScannerView: View {
         if #available(iOS 16.0, *), BarcodeScannerAvailability.canUseCameraScanner {
             VisionKitBarcodeScannerView(
                 onBarcode: onBarcode,
+                onQRCode: onQRCode,
                 onScannerError: onScannerError
             )
                 .accessibilityIdentifier("BarcodeScannerCameraView")
@@ -62,16 +64,17 @@ private struct BarcodeScannerUnavailableView: View {
 @available(iOS 16.0, *)
 private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
     var onBarcode: (String) -> Void
+    var onQRCode: (String) -> Void
     var onScannerError: (String) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onBarcode: onBarcode, onScannerError: onScannerError)
+        Coordinator(onBarcode: onBarcode, onQRCode: onQRCode, onScannerError: onScannerError)
     }
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let controller = DataScannerViewController(
             recognizedDataTypes: [
-                .barcode(symbologies: [.ean13, .ean8, .upce]),
+                .barcode(symbologies: [.ean13, .ean8, .upce, .qr]),
             ],
             qualityLevel: .balanced,
             recognizesMultipleItems: true,
@@ -98,13 +101,16 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
         private var didEmit = false
         private var didReportScannerError = false
         private let onBarcode: (String) -> Void
+        private let onQRCode: (String) -> Void
         private let onScannerError: (String) -> Void
 
         init(
             onBarcode: @escaping (String) -> Void,
+            onQRCode: @escaping (String) -> Void,
             onScannerError: @escaping (String) -> Void
         ) {
             self.onBarcode = onBarcode
+            self.onQRCode = onQRCode
             self.onScannerError = onScannerError
         }
 
@@ -145,6 +151,12 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
                 }
                 return barcode.payloadStringValue
             }
+            if let qrValue = values.first(where: Self.isMealMarkQRCode) {
+                didEmit = true
+                dataScanner.stopScanning()
+                onQRCode(qrValue)
+                return
+            }
             if let normalizedValue = BrokerFoodSearchRequest.preferredCameraBarcode(
                 from: values,
                 allowsShortBarcode: allowsShortBarcode
@@ -153,6 +165,13 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
                 dataScanner.stopScanning()
                 onBarcode(normalizedValue)
             }
+        }
+
+        private static func isMealMarkQRCode(_ value: String?) -> Bool {
+            guard let value else {
+                return false
+            }
+            return value.contains("\"grain.food-wallet.qr.v1\"") || value.contains("grain.food-wallet.qr.v1")
         }
 
         func emitScannerError(_ message: String) {

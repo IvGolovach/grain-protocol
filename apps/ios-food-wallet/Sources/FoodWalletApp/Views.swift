@@ -114,9 +114,23 @@ struct FoodWalletRootView: View {
                     },
                     onTakePhoto: {
                         isShowingAddFoodHub = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            startPhotoCaptureFlow()
+                        #if os(iOS)
+                        DispatchQueue.main.async {
+                            startCameraCaptureFlow()
                         }
+                        #else
+                        captureErrorMessage = "Camera capture is available in the iOS app target."
+                        #endif
+                    },
+                    onChoosePhoto: {
+                        isShowingAddFoodHub = false
+                        #if os(iOS)
+                        DispatchQueue.main.async {
+                            isShowingPhotoLibrary = true
+                        }
+                        #else
+                        captureErrorMessage = "Photo library import is available in the iOS app target."
+                        #endif
                     }
                 )
             }
@@ -331,6 +345,8 @@ private struct TodayView: View {
 
                 Section {
                     TodayAddFoodButton(action: onAddFood)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                        .listRowBackground(Color.clear)
                 }
 
                 Section("Saved today") {
@@ -358,6 +374,7 @@ private struct TodayView: View {
             .refreshable {
                 await refreshLocalState()
             }
+            .mealMarkInsetGroupedListStyle()
 
             if isRefreshing {
                 RunningGrainRefreshView()
@@ -426,34 +443,59 @@ private struct TodayAddFoodButton: View {
     var action: () -> Void
 
     var body: some View {
+        MealMarkFilledActionButton(
+            title: "Add food",
+            subtitle: "Photo, barcode, or build a meal",
+            symbol: "plus.circle.fill",
+            tint: .blue,
+            minHeight: 72,
+            action: action
+        )
+        .accessibilityIdentifier("AddFoodButton")
+        .accessibilityLabel("Add food")
+    }
+}
+
+private struct MealMarkFilledActionButton: View {
+    var title: String
+    var subtitle: String?
+    var symbol: String
+    var tint: Color
+    var isEnabled = true
+    var minHeight: CGFloat = 56
+    var action: () -> Void
+
+    var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                Image(systemName: symbol)
+                    .font(.title3.weight(.bold))
+                    .frame(width: 30, height: 30)
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Add food")
+                    Text(title)
                         .font(.headline.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text("Photo, barcode, or build a meal")
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.84))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .opacity(0.84)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                    }
                 }
 
                 Spacer(minLength: 8)
             }
-            .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .leading)
             .padding(.horizontal, 18)
-            .contentShape(Rectangle())
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(tint.opacity(isEnabled ? 1 : 0.45), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("AddFoodButton")
-        .accessibilityLabel("Add food")
-        .background(Color.blue, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .disabled(!isEnabled)
     }
 }
 
@@ -546,9 +588,12 @@ private struct AddFoodHubView: View {
     @State private var personalIngredientErrorMessage: String?
     @State private var isShowingBarcodeLookup = false
     @State private var isShowingBuildMeal = false
+    @State private var selectedSavedRecipeID: String?
+    @State private var selectedPersonalIngredientID: String?
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
+    var onChoosePhoto: () -> Void
 
     private var trimmedQuickText: String {
         quickText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -570,7 +615,8 @@ private struct AddFoodHubView: View {
 
                     AddFoodShortcutGrid(
                         canStartPhoto: store.canStartAnalysis,
-                        onPhoto: onTakePhoto,
+                        onCamera: onTakePhoto,
+                        onLibrary: onChoosePhoto,
                         onBarcode: {
                             isShowingBarcodeLookup = true
                         },
@@ -585,21 +631,25 @@ private struct AddFoodHubView: View {
             if shouldShowLibraryResults {
                 Section("My meals") {
                     ForEach(Array(store.savedRecipes.prefix(6)), id: \.id) { recipe in
-                        NavigationLink {
-                            SavedMealDetailView(recipeID: recipe.id, onDraftReady: onDraftReady)
-                        } label: {
-                            SavedRecipeLibraryRow(recipe: recipe)
+                        AddFoodResultRow(
+                            title: recipe.title,
+                            subtitle: "\(recipe.subtitle) • \(recipe.totalGrams) g • \(recipe.totalKcal) kcal",
+                            symbol: "book.closed",
+                            accessibilityIdentifier: "SavedRecipe-\(recipe.id)"
+                        ) {
+                            selectedSavedRecipeID = recipe.id
                         }
-                        .accessibilityIdentifier("SavedRecipe-\(recipe.id)")
                     }
 
                     ForEach(Array(store.personalIngredients.prefix(4)), id: \.id) { ingredient in
-                        NavigationLink {
-                            PersonalFoodDetailView(ingredientID: ingredient.id, onDraftReady: onDraftReady)
-                        } label: {
-                            PersonalFoodLibraryRow(ingredient: ingredient)
+                        AddFoodResultRow(
+                            title: ingredient.name,
+                            subtitle: "\(Int64(ingredient.sourceServingGrams.rounded())) g serving • \(ingredient.sourceServingKcal) kcal",
+                            symbol: "person.crop.circle.badge.checkmark",
+                            accessibilityIdentifier: "SavedPersonalFood-\(ingredient.id)"
+                        ) {
+                            selectedPersonalIngredientID = ingredient.id
                         }
-                        .accessibilityIdentifier("SavedPersonalFood-\(ingredient.id)")
                     }
                 }
             }
@@ -635,7 +685,7 @@ private struct AddFoodHubView: View {
                     AddFoodScopeBar(selectedScope: $selectedScope)
 
                     if shouldShowFoodSearchResults {
-                        ForEach(Array(filteredFoodSearchRows.prefix(4).enumerated()), id: \.element.id) { index, row in
+                        ForEach(Array(filteredFoodSearchRows.prefix(12).enumerated()), id: \.element.id) { index, row in
                             AddFoodResultRow(
                                 title: row.title,
                                 subtitle: "\(row.subtitle ?? row.sourceLabel) • \(row.sourceLabel)",
@@ -722,6 +772,9 @@ private struct AddFoodHubView: View {
         .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Add Food")
         .mealMarkNavigationBarTitleDisplayModeInline()
+        .task(id: trimmedQuickText) {
+            await refreshBrokerFoodSearchForCurrentQuery()
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") {
@@ -759,6 +812,16 @@ private struct AddFoodHubView: View {
                 onSavePersonalIngredient: savePersonalIngredient
             )
         }
+        .navigationDestination(isPresented: isShowingSavedRecipeDetail) {
+            if let selectedSavedRecipeID {
+                SavedMealDetailView(recipeID: selectedSavedRecipeID, onDraftReady: onDraftReady)
+            }
+        }
+        .navigationDestination(isPresented: isShowingPersonalIngredientDetail) {
+            if let selectedPersonalIngredientID {
+                PersonalFoodDetailView(ingredientID: selectedPersonalIngredientID, onDraftReady: onDraftReady)
+            }
+        }
         .sheet(isPresented: $isShowingBarcodeLookup) {
             NavigationStack {
                 BarcodeLookupView(onDraftReady: onDraftReady)
@@ -768,10 +831,45 @@ private struct AddFoodHubView: View {
         }
     }
 
+    private var isShowingSavedRecipeDetail: Binding<Bool> {
+        Binding(
+            get: { selectedSavedRecipeID != nil },
+            set: { isShowing in
+                if !isShowing {
+                    selectedSavedRecipeID = nil
+                }
+            }
+        )
+    }
+
+    private var isShowingPersonalIngredientDetail: Binding<Bool> {
+        Binding(
+            get: { selectedPersonalIngredientID != nil },
+            set: { isShowing in
+                if !isShowing {
+                    selectedPersonalIngredientID = nil
+                }
+            }
+        )
+    }
+
     private static func slug(_ value: String) -> String {
         value.lowercased()
             .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
             .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    }
+
+    @MainActor
+    private func refreshBrokerFoodSearchForCurrentQuery() async {
+        guard hasSearchQuery, trimmedQuickText.count >= 2 else {
+            store.clearBrokerFoodSearch()
+            return
+        }
+        try? await Task.sleep(nanoseconds: 220_000_000)
+        guard !Task.isCancelled else {
+            return
+        }
+        await store.searchBrokerFood(query: trimmedQuickText)
     }
 
     private var canCreateIngredientDraft: Bool {
@@ -1011,6 +1109,7 @@ private struct AddFoodHubView: View {
 
 private struct BuildMealEditorView: View {
     @EnvironmentObject private var store: FoodWalletStore
+    @FocusState private var focusedIngredientNameIndex: Int?
     @Binding var mealTitle: String
     @Binding var ingredientRows: [IngredientBuilderRow]
     var ingredientErrorMessage: String?
@@ -1037,13 +1136,10 @@ private struct BuildMealEditorView: View {
                     IngredientBuilderRowView(
                         index: index,
                         row: $ingredientRows[index],
-                        suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 4),
+                        suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 8),
+                        focusedIngredientNameIndex: $focusedIngredientNameIndex,
                         onSelectSuggestion: { suggestion in
-                            ingredientRows[index].name = suggestion.title
-                            if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                               let gramsMode = suggestion.portion?.gramsMode {
-                                ingredientRows[index].grams = "\(gramsMode)"
-                            }
+                            selectIngredientSuggestion(suggestion, at: index)
                         }
                     )
                 }
@@ -1080,18 +1176,25 @@ private struct BuildMealEditorView: View {
             }
 
             Section {
-                Button(action: onCreateDraft) {
-                    Label("Create meal draft", systemImage: "fork.knife.circle.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .disabled(!canCreateIngredientDraft)
+                MealMarkFilledActionButton(
+                    title: "Create meal draft",
+                    subtitle: "Review before saving",
+                    symbol: "fork.knife.circle.fill",
+                    tint: .green,
+                    isEnabled: canCreateIngredientDraft,
+                    action: onCreateDraft
+                )
                 .accessibilityIdentifier("CreateIngredientMealDraftButton")
             }
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            .listRowBackground(Color.clear)
         }
         .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Build Meal")
         .accessibilityIdentifier("BuildMealScreen")
+        .task(id: ingredientSearchSeed) {
+            await refreshBrokerFoodSearchForActiveIngredient()
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -1103,6 +1206,43 @@ private struct BuildMealEditorView: View {
             }
         }
     }
+
+    private func selectIngredientSuggestion(_ suggestion: AddFoodSuggestionRow, at index: Int) {
+        if suggestion.id.hasPrefix("food-search:"),
+           let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: suggestion.id) {
+            ingredientRows[index].name = ingredient.name
+            if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                ingredientRows[index].grams = "\(max(1, Int64(ingredient.sourceServingGrams.rounded())))"
+            }
+            return
+        }
+
+        ingredientRows[index].name = suggestion.title
+        if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           let gramsMode = suggestion.portion?.gramsMode {
+            ingredientRows[index].grams = "\(gramsMode)"
+        }
+    }
+
+    private var ingredientSearchSeed: String {
+        ingredientRows
+            .map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .joined(separator: "|")
+    }
+
+    @MainActor
+    private func refreshBrokerFoodSearchForActiveIngredient() async {
+        guard let query = ingredientRows
+            .map({ $0.name.trimmingCharacters(in: .whitespacesAndNewlines) })
+            .last(where: { $0.count >= 2 }) else {
+            return
+        }
+        try? await Task.sleep(nanoseconds: 220_000_000)
+        guard !Task.isCancelled else {
+            return
+        }
+        await store.searchBrokerFood(query: query)
+    }
 }
 
 private struct BarcodeLookupView: View {
@@ -1113,6 +1253,8 @@ private struct BarcodeLookupView: View {
     @State private var errorMessage: String?
     @State private var isLookingUp = false
     @State private var detectedBarcode: String?
+    @State private var detectedQRCodeText: String?
+    @State private var qrPreview: FoodWalletQRImportPreview?
     @State private var scannerRestartID = UUID()
 
     var onDraftReady: () -> Void
@@ -1129,6 +1271,9 @@ private struct BarcodeLookupView: View {
                         onBarcode: { barcode in
                             handleDetectedBarcode(barcode)
                         },
+                        onQRCode: { payloadText in
+                            handleDetectedQRCode(payloadText)
+                        },
                         onScannerError: { message in
                             errorMessage = message
                         }
@@ -1136,42 +1281,29 @@ private struct BarcodeLookupView: View {
                     .id(scannerRestartID)
                     .frame(minHeight: 260)
 
-                    if let detectedBarcode {
+                    if let qrPreview {
+                        QRCodeImportPreviewCard(preview: qrPreview) {
+                            createQRCodeDraft()
+                        }
+                    } else if let detectedBarcode {
                         Label("Detected \(detectedBarcode)", systemImage: "barcode")
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .accessibilityIdentifier("BarcodeDetectedValueLabel")
+
+                        barcodeManualControls
+                    } else {
+                        barcodeManualControls
                     }
-
-                    TextField("Enter UPC or EAN", text: $barcodeText)
-                        .textContentType(.oneTimeCode)
-                        #if os(iOS)
-                        .keyboardType(.numberPad)
-                        #endif
-                        .focused($isBarcodeFieldFocused)
-                        .accessibilityIdentifier("BarcodeManualEntryField")
-
-                    Button(action: lookupManualBarcode) {
-                        if isLookingUp {
-                            Label("Looking up", systemImage: "hourglass")
-                        } else {
-                            Label("Look up barcode", systemImage: "arrow.right.circle.fill")
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                    .disabled(normalizedBarcode == nil || isLookingUp)
-                    .accessibilityIdentifier("BarcodeManualLookupButton")
-
-                    statusLabel
                 }
                 .padding(.vertical, 4)
             } footer: {
-                Text("Packaged foods use broker-side databases. You still review serving size before saving.")
+                Text("Packaged foods use broker-side databases. MealMark food QR works offline and still opens review before saving.")
             }
         }
+
         .mealMarkScrollDismissesKeyboard()
-        .navigationTitle("Barcode")
+        .navigationTitle("Scan code")
         .mealMarkNavigationBarTitleDisplayModeInline()
         .accessibilityIdentifier("BarcodeScannerSheet")
         .toolbar {
@@ -1194,6 +1326,30 @@ private struct BarcodeLookupView: View {
                 .padding(.bottom, 6)
                 .accessibilityIdentifier("BarcodeKeyboardSearchButton")
             }
+        }
+    }
+
+    private var barcodeManualControls: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            TextField("Enter UPC or EAN", text: $barcodeText)
+                .textContentType(.oneTimeCode)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
+                .focused($isBarcodeFieldFocused)
+                .accessibilityIdentifier("BarcodeManualEntryField")
+
+            MealMarkFilledActionButton(
+                title: isLookingUp ? "Looking up" : "Look up barcode",
+                subtitle: isLookingUp ? "Checking product databases" : nil,
+                symbol: isLookingUp ? "hourglass" : "arrow.right.circle.fill",
+                tint: .green,
+                isEnabled: normalizedBarcode != nil && !isLookingUp,
+                action: lookupManualBarcode
+            )
+            .accessibilityIdentifier("BarcodeManualLookupButton")
+
+            statusLabel
         }
     }
 
@@ -1239,10 +1395,35 @@ private struct BarcodeLookupView: View {
         }
     }
 
+    private func handleDetectedQRCode(_ text: String) {
+        do {
+            qrPreview = try store.previewQRCodePayload(text)
+            detectedQRCodeText = text
+            errorMessage = nil
+        } catch {
+            errorMessage = "This QR is not a valid MealMark food QR. Try scanning again or enter the food manually."
+        }
+    }
+
     private func scanAgain() {
         errorMessage = nil
         detectedBarcode = nil
+        detectedQRCodeText = nil
+        qrPreview = nil
         scannerRestartID = UUID()
+    }
+
+    private func createQRCodeDraft() {
+        guard let detectedQRCodeText else {
+            errorMessage = "Scan a MealMark food QR first."
+            return
+        }
+        do {
+            try store.createQRCodeDraft(payloadText: detectedQRCodeText)
+            onDraftReady()
+        } catch {
+            errorMessage = "MealMark could not import this QR. Ask the sender to share it again."
+        }
     }
 
     private func lookupManualBarcode() {
@@ -1285,6 +1466,63 @@ private struct BarcodeLookupView: View {
             return
         }
         onDraftReady()
+    }
+}
+
+private struct QRCodeImportPreviewCard: View {
+    var preview: FoodWalletQRImportPreview
+    var onAdd: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("MealMark food QR", systemImage: "qrcode.viewfinder")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.blue)
+                .accessibilityIdentifier("QRCodeImportStatusLabel")
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(preview.title)
+                    .font(.headline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("QRCodeImportPreviewTitle")
+                Text(preview.subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text(preview.macronutrientsLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Label(preview.signedByLabel, systemImage: "signature")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("QRCodeImportSignedBy")
+
+            if !preview.ingredients.isEmpty {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Ingredients")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(Array(preview.ingredients.prefix(5).enumerated()), id: \.offset) { _, ingredient in
+                        Text(ingredient)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            MealMarkFilledActionButton(
+                title: "Add to today",
+                subtitle: "Open review first",
+                symbol: "checkmark.circle.fill",
+                tint: .green,
+                action: onAdd
+            )
+            .accessibilityIdentifier("QRCodeImportAddButton")
+        }
+        .padding(.vertical, 4)
+        .accessibilityIdentifier("QRCodeImportPreviewCard")
     }
 }
 
@@ -1384,27 +1622,43 @@ private struct AddFoodSearchField: View {
 
 private struct AddFoodShortcutGrid: View {
     var canStartPhoto: Bool
-    var onPhoto: () -> Void
+    var onCamera: () -> Void
+    var onLibrary: () -> Void
     var onBarcode: () -> Void
     var onBuild: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+    ]
 
     var body: some View {
         ZStack(alignment: .topLeading) {
             shortcutContainer {
-                HStack(spacing: 10) {
+                LazyVGrid(columns: columns, spacing: 10) {
                     AddFoodShortcutButton(
-                        title: "Photo",
-                        subtitle: canStartPhoto ? "Camera or Library" : "Unavailable",
+                        title: "Camera",
+                        subtitle: canStartPhoto ? "Take photo" : "Unavailable",
                         symbol: "camera.fill",
-                        accessibilityIdentifier: "AddFoodModePhotoButton",
+                        accessibilityIdentifier: "AddFoodPhotoCameraButton",
                         isEnabled: canStartPhoto,
                         tint: .green,
-                        action: onPhoto
+                        action: onCamera
+                    )
+
+                    AddFoodShortcutButton(
+                        title: "Library",
+                        subtitle: "Choose photo",
+                        symbol: "photo.on.rectangle",
+                        accessibilityIdentifier: "AddFoodPhotoLibraryButton",
+                        isEnabled: canStartPhoto,
+                        tint: .teal,
+                        action: onLibrary
                     )
 
                     AddFoodShortcutButton(
                         title: "Barcode",
-                        subtitle: "Packaged",
+                        subtitle: "UPC or QR",
                         symbol: "barcode.viewfinder",
                         accessibilityIdentifier: "AddFoodModeBarcodeButton",
                         tint: .blue,
@@ -1536,6 +1790,15 @@ private extension View {
     }
 
     @ViewBuilder
+    func mealMarkInsetGroupedListStyle() -> some View {
+        #if os(iOS)
+        self.listStyle(.insetGrouped)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
     func mealMarkGlassSurface(
         cornerRadius: CGFloat,
         tint: Color = Color.secondary.opacity(0.08),
@@ -1633,12 +1896,14 @@ private struct IngredientBuilderRowView: View {
     var index: Int
     @Binding var row: IngredientBuilderRow
     var suggestions: [AddFoodSuggestionRow] = []
+    var focusedIngredientNameIndex: FocusState<Int?>.Binding
     var onSelectSuggestion: (AddFoodSuggestionRow) -> Void = { _ in }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 TextField("Ingredient", text: $row.name)
+                    .focused(focusedIngredientNameIndex, equals: index)
                     .accessibilityIdentifier("IngredientNameField-\(index)")
 
                 TextField("g", text: $row.grams)
@@ -1650,12 +1915,18 @@ private struct IngredientBuilderRowView: View {
             }
 
             if shouldShowSuggestions {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(Array(suggestions.prefix(4).enumerated()), id: \.element.id) { _, suggestion in
-                            Button {
-                                onSelectSuggestion(suggestion)
-                            } label: {
+                VStack(spacing: 6) {
+                    ForEach(Array(suggestions.prefix(8).enumerated()), id: \.element.id) { suggestionIndex, suggestion in
+                        Button {
+                            onSelectSuggestion(suggestion)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: suggestionIcon(for: suggestion))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.blue)
+                                    .frame(width: 24, height: 24)
+                                    .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(suggestion.title)
                                         .font(.caption.weight(.semibold))
@@ -1666,13 +1937,21 @@ private struct IngredientBuilderRowView: View {
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
                                 }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                                Spacer(minLength: 0)
+
+                                Text(suggestion.sourceLabel)
+                                    .font(.caption2.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("IngredientSuggestion-\(index)-\(Self.slug(suggestion.title))")
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.blue.opacity(suggestionIndex == 0 ? 0.13 : 0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("IngredientSuggestion-\(index)-\(Self.slug(suggestion.title))")
                     }
                 }
             }
@@ -1684,7 +1963,7 @@ private struct IngredientBuilderRowView: View {
         guard trimmed.count >= 2 else {
             return false
         }
-        return !suggestions.isEmpty
+        return focusedIngredientNameIndex.wrappedValue == index && !suggestions.isEmpty
     }
 
     private static func slug(_ value: String) -> String {
@@ -1692,6 +1971,17 @@ private struct IngredientBuilderRowView: View {
             .replacingOccurrences(of: "%", with: "")
             .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
             .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+    }
+
+    private func suggestionIcon(for suggestion: AddFoodSuggestionRow) -> String {
+        switch suggestion.kind {
+        case .personalIngredient:
+            return "person.crop.circle.badge.checkmark"
+        case .providerMatch:
+            return "checkmark.seal"
+        default:
+            return "magnifyingglass"
+        }
     }
 }
 
@@ -1911,6 +2201,7 @@ private struct PersonalFoodDetailView: View {
 private struct SavedRecipeEditorView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedIngredientNameIndex: Int?
     @State private var mealTitle: String
     @State private var ingredientRows: [IngredientBuilderRow]
     @State private var errorMessage: String?
@@ -1935,7 +2226,8 @@ private struct SavedRecipeEditorView: View {
                         IngredientBuilderRowView(
                             index: index,
                             row: $ingredientRows[index],
-                            suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 4),
+                            suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 8),
+                            focusedIngredientNameIndex: $focusedIngredientNameIndex,
                             onSelectSuggestion: { suggestion in
                                 ingredientRows[index].name = suggestion.title
                                 if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -2679,24 +2971,26 @@ private struct DraftActionBar: View {
         HStack(spacing: 10) {
             Button(role: .destructive, action: onDiscard) {
                 Label("Discard", systemImage: "trash")
-                    .frame(minWidth: 104, minHeight: 48)
+                    .frame(minWidth: 112, minHeight: 50)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 14)
+                    .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
-            .controlSize(.large)
+            .buttonStyle(.plain)
             .accessibilityIdentifier("DiscardDraftButton")
 
             Button(action: onSave) {
                 Label("Save", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .frame(maxWidth: .infinity, minHeight: 50)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .background(Color.green.opacity(canSave ? 1 : 0.45), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.green)
-            .controlSize(.large)
+            .buttonStyle(.plain)
             .disabled(!canSave)
             .accessibilityIdentifier("SaveToFoodWalletButton")
         }

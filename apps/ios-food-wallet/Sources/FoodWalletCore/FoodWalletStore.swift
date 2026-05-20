@@ -347,18 +347,17 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func addFoodSearchSuggestions(for text: String) -> [AddFoodSuggestionRow] {
-        FoodIngredientCatalog.suggestionRows(for: text, personalIngredients: personalIngredients)
+        mergedFoodSearchSuggestions(for: text, limit: 12)
     }
 
     public func ingredientSuggestions(for text: String, limit: Int = 5) -> [AddFoodSuggestionRow] {
-        FoodIngredientCatalog.suggestionRows(
-            for: text,
-            personalIngredients: personalIngredients,
-            limit: limit
-        )
+        mergedFoodSearchSuggestions(for: text, limit: limit)
     }
 
     public func createFoodSearchSuggestionDraft(id: String) -> Bool {
+        if createBrokerFoodSearchDraft(id: id) {
+            return true
+        }
         guard let candidate = FoodIngredientCatalog.candidate(
             suggestionID: id,
             personalIngredients: personalIngredients
@@ -367,6 +366,31 @@ public final class FoodWalletStore: ObservableObject {
         }
         presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
         return true
+    }
+
+    private func mergedFoodSearchSuggestions(for text: String, limit: Int) -> [AddFoodSuggestionRow] {
+        let query = AddFoodSearchQuery(text)
+        guard !query.isEmpty else {
+            return []
+        }
+        let localRows = FoodIngredientCatalog.suggestionRows(
+            for: text,
+            personalIngredients: personalIngredients,
+            limit: limit
+        )
+        let brokerRows = brokerFoodSearchRows.filter { query.matches($0) }
+        var seen = Set<String>()
+        return (localRows + brokerRows)
+            .filter { row in
+                let key = row.title.normalizedFoodSearchDeduplicationKey
+                guard !seen.contains(key) else {
+                    return false
+                }
+                seen.insert(key)
+                return true
+            }
+            .prefix(limit)
+            .map { $0 }
     }
 
     public func searchBrokerFood(query: String) async {
@@ -394,6 +418,20 @@ public final class FoodWalletStore: ObservableObject {
         }
         presentDraft(candidate: candidate, sourceClass: .estimated, trustStatus: .estimated)
         return true
+    }
+
+    public func saveBrokerFoodSearchResultAsPersonalIngredient(id: String) -> PersonalFoodIngredient? {
+        guard let result = brokerFoodSearchResults[id] else {
+            return nil
+        }
+        let ingredient = result.personalIngredient()
+        if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
+            personalIngredients[existingIndex] = ingredient
+        } else {
+            personalIngredients.append(ingredient)
+        }
+        publishUserLibraryMutation()
+        return ingredient
     }
 
     public func createIngredientMealDraft(
@@ -465,6 +503,100 @@ public final class FoodWalletStore: ObservableObject {
             return nil
         }
         return try? FoodWalletQRFactory.payloadText(payload)
+    }
+
+    public func previewQRCodePayload(_ text: String) throws -> FoodWalletQRImportPreview {
+        let payload = try FoodWalletQRFactory.payload(from: text)
+        let signedBy = payload.issuer?.label ?? "Unsigned MealMark QR"
+        switch payload.kind {
+        case .recipe:
+            guard let exportRecipe = payload.recipe else {
+                throw FoodWalletQRImportError.invalidPayload
+            }
+            let recipe = SavedFoodRecipe(exportRecipe: exportRecipe)
+            return FoodWalletQRImportPreview(
+                title: recipe.title,
+                subtitle: "\(recipe.totalGrams) g • \(recipe.totalKcal) kcal",
+                nutritionLabel: "\(recipe.totalKcal) kcal",
+                macronutrientsLabel: recipe.macronutrients.shortLabel,
+                signedByLabel: signedBy,
+                sourceLabel: "MealMark food QR",
+                ingredients: recipe.ingredients.map { "\($0.label) • \($0.grams) g" }
+            )
+        case .personalFood:
+            guard let exportPersonalFood = payload.personalFood else {
+                throw FoodWalletQRImportError.invalidPayload
+            }
+            let ingredient = PersonalFoodIngredient(exportPersonalFood: exportPersonalFood)
+            let grams = max(1, Int64(ingredient.sourceServingGrams.rounded()))
+            return FoodWalletQRImportPreview(
+                title: ingredient.name,
+                subtitle: "\(grams) g • \(ingredient.sourceServingKcal) kcal",
+                nutritionLabel: "\(ingredient.sourceServingKcal) kcal",
+                macronutrientsLabel: ingredient.macronutrientsPer100Grams.scaled(by: Double(grams) / 100).shortLabel,
+                signedByLabel: signedBy,
+                sourceLabel: "MealMark food QR",
+                ingredients: []
+            )
+        }
+    }
+
+    @discardableResult
+    public func createQRCodeDraft(payloadText: String) throws -> Bool {
+        let payload = try FoodWalletQRFactory.payload(from: payloadText)
+        let signedBy = payload.issuer?.label ?? "Unsigned MealMark QR"
+        switch payload.kind {
+        case .recipe:
+            guard let exportRecipe = payload.recipe else {
+                throw FoodWalletQRImportError.invalidPayload
+            }
+            let recipe = SavedFoodRecipe(exportRecipe: exportRecipe)
+            upsertSavedRecipe(recipe)
+            presentDraft(
+                candidate: Self.qrCandidate(
+                    id: "qr-recipe-\(recipe.id)",
+                    label: recipe.title,
+                    genericLabel: recipe.title.lowercased(),
+                    dishType: recipe.ingredients.count > 1 ? .mixed : .single,
+                    meal: recipe.mealEstimate(consumedFraction: 1),
+                    issuerLabel: signedBy,
+                    payloadID: recipe.id,
+                    ingredients: recipe.ingredients.map(\.label)
+                ),
+                sourceClass: .measured,
+                trustStatus: .selfIssued
+            )
+            return true
+        case .personalFood:
+            guard let exportPersonalFood = payload.personalFood else {
+                throw FoodWalletQRImportError.invalidPayload
+            }
+            let ingredient = PersonalFoodIngredient(exportPersonalFood: exportPersonalFood)
+            if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
+                personalIngredients[existingIndex] = ingredient
+            } else {
+                personalIngredients.append(ingredient)
+            }
+            publishUserLibraryMutation()
+            guard let candidate = FoodIngredientCatalog.candidate(
+                suggestionID: "personal:\(ingredient.id)",
+                personalIngredients: personalIngredients
+            ) else {
+                throw FoodWalletQRImportError.invalidPayload
+            }
+            var qrCandidate = candidate
+            qrCandidate.evidence.append(ProviderEvidence(
+                provider: "mealmark_qr",
+                providerID: ingredient.id,
+                matchedName: ingredient.name,
+                servingBasis: "signed by \(signedBy)",
+                sourceLabelID: "mealmark_qr",
+                matchType: "qr",
+                trustLabel: "self_issued"
+            ))
+            presentDraft(candidate: qrCandidate, sourceClass: .measured, trustStatus: .selfIssued)
+            return true
+        }
     }
 
     public func savePersonalIngredient(
@@ -1122,6 +1254,48 @@ public final class FoodWalletStore: ObservableObject {
         )
     }
 
+    private static func qrCandidate(
+        id: String,
+        label: String,
+        genericLabel: String,
+        dishType: DishType,
+        meal: MealEstimate,
+        issuerLabel: String,
+        payloadID: String,
+        ingredients: [String]
+    ) -> FoodAnalysisCandidate {
+        var assumptions = [
+            FoodAssumption(id: "mealmark-qr", label: "imported from MealMark food QR"),
+            FoodAssumption(id: "review-portion", label: "review serving before saving"),
+        ]
+        if !ingredients.isEmpty {
+            assumptions.append(FoodAssumption(
+                id: "qr-ingredients",
+                label: ingredients.prefix(4).joined(separator: ", ")
+            ))
+        }
+        return candidate(
+            id: id,
+            label: label,
+            genericLabel: genericLabel,
+            dishType: dishType,
+            meal: meal,
+            confidence: .high,
+            assumptions: assumptions,
+            evidence: [
+                ProviderEvidence(
+                    provider: "mealmark_qr",
+                    providerID: payloadID,
+                    matchedName: label,
+                    servingBasis: "signed by \(issuerLabel)",
+                    sourceLabelID: "mealmark_qr",
+                    matchType: "qr",
+                    trustLabel: "self_issued"
+                ),
+            ]
+        )
+    }
+
     private static func editedMeal(_ meal: MealEstimate, label: String, gramsMode: Int64) -> MealEstimate {
         let oldGrams = max(1, meal.amountGrams)
         let factor = Double(max(1, gramsMode)) / Double(oldGrams)
@@ -1251,5 +1425,11 @@ public final class FoodWalletStore: ObservableObject {
         }
 
         return "Food lookup failed. Try again, use photo, or enter the food manually."
+    }
+}
+
+private extension String {
+    var normalizedFoodSearchDeduplicationKey: String {
+        AddFoodSearchQuery.normalize(self)
     }
 }

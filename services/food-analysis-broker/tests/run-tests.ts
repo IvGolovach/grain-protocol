@@ -12,6 +12,7 @@ import {
   FixtureFoodSearchProvider,
   OpenFoodFactsSearchProvider,
   UsdaBrandedFoodSearchProvider,
+  UsdaGenericFoodSearchProvider,
   foodSearchProviderFromEnv
 } from "../src/search.js";
 import { FixtureNutritionProvider, type NutritionProvider } from "../src/usda.js";
@@ -54,6 +55,7 @@ async function main(): Promise<number> {
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing();
   await testUsdaBrandedBarcodeProvider();
   await testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates();
+  await testUsdaGenericFoodSearchProvider();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
   await testFoodSearchProviderFromEnvCanDisableExternalProviders();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
@@ -418,6 +420,45 @@ async function testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates(): Promi
   assert.equal(results[0].primary_label, "SMALL PACK GUM");
   assert.equal(results[0].source_label, "usda_fdc");
   pass("USDA branded barcode provider matches expanded UPC-E canonical candidates");
+}
+
+async function testUsdaGenericFoodSearchProvider(): Promise<void> {
+  const provider = new UsdaGenericFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (url: string | URL, init?: RequestInit) => {
+      assert.equal(String(url), "https://fdc.example.test/fdc/v1/foods/search?api_key=test-fdc-key");
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.query, "ground beef");
+      assert.deepEqual(body.dataType, ["Foundation", "SR Legacy", "Survey (FNDDS)"]);
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 333333,
+            description: "BEEF, GROUND, 90% LEAN MEAT / 10% FAT, COOKED",
+            foodCategory: "Beef Products",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 254 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 25.9 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 0 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 17.2 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ query: "ground beef", limit: 5 });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "Beef, Ground, 90% Lean Meat / 10% Fat, Cooked");
+  assert.equal(results[0].serving.serving_size_g, 100);
+  assert.equal(results[0].source_label, "usda_fdc");
+  assert.equal(results[0].trust_label, "provider_estimate");
+  assert.equal(results[0].provider_evidence[0].source_label, "usda_generic_food");
+  assert.equal(results[0].provider_evidence[0].match_type, "name");
+  pass("USDA generic food provider maps query result to search result");
 }
 
 async function testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault(): Promise<void> {

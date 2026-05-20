@@ -181,6 +181,8 @@ public struct FoodEvidenceSource: Codable, Equatable, Sendable {
             return "Photo estimate"
         case "grain_serving_offer":
             return "Grain serving"
+        case "mealmark_qr":
+            return "MealMark QR"
         case "deterministic_fixture":
             return "Food search match"
         case "curated_fixture":

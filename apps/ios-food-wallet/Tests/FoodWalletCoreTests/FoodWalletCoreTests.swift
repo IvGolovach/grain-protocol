@@ -81,8 +81,17 @@ struct FoodWalletCoreTests {
         await run("ingredientSuggestionsIncludeMilkVariants") {
             try await testIngredientSuggestionsIncludeMilkVariants()
         }
+        await run("ingredientSuggestionsIncludeCommonProteins") {
+            try await testIngredientSuggestionsIncludeCommonProteins()
+        }
+        await run("brokerSearchResultCanBecomeReusableIngredient") {
+            try await testBrokerSearchResultCanBecomeReusableIngredient()
+        }
         await run("buildMealSavesReusableRecipeAndQRCode") {
             try await testBuildMealSavesReusableRecipeAndQRCode()
+        }
+        await run("qrPayloadImportCreatesReviewableDraft") {
+            try await testQRCodePayloadImportCreatesReviewableDraft()
         }
         await run("caseinProteinResolvesAsCuratedPowder") {
             try await testCaseinProteinResolvesAsCuratedPowder()
@@ -648,6 +657,55 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testIngredientSuggestionsIncludeCommonProteins() async throws {
+        let store = FoodWalletStore()
+
+        let beefTitles = store.ingredientSuggestions(for: "beef", limit: 8).map(\.title)
+        try expect(beefTitles.contains("Cooked ground beef"), "expected ground beef suggestion")
+        try expect(beefTitles.contains("Cooked beef steak"), "expected beef steak suggestion")
+
+        let porkTitles = store.ingredientSuggestions(for: "pork", limit: 8).map(\.title)
+        try expect(porkTitles.contains("Cooked pork tenderloin"), "expected pork tenderloin suggestion")
+        try expect(porkTitles.contains("Cooked pork chop"), "expected pork chop suggestion")
+
+        let eggTitles = store.ingredientSuggestions(for: "egg", limit: 8).map(\.title)
+        try expect(eggTitles.first == "Whole egg", "expected whole egg to rank first for egg, got \(eggTitles)")
+        try expect(eggTitles.contains("Egg whites"), "expected egg whites suggestion")
+        try expect(eggTitles.contains("Boiled egg"), "expected boiled egg suggestion")
+
+        let result = store.createIngredientMealDraft(
+            title: "Protein plate",
+            ingredients: [
+                FoodMealIngredientInput(name: "beef", grams: 100),
+                FoodMealIngredientInput(name: "pork", grams: 100),
+                FoodMealIngredientInput(name: "egg whites", grams: 100),
+            ]
+        )
+        try expect(result == .created, "expected common proteins to resolve, got \(result)")
+    }
+
+    @MainActor
+    private static func testBrokerSearchResultCanBecomeReusableIngredient() async throws {
+        let store = FoodWalletStore(searchClient: MockBrokerFoodSearchClient())
+
+        await store.searchBrokerFood(query: "beef")
+        guard let result = store.brokerFoodSearchRows.first else {
+            throw FoodWalletTestFailure("expected broker beef search result")
+        }
+        let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: result.id)
+        try expect(ingredient?.name == "Cooked ground beef", "expected broker result to save as personal ingredient")
+
+        let draftResult = store.createIngredientMealDraft(
+            title: "Beef bowl",
+            ingredients: [
+                FoodMealIngredientInput(name: "Cooked ground beef", grams: 100),
+            ]
+        )
+        try expect(draftResult == .created, "expected saved broker ingredient to resolve, got \(draftResult)")
+        try expect(store.currentDraft?.meal.label == "Beef bowl", "expected reusable broker-backed draft")
+    }
+
+    @MainActor
     private static func testBuildMealSavesReusableRecipeAndQRCode() async throws {
         var publishedLibrary: FoodWalletUserLibraryState?
         let store = FoodWalletStore(
@@ -686,6 +744,7 @@ struct FoodWalletCoreTests {
         let decoded = try decoder.decode(FoodWalletQRPayload.self, from: qrData)
         try expect(FoodWalletQRFactory.verify(decoded), "expected recipe QR payload to verify")
         try expect(decoded.kind == .recipe, "expected recipe QR payload kind")
+        try expect(decoded.issuer?.label == "MealMark self-issued", "expected QR issuer label")
         try expect(!qrText.localizedCaseInsensitiveContains("rawPhoto"), "QR payload must not contain raw photo data")
 
         let updateResult = store.updateSavedRecipe(
@@ -700,6 +759,46 @@ struct FoodWalletCoreTests {
         try expect(store.savedRecipes.first?.title == "Breakfast v2", "expected updated recipe title")
         try expect(store.deleteSavedRecipe(id: recipe.id), "expected saved recipe delete")
         try expect(store.savedRecipes.isEmpty, "expected saved recipe to be removed")
+    }
+
+    @MainActor
+    private static func testQRCodePayloadImportCreatesReviewableDraft() async throws {
+        let sourceStore = FoodWalletStore()
+        let createResult = sourceStore.createIngredientMealDraft(
+            title: "Breakfast QR",
+            ingredients: [
+                FoodMealIngredientInput(name: "eggs", grams: 100),
+                FoodMealIngredientInput(name: "toast", grams: 40),
+            ]
+        )
+        try expect(createResult == .created, "expected source recipe creation")
+        guard let recipe = sourceStore.savedRecipes.first,
+              let qrText = sourceStore.qrPayloadTextForRecipe(id: recipe.id) else {
+            throw FoodWalletTestFailure("expected QR payload")
+        }
+
+        let importStore = FoodWalletStore()
+        let preview = try importStore.previewQRCodePayload(qrText)
+        try expect(preview.title == "Breakfast QR", "expected QR preview title")
+        try expect(preview.signedByLabel == "MealMark self-issued", "expected QR signer label")
+        try expect(preview.ingredients.contains { $0.contains("Whole egg") }, "expected QR ingredient preview")
+
+        try importStore.createQRCodeDraft(payloadText: qrText)
+        try expect(importStore.savedRecipes.count == 1, "expected QR recipe to be saved into library")
+        try expect(importStore.currentDraft?.meal.label == "Breakfast QR", "expected QR draft label")
+        try expect(importStore.currentDraft?.trustStatus == .selfIssued, "expected self-issued QR draft")
+        try expect(importStore.currentCandidate?.evidence.contains { $0.provider == "mealmark_qr" } == true, "expected QR evidence")
+
+        var tampered = qrText.replacingOccurrences(of: "\"title\":\"Breakfast QR\"", with: "\"title\":\"Tampered\"")
+        if tampered == qrText {
+            tampered = qrText.replacingOccurrences(of: "Breakfast QR", with: "Tampered")
+        }
+        do {
+            _ = try importStore.previewQRCodePayload(tampered)
+            throw FoodWalletTestFailure("expected tampered QR to fail")
+        } catch FoodWalletQRImportError.integrityMismatch {
+            // Expected.
+        }
     }
 
     @MainActor

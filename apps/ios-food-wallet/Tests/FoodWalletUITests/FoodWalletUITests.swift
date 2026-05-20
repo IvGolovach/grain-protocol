@@ -211,7 +211,8 @@ final class FoodWalletUITests: XCTestCase {
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.otherElements["AddFoodModeChooser"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["AddFoodModePhotoButton"].exists)
+        XCTAssertTrue(app.buttons["AddFoodPhotoCameraButton"].exists)
+        XCTAssertTrue(app.buttons["AddFoodPhotoLibraryButton"].exists)
         XCTAssertTrue(app.buttons["AddFoodModeBarcodeButton"].exists)
         XCTAssertFalse(app.buttons["AddFoodModeQuickAddButton"].exists)
         XCTAssertTrue(app.buttons["AddFoodModeBuildMealButton"].exists)
@@ -256,7 +257,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
         app.buttons["AddFoodModeBarcodeButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Barcode"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Scan code"].waitForExistence(timeout: 5))
         let barcodeField = app.textFields["BarcodeManualEntryField"]
         XCTAssertTrue(barcodeField.waitForExistence(timeout: 5))
         barcodeField.tap()
@@ -317,7 +318,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 5))
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["SavedRecipe-recipe-breakfast"].waitForExistence(timeout: 5))
+        XCTAssertTrue(scrollToElement(app.buttons["SavedRecipe-recipe-breakfast"]))
         app.buttons["SavedRecipe-recipe-breakfast"].tap()
         XCTAssertTrue(app.staticTexts["SavedMealDetailTitle"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["SavedMealDetailTitle"].label, "Breakfast")
@@ -345,6 +346,29 @@ final class FoodWalletUITests: XCTestCase {
         app.buttons["IngredientSuggestion-0-2-milk"].tap()
 
         XCTAssertEqual(app.textFields["IngredientNameField-0"].value as? String, "2% milk")
+        XCTAssertEqual(app.textFields["IngredientGramsField-0"].value as? String, "100")
+    }
+
+    func testBuildMealIngredientSuggestionsShowCommonProteinVariants() throws {
+        launch(arguments: [])
+
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
+        openBuildMealScreen()
+
+        app.textFields["MealTitleField"].tap()
+        app.textFields["MealTitleField"].typeText("Egg plate")
+        app.textFields["IngredientNameField-0"].tap()
+        app.textFields["IngredientNameField-0"].typeText("egg")
+
+        XCTAssertTrue(app.buttons["IngredientSuggestion-0-whole-egg"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["IngredientSuggestion-0-egg-whites"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["IngredientSuggestion-0-boiled-egg"].waitForExistence(timeout: 5))
+        app.buttons["IngredientSuggestion-0-egg-whites"].tap()
+
+        XCTAssertEqual(app.textFields["IngredientNameField-0"].value as? String, "Egg whites")
         XCTAssertEqual(app.textFields["IngredientGramsField-0"].value as? String, "100")
     }
 

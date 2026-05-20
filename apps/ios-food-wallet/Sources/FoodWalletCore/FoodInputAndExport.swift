@@ -116,12 +116,28 @@ public enum FoodWalletQRPayloadKind: String, Codable, Equatable, Sendable {
     case personalFood = "personal_food"
 }
 
+public struct FoodWalletQRIssuer: Codable, Equatable, Sendable {
+    public var label: String
+    public var keyID: String
+
+    public init(label: String, keyID: String) {
+        self.label = label
+        self.keyID = keyID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case label
+        case keyID = "keyId"
+    }
+}
+
 public struct FoodWalletQRPayload: Codable, Equatable, Sendable {
     public var schema: String
     public var version: Int
     public var kind: FoodWalletQRPayloadKind
     public var title: String
     public var contentSha256: String
+    public var issuer: FoodWalletQRIssuer?
     public var recipe: FoodWalletExportRecipe?
     public var personalFood: FoodWalletExportPersonalFood?
 
@@ -131,8 +147,54 @@ public struct FoodWalletQRPayload: Codable, Equatable, Sendable {
         case kind
         case title
         case contentSha256
+        case issuer
         case recipe
         case personalFood
+    }
+}
+
+public struct FoodWalletQRImportPreview: Equatable, Sendable {
+    public var title: String
+    public var subtitle: String
+    public var nutritionLabel: String
+    public var macronutrientsLabel: String
+    public var signedByLabel: String
+    public var sourceLabel: String
+    public var ingredients: [String]
+
+    public init(
+        title: String,
+        subtitle: String,
+        nutritionLabel: String,
+        macronutrientsLabel: String,
+        signedByLabel: String,
+        sourceLabel: String,
+        ingredients: [String]
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.nutritionLabel = nutritionLabel
+        self.macronutrientsLabel = macronutrientsLabel
+        self.signedByLabel = signedByLabel
+        self.sourceLabel = sourceLabel
+        self.ingredients = ingredients
+    }
+}
+
+public enum FoodWalletQRImportError: Error, Equatable, Sendable, CustomStringConvertible {
+    case invalidPayload
+    case integrityMismatch
+    case unsupportedPayload
+
+    public var description: String {
+        switch self {
+        case .invalidPayload:
+            return "invalidPayload"
+        case .integrityMismatch:
+            return "integrityMismatch"
+        case .unsupportedPayload:
+            return "unsupportedPayload"
+        }
     }
 }
 
@@ -977,6 +1039,9 @@ struct FoodIngredientCatalog {
            let milkPriority = milkSuggestionPriority(entry.id) {
             return 120 + milkPriority
         }
+        if let commonPriority = commonSuggestionPriority(query.normalizedValue, entry.id) {
+            return 115 + commonPriority
+        }
         if entry.aliases.contains(where: { AddFoodSearchQuery.normalize($0) == query.normalizedValue }) {
             return 100
         }
@@ -1007,6 +1072,37 @@ struct FoodIngredientCatalog {
         }
     }
 
+    private static func commonSuggestionPriority(_ query: String, _ id: String) -> Int? {
+        switch query {
+        case "egg", "eggs":
+            switch id {
+            case "egg.whole": return 8
+            case "egg.boiled": return 7
+            case "egg.white": return 6
+            case "egg.scrambled": return 5
+            case "egg.yolk": return 4
+            default: return nil
+            }
+        case "beef":
+            switch id {
+            case "beef.ground.cooked": return 8
+            case "beef.steak.cooked": return 7
+            case "beef.roast.cooked": return 6
+            default: return nil
+            }
+        case "pork":
+            switch id {
+            case "pork.tenderloin.cooked": return 8
+            case "pork.chop.cooked": return 7
+            case "pork.ground.cooked": return 6
+            case "pork.bacon.cooked": return 5
+            default: return nil
+            }
+        default:
+            return nil
+        }
+    }
+
     private static func slug(_ value: String) -> String {
         let slug = value
             .lowercased()
@@ -1019,7 +1115,7 @@ struct FoodIngredientCatalog {
         Entry(
             id: "egg.whole",
             label: "Whole egg",
-            aliases: ["egg", "eggs", "whole egg"],
+            aliases: ["egg", "eggs", "whole egg", "raw egg", "chicken egg"],
             kcalPer100Grams: 143,
             macronutrientsPer100Grams: MealMacronutrients(
                 proteinGrams: 12.6,
@@ -1027,6 +1123,144 @@ struct FoodIngredientCatalog {
                 fatGrams: 9.5,
                 fiberGrams: 0
             )
+        ),
+        Entry(
+            id: "egg.boiled",
+            label: "Boiled egg",
+            aliases: ["egg", "eggs", "boiled egg", "hard boiled egg", "hard-boiled egg"],
+            kcalPer100Grams: 155,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 12.6,
+                carbohydrateGrams: 1.1,
+                fatGrams: 10.6,
+                fiberGrams: 0
+            ),
+            defaultServingGrams: 50,
+            servingLabel: "1 large egg (50 g)"
+        ),
+        Entry(
+            id: "egg.white",
+            label: "Egg whites",
+            aliases: ["egg", "eggs", "egg white", "egg whites", "liquid egg whites"],
+            kcalPer100Grams: 52,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 10.9,
+                carbohydrateGrams: 0.7,
+                fatGrams: 0.2,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "egg.yolk",
+            label: "Egg yolk",
+            aliases: ["egg", "eggs", "egg yolk", "egg yolks"],
+            kcalPer100Grams: 322,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 15.9,
+                carbohydrateGrams: 3.6,
+                fatGrams: 26.5,
+                fiberGrams: 0
+            ),
+            defaultServingGrams: 17,
+            servingLabel: "1 large yolk (17 g)"
+        ),
+        Entry(
+            id: "egg.scrambled",
+            label: "Scrambled eggs",
+            aliases: ["egg", "eggs", "scrambled egg", "scrambled eggs"],
+            kcalPer100Grams: 149,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 9.9,
+                carbohydrateGrams: 1.6,
+                fatGrams: 10.9,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "beef.ground.cooked",
+            label: "Cooked ground beef",
+            aliases: ["beef", "ground beef", "cooked ground beef", "minced beef", "hamburger meat"],
+            kcalPer100Grams: 254,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 25.9,
+                carbohydrateGrams: 0,
+                fatGrams: 17.2,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "beef.steak.cooked",
+            label: "Cooked beef steak",
+            aliases: ["beef", "steak", "beef steak", "cooked steak", "sirloin", "sirloin steak"],
+            kcalPer100Grams: 217,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 26.1,
+                carbohydrateGrams: 0,
+                fatGrams: 11.8,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "beef.roast.cooked",
+            label: "Cooked roast beef",
+            aliases: ["beef", "roast beef", "cooked roast beef"],
+            kcalPer100Grams: 170,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 29.1,
+                carbohydrateGrams: 0,
+                fatGrams: 5.9,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "pork.tenderloin.cooked",
+            label: "Cooked pork tenderloin",
+            aliases: ["pork", "pork tenderloin", "cooked pork", "lean pork"],
+            kcalPer100Grams: 143,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 26.2,
+                carbohydrateGrams: 0,
+                fatGrams: 3.5,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "pork.chop.cooked",
+            label: "Cooked pork chop",
+            aliases: ["pork", "pork chop", "cooked pork chop", "pork loin chop"],
+            kcalPer100Grams: 231,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 25.7,
+                carbohydrateGrams: 0,
+                fatGrams: 13.9,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "pork.ground.cooked",
+            label: "Cooked ground pork",
+            aliases: ["pork", "ground pork", "minced pork", "cooked ground pork"],
+            kcalPer100Grams: 297,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 25.7,
+                carbohydrateGrams: 0,
+                fatGrams: 20.8,
+                fiberGrams: 0
+            )
+        ),
+        Entry(
+            id: "pork.bacon.cooked",
+            label: "Cooked bacon",
+            aliases: ["pork", "bacon", "cooked bacon"],
+            kcalPer100Grams: 541,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 37,
+                carbohydrateGrams: 1.4,
+                fatGrams: 42,
+                fiberGrams: 0
+            ),
+            defaultServingGrams: 16,
+            servingLabel: "2 slices (16 g)"
         ),
         Entry(
             id: "bread.toast",
@@ -2016,6 +2250,7 @@ public enum FoodWalletQRFactory {
             kind: .recipe,
             title: recipe.title,
             contentSha256: "",
+            issuer: Self.defaultIssuer,
             recipe: FoodWalletExportRecipe(recipe: recipe),
             personalFood: nil
         )
@@ -2030,6 +2265,7 @@ public enum FoodWalletQRFactory {
             kind: .personalFood,
             title: personalFood.name,
             contentSha256: "",
+            issuer: Self.defaultIssuer,
             recipe: nil,
             personalFood: FoodWalletExportPersonalFood(ingredient: personalFood)
         )
@@ -2039,6 +2275,24 @@ public enum FoodWalletQRFactory {
 
     public static func payloadText(_ payload: FoodWalletQRPayload) throws -> String {
         String(decoding: try jsonData(payload), as: UTF8.self)
+    }
+
+    public static func payload(from text: String) throws -> FoodWalletQRPayload {
+        guard let data = text.data(using: .utf8) else {
+            throw FoodWalletQRImportError.invalidPayload
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        guard let payload = try? decoder.decode(FoodWalletQRPayload.self, from: data) else {
+            throw FoodWalletQRImportError.invalidPayload
+        }
+        guard payload.schema == "grain.food-wallet.qr.v1", payload.version == 1 else {
+            throw FoodWalletQRImportError.unsupportedPayload
+        }
+        guard verify(payload) else {
+            throw FoodWalletQRImportError.integrityMismatch
+        }
+        return payload
     }
 
     public static func verify(_ payload: FoodWalletQRPayload) -> Bool {
@@ -2068,10 +2322,14 @@ public enum FoodWalletQRFactory {
         return sha256Hex(try jsonData(unsigned))
     }
 
+    private static var defaultIssuer: FoodWalletQRIssuer {
+        FoodWalletQRIssuer(label: "MealMark self-issued", keyID: "mealmark.local")
+    }
+
     private static func jsonData(_ payload: FoodWalletQRPayload) throws -> Data {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.sortedKeys]
         return try encoder.encode(payload)
     }
 
@@ -2286,12 +2544,51 @@ private extension FoodWalletExportRecipe {
     }
 }
 
+extension SavedFoodRecipe {
+    init(exportRecipe: FoodWalletExportRecipe) {
+        let details = exportRecipe.ingredientDetails ?? exportRecipe.ingredients.enumerated().map { index, label in
+            FoodWalletExportRecipeIngredient(
+                id: "qr-ingredient-\(index)",
+                label: label,
+                grams: 0,
+                kcal: 0
+            )
+        }
+        let macros = MealMacronutrients(
+            proteinGrams: exportRecipe.proteinGrams ?? 0,
+            carbohydrateGrams: exportRecipe.carbohydrateGrams ?? 0,
+            fatGrams: exportRecipe.fatGrams ?? 0,
+            fiberGrams: exportRecipe.fiberGrams
+        )
+        self.init(
+            id: exportRecipe.id,
+            title: exportRecipe.title,
+            subtitle: exportRecipe.subtitle ?? details.prefix(3).map(\.label).joined(separator: ", "),
+            totalGrams: exportRecipe.totalGrams,
+            totalKcal: exportRecipe.totalKcal,
+            macronutrients: macros,
+            ingredients: details.map(SavedFoodRecipeIngredient.init(exportIngredient:))
+        )
+    }
+}
+
 private extension FoodWalletExportRecipeIngredient {
     init(ingredient: SavedFoodRecipeIngredient) {
         id = ingredient.id
         label = ingredient.label
         grams = ingredient.grams
         kcal = ingredient.kcal
+    }
+}
+
+extension SavedFoodRecipeIngredient {
+    init(exportIngredient: FoodWalletExportRecipeIngredient) {
+        self.init(
+            id: exportIngredient.id,
+            label: exportIngredient.label,
+            grams: exportIngredient.grams,
+            kcal: exportIngredient.kcal
+        )
     }
 }
 
@@ -2308,5 +2605,23 @@ private extension FoodWalletExportPersonalFood {
         fiberGramsPer100 = ingredient.macronutrientsPer100Grams.fiberGrams
         evidenceProvider = "food_wallet_personal_ingredient"
         servingBasis = "user_entered_nutrition_label"
+    }
+}
+
+extension PersonalFoodIngredient {
+    init(exportPersonalFood: FoodWalletExportPersonalFood) {
+        self.init(
+            id: exportPersonalFood.id,
+            name: exportPersonalFood.name,
+            sourceServingGrams: exportPersonalFood.sourceServingGrams,
+            sourceServingKcal: exportPersonalFood.sourceServingKcal,
+            kcalPer100Grams: exportPersonalFood.kcalPer100Grams,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: exportPersonalFood.proteinGramsPer100,
+                carbohydrateGrams: exportPersonalFood.carbohydrateGramsPer100,
+                fatGrams: exportPersonalFood.fatGramsPer100,
+                fiberGrams: exportPersonalFood.fiberGramsPer100
+            )
+        )
     }
 }
