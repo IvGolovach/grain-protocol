@@ -44,6 +44,7 @@ private enum FoodWalletAppConfiguration {
     private static let deviceSmokeArgument = "--grain-device-smoke"
     private static let uiTestPhotoFlowArgument = "--grain-ui-test-photo-flow"
     private static let uiTestDelayedPhotoFlowArgument = "--grain-ui-test-delayed-photo-flow"
+    private static let uiTestNoFoodPhotoFlowArgument = "--grain-ui-test-no-food-photo-flow"
     private static let uiTestFailingPhotoFlowArgument = "--grain-ui-test-failing-photo-flow"
     private static let uiTestResetFoodWalletStorageArgument = "--grain-ui-test-reset-food-wallet-storage"
     private static let uiTestResetPersonalIngredientsArgument = "--grain-ui-test-reset-personal-ingredients"
@@ -75,6 +76,9 @@ private enum FoodWalletAppConfiguration {
     private static func makeAnalysisClient() -> any FoodAnalysisClient {
         if ProcessInfo.processInfo.arguments.contains(uiTestDelayedPhotoFlowArgument) {
             return DelayedFoodAnalysisClient(delayNanoseconds: uiTestDelayNanoseconds())
+        }
+        if ProcessInfo.processInfo.arguments.contains(uiTestNoFoodPhotoFlowArgument) {
+            return NoFoodFoodAnalysisClient()
         }
         if ProcessInfo.processInfo.arguments.contains(uiTestFailingPhotoFlowArgument) {
             return UnavailableFoodAnalysisClient()
@@ -275,6 +279,28 @@ private struct UnavailableFoodAnalysisClient: FoodAnalysisClient {
 
     func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
         throw FoodWalletAppConfigurationError.analysisUnavailable
+    }
+}
+
+private struct NoFoodFoodAnalysisClient: FoodAnalysisClient {
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        throw noFoodError()
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        throw noFoodError()
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        throw noFoodError()
+    }
+
+    private func noFoodError() -> FoodAnalysisBrokerClientError {
+        .brokerError(
+            code: "NO_FOOD_DETECTED",
+            message: "The image shows a desk setup with a monitor, cables, docking station, and chair; no food, drink, or readable nutrition label is visible.",
+            status: 422
+        )
     }
 }
 

@@ -122,6 +122,26 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Fuji apple")
     }
 
+    func testNoFoodPhotoShowsRecoveryActionsAndManualEntry() throws {
+        launch(arguments: ["--grain-ui-test-no-food-photo-flow"])
+
+        XCTAssertTrue(app.staticTexts["MealMark"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["NoFoodTitle"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["NoFoodMessage"].label.localizedCaseInsensitiveContains("no food"))
+        XCTAssertFalse(app.staticTexts["DraftPrimaryLabel"].exists)
+        XCTAssertFalse(app.buttons["SaveToFoodWalletButton"].exists)
+        XCTAssertTrue(app.buttons["RetryNoFoodPhotoButton"].exists)
+        XCTAssertTrue(app.buttons["EnterFoodManuallyButton"].exists)
+        XCTAssertTrue(app.buttons["DismissNoFoodButton"].exists)
+
+        app.buttons["EnterFoodManuallyButton"].tap()
+        XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["QuickTextField"].waitForExistence(timeout: 5))
+    }
+
     func testAddFoodHubCreatesQuickTextDraftAndAdjustsPortion() throws {
         launch(arguments: [])
 

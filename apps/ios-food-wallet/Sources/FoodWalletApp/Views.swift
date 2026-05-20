@@ -59,6 +59,7 @@ struct FoodWalletRootView: View {
         let arguments = ProcessInfo.processInfo.arguments
         return arguments.contains("--grain-ui-test-photo-flow") ||
             arguments.contains("--grain-ui-test-delayed-photo-flow") ||
+            arguments.contains("--grain-ui-test-no-food-photo-flow") ||
             arguments.contains("--grain-ui-test-failing-photo-flow")
     }
 
@@ -77,11 +78,13 @@ struct FoodWalletRootView: View {
     var body: some View {
         ZStack {
             tabContent
+                .accessibilityHidden(store.analysisState.isAnalyzing)
 
             if store.analysisState.isAnalyzing {
                 AnalysisProgressOverlay(state: store.analysisState) {
                     store.cancelAnalysis()
                 }
+                .accessibilityAddTraits(.isModal)
                 .transition(.opacity)
                 .zIndex(1)
             }
@@ -150,7 +153,7 @@ struct FoodWalletRootView: View {
             NavigationStack {
                 CaptureView(
                     onCapturePhoto: startPhotoCaptureFlow,
-                    onEnterManually: openAddFoodHub
+                    onEnterManually: openManualAddFoodHub
                 )
             }
             .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
@@ -187,6 +190,12 @@ struct FoodWalletRootView: View {
             return
         }
 
+        isShowingAddFoodHub = true
+    }
+
+    private func openManualAddFoodHub() {
+        selectedTab = .capture
+        addFoodHubDetent = .medium
         isShowingAddFoodHub = true
     }
 
@@ -1658,47 +1667,69 @@ private struct AnalysisNoFoodCard: View {
     var onDismiss: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("No food recognized", systemImage: "viewfinder.circle")
-                .font(.headline)
-                .foregroundStyle(.orange)
-                .accessibilityIdentifier("NoFoodTitle")
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "viewfinder.circle")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .frame(width: 46, height: 46)
+                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .accessibilityHidden(true)
 
-            Text(message.isEmpty ? "MealMark did not find visible food or a readable nutrition label in this photo." : message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("NoFoodMessage")
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("No food recognized")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .accessibilityIdentifier("NoFoodTitle")
 
-            Text("Nothing was saved. Take another photo, or add the food manually.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 10) {
-                Button(role: .cancel, action: onDismiss) {
-                    Label("Dismiss", systemImage: "xmark")
+                    Text(message.isEmpty ? "MealMark did not find visible food or a readable nutrition label in this photo." : message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("NoFoodMessage")
                 }
-                .buttonStyle(.bordered)
-                .accessibilityIdentifier("DismissNoFoodButton")
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
 
-                Spacer(minLength: 0)
+            Text("Nothing was saved.")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.secondary)
+
+            VStack(spacing: 10) {
+                Button(action: onRetry) {
+                    Label("Retake photo", systemImage: "camera.fill")
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(.green)
+                .accessibilityIdentifier("RetryNoFoodPhotoButton")
 
                 Button(action: onEnterManually) {
                     Label("Enter manually", systemImage: "text.badge.plus")
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.large)
                 .accessibilityIdentifier("EnterFoodManuallyButton")
 
-                Button(action: onRetry) {
-                    Label("Retake", systemImage: "camera.fill")
+                Button(role: .cancel, action: onDismiss) {
+                    Label("Dismiss", systemImage: "xmark")
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .accessibilityIdentifier("RetryNoFoodPhotoButton")
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("DismissNoFoodButton")
             }
         }
-        .padding(.vertical, 8)
-        .accessibilityIdentifier("NoFoodAnalysisCard")
+        .padding(18)
+        .mealMarkGlassSurface(cornerRadius: 28, tint: Color.orange.opacity(0.045), isInteractive: false)
     }
 }
 
@@ -1726,40 +1757,29 @@ private struct DraftReviewView: View {
     var body: some View {
         if let candidate = store.currentCandidate {
             let trustStatus = store.currentDraft?.trustStatus ?? .estimated
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .top, spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(candidate.primaryLabel)
-                            .font(.title2.bold())
-                            .lineLimit(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityIdentifier("DraftPrimaryLabel")
-                        Text("\(candidate.portion.label) • \(candidate.nutrition.label)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("DraftNutritionLabel")
-                        Text(candidate.macronutrients.shortLabel)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("DraftMacronutrientsLabel")
+            VStack(alignment: .leading, spacing: 16) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 14) {
+                        draftTitle(candidate: candidate)
+                            .layoutPriority(1)
+                        SourceBadge(
+                            text: candidate.reviewBadgeText(trustStatus: trustStatus),
+                            tint: trustStatus.reviewTint
+                        )
                     }
-                    Spacer()
-                    SourceBadge(
-                        text: candidate.reviewBadgeText(trustStatus: trustStatus),
-                        tint: trustStatus.reviewTint
-                    )
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        SourceBadge(
+                            text: candidate.reviewBadgeText(trustStatus: trustStatus),
+                            tint: trustStatus.reviewTint
+                        )
+                        draftTitle(candidate: candidate)
+                    }
                 }
 
-                HStack(spacing: 10) {
-                    NutritionMetricView(title: "Calories", value: "\(candidate.nutrition.modeKcal)", unit: "kcal")
-                    NutritionMetricView(title: "Protein", value: macroValue(candidate.macronutrients.proteinGrams), unit: "g")
-                    NutritionMetricView(title: "Carbs", value: macroValue(candidate.macronutrients.carbohydrateGrams), unit: "g")
-                    NutritionMetricView(title: "Fat", value: macroValue(candidate.macronutrients.fatGrams), unit: "g")
-                }
+                NutritionOverviewView(candidate: candidate, tint: trustStatus.reviewTint)
 
-                Label(candidate.confidence.label, systemImage: "gauge.with.dots.needle.50percent")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(trustStatus.reviewTint)
+                DraftExplanationSection(candidate: candidate, trustStatus: trustStatus)
 
                 PortionControlsView(
                     candidate: candidate,
@@ -1775,11 +1795,9 @@ private struct DraftReviewView: View {
                         store.confirmDraft()
                     }
                 )
-
-                DraftExplanationSection(candidate: candidate, trustStatus: trustStatus)
             }
             .padding(18)
-            .mealMarkGlassSurface(cornerRadius: 28, tint: trustStatus.reviewTint.opacity(0.055), isInteractive: false)
+            .mealMarkGlassSurface(cornerRadius: 30, tint: Color.secondary.opacity(0.035), isInteractive: false)
             .onAppear {
                 resetPortionText(with: candidate)
             }
@@ -1811,8 +1829,62 @@ private struct DraftReviewView: View {
         portionGramsText = "\(candidate.portion.gramsMode)"
     }
 
+    private func draftTitle(candidate: FoodAnalysisCandidate) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(candidate.primaryLabel)
+                .font(.title2.weight(.bold))
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("DraftPrimaryLabel")
+            Text("\(candidate.portion.label) • \(candidate.nutrition.label)")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("DraftNutritionLabel")
+            Text(candidate.macronutrients.shortLabel)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .accessibilityIdentifier("DraftMacronutrientsLabel")
+        }
+    }
+
     private static func digitsOnly(_ text: String) -> String {
         String(text.filter(\.isNumber))
+    }
+}
+
+private struct NutritionOverviewView: View {
+    var candidate: FoodAnalysisCandidate
+    var tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\(candidate.nutrition.modeKcal)")
+                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+                Text("kcal")
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Label(candidate.confidence.label, systemImage: "gauge.with.dots.needle.50percent")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 7)
+                    .background(tint.opacity(0.11), in: Capsule())
+            }
+
+            HStack(spacing: 8) {
+                NutritionMetricView(title: "Protein", value: macroValue(candidate.macronutrients.proteinGrams), unit: "g")
+                NutritionMetricView(title: "Carbs", value: macroValue(candidate.macronutrients.carbohydrateGrams), unit: "g")
+                NutritionMetricView(title: "Fat", value: macroValue(candidate.macronutrients.fatGrams), unit: "g")
+            }
+        }
+        .padding(14)
+        .mealMarkGlassSurface(cornerRadius: 22, tint: Color.secondary.opacity(0.055), isInteractive: false)
     }
 
     private func macroValue(_ value: Double) -> String {
@@ -1830,23 +1902,20 @@ private struct NutritionMetricView: View {
     var unit: String
 
     var body: some View {
-        VStack(spacing: 3) {
+        VStack(spacing: 2) {
             Text(value)
                 .font(.system(.headline, design: .rounded).weight(.bold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
-            Text(unit)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text(title)
-                .font(.caption2)
+            Text("\(unit) \(title)")
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.72)
+                .minimumScaleFactor(0.68)
         }
-        .frame(maxWidth: .infinity, minHeight: 76)
-        .padding(.horizontal, 6)
-        .mealMarkGlassSurface(cornerRadius: 18, tint: Color.secondary.opacity(0.055), isInteractive: false)
+        .frame(maxWidth: .infinity, minHeight: 54)
+        .padding(.horizontal, 8)
+        .background(Color.secondary.opacity(0.055), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
     }
 }
 
@@ -1855,36 +1924,41 @@ private struct DraftExplanationSection: View {
     var trustStatus: FoodTrustStatus
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("How MealMark read it", systemImage: "sparkle.magnifyingglass")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "sparkle.magnifyingglass")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.blue)
+                    .frame(width: 30, height: 30)
+                    .background(Color.blue.opacity(0.1), in: Circle())
+                    .accessibilityHidden(true)
 
-            Text(summary)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("DraftRecognitionSummary")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("How MealMark read it")
+                        .font(.subheadline.weight(.semibold))
+                    Text(summary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("DraftRecognitionSummary")
+                }
+            }
 
-            ForEach(Array(candidate.evidence.enumerated()), id: \.offset) { _, evidence in
+            if let evidence = candidate.evidence.first {
                 EvidenceSourceRow(evidence: evidence)
             }
 
-            if !candidate.assumptions.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Assumptions")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    ForEach(candidate.assumptions) { assumption in
-                        Label(assumption.label, systemImage: "checkmark.circle")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("DraftAssumption-\(assumption.id)")
-                    }
-                }
+            if let assumption = candidate.assumptions.first {
+                Label(assumption.label, systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                    .accessibilityIdentifier("DraftAssumption-\(assumption.id)")
             }
         }
-        .padding(12)
-        .mealMarkGlassSurface(cornerRadius: 18, tint: Color.blue.opacity(0.055), isInteractive: false)
+        .padding(13)
+        .mealMarkGlassSurface(cornerRadius: 20, tint: Color.blue.opacity(0.04), isInteractive: false)
         .accessibilityIdentifier("DraftExplanationSection")
     }
 
@@ -1892,11 +1966,11 @@ private struct DraftExplanationSection: View {
         let source = candidate.primarySourceLabel(trustStatus: trustStatus)
         switch candidate.confidence {
         case .high:
-            return "\(source). The photo or lookup produced a specific match, but you still confirm the portion before saving."
+            return "\(source). Review grams before saving."
         case .medium:
-            return "\(source). MealMark found a plausible match and needs your portion review."
+            return "\(source). Plausible match; review grams."
         case .low:
-            return "\(source). This is a rough estimate; verify the food and grams before saving."
+            return "\(source). Rough estimate; verify food and grams."
         }
     }
 }
@@ -1950,21 +2024,27 @@ private struct DraftActionBar: View {
     var onSave: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button(role: .destructive, action: onDiscard) {
                 Label("Discard", systemImage: "trash")
-                    .frame(maxWidth: .infinity)
+                    .frame(minWidth: 104, minHeight: 48)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .buttonStyle(.bordered)
             .tint(.red)
+            .controlSize(.large)
             .accessibilityIdentifier("DiscardDraftButton")
 
             Button(action: onSave) {
                 Label("Save", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             .buttonStyle(.borderedProminent)
             .tint(.green)
+            .controlSize(.large)
             .disabled(!canSave)
             .accessibilityIdentifier("SaveToFoodWalletButton")
         }
@@ -1979,11 +2059,17 @@ private struct PortionControlsView: View {
     var onCommit: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Portion")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Portion")
+                    .font(.headline)
+                Spacer()
+                Text("grams eaten")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
 
-            HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 9) {
                 portionButton(
                     symbol: "minus",
                     label: "Decrease portion",
@@ -2031,20 +2117,23 @@ private struct PortionControlsView: View {
                 ) {
                     update(to: candidate.portion.gramsMode + 25)
                 }
-            }
 
-            Button {
-                onCommit()
-            } label: {
-                Label("Apply grams", systemImage: "checkmark")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 44)
+                Button {
+                    onCommit()
+                } label: {
+                    Text("Apply")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(minWidth: 62, minHeight: 50)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .accessibilityIdentifier("ApplyPortionGramsButton")
             }
-            .buttonStyle(.bordered)
-            .accessibilityIdentifier("ApplyPortionGramsButton")
         }
-        .padding(14)
-        .mealMarkGlassSurface(cornerRadius: 22, tint: Color.secondary.opacity(0.055), isInteractive: false)
+        .padding(13)
+        .mealMarkGlassSurface(cornerRadius: 22, tint: Color.secondary.opacity(0.045), isInteractive: false)
         .onChange(of: isGramsFieldFocused) { isFocused in
             if isFocused && gramsText == "\(candidate.portion.gramsMode)" {
                 gramsText = ""
@@ -2076,8 +2165,8 @@ private struct PortionControlsView: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.title3.weight(.bold))
-                .frame(width: 52, height: 52)
-                .mealMarkGlassSurface(cornerRadius: 18, tint: Color.green.opacity(0.12), isInteractive: true)
+                .frame(width: 50, height: 50)
+                .mealMarkGlassSurface(cornerRadius: 17, tint: Color.green.opacity(0.1), isInteractive: true)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
