@@ -25,6 +25,8 @@ export type FoodAnalyzePhotoRequest = {
 };
 
 export type FoodObservation = {
+  recognition_status: "food_detected" | "no_food" | "uncertain";
+  non_food_reason: string | null;
   items: Array<{
     label: string;
     confidence: number;
@@ -207,9 +209,11 @@ export type ErrorCode =
   | "BAD_JSON"
   | "BAD_REQUEST"
   | "METHOD_NOT_ALLOWED"
+  | "NO_FOOD_DETECTED"
   | "NOT_FOUND"
   | "PAYLOAD_TOO_LARGE"
   | "UPSTREAM_ERROR"
+  | "UPSTREAM_TIMEOUT"
   | "INTERNAL_ERROR";
 
 export type ErrorShape = {

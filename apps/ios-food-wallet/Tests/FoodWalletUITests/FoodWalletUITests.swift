@@ -80,6 +80,13 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["MealRowNutrition-Fuji apple"].label, "170 g • 102 kcal")
         XCTAssertTrue(app.staticTexts["MealRowMacros-Fuji apple"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["MealRowMacros-Fuji apple"].label, "P 0.5g • C 27g • F 0.3g")
+        app.staticTexts["MealRowLabel-Fuji apple"].tap()
+        XCTAssertTrue(app.navigationBars["Meal details"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["MealDetailTitle"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["MealDetailTitle"].label, "Fuji apple")
+        XCTAssertTrue(app.staticTexts["MealDetailNutrition"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["MealDetailNutrition"].label, "170 g • 102 kcal")
+        XCTAssertTrue(scrollToElement(app.descendants(matching: .any)["MealDetailEvidence-curated_cache"]))
 
         app.tabBars.buttons["Wallet"].tap()
         XCTAssertTrue(app.navigationBars["Wallet"].waitForExistence(timeout: 5))

@@ -28,6 +28,8 @@ export const FOOD_OBSERVATION_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: [
+    "recognition_status",
+    "non_food_reason",
     "items",
     "total_kcal",
     "kcal_variance",
@@ -39,6 +41,13 @@ export const FOOD_OBSERVATION_SCHEMA = {
     "rationale"
   ],
   properties: {
+    recognition_status: {
+      type: "string",
+      enum: ["food_detected", "no_food", "uncertain"]
+    },
+    non_food_reason: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }]
+    },
     items: {
       type: "array",
       maxItems: 8,

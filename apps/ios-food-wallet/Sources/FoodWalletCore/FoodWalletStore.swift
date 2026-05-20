@@ -38,6 +38,8 @@ public enum FoodAnalysisFailureCode: Equatable, Sendable {
     case invalidPayload
     case invalidResponse
     case httpStatus(Int)
+    case noFoodDetected
+    case timeout
     case unsafeCandidate
     case network
     case unknown
@@ -92,6 +94,8 @@ public enum FoodAnalysisState: Equatable, Sendable {
             return "Looking for food"
         case .slow:
             return "Still analyzing photo"
+        case let .failed(failure) where failure.code == .noFoodDetected:
+            return "No food found"
         case .failed:
             return "Couldn’t analyze photo"
         case .draftReady:
@@ -138,12 +142,15 @@ public final class FoodWalletStore: ObservableObject {
     private let analysisClient: any FoodAnalysisClient
     private let searchClient: (any BrokerFoodSearchClient)?
     private let slowAnalysisThresholdNanoseconds: UInt64
+    private let analysisTimeoutNanoseconds: UInt64
     private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
     private let entriesDidChange: @MainActor ([FoodIntakeEntry]) -> Void
     private let entriesReload: (@MainActor () -> [FoodIntakeEntry])?
     private var slowAnalysisTask: Task<Void, Never>?
+    private var analysisTimeoutTask: Task<Void, Never>?
     private var wallet: GrainFoodWallet
     private var brokerFoodSearchResults: [String: BrokerFoodSearchResult] = [:]
+    private var entryProvenanceByEntryID: [String: MealMarkProvenanceSnapshot] = [:]
 
     public init(
         analysisClient: any FoodAnalysisClient = MockFoodAnalysisClient(),
@@ -158,11 +165,13 @@ public final class FoodWalletStore: ObservableObject {
         onEntriesChange: @escaping @MainActor ([FoodIntakeEntry]) -> Void = { _ in },
         onPersonalIngredientsChange: @escaping @MainActor ([PersonalFoodIngredient]) -> Void = { _ in },
         onEntriesReload: (@MainActor () -> [FoodIntakeEntry])? = nil,
-        slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000
+        slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000,
+        analysisTimeoutNanoseconds: UInt64 = 30_000_000_000
     ) {
         self.analysisClient = analysisClient
         self.searchClient = searchClient
         self.slowAnalysisThresholdNanoseconds = slowAnalysisThresholdNanoseconds
+        self.analysisTimeoutNanoseconds = analysisTimeoutNanoseconds
         self.personalIngredientsDidChange = onPersonalIngredientsChange
         self.entriesDidChange = onEntriesChange
         self.entriesReload = onEntriesReload
@@ -212,6 +221,14 @@ public final class FoodWalletStore: ObservableObject {
 
     public var canDiscardDraft: Bool {
         hasDraft || analysisState.isFailed || analysisState == .blockedPrivacy
+    }
+
+    public func entry(entryID: String) -> FoodIntakeEntry? {
+        entries.first { $0.entryID == entryID }
+    }
+
+    public func provenanceSnapshot(entryID: String) -> MealMarkProvenanceSnapshot? {
+        entryProvenanceByEntryID[entryID]
     }
 
     public func grantAIConsent() {
@@ -274,8 +291,7 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func cancelAnalysis() {
-        slowAnalysisTask?.cancel()
-        slowAnalysisTask = nil
+        cancelAnalysisTimers()
         currentCandidate = nil
         currentDraft = nil
         analysisState = .idle
@@ -458,6 +474,7 @@ public final class FoodWalletStore: ObservableObject {
             return false
         }
         entries.remove(at: index)
+        entryProvenanceByEntryID[entryID] = nil
         publishEntryMutation()
         return true
     }
@@ -718,8 +735,12 @@ public final class FoodWalletStore: ObservableObject {
         guard let draft = currentDraft else {
             return
         }
+        let candidate = currentCandidate
         let entry = wallet.confirmDraft(draft)
         entries.insert(entry, at: 0)
+        if let candidate {
+            entryProvenanceByEntryID[entry.entryID] = MealMarkProvenanceSnapshot(candidate: candidate, entry: entry)
+        }
         safeSummary = wallet.exportSafeSummary()
         entriesDidChange(entries)
         currentCandidate = nil
@@ -734,10 +755,10 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func resetLocalData() {
-        slowAnalysisTask?.cancel()
-        slowAnalysisTask = nil
+        cancelAnalysisTimers()
         wallet = GrainFoodWallet()
         entries = []
+        entryProvenanceByEntryID = [:]
         currentCandidate = nil
         currentDraft = nil
         analysisState = .idle
@@ -806,8 +827,7 @@ public final class FoodWalletStore: ObservableObject {
 
     private func preparePrivacyForAnalysis() -> Bool {
         if privacy == .denied {
-            slowAnalysisTask?.cancel()
-            slowAnalysisTask = nil
+            cancelAnalysisTimers()
             currentCandidate = nil
             currentDraft = nil
             analysisState = .blockedPrivacy
@@ -820,13 +840,14 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     private func beginAnalysis(source: FoodAnalysisSource) -> FoodAnalysisOperation {
-        slowAnalysisTask?.cancel()
+        cancelAnalysisTimers()
         currentCandidate = nil
         currentDraft = nil
 
         let operation = FoodAnalysisOperation(source: source)
         analysisState = .analyzing(operation)
         scheduleSlowState(for: operation)
+        scheduleTimeoutState(for: operation)
         return operation
     }
 
@@ -847,12 +868,41 @@ public final class FoodWalletStore: ObservableObject {
         }
     }
 
+    private func scheduleTimeoutState(for operation: FoodAnalysisOperation) {
+        let threshold = analysisTimeoutNanoseconds
+        analysisTimeoutTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: threshold)
+            } catch {
+                return
+            }
+            await MainActor.run {
+                guard let self, self.isCurrent(operation: operation) else {
+                    return
+                }
+                self.cancelAnalysisTimers()
+                self.currentCandidate = nil
+                self.currentDraft = nil
+                self.analysisState = .failed(FoodAnalysisFailure(
+                    code: .timeout,
+                    message: "Analysis took too long. Check your connection, try another photo, or enter the meal manually."
+                ))
+            }
+        }
+    }
+
+    private func cancelAnalysisTimers() {
+        slowAnalysisTask?.cancel()
+        slowAnalysisTask = nil
+        analysisTimeoutTask?.cancel()
+        analysisTimeoutTask = nil
+    }
+
     private func apply(candidate: FoodAnalysisCandidate, for operation: FoodAnalysisOperation) {
         guard isCurrent(operation: operation) else {
             return
         }
-        slowAnalysisTask?.cancel()
-        slowAnalysisTask = nil
+        cancelAnalysisTimers()
         presentDraft(candidate: candidate, sourceClass: .estimated, trustStatus: .estimated)
     }
 
@@ -860,14 +910,10 @@ public final class FoodWalletStore: ObservableObject {
         guard isCurrent(operation: operation) else {
             return
         }
-        slowAnalysisTask?.cancel()
-        slowAnalysisTask = nil
+        cancelAnalysisTimers()
         currentCandidate = nil
         currentDraft = nil
-        analysisState = .failed(FoodAnalysisFailure(
-            code: FoodWalletStore.failureCode(for: error),
-            message: "The analysis service did not return a usable food estimate. Try another photo or enter this meal manually."
-        ))
+        analysisState = .failed(FoodWalletStore.analysisFailure(for: error))
     }
 
     private func isCurrent(operation: FoodAnalysisOperation) -> Bool {
@@ -884,8 +930,7 @@ public final class FoodWalletStore: ObservableObject {
         sourceClass: FoodSourceClass,
         trustStatus: FoodTrustStatus
     ) {
-        slowAnalysisTask?.cancel()
-        slowAnalysisTask = nil
+        cancelAnalysisTimers()
         currentCandidate = candidate
         currentDraft = makeDraft(
             meal: candidate.mealEstimate(),
@@ -896,6 +941,8 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     private func publishEntryMutation() {
+        let entryIDs = Set(entries.map(\.entryID))
+        entryProvenanceByEntryID = entryProvenanceByEntryID.filter { entryIDs.contains($0.key) }
         wallet.replaceEntries(entries)
         safeSummary = wallet.exportSafeSummary()
         entriesDidChange(entries)
@@ -991,20 +1038,74 @@ public final class FoodWalletStore: ObservableObject {
         )
     }
 
-    private static func failureCode(for error: Error) -> FoodAnalysisFailureCode {
+    private static func analysisFailure(for error: Error) -> FoodAnalysisFailure {
         guard let brokerError = error as? FoodAnalysisBrokerClientError else {
-            return .unknown
+            if let urlError = error as? URLError, urlError.code == .timedOut {
+                return FoodAnalysisFailure(
+                    code: .timeout,
+                    message: "Analysis took too long. Check your connection, try another photo, or enter the meal manually."
+                )
+            }
+            if error is URLError {
+                return FoodAnalysisFailure(
+                    code: .network,
+                    message: "MealMark could not reach the analysis service. Check your connection, then try again."
+                )
+            }
+            return FoodAnalysisFailure(
+                code: .unknown,
+                message: "The analysis service did not return a usable food estimate. Try another photo or enter this meal manually."
+            )
         }
 
         switch brokerError {
         case .invalidPayload:
-            return .invalidPayload
+            return FoodAnalysisFailure(
+                code: .invalidPayload,
+                message: "MealMark could not send this photo. Try another photo or enter the meal manually."
+            )
         case .invalidResponse:
-            return .invalidResponse
+            return FoodAnalysisFailure(
+                code: .invalidResponse,
+                message: "The analysis service returned data MealMark could not read. Try again."
+            )
         case let .httpStatus(status):
-            return .httpStatus(status)
+            return FoodAnalysisFailure(
+                code: .httpStatus(status),
+                message: "The analysis service returned HTTP \(status). Try again or enter the meal manually."
+            )
+        case let .brokerError(code, message, status):
+            if code == "NO_FOOD_DETECTED" {
+                return FoodAnalysisFailure(
+                    code: .noFoodDetected,
+                    message: message
+                )
+            }
+            if code == "UPSTREAM_TIMEOUT" {
+                return FoodAnalysisFailure(
+                    code: .timeout,
+                    message: "Analysis took too long. Check your connection, try another photo, or enter the meal manually."
+                )
+            }
+            return FoodAnalysisFailure(
+                code: .httpStatus(status),
+                message: message.isEmpty ? "The analysis service returned \(code). Try again." : message
+            )
+        case .requestTimedOut:
+            return FoodAnalysisFailure(
+                code: .timeout,
+                message: "Analysis took too long. Check your connection, try another photo, or enter the meal manually."
+            )
+        case .networkUnavailable:
+            return FoodAnalysisFailure(
+                code: .network,
+                message: "MealMark could not reach the analysis service. Check your connection, then try again."
+            )
         case .unsafeCandidate:
-            return .unsafeCandidate
+            return FoodAnalysisFailure(
+                code: .unsafeCandidate,
+                message: "The analysis service returned an unsafe food estimate. Try another photo or enter the meal manually."
+            )
         }
     }
 
@@ -1029,6 +1130,15 @@ public final class FoodWalletStore: ObservableObject {
             switch brokerError {
             case let .httpStatus(status):
                 return "Food lookup service returned HTTP \(status). Try again."
+            case let .brokerError(code, message, status):
+                if code == "UPSTREAM_TIMEOUT" {
+                    return "Food lookup took too long. Check your connection and try again."
+                }
+                return message.isEmpty ? "Food lookup returned HTTP \(status). Try again." : message
+            case .requestTimedOut:
+                return "Food lookup took too long. Check your connection and try again."
+            case .networkUnavailable:
+                return "Food lookup could not reach the broker. Check that it is running on this network."
             case .invalidResponse:
                 return "Food lookup service returned data MealMark could not read."
             case .unsafeCandidate:

@@ -59,6 +59,8 @@ async function main(): Promise<number> {
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
+  await testNoFoodObservationReturnsNoFoodError();
+  await testOpenAiAnalyzerTimeoutReturnsGatewayTimeout();
   await testVisibleNutritionLabelOverridesDatabasePortionScaling();
   await testUpstreamSchemaValidation();
 
@@ -542,9 +544,72 @@ async function testOpenAiRequestShapeAndResolverBoundary(): Promise<void> {
   assert.equal(captured.text.format.strict, true);
   const capturedJson = JSON.stringify(captured);
   assert.equal(capturedJson.includes("nutrition_label"), true);
+  assert.equal(capturedJson.includes("recognition_status"), true);
+  assert.equal(capturedJson.includes("no_food"), true);
   assert.equal(capturedJson.includes("whole bottle"), true);
   assert.equal(capturedJson.includes("\"draft_v\""), false);
   pass("OpenAI call uses store=false structured observation, resolver produces draft");
+}
+
+async function testNoFoodObservationReturnsNoFoodError(): Promise<void> {
+  const analyzer: FoodAnalyzer = {
+    async analyze() {
+      return {
+        mode: "openai",
+        modelId: "gpt-test-vision",
+        observation: {
+          recognition_status: "no_food",
+          non_food_reason: "A tabletop is visible, but no food or nutrition label is visible.",
+          items: [],
+          total_kcal: 0,
+          kcal_variance: 0,
+          nutrition_label: null,
+          serving_g: null,
+          amount_g: null,
+          servings: null,
+          confidence: 0,
+          rationale: "no food visible in the frame"
+        }
+      };
+    }
+  };
+
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 422);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, false);
+    const error = body.error as Record<string, unknown>;
+    assert.equal(error.code, "NO_FOOD_DETECTED");
+    assert.equal(JSON.stringify(body).includes("\"candidate\""), false);
+    assert.equal(JSON.stringify(body).includes("\"draft\""), false);
+  });
+  pass("no-food photo observations never become draft candidates");
+}
+
+async function testOpenAiAnalyzerTimeoutReturnsGatewayTimeout(): Promise<void> {
+  const analyzer = new OpenAiFoodAnalyzer({
+    apiKey: "test-key",
+    model: "gpt-test-vision",
+    timeoutMs: 1,
+    fetchFn: (_url, init) => new Promise<Response>((_resolve, reject) => {
+      const signal = init?.signal;
+      if (signal) {
+        signal.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        }, { once: true });
+      }
+    })
+  });
+
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 504);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, false);
+    assert.equal((body.error as Record<string, unknown>).code, "UPSTREAM_TIMEOUT");
+  });
+  pass("OpenAI analyzer timeout returns explicit retryable broker error");
 }
 
 async function testVisibleNutritionLabelOverridesDatabasePortionScaling(): Promise<void> {
@@ -554,6 +619,8 @@ async function testVisibleNutritionLabelOverridesDatabasePortionScaling(): Promi
         mode: "openai",
         modelId: "gpt-test-vision",
         observation: {
+          recognition_status: "food_detected",
+          non_food_reason: null,
           items: [{ label: "kombucha bottle nutrition label", confidence: 0.93 }],
           total_kcal: 80,
           kcal_variance: 0,
@@ -672,6 +739,8 @@ async function postJson(url: string, body: unknown): Promise<Response> {
 
 function fakeObservation(): FoodObservation {
   return {
+    recognition_status: "food_detected",
+    non_food_reason: null,
     items: [{ label: "oatmeal", confidence: 0.8 }],
     total_kcal: 512,
     kcal_variance: 49,

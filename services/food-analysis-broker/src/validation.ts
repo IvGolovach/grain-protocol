@@ -98,6 +98,8 @@ export function assertObservation(value: unknown): FoodObservation {
   }
 
   const observation: FoodObservation = {
+    recognition_status: parseRecognitionStatus(value.recognition_status),
+    non_food_reason: parseNullableString(value.non_food_reason, "non_food_reason", 160),
     items: parseItems(value.items),
     total_kcal: parseNonNegativeInteger(value.total_kcal, "total_kcal"),
     kcal_variance: parseNonNegativeInteger(value.kcal_variance, "kcal_variance"),
@@ -110,6 +112,56 @@ export function assertObservation(value: unknown): FoodObservation {
   };
 
   return observation;
+}
+
+export function assertReviewableFoodObservation(observation: FoodObservation): void {
+  const hasVisibleNutritionLabel = Boolean(observation.nutrition_label?.is_visible);
+  const itemLabels = observation.items
+    .map((item) => item.label.trim())
+    .filter((label) => label.length > 0);
+  const hasSpecificItem = itemLabels.some((label) => !isPlaceholderFoodLabel(label));
+  const strongestItemConfidence = Math.max(0, ...observation.items.map((item) => item.confidence));
+
+  if (observation.recognition_status === "no_food") {
+    throw noFoodError(observation, "The photo does not show recognizable food.");
+  }
+  if (observation.recognition_status === "uncertain" && !hasVisibleNutritionLabel) {
+    throw noFoodError(observation, "MealMark could not confidently identify food in this photo.");
+  }
+  if (!hasVisibleNutritionLabel && (!hasSpecificItem || strongestItemConfidence < 0.45)) {
+    throw noFoodError(observation, "MealMark could not confidently identify food in this photo.");
+  }
+}
+
+function parseRecognitionStatus(value: unknown): FoodObservation["recognition_status"] {
+  if (value === "food_detected" || value === "no_food" || value === "uncertain") {
+    return value;
+  }
+  throw new BrokerError(502, "UPSTREAM_ERROR", "recognition_status was not valid");
+}
+
+function noFoodError(observation: FoodObservation, fallbackMessage: string): BrokerError {
+  return new BrokerError(422, "NO_FOOD_DETECTED", observation.non_food_reason ?? fallbackMessage, {
+    recognition_status: observation.recognition_status,
+    item_count: observation.items.length,
+    observation_confidence: observation.confidence
+  });
+}
+
+function isPlaceholderFoodLabel(label: string): boolean {
+  const normalized = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, " ")
+    .trim();
+  return normalized === "" ||
+    normalized === "captured meal" ||
+    normalized === "meal" ||
+    normalized === "food" ||
+    normalized === "unknown" ||
+    normalized === "unknown food" ||
+    normalized === "plate" ||
+    normalized === "table";
 }
 
 function parseNutritionLabel(value: unknown): FoodObservation["nutrition_label"] {

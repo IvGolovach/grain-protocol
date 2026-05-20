@@ -5,6 +5,7 @@ import type { FoodAnalyzePhotoRequest, FoodAnalyzer, FoodObservation } from "./t
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5.5";
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 type FetchFn = typeof fetch;
 
@@ -19,6 +20,8 @@ export class MockFoodAnalyzer implements FoodAnalyzer {
       mode: "mock",
       modelId: "deterministic-fixture-food-analyzer-v1",
       observation: {
+        recognition_status: "food_detected",
+        non_food_reason: null,
         items: [
           {
             label: input.request.hints?.meal_context || "fixture meal",
@@ -42,11 +45,13 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly fetchFn: FetchFn;
+  private readonly timeoutMs: number;
 
-  constructor(options: { apiKey: string; model?: string; fetchFn?: FetchFn }) {
+  constructor(options: { apiKey: string; model?: string; fetchFn?: FetchFn; timeoutMs?: number }) {
     this.apiKey = options.apiKey;
     this.model = options.model ?? DEFAULT_MODEL;
     this.fetchFn = options.fetchFn ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   async analyze(input: {
@@ -55,14 +60,27 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
     photoSha25616: string;
   }): Promise<{ mode: "openai"; modelId: string; observation: FoodObservation }> {
     const body = this.buildResponsesRequest(input.request);
-    const response = await this.fetchFn(OPENAI_RESPONSES_URL, {
-      method: "POST",
-      headers: {
-        "authorization": `Bearer ${this.apiKey}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    let response: Response;
+    try {
+      response = await this.fetchFn(OPENAI_RESPONSES_URL, {
+        method: "POST",
+        headers: {
+          "authorization": `Bearer ${this.apiKey}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (isAbortError(error)) {
+        throw new BrokerError(504, "UPSTREAM_TIMEOUT", "OpenAI food observation request timed out");
+      }
+      throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation request failed");
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation request failed", {
@@ -99,6 +117,10 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
         "If only per-serving calories and servings per container are visible, set total_kcal to calories_per_serving multiplied by servings_per_container, round to the nearest integer, set kcal_variance to 0, and fill the nutrition_label fields.",
         "Do not rescale explicit package-label calories by bottle size, visual ounces, milliliters, grams, or generic USDA-style per-100g nutrition.",
         "Set nutrition_label to null when no explicit visible nutrition label is present.",
+        "If the image does not clearly show food, drink, or a readable nutrition label for a packaged product, set recognition_status to no_food, items to [], total_kcal and kcal_variance to 0, all portion fields to null, confidence to 0, and explain the visible non-food scene in non_food_reason.",
+        "If food might be present but you cannot identify it well enough for a user-reviewable nutrition draft, set recognition_status to uncertain and keep items empty unless a specific visible food item is identifiable.",
+        "Never invent a generic item such as captured meal, meal, food, plate, or unknown just to satisfy the schema.",
+        "Only set recognition_status to food_detected when a specific food, drink, or nutrition label is visible enough to review.",
         "Return only the requested structured JSON observation.",
         "Do not produce Grain ledger records, drafts, CIDs, signatures, or persistence fields.",
         "Never echo or describe raw image bytes."
@@ -140,10 +162,17 @@ export function analyzerFromEnv(env: NodeJS.ProcessEnv = process.env): FoodAnaly
   if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.trim().length > 0) {
     return new OpenAiFoodAnalyzer({
       apiKey: env.OPENAI_API_KEY,
-      model: env.OPENAI_MODEL || undefined
+      model: env.OPENAI_MODEL || undefined,
+      timeoutMs: parseTimeoutMs(env.FOOD_ANALYSIS_TIMEOUT_MS)
     });
   }
   return new MockFoodAnalyzer();
+}
+
+function parseTimeoutMs(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isSafeInteger(parsed) && parsed >= 1_000 && parsed <= 120_000 ? parsed : undefined;
 }
 
 function extractOutputText(value: unknown): string {
@@ -172,4 +201,8 @@ function extractOutputText(value: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isAbortError(value: unknown): boolean {
+  return value instanceof Error && (value.name === "AbortError" || value.message.toLowerCase().includes("abort"));
 }

@@ -6,7 +6,7 @@ import { BrokerError, errorShape, internalError } from "./errors.js";
 import { FoodAnalysisCandidateResolver, GrainDraftResolver } from "./resolver.js";
 import { MAX_JSON_BODY_BYTES } from "./schema.js";
 import { foodSearchProviderFromEnv } from "./search.js";
-import { assertObservation, parseAnalyzePhotoRequest, parseFoodSearchRequest } from "./validation.js";
+import { assertObservation, assertReviewableFoodObservation, parseAnalyzePhotoRequest, parseFoodSearchRequest } from "./validation.js";
 import type {
   CandidateResolver,
   FoodAnalyzer,
@@ -93,6 +93,7 @@ async function routeRequest(
   const { request, imageBytes, photoSha25616, requestId } = parseAnalyzePhotoRequest(parsed);
   const analysis = await context.analyzer.analyze({ request, imageBytes, photoSha25616 });
   const observation = assertObservation(analysis.observation);
+  assertReviewableFoodObservation(observation);
   const candidate = await context.candidateResolver.resolveCandidate({
     request,
     observation,

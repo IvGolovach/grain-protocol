@@ -4,6 +4,9 @@ public enum FoodAnalysisBrokerClientError: Error, Equatable, Sendable, CustomStr
     case invalidPayload(String)
     case invalidResponse
     case httpStatus(Int)
+    case brokerError(code: String, message: String, status: Int)
+    case requestTimedOut
+    case networkUnavailable
     case unsafeCandidate(String)
 
     public var description: String {
@@ -14,6 +17,12 @@ public enum FoodAnalysisBrokerClientError: Error, Equatable, Sendable, CustomStr
             return "invalid response"
         case .httpStatus(let statusCode):
             return "broker returned HTTP \(statusCode)"
+        case let .brokerError(code, message, status):
+            return "broker returned \(code) HTTP \(status): \(message)"
+        case .requestTimedOut:
+            return "analysis request timed out"
+        case .networkUnavailable:
+            return "network unavailable"
         case .unsafeCandidate(let reason):
             return "unsafe candidate: \(reason)"
         }
@@ -56,16 +65,22 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
 
         var request = URLRequest(url: analysisEndpoint)
         request.httpMethod = "POST"
+        request.timeoutInterval = 30
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.httpBody = try JSONEncoder().encode(Self.requestEnvelope(photoPayload: photoPayload))
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw Self.mapTransportError(error)
+        }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FoodAnalysisBrokerClientError.invalidResponse
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw FoodAnalysisBrokerClientError.httpStatus(httpResponse.statusCode)
+            throw Self.decodeBrokerError(from: data, status: httpResponse.statusCode)
         }
 
         let candidate = try decodeCandidate(from: data)
@@ -78,16 +93,22 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
     public func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
         var urlRequest = URLRequest(url: searchEndpoint)
         urlRequest.httpMethod = "POST"
+        urlRequest.timeoutInterval = 20
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
-        let (data, response) = try await session.data(for: urlRequest)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: urlRequest)
+        } catch {
+            throw Self.mapTransportError(error)
+        }
         guard let httpResponse = response as? HTTPURLResponse else {
             throw FoodAnalysisBrokerClientError.invalidResponse
         }
         guard (200..<300).contains(httpResponse.statusCode) else {
-            throw FoodAnalysisBrokerClientError.httpStatus(httpResponse.statusCode)
+            throw Self.decodeBrokerError(from: data, status: httpResponse.statusCode)
         }
 
         let envelope = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: data)
@@ -138,6 +159,27 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         return candidate
     }
 
+    private static func decodeBrokerError(from data: Data, status: Int) -> FoodAnalysisBrokerClientError {
+        if let envelope = try? JSONDecoder().decode(BrokerErrorEnvelope.self, from: data) {
+            return .brokerError(code: envelope.error.code, message: envelope.error.message, status: status)
+        }
+        return .httpStatus(status)
+    }
+
+    private static func mapTransportError(_ error: Error) -> FoodAnalysisBrokerClientError {
+        guard let urlError = error as? URLError else {
+            return .invalidResponse
+        }
+        switch urlError.code {
+        case .timedOut:
+            return .requestTimedOut
+        case .notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+            return .networkUnavailable
+        default:
+            return .invalidResponse
+        }
+    }
+
     private static func analysisEndpoint(from endpoint: URL) -> URL {
         if endpoint.path == "" || endpoint.path == "/" {
             return endpoint.appendingPathComponent("v1/food/analyze-photo")
@@ -183,4 +225,14 @@ private struct BrokerPhoto: Encodable {
 private struct BrokerResponseEnvelope: Decodable {
     var ok: Bool
     var candidate: FoodAnalysisCandidate?
+}
+
+private struct BrokerErrorEnvelope: Decodable {
+    var ok: Bool
+    var error: BrokerErrorBody
+}
+
+private struct BrokerErrorBody: Decodable {
+    var code: String
+    var message: String
 }

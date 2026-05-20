@@ -59,7 +59,7 @@ export class FoodAnalysisCandidateResolver implements CandidateResolver {
 
   async resolveCandidate(input: Parameters<CandidateResolver["resolveCandidate"]>[0]): Promise<FoodAnalysisCandidate> {
     const item = input.observation.items[0];
-    const label = item?.label?.trim() || input.request.hints?.meal_context || "Captured meal";
+    const label = item?.label?.trim() || input.observation.nutrition_label?.source_text?.trim() || "Visible nutrition label";
     const genericLabel = genericFoodLabel(label);
     const explicitLabelCalories = caloriesFromNutritionLabel(input.observation);
     const dishType = explicitLabelCalories ? "packaged" : inferDishType(label);

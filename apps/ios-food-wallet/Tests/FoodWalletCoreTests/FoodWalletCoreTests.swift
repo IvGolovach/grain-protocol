@@ -33,6 +33,9 @@ struct FoodWalletCoreTests {
         await run("brokerRejectsNonSuccessStatus") {
             try await testBrokerRejectsNonSuccessStatus()
         }
+        await run("brokerMapsNoFoodError") {
+            try await testBrokerMapsNoFoodError()
+        }
         await run("brokerSearchPostsBarcodeEnvelope") {
             try await testBrokerSearchPostsBarcodeEnvelope()
         }
@@ -140,6 +143,12 @@ struct FoodWalletCoreTests {
         }
         await run("storePublishesFailureStateWhenPhotoAnalysisFails") {
             try await testStorePublishesFailureStateWhenPhotoAnalysisFails()
+        }
+        await run("storePublishesNoFoodStateWithoutDraft") {
+            try await testStorePublishesNoFoodStateWithoutDraft()
+        }
+        await run("storePublishesTimeoutStateWithoutDraft") {
+            try await testStorePublishesTimeoutStateWithoutDraft()
         }
         await run("storeResetClearsSafeSummary") {
             try await testStoreResetClearsSafeSummary()
@@ -324,6 +333,24 @@ struct FoodWalletCoreTests {
         let payload = TransientMealPhotoPayload(photo: .uiTestFujiApple, jpegData: Data([0xff, 0xd8]))
 
         try await expectError(.httpStatus(503)) {
+            try await client.estimate(photoPayload: payload)
+        }
+    }
+
+    private static func testBrokerMapsNoFoodError() async throws {
+        let client = brokerClient { _ in
+            BrokerResponse(statusCode: 422, body: brokerErrorJSON(
+                code: "NO_FOOD_DETECTED",
+                message: "A tabletop is visible, but no food or nutrition label is visible."
+            ))
+        }
+        let payload = TransientMealPhotoPayload(photo: .uiTestFujiApple, jpegData: Data([0xff, 0xd8]))
+
+        try await expectError(.brokerError(
+            code: "NO_FOOD_DETECTED",
+            message: "A tabletop is visible, but no food or nutrition label is visible.",
+            status: 422
+        )) {
             try await client.estimate(photoPayload: payload)
         }
     }
@@ -1147,6 +1174,42 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStorePublishesNoFoodStateWithoutDraft() async throws {
+        let store = FoodWalletStore(analysisClient: NoFoodFoodAnalysisClient())
+
+        await store.analyze(photo: .uiTestFujiApple)
+
+        try expect(store.analysisState.isFailed, "expected no-food to use recoverable failed state")
+        try expect(store.analysisState.statusText == "No food found", "expected no-food status")
+        try expect(store.analysisState.errorMessage?.localizedCaseInsensitiveContains("tabletop") == true, "expected no-food reason")
+        try expect(store.currentDraft == nil, "expected no draft after no-food analysis")
+        try expect(store.currentCandidate == nil, "expected no candidate after no-food analysis")
+        try expect(!store.canSaveDraft, "expected no-food state to disable saving")
+    }
+
+    @MainActor
+    private static func testStorePublishesTimeoutStateWithoutDraft() async throws {
+        let store = FoodWalletStore(
+            analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 200_000_000),
+            slowAnalysisThresholdNanoseconds: 20_000_000,
+            analysisTimeoutNanoseconds: 60_000_000
+        )
+
+        let task = Task {
+            await store.analyze(photo: .uiTestFujiApple)
+        }
+        try await Task.sleep(nanoseconds: 90_000_000)
+
+        try expect(store.analysisState.isFailed, "expected timeout to publish failed state")
+        try expect(store.analysisState.errorMessage?.localizedCaseInsensitiveContains("too long") == true, "expected timeout message")
+        try expect(store.currentDraft == nil, "expected no draft after timeout")
+        try expect(store.currentCandidate == nil, "expected no candidate after timeout")
+
+        await task.value
+        try expect(store.analysisState.isFailed, "expected late result to be ignored after timeout")
+    }
+
+    @MainActor
     private static func testStoreResetClearsSafeSummary() async throws {
         let store = FoodWalletStore()
 
@@ -1336,6 +1399,28 @@ private struct FailingFoodAnalysisClient: FoodAnalysisClient {
     }
 }
 
+private struct NoFoodFoodAnalysisClient: FoodAnalysisClient {
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        throw noFoodError()
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        throw noFoodError()
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        throw noFoodError()
+    }
+
+    private func noFoodError() -> FoodAnalysisBrokerClientError {
+        .brokerError(
+            code: "NO_FOOD_DETECTED",
+            message: "A tabletop is visible, but no food or nutrition label is visible.",
+            status: 422
+        )
+    }
+}
+
 private struct StaticFoodSearchClient: BrokerFoodSearchClient {
     var results: [BrokerFoodSearchResult]
 
@@ -1441,6 +1526,21 @@ private func brokerSearchEnvelopeJSON() -> Data {
               "user_confirmation_required": true
             }
           ]
+        }
+        """.utf8
+    )
+}
+
+private func brokerErrorJSON(code: String, message: String) -> Data {
+    Data(
+        """
+        {
+          "ok": false,
+          "error": {
+            "code": "\(code)",
+            "message": "\(message)",
+            "request_id": "broker-error-fixture"
+          }
         }
         """.utf8
     )

@@ -148,7 +148,10 @@ struct FoodWalletRootView: View {
             .tag(FoodWalletTab.today)
 
             NavigationStack {
-                CaptureView(onCapturePhoto: startPhotoCaptureFlow)
+                CaptureView(
+                    onCapturePhoto: startPhotoCaptureFlow,
+                    onEnterManually: openAddFoodHub
+                )
             }
             .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
             .tag(FoodWalletTab.capture)
@@ -240,11 +243,15 @@ private struct TodayView: View {
                         )
                     } else {
                         ForEach(store.todayEntries, id: \.entryID) { entry in
-                            MealRow(entry: entry)
-                                .mealEntrySwipeActions(
-                                    entry: entry,
-                                    onEdit: { editingEntry = EditableMealEntry(entry: entry) }
-                                )
+                            NavigationLink {
+                                MealDetailView(entryID: entry.entryID)
+                            } label: {
+                                MealRow(entry: entry)
+                            }
+                            .mealEntrySwipeActions(
+                                entry: entry,
+                                onEdit: { editingEntry = EditableMealEntry(entry: entry) }
+                            )
                         }
                     }
                 }
@@ -281,6 +288,7 @@ private struct TodayView: View {
 private struct CaptureView: View {
     @EnvironmentObject private var store: FoodWalletStore
     var onCapturePhoto: () -> Void
+    var onEnterManually: () -> Void
 
     var body: some View {
         List {
@@ -291,12 +299,21 @@ private struct CaptureView: View {
             }
 
             Section("Review draft") {
-                if let errorMessage = store.analysisState.errorMessage {
-                    AnalysisFailureCard(
-                        message: errorMessage,
-                        onRetry: onCapturePhoto,
-                        onDismiss: store.discardDraft
-                    )
+                if case let .failed(failure) = store.analysisState {
+                    if failure.code == .noFoodDetected {
+                        AnalysisNoFoodCard(
+                            message: failure.message,
+                            onRetry: onCapturePhoto,
+                            onEnterManually: onEnterManually,
+                            onDismiss: store.discardDraft
+                        )
+                    } else {
+                        AnalysisFailureCard(
+                            message: failure.message,
+                            onRetry: onCapturePhoto,
+                            onDismiss: store.discardDraft
+                        )
+                    }
                 } else if store.analysisState == .blockedPrivacy {
                     AnalysisBlockedCard {
                         store.discardDraft()
@@ -1634,6 +1651,57 @@ private struct AnalysisFailureCard: View {
     }
 }
 
+private struct AnalysisNoFoodCard: View {
+    var message: String
+    var onRetry: () -> Void
+    var onEnterManually: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("No food recognized", systemImage: "viewfinder.circle")
+                .font(.headline)
+                .foregroundStyle(.orange)
+                .accessibilityIdentifier("NoFoodTitle")
+
+            Text(message.isEmpty ? "MealMark did not find visible food or a readable nutrition label in this photo." : message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("NoFoodMessage")
+
+            Text("Nothing was saved. Take another photo, or add the food manually.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack(spacing: 10) {
+                Button(role: .cancel, action: onDismiss) {
+                    Label("Dismiss", systemImage: "xmark")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("DismissNoFoodButton")
+
+                Spacer(minLength: 0)
+
+                Button(action: onEnterManually) {
+                    Label("Enter manually", systemImage: "text.badge.plus")
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("EnterFoodManuallyButton")
+
+                Button(action: onRetry) {
+                    Label("Retake", systemImage: "camera.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .accessibilityIdentifier("RetryNoFoodPhotoButton")
+            }
+        }
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("NoFoodAnalysisCard")
+    }
+}
+
 private struct AnalysisBlockedCard: View {
     var onDismiss: () -> Void
 
@@ -1699,30 +1767,19 @@ private struct DraftReviewView: View {
                     onCommit: commitPortion
                 )
 
-                HStack(spacing: 12) {
-                    Button(role: .cancel) {
-                        store.discardDraft()
-                    } label: {
-                        Label("Discard", systemImage: "xmark")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
+                DraftActionBar(
+                    canSave: store.canSaveDraft,
+                    onDiscard: store.discardDraft,
+                    onSave: {
                         commitPortion()
                         store.confirmDraft()
-                    } label: {
-                        Label("Save to MealMark", systemImage: "checkmark.circle.fill")
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                    .disabled(!store.canSaveDraft)
-                    .accessibilityIdentifier("SaveToFoodWalletButton")
-                }
+                )
+
+                DraftExplanationSection(candidate: candidate, trustStatus: trustStatus)
             }
             .padding(18)
-            .mealMarkGlassSurface(cornerRadius: 28, tint: Color.green.opacity(0.07), isInteractive: false)
+            .mealMarkGlassSurface(cornerRadius: 28, tint: trustStatus.reviewTint.opacity(0.055), isInteractive: false)
             .onAppear {
                 resetPortionText(with: candidate)
             }
@@ -1790,6 +1847,127 @@ private struct NutritionMetricView: View {
         .frame(maxWidth: .infinity, minHeight: 76)
         .padding(.horizontal, 6)
         .mealMarkGlassSurface(cornerRadius: 18, tint: Color.secondary.opacity(0.055), isInteractive: false)
+    }
+}
+
+private struct DraftExplanationSection: View {
+    var candidate: FoodAnalysisCandidate
+    var trustStatus: FoodTrustStatus
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("How MealMark read it", systemImage: "sparkle.magnifyingglass")
+                .font(.headline)
+
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("DraftRecognitionSummary")
+
+            ForEach(Array(candidate.evidence.enumerated()), id: \.offset) { _, evidence in
+                EvidenceSourceRow(evidence: evidence)
+            }
+
+            if !candidate.assumptions.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Assumptions")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(candidate.assumptions) { assumption in
+                        Label(assumption.label, systemImage: "checkmark.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("DraftAssumption-\(assumption.id)")
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .mealMarkGlassSurface(cornerRadius: 18, tint: Color.blue.opacity(0.055), isInteractive: false)
+        .accessibilityIdentifier("DraftExplanationSection")
+    }
+
+    private var summary: String {
+        let source = candidate.primarySourceLabel(trustStatus: trustStatus)
+        switch candidate.confidence {
+        case .high:
+            return "\(source). The photo or lookup produced a specific match, but you still confirm the portion before saving."
+        case .medium:
+            return "\(source). MealMark found a plausible match and needs your portion review."
+        case .low:
+            return "\(source). This is a rough estimate; verify the food and grams before saving."
+        }
+    }
+}
+
+private struct EvidenceSourceRow: View {
+    var evidence: ProviderEvidence
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: iconName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.blue)
+                .frame(width: 22, height: 22)
+                .background(Color.blue.opacity(0.1), in: Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(evidence.sourceLabel)
+                    .font(.caption.weight(.semibold))
+                    .accessibilityIdentifier("DraftEvidenceSourceLabel")
+                Text("\(evidence.matchedName) • \(evidence.servingBasis)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityIdentifier("DraftEvidence-\(evidence.normalizedProvider)")
+    }
+
+    private var iconName: String {
+        switch evidence.normalizedProvider {
+        case "visible_nutrition_label":
+            return "doc.text.viewfinder"
+        case "barcode_provider", "open_food_facts", "open_food_facts_fixture":
+            return "barcode.viewfinder"
+        case "usda_fdc":
+            return "books.vertical"
+        case "food_wallet_history":
+            return "clock.arrow.circlepath"
+        case "food_wallet_recipe", "food_wallet_template":
+            return "book.closed"
+        default:
+            return "checkmark.seal"
+        }
+    }
+}
+
+private struct DraftActionBar: View {
+    var canSave: Bool
+    var onDiscard: () -> Void
+    var onSave: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(role: .destructive, action: onDiscard) {
+                Label("Discard", systemImage: "trash")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .accessibilityIdentifier("DiscardDraftButton")
+
+            Button(action: onSave) {
+                Label("Save", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
+            .disabled(!canSave)
+            .accessibilityIdentifier("SaveToFoodWalletButton")
+        }
     }
 }
 
@@ -2007,11 +2185,15 @@ private struct HistoryView: View {
                         )
                     } else {
                         ForEach(store.entries, id: \.entryID) { entry in
-                            MealRow(entry: entry)
-                                .mealEntrySwipeActions(
-                                    entry: entry,
-                                    onEdit: { editingEntry = EditableMealEntry(entry: entry) }
-                                )
+                            NavigationLink {
+                                MealDetailView(entryID: entry.entryID)
+                            } label: {
+                                MealRow(entry: entry)
+                            }
+                            .mealEntrySwipeActions(
+                                entry: entry,
+                                onEdit: { editingEntry = EditableMealEntry(entry: entry) }
+                            )
                         }
                     }
                 }
@@ -2208,6 +2390,125 @@ private struct MealEntrySwipeActions: ViewModifier {
                 .tint(.blue)
                 .accessibilityIdentifier("EditMealButton-\(entry.entryID)")
             }
+    }
+}
+
+private struct MealDetailView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var editingEntry: EditableMealEntry?
+    var entryID: String
+
+    private var entry: FoodIntakeEntry? {
+        store.entry(entryID: entryID)
+    }
+
+    var body: some View {
+        Group {
+            if let entry {
+                List {
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .top, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(entry.meal.label)
+                                        .font(.title2.bold())
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .accessibilityIdentifier("MealDetailTitle")
+                                    Text("\(entry.meal.amountGrams) g • \(entry.meal.kcal) kcal")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .accessibilityIdentifier("MealDetailNutrition")
+                                }
+                                Spacer()
+                                SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus == .verified ? .green : .orange)
+                            }
+
+                            if let macronutrients = entry.meal.macronutrients {
+                                Text(macronutrients.shortLabel)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityIdentifier("MealDetailMacros")
+                            }
+                        }
+                        .padding(.vertical, 6)
+                    }
+
+                    Section("Nutrition") {
+                        LabeledContent("Calories", value: "\(entry.meal.kcal) kcal")
+                        LabeledContent("Range", value: "\(max(0, entry.meal.kcal - entry.meal.varianceKcal))-\(entry.meal.kcal + entry.meal.varianceKcal) kcal")
+                        LabeledContent("Grams", value: "\(entry.meal.amountGrams) g")
+                        LabeledContent("Servings", value: "\(entry.meal.servings)")
+                    }
+
+                    if let macronutrients = entry.meal.macronutrients {
+                        Section("Macros") {
+                            LabeledContent("Protein", value: macroValue(macronutrients.proteinGrams))
+                            LabeledContent("Carbs", value: macroValue(macronutrients.carbohydrateGrams))
+                            LabeledContent("Fat", value: macroValue(macronutrients.fatGrams))
+                            if let fiberGrams = macronutrients.fiberGrams {
+                                LabeledContent("Fiber", value: macroValue(fiberGrams))
+                            }
+                        }
+                    }
+
+                    Section("Why this is in MealMark") {
+                        LabeledContent("Source", value: entry.sourceClass.description)
+                        LabeledContent("Trust", value: entry.trustStatus.label)
+                        if let provenance = store.provenanceSnapshot(entryID: entry.entryID) {
+                            LabeledContent("Primary evidence", value: provenance.primarySourceLabel)
+                            ForEach(Array(provenance.evidence.enumerated()), id: \.offset) { _, evidence in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(evidence.sourceLabel)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text("\(evidence.matchedName) • \(evidence.servingBasis)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .accessibilityIdentifier("MealDetailEvidence-\(evidence.normalizedProvider)")
+                            }
+                        } else {
+                            Text("This entry keeps confirmed nutrition values and trust labels. Detailed provider evidence is available for meals saved in the current session.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Section("Record") {
+                        LabeledContent("Date", value: entry.dateKey)
+                        LabeledContent("Entry ID", value: entry.entryID)
+                    }
+                }
+                .accessibilityIdentifier("MealDetailScreen")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Edit") {
+                            editingEntry = EditableMealEntry(entry: entry)
+                        }
+                        .accessibilityIdentifier("MealDetailEditButton")
+                    }
+                }
+            } else {
+                EmptyStateView(
+                    title: "Meal not found",
+                    symbol: "exclamationmark.magnifyingglass",
+                    message: "This record is no longer available."
+                )
+            }
+        }
+        .navigationTitle("Meal details")
+        .mealMarkNavigationBarTitleDisplayModeInline()
+        .sheet(item: $editingEntry) { editableEntry in
+            EditMealEntryView(entry: editableEntry.entry)
+        }
+    }
+
+    private func macroValue(_ value: Double) -> String {
+        let rounded = (value * 10).rounded() / 10
+        if rounded == rounded.rounded() {
+            return "\(Int(rounded)) g"
+        }
+        return "\(rounded) g"
     }
 }
 
