@@ -10,7 +10,6 @@ import UIKit
 
 private enum FoodWalletTab: String, CaseIterable, Identifiable {
     case today
-    case capture
     case history
     case wallet
     case pro
@@ -20,7 +19,6 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .today: return "Today"
-        case .capture: return "Capture"
         case .history: return "History"
         case .wallet: return "Wallet"
         case .pro: return "Pro"
@@ -30,7 +28,6 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .today: return "list.bullet.rectangle"
-        case .capture: return "camera.viewfinder"
         case .history: return "calendar"
         case .wallet: return "checkmark.seal"
         case .pro: return "sparkles"
@@ -47,11 +44,21 @@ private enum FoodWalletHaptics {
     }
 }
 
+private enum MealMarkKeyboard {
+    @MainActor
+    static func dismiss() {
+        #if os(iOS)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+}
+
 struct FoodWalletRootView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var selectedTab: FoodWalletTab = .today
     @State private var isShowingCamera = false
     @State private var isShowingAddFoodHub = false
+    @State private var isShowingCaptureReview = false
     @State private var addFoodHubDetent = PresentationDetent.medium
     @State private var captureErrorMessage: String?
 
@@ -96,11 +103,10 @@ struct FoodWalletRootView: View {
                 AddFoodHubView(
                     onDraftReady: {
                         isShowingAddFoodHub = false
-                        selectedTab = .capture
+                        showCaptureReviewSoon()
                     },
                     onTakePhoto: {
                         isShowingAddFoodHub = false
-                        selectedTab = .capture
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                             startPhotoCaptureFlow()
                         }
@@ -110,6 +116,27 @@ struct FoodWalletRootView: View {
             .presentationDetents([.medium, .large], selection: $addFoodHubDetent)
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $isShowingCaptureReview) {
+            NavigationStack {
+                CaptureView(
+                    onCapturePhoto: startPhotoCaptureFlow,
+                    onEnterManually: openManualAddFoodHub,
+                    onDraftSaved: {
+                        isShowingCaptureReview = false
+                    }
+                )
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            isShowingCaptureReview = false
+                        }
+                        .accessibilityIdentifier("CloseCaptureReviewButton")
+                    }
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         #if os(iOS)
         .sheet(isPresented: $isShowingCamera) {
             CameraCaptureView(
@@ -117,6 +144,9 @@ struct FoodWalletRootView: View {
                     isShowingCamera = false
                     Task {
                         await store.analyze(photoPayload: photoPayload)
+                        await MainActor.run {
+                            isShowingCaptureReview = true
+                        }
                     }
                 },
                 onCancel: {
@@ -151,15 +181,6 @@ struct FoodWalletRootView: View {
             .tag(FoodWalletTab.today)
 
             NavigationStack {
-                CaptureView(
-                    onCapturePhoto: startPhotoCaptureFlow,
-                    onEnterManually: openManualAddFoodHub
-                )
-            }
-            .tabItem { Label(FoodWalletTab.capture.title, systemImage: FoodWalletTab.capture.symbol) }
-            .tag(FoodWalletTab.capture)
-
-            NavigationStack {
                 HistoryView()
             }
             .tabItem { Label(FoodWalletTab.history.title, systemImage: FoodWalletTab.history.symbol) }
@@ -180,12 +201,15 @@ struct FoodWalletRootView: View {
     }
 
     private func openAddFoodHub() {
-        selectedTab = .capture
+        selectedTab = .today
         addFoodHubDetent = .medium
 
         if usesUITestPhotoFlow {
             Task {
                 await store.analyze(photo: .uiTestFujiApple)
+                await MainActor.run {
+                    isShowingCaptureReview = true
+                }
             }
             return
         }
@@ -194,14 +218,15 @@ struct FoodWalletRootView: View {
     }
 
     private func openManualAddFoodHub() {
-        selectedTab = .capture
+        isShowingCaptureReview = false
         addFoodHubDetent = .medium
-        isShowingAddFoodHub = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            isShowingAddFoodHub = true
+        }
     }
 
     private func startPhotoCaptureFlow() {
-        selectedTab = .capture
-
+        isShowingCaptureReview = false
         #if os(iOS)
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
             isShowingCamera = true
@@ -211,6 +236,12 @@ struct FoodWalletRootView: View {
         #else
         captureErrorMessage = "Camera capture is available in the iOS app target on a real iPhone."
         #endif
+    }
+
+    private func showCaptureReviewSoon() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            isShowingCaptureReview = true
+        }
     }
 }
 
@@ -236,11 +267,8 @@ private struct TodayView: View {
                     .padding(.vertical, 8)
                 }
 
-                Section("Quick actions") {
-                    Button(action: onAddFood) {
-                        Label("Add food", systemImage: "plus.circle.fill")
-                    }
-                    .accessibilityIdentifier("AddFoodButton")
+                Section {
+                    TodayAddFoodButton(action: onAddFood)
                 }
 
                 Section("Saved today") {
@@ -294,10 +322,53 @@ private struct TodayView: View {
     }
 }
 
+private struct TodayAddFoodButton: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: "plus")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.green, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Add food")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Photo, barcode, or build a meal")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            .frame(maxWidth: .infinity, minHeight: 64)
+            .padding(.horizontal, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("AddFoodButton")
+        .accessibilityLabel("Add food")
+        .mealMarkGlassSurface(cornerRadius: 22, tint: Color.green.opacity(0.08), isInteractive: true)
+    }
+}
+
 private struct CaptureView: View {
     @EnvironmentObject private var store: FoodWalletStore
     var onCapturePhoto: () -> Void
     var onEnterManually: () -> Void
+    var onDraftSaved: () -> Void = {}
 
     var body: some View {
         List {
@@ -328,7 +399,7 @@ private struct CaptureView: View {
                         store.discardDraft()
                     }
                 } else if store.hasDraft {
-                    DraftReviewView()
+                    DraftReviewView(onSaved: onDraftSaved)
                 } else {
                     EmptyStateView(
                         title: "No active draft",
@@ -349,6 +420,7 @@ private struct CaptureView: View {
                 )
             }
         }
+        .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Capture")
     }
 }
@@ -532,6 +604,7 @@ private struct AddFoodHubView: View {
                 }
             }
         }
+        .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Add Food")
         .mealMarkNavigationBarTitleDisplayModeInline()
         .toolbar {
@@ -879,14 +952,25 @@ private struct BuildMealEditorView: View {
                 .accessibilityIdentifier("CreateIngredientMealDraftButton")
             }
         }
+        .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Build Meal")
         .accessibilityIdentifier("BuildMealScreen")
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    MealMarkKeyboard.dismiss()
+                }
+                .accessibilityIdentifier("BuildMealKeyboardDoneButton")
+            }
+        }
     }
 }
 
 private struct BarcodeLookupView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isBarcodeFieldFocused: Bool
     @State private var barcodeText = ""
     @State private var errorMessage: String?
     @State private var isLookingUp = false
@@ -926,6 +1010,7 @@ private struct BarcodeLookupView: View {
                         #if os(iOS)
                         .keyboardType(.numberPad)
                         #endif
+                        .focused($isBarcodeFieldFocused)
                         .accessibilityIdentifier("BarcodeManualEntryField")
 
                     Button(action: lookupManualBarcode) {
@@ -947,6 +1032,7 @@ private struct BarcodeLookupView: View {
                 Text("Packaged foods use broker-side databases. You still review serving size before saving.")
             }
         }
+        .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Barcode")
         .mealMarkNavigationBarTitleDisplayModeInline()
         .accessibilityIdentifier("BarcodeScannerSheet")
@@ -956,6 +1042,18 @@ private struct BarcodeLookupView: View {
                     dismiss()
                 }
                 .accessibilityIdentifier("BarcodeCancelButton")
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(normalizedBarcode == nil ? "Done" : "Search") {
+                    MealMarkKeyboard.dismiss()
+                    isBarcodeFieldFocused = false
+                    if normalizedBarcode != nil {
+                        lookupManualBarcode()
+                    }
+                }
+                .disabled(isLookingUp)
+                .accessibilityIdentifier("BarcodeKeyboardSearchButton")
             }
         }
     }
@@ -1179,7 +1277,7 @@ private struct AddFoodShortcutGrid: View {
                         subtitle: "Ingredients",
                         symbol: "list.bullet.clipboard",
                         accessibilityIdentifier: "AddFoodModeBuildMealButton",
-                        tint: .orange,
+                        tint: .purple,
                         action: onBuild
                     )
                 }
@@ -1290,6 +1388,15 @@ private extension View {
     }
 
     @ViewBuilder
+    func mealMarkScrollDismissesKeyboard() -> some View {
+        #if os(iOS)
+        self.scrollDismissesKeyboard(.interactively)
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
     func mealMarkGlassSurface(
         cornerRadius: CGFloat,
         tint: Color = Color.secondary.opacity(0.08),
@@ -1393,6 +1500,9 @@ private struct IngredientBuilderRowView: View {
                 .accessibilityIdentifier("IngredientNameField-\(index)")
 
             TextField("g", text: $row.grams)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
                 .frame(width: 72)
                 .accessibilityIdentifier("IngredientGramsField-\(index)")
         }
@@ -1425,22 +1535,40 @@ private struct PersonalIngredientResolutionView: View {
 
             HStack(spacing: 10) {
                 TextField("serving g", text: $servingGrams)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
                     .accessibilityIdentifier("PersonalIngredientServingGramsField")
                 TextField("kcal", text: $servingKcal)
+                    #if os(iOS)
+                    .keyboardType(.numberPad)
+                    #endif
                     .accessibilityIdentifier("PersonalIngredientCaloriesField")
             }
 
             HStack(spacing: 10) {
                 TextField("protein", text: $proteinGrams)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
                     .accessibilityIdentifier("PersonalIngredientProteinField")
                 TextField("carbs", text: $carbohydrateGrams)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
                     .accessibilityIdentifier("PersonalIngredientCarbsField")
             }
 
             HStack(spacing: 10) {
                 TextField("fat", text: $fatGrams)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
                     .accessibilityIdentifier("PersonalIngredientFatField")
                 TextField("fiber", text: $fiberGrams)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
                     .accessibilityIdentifier("PersonalIngredientFiberField")
             }
 
@@ -1671,9 +1799,9 @@ private struct AnalysisNoFoodCard: View {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: "viewfinder.circle")
                     .font(.title2.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.blue)
                     .frame(width: 46, height: 46)
-                    .background(.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 7) {
@@ -1703,7 +1831,6 @@ private struct AnalysisNoFoodCard: View {
                         .minimumScaleFactor(0.82)
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.large)
                 .tint(.green)
                 .accessibilityIdentifier("RetryNoFoodPhotoButton")
 
@@ -1714,7 +1841,7 @@ private struct AnalysisNoFoodCard: View {
                         .minimumScaleFactor(0.82)
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.large)
+                .tint(.green)
                 .accessibilityIdentifier("EnterFoodManuallyButton")
 
                 Button(role: .cancel, action: onDismiss) {
@@ -1729,7 +1856,7 @@ private struct AnalysisNoFoodCard: View {
             }
         }
         .padding(18)
-        .mealMarkGlassSurface(cornerRadius: 28, tint: Color.orange.opacity(0.045), isInteractive: false)
+        .mealMarkGlassSurface(cornerRadius: 28, tint: Color.secondary.opacity(0.035), isInteractive: false)
     }
 }
 
@@ -1753,6 +1880,7 @@ private struct AnalysisBlockedCard: View {
 private struct DraftReviewView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var portionGramsText = ""
+    var onSaved: () -> Void = {}
 
     var body: some View {
         if let candidate = store.currentCandidate {
@@ -1779,8 +1907,6 @@ private struct DraftReviewView: View {
 
                 NutritionOverviewView(candidate: candidate, tint: trustStatus.reviewTint)
 
-                DraftExplanationSection(candidate: candidate, trustStatus: trustStatus)
-
                 PortionControlsView(
                     candidate: candidate,
                     gramsText: $portionGramsText,
@@ -1793,6 +1919,7 @@ private struct DraftReviewView: View {
                     onSave: {
                         commitPortion()
                         store.confirmDraft()
+                        onSaved()
                     }
                 )
             }
@@ -1919,105 +2046,6 @@ private struct NutritionMetricView: View {
     }
 }
 
-private struct DraftExplanationSection: View {
-    var candidate: FoodAnalysisCandidate
-    var trustStatus: FoodTrustStatus
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "sparkle.magnifyingglass")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.blue)
-                    .frame(width: 30, height: 30)
-                    .background(Color.blue.opacity(0.1), in: Circle())
-                    .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("How MealMark read it")
-                        .font(.subheadline.weight(.semibold))
-                    Text(summary)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("DraftRecognitionSummary")
-                }
-            }
-
-            if let evidence = candidate.evidence.first {
-                EvidenceSourceRow(evidence: evidence)
-            }
-
-            if let assumption = candidate.assumptions.first {
-                Label(assumption.label, systemImage: "checkmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-                    .accessibilityIdentifier("DraftAssumption-\(assumption.id)")
-            }
-        }
-        .padding(13)
-        .mealMarkGlassSurface(cornerRadius: 20, tint: Color.blue.opacity(0.04), isInteractive: false)
-        .accessibilityIdentifier("DraftExplanationSection")
-    }
-
-    private var summary: String {
-        let source = candidate.primarySourceLabel(trustStatus: trustStatus)
-        switch candidate.confidence {
-        case .high:
-            return "\(source). Review grams before saving."
-        case .medium:
-            return "\(source). Plausible match; review grams."
-        case .low:
-            return "\(source). Rough estimate; verify food and grams."
-        }
-    }
-}
-
-private struct EvidenceSourceRow: View {
-    var evidence: ProviderEvidence
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: iconName)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.blue)
-                .frame(width: 22, height: 22)
-                .background(Color.blue.opacity(0.1), in: Circle())
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(evidence.sourceLabel)
-                    .font(.caption.weight(.semibold))
-                    .accessibilityIdentifier("DraftEvidenceSourceLabel")
-                Text("\(evidence.matchedName) • \(evidence.servingBasis)")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .accessibilityIdentifier("DraftEvidence-\(evidence.normalizedProvider)")
-    }
-
-    private var iconName: String {
-        switch evidence.normalizedProvider {
-        case "visible_nutrition_label":
-            return "doc.text.viewfinder"
-        case "barcode_provider", "open_food_facts", "open_food_facts_fixture":
-            return "barcode.viewfinder"
-        case "usda_fdc":
-            return "books.vertical"
-        case "food_wallet_history":
-            return "clock.arrow.circlepath"
-        case "food_wallet_recipe", "food_wallet_template":
-            return "book.closed"
-        default:
-            return "checkmark.seal"
-        }
-    }
-}
-
 private struct DraftActionBar: View {
     var canSave: Bool
     var onDiscard: () -> Void
@@ -2069,7 +2097,7 @@ private struct PortionControlsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack(alignment: .center, spacing: 9) {
+            HStack(alignment: .center, spacing: 12) {
                 portionButton(
                     symbol: "minus",
                     label: "Decrease portion",
@@ -2078,37 +2106,7 @@ private struct PortionControlsView: View {
                     update(to: max(1, candidate.portion.gramsMode - 25))
                 }
 
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    TextField("0", text: gramsBinding)
-                        #if os(iOS)
-                        .keyboardType(.numberPad)
-                        #endif
-                        .font(.system(.title2, design: .rounded).weight(.bold))
-                        .multilineTextAlignment(.trailing)
-                        .frame(minWidth: 74, maxWidth: 108)
-                        .focused($isGramsFieldFocused)
-                        .accessibilityLabel("Portion grams")
-                        .accessibilityIdentifier("PortionGramsField")
-                        .onSubmit(onCommit)
-
-                    Text("g")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 54)
-                .padding(.horizontal, 14)
-                .background {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.clear)
-                        .mealMarkGlassSurface(
-                            cornerRadius: 18,
-                            tint: Color.secondary.opacity(0.08),
-                            isInteractive: true
-                        )
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-                .accessibilityElement(children: .contain)
+                gramsField
 
                 portionButton(
                     symbol: "plus",
@@ -2117,23 +2115,33 @@ private struct PortionControlsView: View {
                 ) {
                     update(to: candidate.portion.gramsMode + 25)
                 }
-
-                Button {
-                    onCommit()
-                } label: {
-                    Text("Apply")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(minWidth: 62, minHeight: 50)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.78)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .accessibilityIdentifier("ApplyPortionGramsButton")
             }
+
+            Button {
+                commitAndDismiss()
+            } label: {
+                Label("Apply grams", systemImage: "checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .buttonStyle(.bordered)
+            .tint(.green)
+            .controlSize(.large)
+            .accessibilityIdentifier("ApplyPortionGramsButton")
         }
         .padding(13)
         .mealMarkGlassSurface(cornerRadius: 22, tint: Color.secondary.opacity(0.045), isInteractive: false)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    commitAndDismiss()
+                }
+                .accessibilityIdentifier("PortionKeyboardDoneButton")
+            }
+        }
         .onChange(of: isGramsFieldFocused) { isFocused in
             if isFocused && gramsText == "\(candidate.portion.gramsMode)" {
                 gramsText = ""
@@ -2141,6 +2149,47 @@ private struct PortionControlsView: View {
                 onCommit()
             }
         }
+    }
+
+    private var gramsField: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            TextField("0", text: gramsBinding)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
+                .font(.system(.title2, design: .rounded).weight(.bold))
+                .multilineTextAlignment(.trailing)
+                .frame(minWidth: 80, maxWidth: 126)
+                .focused($isGramsFieldFocused)
+                .accessibilityLabel("Portion grams")
+                .accessibilityIdentifier("PortionGramsField")
+                .onSubmit(onCommit)
+
+            Text("g")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 54)
+        .padding(.horizontal, 14)
+        .background {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.clear)
+                .mealMarkGlassSurface(
+                    cornerRadius: 18,
+                    tint: Color.secondary.opacity(0.08),
+                    isInteractive: true
+                )
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    @MainActor
+    private func commitAndDismiss() {
+        onCommit()
+        isGramsFieldFocused = false
+        MealMarkKeyboard.dismiss()
     }
 
     private var gramsBinding: Binding<String> {
@@ -2211,49 +2260,70 @@ private struct RunningGrainMascot: View {
     var isRunning: Bool
 
     var body: some View {
-        ZStack {
-            Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(.sRGB, red: 0.98, green: 0.78, blue: 0.28, opacity: 1),
-                            Color(.sRGB, red: 0.41, green: 0.78, blue: 0.37, opacity: 1),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let height = proxy.size.height
+
+            ZStack {
+                Ellipse()
+                    .fill(.black.opacity(0.12))
+                    .frame(width: width * 0.66, height: height * 0.12)
+                    .offset(y: height * 0.35)
+
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(.sRGB, red: 1.0, green: 0.82, blue: 0.38, opacity: 1),
+                                Color(.sRGB, red: 0.95, green: 0.59, blue: 0.24, opacity: 1),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-                )
-                .rotationEffect(.degrees(-12))
-                .shadow(color: .green.opacity(0.18), radius: 6, x: 0, y: 4)
+                    .frame(width: width * 0.48, height: height * 0.7)
+                    .rotationEffect(.degrees(isRunning ? -12 : -7))
+                    .offset(x: width * 0.02, y: isRunning ? -height * 0.05 : height * 0.02)
+                    .shadow(color: .green.opacity(0.16), radius: 5, x: 0, y: 3)
 
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(.black.opacity(0.78))
-                    .frame(width: 4, height: 4)
-                Circle()
-                    .fill(.black.opacity(0.78))
-                    .frame(width: 4, height: 4)
-            }
-            .offset(y: -3)
-
-            Capsule()
-                .stroke(.black.opacity(0.72), lineWidth: 1.5)
-                .frame(width: 13, height: 6)
-                .offset(y: 7)
-
-            HStack(spacing: 14) {
                 Capsule()
-                    .fill(.green.opacity(0.82))
-                    .frame(width: 5, height: 12)
-                    .rotationEffect(.degrees(isRunning ? 24 : -24))
-                Capsule()
-                    .fill(.green.opacity(0.82))
-                    .frame(width: 5, height: 12)
-                    .rotationEffect(.degrees(isRunning ? -24 : 24))
+                    .fill(Color.green.opacity(0.78))
+                    .frame(width: width * 0.14, height: height * 0.32)
+                    .rotationEffect(.degrees(38))
+                    .offset(x: width * 0.18, y: -height * 0.26)
+
+                HStack(spacing: width * 0.11) {
+                    Circle()
+                        .fill(.black.opacity(0.75))
+                    Circle()
+                        .fill(.black.opacity(0.75))
+                }
+                .frame(width: width * 0.24, height: height * 0.07)
+                .offset(x: width * 0.02, y: -height * 0.09)
+
+                Path { path in
+                    path.move(to: CGPoint(x: width * 0.42, y: height * 0.54))
+                    path.addQuadCurve(
+                        to: CGPoint(x: width * 0.6, y: height * 0.54),
+                        control: CGPoint(x: width * 0.51, y: height * 0.62)
+                    )
+                }
+                .stroke(.black.opacity(0.58), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+
+                HStack(spacing: width * 0.28) {
+                    Capsule()
+                        .fill(Color.green.opacity(0.76))
+                        .frame(width: width * 0.1, height: height * 0.27)
+                        .rotationEffect(.degrees(isRunning ? 24 : -22))
+                    Capsule()
+                        .fill(Color.green.opacity(0.76))
+                        .frame(width: width * 0.1, height: height * 0.27)
+                        .rotationEffect(.degrees(isRunning ? -22 : 24))
+                }
+                .offset(y: height * 0.35)
             }
-            .offset(y: 17)
+            .frame(width: width, height: height)
         }
-        .offset(y: isRunning ? -2 : 2)
     }
 }
 
@@ -2403,6 +2473,7 @@ private struct EditMealEntryView: View {
                     }
                 }
             }
+            .mealMarkScrollDismissesKeyboard()
             .navigationTitle("Edit meal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -2417,6 +2488,14 @@ private struct EditMealEntryView: View {
                     }
                     .disabled(trimmedLabel.isEmpty || (gramsValue ?? 0) <= 0)
                     .accessibilityIdentifier("SaveEditedMealButton")
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        focusedField = nil
+                        MealMarkKeyboard.dismiss()
+                    }
+                    .accessibilityIdentifier("EditMealKeyboardDoneButton")
                 }
             }
             .onAppear {
@@ -2510,7 +2589,7 @@ private struct MealDetailView: View {
                                         .accessibilityIdentifier("MealDetailNutrition")
                                 }
                                 Spacer()
-                                SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus == .verified ? .green : .orange)
+                                SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus.reviewTint)
                             }
 
                             if let macronutrients = entry.meal.macronutrients {
@@ -2541,20 +2620,12 @@ private struct MealDetailView: View {
                         }
                     }
 
-                    Section("Why this is in MealMark") {
+                    Section("How MealMark read it") {
                         LabeledContent("Source", value: entry.sourceClass.description)
                         LabeledContent("Trust", value: entry.trustStatus.label)
                         if let provenance = store.provenanceSnapshot(entryID: entry.entryID) {
-                            LabeledContent("Primary evidence", value: provenance.primarySourceLabel)
                             ForEach(Array(provenance.evidence.enumerated()), id: \.offset) { _, evidence in
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(evidence.sourceLabel)
-                                        .font(.subheadline.weight(.semibold))
-                                    Text("\(evidence.matchedName) • \(evidence.servingBasis)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                .accessibilityIdentifier("MealDetailEvidence-\(evidence.normalizedProvider)")
+                                MealDetailEvidenceRow(evidence: evidence)
                             }
                         } else {
                             Text("This entry keeps confirmed nutrition values and trust labels. Detailed provider evidence is available for meals saved in the current session.")
@@ -2598,6 +2669,71 @@ private struct MealDetailView: View {
             return "\(Int(rounded)) g"
         }
         return "\(rounded) g"
+    }
+}
+
+private struct MealDetailEvidenceRow: View {
+    var evidence: ProviderEvidence
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: iconName)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.blue)
+                .frame(width: 30, height: 30)
+                .background(Color.blue.opacity(0.1), in: Circle())
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(evidence.sourceLabel)
+                    .font(.subheadline.weight(.semibold))
+                Text("\(evidence.matchedName) • \(evidence.servingBasis)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let detailLabel {
+                    Text(detailLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.vertical, 3)
+        .accessibilityIdentifier("MealDetailEvidence-\(evidence.normalizedProvider)")
+    }
+
+    private var detailLabel: String? {
+        let parts = [
+            evidence.trustLabel,
+            evidence.matchType,
+            evidence.providerID.isEmpty ? nil : "ID \(evidence.providerID)",
+        ].compactMap { value in
+            value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }.filter { !$0.isEmpty }
+
+        guard !parts.isEmpty else {
+            return nil
+        }
+        return parts.joined(separator: " • ")
+    }
+
+    private var iconName: String {
+        switch evidence.normalizedProvider {
+        case "visible_nutrition_label":
+            return "doc.text.viewfinder"
+        case "barcode_provider", "open_food_facts", "open_food_facts_fixture":
+            return "barcode.viewfinder"
+        case "usda_fdc":
+            return "books.vertical"
+        case "food_wallet_history":
+            return "clock.arrow.circlepath"
+        case "food_wallet_recipe", "food_wallet_template":
+            return "book.closed"
+        default:
+            return "checkmark.seal"
+        }
     }
 }
 
@@ -2895,7 +3031,7 @@ private struct MealRow: View {
                 }
             }
             Spacer()
-            SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus == .verified ? .green : .orange)
+            SourceBadge(text: entry.trustStatus.label, tint: entry.trustStatus.reviewTint)
         }
         .accessibilityElement(children: .combine)
     }
