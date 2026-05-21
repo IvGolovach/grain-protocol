@@ -33,23 +33,27 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
     private let analysisEndpoint: URL
     private let searchEndpoint: URL
     private let session: URLSession
+    private let bearerToken: String?
 
-    public init(endpoint: URL, session: URLSession = .shared) {
+    public init(endpoint: URL, bearerToken: String? = nil, session: URLSession = .shared) {
         self.analysisEndpoint = endpoint
         self.searchEndpoint = Self.derivedSearchEndpoint(from: endpoint)
         self.session = session
+        self.bearerToken = bearerToken
     }
 
-    public init(analysisEndpoint: URL, searchEndpoint: URL, session: URLSession = .shared) {
+    public init(analysisEndpoint: URL, searchEndpoint: URL, bearerToken: String? = nil, session: URLSession = .shared) {
         self.analysisEndpoint = analysisEndpoint
         self.searchEndpoint = searchEndpoint
         self.session = session
+        self.bearerToken = bearerToken
     }
 
-    public init(baseURL: URL, session: URLSession = .shared) {
+    public init(baseURL: URL, bearerToken: String? = nil, session: URLSession = .shared) {
         self.analysisEndpoint = Self.analysisEndpoint(from: baseURL)
         self.searchEndpoint = Self.searchEndpoint(from: baseURL)
         self.session = session
+        self.bearerToken = bearerToken
     }
 
     public func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
@@ -66,8 +70,7 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         var request = URLRequest(url: analysisEndpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 30
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        applyBrokerHeaders(to: &request)
         request.httpBody = try JSONEncoder().encode(Self.requestEnvelope(photoPayload: photoPayload))
 
         let (data, response): (Data, URLResponse)
@@ -94,8 +97,7 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         var urlRequest = URLRequest(url: searchEndpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = 20
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        applyBrokerHeaders(to: &urlRequest)
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
         let (data, response): (Data, URLResponse)
@@ -127,6 +129,14 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         }
         guard photoPayload.byteCount > 0 else {
             throw FoodAnalysisBrokerClientError.invalidPayload("JPEG bytes are empty")
+        }
+    }
+
+    private func applyBrokerHeaders(to request: inout URLRequest) {
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let token = bearerToken?.trimmingCharacters(in: .whitespacesAndNewlines), !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
     }
 

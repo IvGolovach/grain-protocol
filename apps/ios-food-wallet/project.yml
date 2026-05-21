@@ -38,6 +38,7 @@ targets:
         INFOPLIST_FILE: AppStore/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GRAIN_FOOD_ANALYSIS_BROKER_URL: ""
+        GRAIN_FOOD_BROKER_DEV_TOKEN: ""
         PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet
         PRODUCT_NAME: FoodWallet
         TARGETED_DEVICE_FAMILY: "1"

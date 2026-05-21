@@ -2,7 +2,7 @@ import { BrokerError } from "./errors.js";
 import type { Per100gNutrients } from "./nutrition.js";
 
 export type NutritionMatch = {
-  provider: "usda_fdc";
+  provider: "deterministic_fixture" | "usda_fdc";
   providerID: string;
   matchedName: string;
   servingBasis: "per_100g";
@@ -15,14 +15,14 @@ export type NutritionProvider = {
 
 const FIXTURES: NutritionMatch[] = [
   {
-    provider: "usda_fdc",
+    provider: "deterministic_fixture",
     providerID: "1750340",
     matchedName: "Apples, raw, fuji, with skin",
     servingBasis: "per_100g",
     per100g: { kcal: 63, proteinGrams: 0.2, carbohydrateGrams: 15.2, fatGrams: 0.2, fiberGrams: 2.1 }
   },
   {
-    provider: "usda_fdc",
+    provider: "deterministic_fixture",
     providerID: "fixture-risotto-mushroom-components",
     matchedName: "Mushroom risotto, reconstructed from visible components",
     servingBasis: "per_100g",
@@ -40,6 +40,12 @@ export class FixtureNutritionProvider implements NutritionProvider {
       .filter((entry) => entry.score > 0)
       .sort((left, right) => right.score - left.score);
     return scored[0]?.fixture ?? null;
+  }
+}
+
+export class MissingNutritionProvider implements NutritionProvider {
+  async lookup(): Promise<NutritionMatch | null> {
+    return null;
   }
 }
 
@@ -91,7 +97,10 @@ export function nutritionProviderFromEnv(env: NodeJS.ProcessEnv = process.env): 
   if (apiKey && apiKey.trim().length > 0) {
     return new LiveUsdaFoodDataCentralProvider({ apiKey });
   }
-  return new FixtureNutritionProvider();
+  if (env.FOOD_NUTRITION_FIXTURES === "1") {
+    return new FixtureNutritionProvider();
+  }
+  return new MissingNutritionProvider();
 }
 
 function parseFdcSearchFood(value: unknown): NutritionMatch | null {

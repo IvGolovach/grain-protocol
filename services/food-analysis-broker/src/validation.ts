@@ -44,17 +44,18 @@ export function parseAnalyzePhotoRequest(value: unknown): {
     });
   }
 
-  const request = value as FoodAnalyzePhotoRequest;
-  validateOptionalString("request_id", request.request_id, 96);
-  validateOptionalString("capture_id", request.capture_id, 128);
-  if (request.draft) {
-    validateOptionalString("draft.draft_id", request.draft.draft_id, 128);
-    validateOptionalString("draft.payload_cid", request.draft.payload_cid, 256);
-    if (request.draft.ts_ms !== undefined && !Number.isSafeInteger(request.draft.ts_ms)) {
+  const rawRequest = value as FoodAnalyzePhotoRequest;
+  validateOptionalString("request_id", rawRequest.request_id, 96);
+  validateOptionalString("capture_id", rawRequest.capture_id, 128);
+  if (rawRequest.draft) {
+    validateOptionalString("draft.draft_id", rawRequest.draft.draft_id, 128);
+    validateOptionalString("draft.payload_cid", rawRequest.draft.payload_cid, 256);
+    if (rawRequest.draft.ts_ms !== undefined && !Number.isSafeInteger(rawRequest.draft.ts_ms)) {
       throw new BrokerError(400, "BAD_REQUEST", "draft.ts_ms must be a safe integer");
     }
   }
 
+  const request = sanitizedAnalyzeRequest(value, mediaType as SupportedImageMediaType, photo.bytes_b64);
   const requestId = request.request_id || randomUUID();
   const photoSha25616 = createHash("sha256").update(imageBytes).digest("hex").slice(0, 16);
   return { request, imageBytes, photoSha25616, requestId };
@@ -218,6 +219,81 @@ function decodeBase64(value: string): Uint8Array {
   } catch {
     throw new BrokerError(400, "BAD_REQUEST", "photo.bytes_b64 could not be decoded");
   }
+}
+
+function sanitizedAnalyzeRequest(
+  value: Record<string, unknown>,
+  mediaType: SupportedImageMediaType,
+  photoBytesB64: string
+): FoodAnalyzePhotoRequest {
+  const rawRequest = value as FoodAnalyzePhotoRequest;
+  const request: FoodAnalyzePhotoRequest = {
+    photo: {
+      media_type: mediaType,
+      bytes_b64: photoBytesB64
+    }
+  };
+
+  if (rawRequest.request_id !== undefined) request.request_id = rawRequest.request_id;
+  if (rawRequest.capture_id !== undefined) request.capture_id = rawRequest.capture_id;
+
+  const client = sanitizedClient(value.client);
+  if (client !== undefined) request.client = client;
+
+  const hints = sanitizedHints(value.hints);
+  if (hints !== undefined) request.hints = hints;
+
+  const draft = sanitizedDraft(value.draft);
+  if (draft !== undefined) request.draft = draft;
+
+  return request;
+}
+
+function sanitizedClient(value: unknown): FoodAnalyzePhotoRequest["client"] | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) {
+    throw new BrokerError(400, "BAD_REQUEST", "client must be an object");
+  }
+  validateOptionalString("client.app_version", value.app_version, 64);
+  validateOptionalString("client.device_id_hash", value.device_id_hash, 128);
+  if (value.platform !== undefined && value.platform !== "ios") {
+    throw new BrokerError(400, "BAD_REQUEST", "client.platform must be ios");
+  }
+
+  const client: NonNullable<FoodAnalyzePhotoRequest["client"]> = {};
+  if (value.platform === "ios") client.platform = "ios";
+  if (typeof value.app_version === "string") client.app_version = value.app_version;
+  if (typeof value.device_id_hash === "string") client.device_id_hash = value.device_id_hash;
+  return Object.keys(client).length === 0 ? undefined : client;
+}
+
+function sanitizedHints(value: unknown): FoodAnalyzePhotoRequest["hints"] | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) {
+    throw new BrokerError(400, "BAD_REQUEST", "hints must be an object");
+  }
+  validateOptionalString("hints.locale", value.locale, 32);
+  validateOptionalString("hints.meal_context", value.meal_context, 80);
+  validateOptionalString("hints.timezone", value.timezone, 64);
+
+  const hints: NonNullable<FoodAnalyzePhotoRequest["hints"]> = {};
+  if (typeof value.locale === "string") hints.locale = value.locale;
+  if (typeof value.meal_context === "string") hints.meal_context = value.meal_context;
+  if (typeof value.timezone === "string") hints.timezone = value.timezone;
+  return Object.keys(hints).length === 0 ? undefined : hints;
+}
+
+function sanitizedDraft(value: unknown): FoodAnalyzePhotoRequest["draft"] | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) {
+    throw new BrokerError(400, "BAD_REQUEST", "draft must be an object");
+  }
+
+  const draft: NonNullable<FoodAnalyzePhotoRequest["draft"]> = {};
+  if (typeof value.draft_id === "string") draft.draft_id = value.draft_id;
+  if (typeof value.payload_cid === "string") draft.payload_cid = value.payload_cid;
+  if (typeof value.ts_ms === "number") draft.ts_ms = value.ts_ms;
+  return Object.keys(draft).length === 0 ? undefined : draft;
 }
 
 function validateOptionalString(field: string, value: unknown, maxLength: number): void {

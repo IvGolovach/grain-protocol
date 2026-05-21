@@ -1032,7 +1032,12 @@ struct FoodIngredientCatalog {
 
     private static func matchScore(query: AddFoodSearchQuery, entry: Entry) -> Int? {
         let searchable = AddFoodSearchQuery.normalize(entry.searchableText)
-        guard query.tokens.allSatisfy({ searchable.contains($0) }) else {
+        let searchableTokens = searchable.split(separator: " ").map(String.init)
+        guard query.tokens.allSatisfy({ token in
+            searchableTokens.contains { candidate in
+                candidate == token || candidate.hasPrefix(token)
+            }
+        }) else {
             return nil
         }
         if "milk".hasPrefix(query.normalizedValue),

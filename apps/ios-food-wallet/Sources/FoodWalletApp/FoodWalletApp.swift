@@ -41,6 +41,7 @@ struct FoodWalletAppMain: App {
 
 private enum FoodWalletAppConfiguration {
     private static let brokerEndpointEnvironmentKey = "GRAIN_FOOD_ANALYSIS_BROKER_URL"
+    private static let brokerTokenEnvironmentKey = "GRAIN_FOOD_BROKER_DEV_TOKEN"
     private static let deviceSmokeArgument = "--grain-device-smoke"
     private static let uiTestPhotoFlowArgument = "--grain-ui-test-photo-flow"
     private static let uiTestDelayedPhotoFlowArgument = "--grain-ui-test-delayed-photo-flow"
@@ -93,12 +94,16 @@ private enum FoodWalletAppConfiguration {
             let endpointValue = configuredBrokerEndpoint(),
             let endpoint = URL(string: endpointValue),
             endpoint.scheme != nil,
-            endpoint.host != nil
+            endpoint.host != nil,
+            brokerEndpointIsAllowed(endpoint)
         else {
             return UnavailableFoodAnalysisClient()
         }
 
-        return FoodAnalysisBrokerClient(endpoint: analysisEndpoint(from: endpoint))
+        return FoodAnalysisBrokerClient(
+            endpoint: analysisEndpoint(from: endpoint),
+            bearerToken: configuredBrokerToken()
+        )
     }
 
     private static func makeFoodSearchClient() -> (any BrokerFoodSearchClient)? {
@@ -110,14 +115,16 @@ private enum FoodWalletAppConfiguration {
             let endpointValue = configuredBrokerEndpoint(),
             let endpoint = URL(string: endpointValue),
             endpoint.scheme != nil,
-            endpoint.host != nil
+            endpoint.host != nil,
+            brokerEndpointIsAllowed(endpoint)
         else {
             return nil
         }
 
         return FoodAnalysisBrokerClient(
             analysisEndpoint: analysisEndpoint(from: endpoint),
-            searchEndpoint: searchEndpoint(from: endpoint)
+            searchEndpoint: searchEndpoint(from: endpoint),
+            bearerToken: configuredBrokerToken()
         )
     }
 
@@ -126,6 +133,39 @@ private enum FoodWalletAppConfiguration {
             return value
         }
         return Bundle.main.object(forInfoDictionaryKey: brokerEndpointEnvironmentKey) as? String
+    }
+
+    private static func configuredBrokerToken() -> String? {
+        if let token = usableConfiguredValue(ProcessInfo.processInfo.environment[brokerTokenEnvironmentKey]) {
+            return token
+        }
+        return usableConfiguredValue(Bundle.main.object(forInfoDictionaryKey: brokerTokenEnvironmentKey) as? String)
+    }
+
+    private static func brokerEndpointIsAllowed(_ endpoint: URL) -> Bool {
+        guard let scheme = endpoint.scheme?.lowercased(), let host = endpoint.host else {
+            return false
+        }
+        if scheme == "https" {
+            return true
+        }
+        if scheme == "http" {
+            return isLoopbackHost(host) || configuredBrokerToken() != nil
+        }
+        return false
+    }
+
+    private static func isLoopbackHost(_ host: String) -> Bool {
+        let normalized = host.lowercased()
+        return normalized == "localhost" || normalized == "::1" || normalized.hasPrefix("127.")
+    }
+
+    private static func usableConfiguredValue(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !trimmed.isEmpty, !trimmed.hasPrefix("$(") else {
+            return nil
+        }
+        return trimmed
     }
 
     private static func analysisEndpoint(from endpoint: URL) -> URL {
@@ -177,13 +217,6 @@ private enum FoodWalletUserLibraryStore {
             return state
         }
         return FoodWalletUserLibraryState()
-    }
-
-    @MainActor
-    static func savePersonalIngredients(_ ingredients: [PersonalFoodIngredient]) {
-        var state = load()
-        state.personalIngredients = ingredients
-        save(state)
     }
 
     static func save(_ state: FoodWalletUserLibraryState) {

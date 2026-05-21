@@ -18,6 +18,7 @@ import type {
 
 export type BrokerServerOptions = {
   analyzer?: FoodAnalyzer;
+  authToken?: string;
   candidateResolver?: CandidateResolver;
   searchProvider?: FoodSearchProvider;
   resolver?: ObservationResolver;
@@ -30,11 +31,12 @@ export function createBrokerServer(options: BrokerServerOptions = {}): Server {
   const searchProvider = options.searchProvider ?? foodSearchProviderFromEnv();
   const resolver = options.resolver ?? new GrainDraftResolver();
   const maxBodyBytes = options.maxBodyBytes ?? MAX_JSON_BODY_BYTES;
+  const authToken = normalizeAuthToken(options.authToken ?? process.env.FOOD_BROKER_DEV_TOKEN);
 
   return createServer(async (req, res) => {
     const requestId = req.headers["x-request-id"]?.toString() || randomUUID();
     try {
-      await routeRequest(req, res, { analyzer, candidateResolver, searchProvider, resolver, maxBodyBytes, requestId });
+      await routeRequest(req, res, { analyzer, authToken, candidateResolver, searchProvider, resolver, maxBodyBytes, requestId });
     } catch (err) {
       if (err instanceof BrokerError) {
         writeJson(res, err.status, errorShape(err, requestId));
@@ -50,6 +52,7 @@ async function routeRequest(
   res: ServerResponse,
   context: {
     analyzer: FoodAnalyzer;
+    authToken: string | null;
     candidateResolver: CandidateResolver;
     searchProvider: FoodSearchProvider;
     resolver: ObservationResolver;
@@ -61,6 +64,7 @@ async function routeRequest(
   if (pathname !== "/v1/food/analyze-photo" && pathname !== "/v1/food/search") {
     throw new BrokerError(404, "NOT_FOUND", "route not found");
   }
+  enforceAuth(req, context.authToken);
   if (req.method !== "POST") {
     throw new BrokerError(405, "METHOD_NOT_ALLOWED", "POST is required");
   }
@@ -122,6 +126,19 @@ async function routeRequest(
     }
   };
   writeJson(res, 200, body);
+}
+
+function enforceAuth(req: IncomingMessage, authToken: string | null): void {
+  if (!authToken) return;
+  const expected = `Bearer ${authToken}`;
+  if (req.headers.authorization !== expected) {
+    throw new BrokerError(401, "UNAUTHORIZED", "valid broker bearer token is required");
+  }
+}
+
+function normalizeAuthToken(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
 }
 
 function readBody(req: IncomingMessage, maxBodyBytes: number): Promise<string> {

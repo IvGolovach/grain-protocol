@@ -41,6 +41,16 @@ export class MockFoodAnalyzer implements FoodAnalyzer {
   }
 }
 
+export class MissingFoodAnalyzer implements FoodAnalyzer {
+  async analyze(): Promise<{ mode: "mock"; modelId: string; observation: FoodObservation }> {
+    throw new BrokerError(
+      503,
+      "PROVIDER_NOT_CONFIGURED",
+      "OpenAI food analysis is not configured; set OPENAI_API_KEY or explicitly enable FOOD_ANALYSIS_MOCK=1"
+    );
+  }
+}
+
 export class OpenAiFoodAnalyzer implements FoodAnalyzer {
   private readonly apiKey: string;
   private readonly model: string;
@@ -88,7 +98,12 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
       });
     }
 
-    const responseJson = await response.json() as unknown;
+    let responseJson: unknown;
+    try {
+      responseJson = await response.json() as unknown;
+    } catch {
+      throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation response was not valid JSON");
+    }
     const outputText = extractOutputText(responseJson);
     let parsed: unknown;
     try {
@@ -159,6 +174,9 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
 }
 
 export function analyzerFromEnv(env: NodeJS.ProcessEnv = process.env): FoodAnalyzer {
+  if (env.FOOD_ANALYSIS_MOCK === "1") {
+    return new MockFoodAnalyzer();
+  }
   if (env.OPENAI_API_KEY && env.OPENAI_API_KEY.trim().length > 0) {
     return new OpenAiFoodAnalyzer({
       apiKey: env.OPENAI_API_KEY,
@@ -166,7 +184,7 @@ export function analyzerFromEnv(env: NodeJS.ProcessEnv = process.env): FoodAnaly
       timeoutMs: parseTimeoutMs(env.FOOD_ANALYSIS_TIMEOUT_MS)
     });
   }
-  return new MockFoodAnalyzer();
+  return new MissingFoodAnalyzer();
 }
 
 function parseTimeoutMs(value: string | undefined): number | undefined {

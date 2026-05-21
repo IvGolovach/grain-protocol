@@ -88,9 +88,10 @@ live providers on the broker, not in the app:
   environment configuration.
 
 The broker returns structured estimates with calorie range, portion range,
-macros, assumptions, evidence, confidence, and a mandatory confirmation flag. If
-no keyed provider is configured, public Open Food Facts barcode lookup and
-deterministic local development fixtures still require user confirmation.
+macros, assumptions, evidence, confidence, and a mandatory confirmation flag.
+Photo analysis requires `OPENAI_API_KEY` unless `FOOD_ANALYSIS_MOCK=1` is set
+explicitly for deterministic local tests. USDA nutrition fixtures are also
+explicit opt-in via `FOOD_NUTRITION_FIXTURES=1`.
 
 Run the broker guard after touching the backend service:
 
@@ -101,10 +102,20 @@ scripts/sdk/check_food_analysis_broker.sh
 The guard does not require provider accounts; live credentials stay in the local
 environment or a deployment secret manager.
 
-For local iPhone testing, start the broker on the LAN with public barcode lookup
-enabled and optional Keychain-backed OpenAI/USDA credentials:
+For local desktop testing, the broker binds to loopback by default and can use
+Keychain-backed OpenAI/USDA credentials:
 
 ```sh
+scripts/sdk/run_food_analysis_broker_local.sh
+```
+
+For local iPhone testing, opt in to LAN binding and provide a short-lived bearer
+token. Pass the same token to the app install lane.
+
+```sh
+ALLOW_LAN_BROKER=1 \
+HOST=0.0.0.0 \
+FOOD_BROKER_DEV_TOKEN=<dev-token> \
 scripts/sdk/run_food_analysis_broker_local.sh
 ```
 
@@ -187,5 +198,6 @@ GRAIN_IOS_DEVICE_ID=<device-id> \
 GRAIN_IOS_DEVELOPMENT_TEAM=<team-id> \
 GRAIN_IOS_BUNDLE_ID=dev.grain.foodwallet \
 GRAIN_FOOD_ANALYSIS_BROKER_URL=http://<mac-lan-ip>:8788 \
+GRAIN_FOOD_BROKER_DEV_TOKEN=<same-dev-token> \
 scripts/sdk/run_ios_food_wallet_device.sh
 ```

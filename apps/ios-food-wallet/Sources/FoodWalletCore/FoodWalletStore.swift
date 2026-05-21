@@ -686,12 +686,13 @@ public final class FoodWalletStore: ObservableObject {
             label: trimmedLabel,
             gramsMode: gramsMode
         )
+        let didEditUserOwnedFields = current.meal.label != updatedMeal.label || current.meal.amountGrams != updatedMeal.amountGrams
         let updatedEntry = FoodIntakeEntry(
             entryID: current.entryID,
             draftID: current.draftID,
             meal: updatedMeal,
-            sourceClass: current.sourceClass,
-            trustStatus: current.trustStatus,
+            sourceClass: didEditUserOwnedFields ? .measured : current.sourceClass,
+            trustStatus: didEditUserOwnedFields ? .selfIssued : current.trustStatus,
             confirmedAt: current.confirmedAt,
             dateKey: current.dateKey
         )
@@ -844,48 +845,6 @@ public final class FoodWalletStore: ObservableObject {
             ),
             sourceClass: .measured,
             trustStatus: .selfIssued
-        )
-        return true
-    }
-
-    public func createVerifiedServingOfferDraft() -> Bool {
-        let meal = MealEstimate(
-            label: "Verified lentil bowl",
-            kcal: 520,
-            varianceKcal: 0,
-            amountGrams: 420,
-            servingGrams: 420,
-            servings: 1,
-            macronutrients: MealMacronutrients(
-                proteinGrams: 26,
-                carbohydrateGrams: 68,
-                fatGrams: 14,
-                fiberGrams: 15
-            )
-        )
-        presentDraft(
-            candidate: FoodWalletStore.candidate(
-                id: "verified-serving-offer",
-                label: meal.label,
-                genericLabel: "lentil bowl",
-                dishType: .mixed,
-                meal: meal,
-                confidence: .high,
-                assumptions: [
-                    FoodAssumption(id: "issuer-serving", label: "issuer-provided serving"),
-                    FoodAssumption(id: "grain-verified", label: "verified serving offer"),
-                ],
-                evidence: [
-                    ProviderEvidence(
-                        provider: "grain_serving_offer",
-                        providerID: "local-serving-offer",
-                        matchedName: "Verified lentil bowl",
-                        servingBasis: "issuer_attested_serving"
-                    ),
-                ]
-            ),
-            sourceClass: .attested,
-            trustStatus: .verified
         )
         return true
     }

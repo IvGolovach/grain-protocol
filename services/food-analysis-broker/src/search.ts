@@ -213,7 +213,10 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
       }, this.timeoutMs);
       if (!response.ok) continue;
 
-      const body = await response.json() as OpenFoodFactsResponse;
+      const body = await readJsonResponse<OpenFoodFactsResponse>(
+        response,
+        "Open Food Facts response was not valid JSON"
+      );
       if (body.status !== 1 || !body.product) continue;
       const result = openFoodFactsResult(barcode, body.product);
       if (result) return [result];
@@ -261,11 +264,14 @@ export class UsdaBrandedFoodSearchProvider implements FoodSearchProvider {
       }, this.timeoutMs);
       if (!response.ok) continue;
 
-      const body = await response.json() as UsdaSearchResponse;
+      const body = await readJsonResponse<UsdaSearchResponse>(
+        response,
+        "USDA branded search response was not valid JSON"
+      );
       const foods = Array.isArray(body.foods) ? body.foods : [];
       const exact = foods.find((food) => haveSharedBarcodeCandidate(barcodes, barcodeLookupCandidates(food.gtinUpc)));
       if (!exact) continue;
-      const details = await this.fetchDetails(exact.fdcId);
+      const details = await this.fetchDetails(exact.fdcId).catch(() => null);
       const result = usdaBrandedResult(barcode, exact, details);
       if (result) return [result];
     }
@@ -282,7 +288,10 @@ export class UsdaBrandedFoodSearchProvider implements FoodSearchProvider {
       }
     }, this.timeoutMs);
     if (!response.ok) return null;
-    return await response.json() as UsdaFoodDetails;
+    return await readJsonResponse<UsdaFoodDetails>(
+      response,
+      "USDA branded detail response was not valid JSON"
+    );
   }
 }
 
@@ -324,7 +333,10 @@ export class UsdaGenericFoodSearchProvider implements FoodSearchProvider {
     }, this.timeoutMs);
     if (!response.ok) return [];
 
-    const body = await response.json() as UsdaSearchResponse;
+    const body = await readJsonResponse<UsdaSearchResponse>(
+      response,
+      "USDA generic search response was not valid JSON"
+    );
     const foods = Array.isArray(body.foods) ? body.foods : [];
     return foods
       .map((food) => {
@@ -947,6 +959,8 @@ function usdaNutrient(food: UsdaSearchFood, nutrientNumber: string, nameNeedle: 
     const numberMatch = nutrient.nutrientNumber === nutrientNumber;
     const nameMatch = nutrient.nutrientName?.toLowerCase().includes(nameNeedle) ?? false;
     if (numberMatch || nameMatch) {
+      const unit = nutrient.unitName?.trim().toLowerCase() ?? "";
+      if (!["g", "gram", "grams"].includes(unit)) continue;
       const value = numeric(nutrient.value);
       if (value !== null) return value;
     }
@@ -997,6 +1011,14 @@ async function fetchWithTimeout(fetchFn: FetchFn, url: URL, init: RequestInit, t
     });
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function readJsonResponse<T>(response: Response, message: string): Promise<T> {
+  try {
+    return await response.json() as T;
+  } catch {
+    throw new BrokerError(502, "UPSTREAM_ERROR", message);
   }
 }
 

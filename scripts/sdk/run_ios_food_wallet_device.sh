@@ -9,6 +9,7 @@ DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 XCRUN="${XCRUN:-/usr/bin/xcrun}"
 BUNDLE_ID="${GRAIN_IOS_BUNDLE_ID:-dev.grain.foodwallet}"
 BROKER_URL="${GRAIN_FOOD_ANALYSIS_BROKER_URL:-}"
+BROKER_TOKEN="${GRAIN_FOOD_BROKER_DEV_TOKEN:-${FOOD_BROKER_DEV_TOKEN:-}}"
 export DEVELOPER_DIR
 
 if [ ! -d "$DEVELOPER_DIR" ]; then
@@ -129,7 +130,7 @@ fi
 APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphoneos/FoodWallet.app"
 SMOKE_LOG="$DERIVED_DATA/device-smoke.log"
 LAUNCH_ENV="$(
-  python3 - "$BROKER_URL" <<'PY'
+  python3 - "$BROKER_URL" "$BROKER_TOKEN" <<'PY'
 import json
 import sys
 
@@ -137,6 +138,9 @@ env = {"LLVM_PROFILE_FILE": "/dev/null"}
 broker_url = sys.argv[1]
 if broker_url:
     env["GRAIN_FOOD_ANALYSIS_BROKER_URL"] = broker_url
+broker_token = sys.argv[2] if len(sys.argv) > 2 else ""
+if broker_token:
+    env["GRAIN_FOOD_BROKER_DEV_TOKEN"] = broker_token
 print(json.dumps(env, separators=(",", ":")))
 PY
 )"
@@ -154,6 +158,7 @@ build_args=(
   DEVELOPMENT_TEAM="$TEAM_ID"
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID"
   GRAIN_FOOD_ANALYSIS_BROKER_URL="$BROKER_URL"
+  GRAIN_FOOD_BROKER_DEV_TOKEN="$BROKER_TOKEN"
   build
 )
 

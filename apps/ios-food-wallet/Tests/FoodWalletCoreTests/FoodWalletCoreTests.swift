@@ -27,6 +27,9 @@ struct FoodWalletCoreTests {
         await run("brokerPostsTransientPhotoPayload") {
             try await testBrokerPostsTransientPhotoPayload()
         }
+        await run("brokerClientAddsBearerToken") {
+            try await testBrokerClientAddsBearerToken()
+        }
         await run("brokerRejectsUnsafeCandidateWithoutConfirmation") {
             try await testBrokerRejectsUnsafeCandidateWithoutConfirmation()
         }
@@ -74,6 +77,9 @@ struct FoodWalletCoreTests {
         }
         await run("ingredientLookupDoesNotResolveSubstringMatches") {
             try await testIngredientLookupDoesNotResolveSubstringMatches()
+        }
+        await run("ingredientSuggestionsDoNotMatchInsideWords") {
+            try await testIngredientSuggestionsDoNotMatchInsideWords()
         }
         await run("portionEditorScalesDraftNutritionRange") {
             try await testPortionEditorScalesDraftNutritionRange()
@@ -342,6 +348,19 @@ struct FoodWalletCoreTests {
         try expect(capture.contentType == "application/json", "expected JSON request")
     }
 
+    private static func testBrokerClientAddsBearerToken() async throws {
+        let jpegBytes = Data([0xff, 0xd8])
+        let capture = BrokerRequestCapture()
+        let client = brokerClient(bearerToken: "dev-token") { request in
+            capture.authorization = request.value(forHTTPHeaderField: "Authorization")
+            return BrokerResponse(statusCode: 200, body: brokerEnvelopeJSON(userConfirmationRequired: true))
+        }
+
+        _ = try await client.estimate(photoPayload: TransientMealPhotoPayload(photo: .uiTestFujiApple, jpegData: jpegBytes))
+
+        try expect(capture.authorization == "Bearer dev-token", "expected broker bearer token header")
+    }
+
     private static func testBrokerRejectsUnsafeCandidateWithoutConfirmation() async throws {
         let client = brokerClient { _ in
             BrokerResponse(statusCode: 200, body: brokerEnvelopeJSON(userConfirmationRequired: false))
@@ -596,6 +615,15 @@ struct FoodWalletCoreTests {
         )
         try expect(plainButter == .created, "expected exact butter lookup to remain supported, got \(plainButter)")
         try expect(store.currentCandidate?.evidence.first?.providerID == "butter", "expected exact butter provider evidence")
+    }
+
+    @MainActor
+    private static func testIngredientSuggestionsDoNotMatchInsideWords() async throws {
+        let store = FoodWalletStore()
+        let rows = store.addFoodSearchSuggestions(for: "oil")
+
+        try expect(rows.contains { $0.title == "Olive oil" }, "expected exact oil alias to match")
+        try expect(!rows.contains { $0.title == "Boiled egg" }, "expected oil not to match inside boiled")
     }
 
     @MainActor
@@ -1101,8 +1129,8 @@ struct FoodWalletCoreTests {
         try expect(edited.draftID == original.draftID, "expected stable draft id")
         try expect(edited.confirmedAt == original.confirmedAt, "expected stable confirmation date")
         try expect(edited.dateKey == original.dateKey, "expected stable date key")
-        try expect(edited.sourceClass == original.sourceClass, "expected source class to be preserved")
-        try expect(edited.trustStatus == original.trustStatus, "expected trust status to be preserved")
+        try expect(edited.sourceClass == .measured, "expected manual edit to be measured")
+        try expect(edited.trustStatus == .selfIssued, "expected manual edit to be self-issued")
         try expect(edited.meal.amountGrams == 946, "expected edited grams")
         try expect(edited.meal.kcal == 160, "expected edited kcal")
         try expect(store.safeSummary.totals.sumMeanKcal == 160, "expected safe summary to update")
@@ -1359,7 +1387,7 @@ struct FoodWalletCoreTests {
         let store = FoodWalletStore()
         try expect(store.createTypedFoodDraft("apple"), "expected estimated draft")
         store.confirmDraft()
-        try expect(store.createVerifiedServingOfferDraft(), "expected verified draft")
+        try expect(store.createVisibleLabelDraft(label: "Bottle label", caloriesPerContainer: 80, grams: 473), "expected measured draft")
         store.confirmDraft()
 
         let bundle = try store.exportPortableBundle()
@@ -1368,10 +1396,10 @@ struct FoodWalletCoreTests {
         try expect(bundle.manifest.contentSha256.count == 64, "expected content hash")
         try expect(bundle.manifest.contentDigestID == "sha256:\(bundle.manifest.contentSha256)", "expected digest id to bind hash")
         try expect(bundle.manifest.signature?.algorithm == "p256-sha256", "expected self-issued signature")
-        try expect(bundle.manifest.trustStatusSummary["verified"] == 1, "expected verified provenance count")
-        try expect(bundle.manifest.trustStatusSummary["self_issued"] == 1, "expected self-issued provenance count")
-        try expect(bundle.manifest.sourceClassSummary["attested"] == 1, "expected attested source count")
-        try expect(bundle.manifest.sourceClassSummary["measured"] == 1, "expected measured source count")
+        try expect(bundle.manifest.trustStatusSummary["verified"] == nil, "expected no synthetic verified provenance")
+        try expect(bundle.manifest.trustStatusSummary["self_issued"] == 2, "expected self-issued provenance count")
+        try expect(bundle.manifest.sourceClassSummary["attested"] == nil, "expected no synthetic attested source")
+        try expect(bundle.manifest.sourceClassSummary["measured"] == 2, "expected measured source count")
         try expect(FoodWalletExportFactory.verifyIntegrity(bundle), "expected bundle integrity to verify")
     }
 
@@ -1642,6 +1670,7 @@ private struct BrokerResponse: Sendable {
 private final class BrokerRequestCapture: @unchecked Sendable {
     var method: String?
     var contentType: String?
+    var authorization: String?
     var path: String?
     var body = Data()
 }
@@ -1710,6 +1739,7 @@ private struct StaticFoodSearchClient: BrokerFoodSearchClient {
 }
 
 private func brokerClient(
+    bearerToken: String? = nil,
     handler: @escaping @Sendable (URLRequest) throws -> BrokerResponse
 ) -> FoodAnalysisBrokerClient {
     BrokerURLProtocol.setHandler(handler)
@@ -1717,6 +1747,7 @@ private func brokerClient(
     configuration.protocolClasses = [BrokerURLProtocol.self]
     return FoodAnalysisBrokerClient(
         endpoint: URL(string: "https://broker.example.test/v1/food/analyze-photo")!,
+        bearerToken: bearerToken,
         session: URLSession(configuration: configuration)
     )
 }
