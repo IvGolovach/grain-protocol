@@ -7,6 +7,7 @@ export type RuntimeEnv = {
   FOOD_BROKER_DEV_TOKEN?: string;
   FOOD_NUTRITION_FIXTURES?: string;
   FOOD_SEARCH_FIXTURES?: string;
+  FOOD_SEARCH_ALLOW_USDA_BARCODE_FALLBACK?: string;
   FOOD_SEARCH_LIVE?: string;
   FOOD_SEARCH_TIMEOUT_MS?: string;
   FOODDATA_CENTRAL_API_KEY?: string;

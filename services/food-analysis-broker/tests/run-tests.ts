@@ -63,6 +63,9 @@ async function main(): Promise<number> {
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromKilojoules();
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing();
   await testOpenFoodFactsBarcodeProviderPrefersServingNutritionWhenPer100gDisagrees();
+  await testOpenFoodFactsBarcodeProviderRejectsMismatchedReturnedCode();
+  await testOpenFoodFactsBarcodeProviderAcceptsZeroCalorieWaterBeforeSodaCategory();
+  await testOpenFoodFactsBarcodeProviderDoesNotFallBackToTextSearchForBarcodeIntent();
   await testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
   await testOpenFoodFactsBarcodeProviderAcceptsPlausibleCreamCheeseNutrition();
   await testOpenFoodFactsTextSearchProvider();
@@ -78,6 +81,8 @@ async function main(): Promise<number> {
   await testCompositeFoodSearchProviderRanksBarcodeSourceFidelity();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsForTextSearchWithoutUsda();
+  await testFoodSearchProviderFromEnvDoesNotUseUsdaBarcodeFallbackByDefault();
+  await testFoodSearchProviderFromEnvAllowsUsdaBarcodeFallbackWhenExplicit();
   await testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested();
   await testNutritionProviderFromEnvKeepsFixturesExplicit();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
@@ -249,6 +254,7 @@ async function testOpenFoodFactsBarcodeProvider(): Promise<void> {
     fetchFn: async (url: string | URL | Request, init?: RequestInit) => {
       assert.equal(String(url), "https://off.example.test/api/v2/product/012345678905.json?fields=code%2Cproduct_name%2Cgeneric_name%2Cbrands%2Ccategories_tags%2Cserving_quantity%2Cserving_size%2Cnutriments");
       assert.equal((init?.headers as Record<string, string>)["User-Agent"], "MealMarkTests/1.0 (test@example.com)");
+      assert.equal((init?.headers as Record<string, string>)["X-User-Agent"], "MealMarkTests/1.0 (test@example.com)");
       return new Response(JSON.stringify({
         status: 1,
         product: {
@@ -418,6 +424,97 @@ async function testOpenFoodFactsBarcodeProviderPrefersServingNutritionWhenPer100
   pass("Open Food Facts barcode provider prefers serving nutrition when per-100g values disagree");
 }
 
+async function testOpenFoodFactsBarcodeProviderRejectsMismatchedReturnedCode(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "071537001822",
+        product_name: "POLAR, PINK GRAPEFRUIT DRY",
+        generic_name: "pink grapefruit dry",
+        brands: "POLAR",
+        categories_tags: ["en:beverages", "en:sodas"],
+        serving_quantity: "240",
+        serving_size: "8 fl oz (240 ml)",
+        nutriments: {
+          "energy-kcal_serving": 101,
+          carbohydrates_serving: 25.9,
+          fat_serving: 0,
+          proteins_serving: 0
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "071537001839" });
+
+  assert.equal(results.length, 0);
+  pass("Open Food Facts barcode provider rejects mismatched returned product code");
+}
+
+async function testOpenFoodFactsBarcodeProviderAcceptsZeroCalorieWaterBeforeSodaCategory(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "0071537001822",
+        product_name: "BLACKBERRY MANGO",
+        generic_name: "sparkling water",
+        brands: "POLAR",
+        categories_tags: ["en:beverages", "en:waters", "en:sodas"],
+        serving_quantity: "355",
+        serving_size: "1 can (355 ml)",
+        nutriments: {
+          "energy-kcal_100g": 0,
+          proteins_100g: 0,
+          carbohydrates_100g: 0,
+          fat_100g: 0
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "071537001822" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "BLACKBERRY MANGO");
+  assert.equal(results[0].category, "waters");
+  assert.equal(results[0].nutrition.per_100g.kcal, 0);
+  assert.equal(results[0].nutrition.per_100g.carbohydrate_g, 0);
+  assert.equal(results[0].provider_evidence[0].provider_id, "0071537001822");
+  pass("Open Food Facts barcode provider accepts zero-calorie water even when final category is soda");
+}
+
+async function testOpenFoodFactsBarcodeProviderDoesNotFallBackToTextSearchForBarcodeIntent(): Promise<void> {
+  const requestedPaths: string[] = [];
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async (url: string | URL) => {
+      const parsed = new URL(String(url));
+      requestedPaths.push(parsed.pathname);
+      return new Response(JSON.stringify({ status: 0 }), {
+        status: 200,
+        headers: { "content-type": "application/json" }
+      });
+    }
+  });
+
+  const results = await provider.search({ barcode: "071537001839", query: "POLAR PINK GRAPEFRUIT DRY" });
+
+  assert.equal(results.length, 0);
+  assert.deepEqual(requestedPaths, [
+    "/api/v2/product/071537001839.json",
+    "/api/v2/product/0071537001839.json",
+    "/api/v2/product/00071537001839.json"
+  ]);
+  pass("Open Food Facts barcode provider does not fall back to text search for barcode intent");
+}
+
 async function testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition(): Promise<void> {
   const provider = new OpenFoodFactsSearchProvider({
     baseUrl: "https://off.example.test",
@@ -496,6 +593,7 @@ async function testOpenFoodFactsTextSearchProvider(): Promise<void> {
       assert.equal(parsed.searchParams.get("sort_by"), "unique_scans_n");
       assert.equal(parsed.searchParams.get("lc"), "en");
       assert.equal((init?.headers as Record<string, string>)["User-Agent"], "MealMarkTests/1.0 (test@example.com)");
+      assert.equal((init?.headers as Record<string, string>)["X-User-Agent"], "MealMarkTests/1.0 (test@example.com)");
       return new Response(JSON.stringify({
         products: [
           {
@@ -1018,6 +1116,111 @@ async function testFoodSearchProviderFromEnvUsesOpenFoodFactsForTextSearchWithou
   pass("food search env provider can use Open Food Facts text search without USDA credentials");
 }
 
+async function testFoodSearchProviderFromEnvDoesNotUseUsdaBarcodeFallbackByDefault(): Promise<void> {
+  let usdaRequests = 0;
+  const offServer = createServer((_req, res) => {
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ status: 0 }));
+  });
+  const usdaServer = createServer((_req, res) => {
+    usdaRequests += 1;
+    res.statusCode = 500;
+    res.end("USDA branded fallback should be opt-in");
+  });
+  offServer.listen(0, "127.0.0.1");
+  usdaServer.listen(0, "127.0.0.1");
+  await Promise.all([once(offServer, "listening"), once(usdaServer, "listening")]);
+  const offAddress = offServer.address();
+  const usdaAddress = usdaServer.address();
+  assert(offAddress && typeof offAddress === "object");
+  assert(usdaAddress && typeof usdaAddress === "object");
+  try {
+    const provider = foodSearchProviderFromEnv({
+      FOOD_SEARCH_LIVE: "1",
+      FOODDATA_CENTRAL_API_KEY: "test-usda-key",
+      OPEN_FOOD_FACTS_BASE_URL: `http://127.0.0.1:${offAddress.port}`,
+      USDA_FDC_BASE_URL: `http://127.0.0.1:${usdaAddress.port}`
+    });
+    const results = await provider.search({ barcode: "071537001822", limit: 2 });
+    assert.deepEqual(results, []);
+    assert.equal(usdaRequests, 0);
+  } finally {
+    offServer.close();
+    usdaServer.close();
+    await Promise.all([once(offServer, "close"), once(usdaServer, "close")]);
+  }
+  pass("food search env provider keeps USDA branded barcode fallback disabled by default");
+}
+
+async function testFoodSearchProviderFromEnvAllowsUsdaBarcodeFallbackWhenExplicit(): Promise<void> {
+  const offServer = createServer((_req, res) => {
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ status: 0 }));
+  });
+  const usdaServer = createServer(async (req, res) => {
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    res.setHeader("content-type", "application/json");
+    if (url.pathname === "/foods/search") {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      await once(req, "end");
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
+      assert.equal(body.query, "071537001822");
+      res.end(JSON.stringify({
+        foods: [
+          {
+            fdcId: 2047546,
+            description: "POLAR, PINK GRAPEFRUIT DRY",
+            brandName: "POLAR",
+            gtinUpc: "071537001822",
+            foodCategory: "Water",
+            servingSize: 240,
+            servingSizeUnit: "ml",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 42.1 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 10.8 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 0 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 0 }
+            ]
+          }
+        ]
+      }));
+      return;
+    }
+    if (url.pathname === "/food/2047546") {
+      res.end(JSON.stringify({ fdcId: 2047546 }));
+      return;
+    }
+    res.statusCode = 404;
+    res.end(JSON.stringify({ error: "not found" }));
+  });
+  offServer.listen(0, "127.0.0.1");
+  usdaServer.listen(0, "127.0.0.1");
+  await Promise.all([once(offServer, "listening"), once(usdaServer, "listening")]);
+  const offAddress = offServer.address();
+  const usdaAddress = usdaServer.address();
+  assert(offAddress && typeof offAddress === "object");
+  assert(usdaAddress && typeof usdaAddress === "object");
+  try {
+    const provider = foodSearchProviderFromEnv({
+      FOOD_SEARCH_LIVE: "1",
+      FOOD_SEARCH_ALLOW_USDA_BARCODE_FALLBACK: "1",
+      FOODDATA_CENTRAL_API_KEY: "test-usda-key",
+      OPEN_FOOD_FACTS_BASE_URL: `http://127.0.0.1:${offAddress.port}`,
+      USDA_FDC_BASE_URL: `http://127.0.0.1:${usdaAddress.port}`
+    });
+    const results = await provider.search({ barcode: "071537001822", limit: 2 });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].source_label, "usda_fdc");
+    assert.equal(results[0].primary_label, "POLAR, PINK GRAPEFRUIT DRY");
+  } finally {
+    offServer.close();
+    usdaServer.close();
+    await Promise.all([once(offServer, "close"), once(usdaServer, "close")]);
+  }
+  pass("food search env provider allows USDA branded barcode fallback only when explicit");
+}
+
 async function testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested(): Promise<void> {
   const disabledProvider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "0" });
   assert.deepEqual(await disabledProvider.search({ barcode: "012345678905" }), []);
@@ -1064,9 +1267,9 @@ async function testCompositeFoodSearchProviderRanksBarcodeSourceFidelity(): Prom
   const results = await provider.search({ barcode: "071111111113", limit: 2 });
 
   assert.equal(results.length, 2);
-  assert.equal(results[0].source_label, "usda_fdc");
-  assert.equal(results[1].source_label, "open_food_facts");
-  pass("composite food search ranks stronger barcode sources before weaker provider order");
+  assert.equal(results[0].source_label, "open_food_facts");
+  assert.equal(results[1].source_label, "usda_fdc");
+  pass("composite food search prefers exact Open Food Facts barcode data before stale branded mirrors");
 }
 
 async function testCompositeFoodSearchProviderFallsBackAfterProviderFailure(): Promise<void> {

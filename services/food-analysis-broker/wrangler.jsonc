@@ -11,6 +11,7 @@
     "MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH": "1",
     "FOOD_SEARCH_LIVE": "1",
     "FOOD_SEARCH_TIMEOUT_MS": "2500",
+    "OPEN_FOOD_FACTS_BASE_URL": "https://world.openfoodfacts.net",
     "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)"
   },
   "env": {
@@ -22,6 +23,7 @@
         "APP_STORE_SERVER_ENVIRONMENT": "Sandbox",
         "FOOD_SEARCH_LIVE": "1",
         "FOOD_SEARCH_TIMEOUT_MS": "2500",
+        "OPEN_FOOD_FACTS_BASE_URL": "https://world.openfoodfacts.net",
         "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 staging (https://github.com/IvGolovach/grain-protocol)"
       },
       "d1_databases": [
@@ -40,6 +42,7 @@
         "APP_STORE_SERVER_ENVIRONMENT": "Production",
         "FOOD_SEARCH_LIVE": "1",
         "FOOD_SEARCH_TIMEOUT_MS": "2500",
+        "OPEN_FOOD_FACTS_BASE_URL": "https://world.openfoodfacts.net",
         "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)"
       },
       "d1_databases": [

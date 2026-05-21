@@ -103,6 +103,35 @@ public struct BrokerFoodSearchRequest: Encodable, Equatable, Sendable {
     }
 }
 
+public struct CameraBarcodeStabilityTracker: Sendable {
+    private var observationCounts: [String: Int]
+
+    public init() {
+        observationCounts = [:]
+    }
+
+    public mutating func observe(
+        _ values: [String?],
+        allowsShortBarcode: Bool = false,
+        requiredObservations: Int = 2
+    ) -> String? {
+        guard let candidate = BrokerFoodSearchRequest.preferredCameraBarcode(
+            from: values,
+            allowsShortBarcode: allowsShortBarcode
+        ) else {
+            return nil
+        }
+
+        let count = (observationCounts[candidate] ?? 0) + 1
+        observationCounts[candidate] = count
+        return count >= max(1, requiredObservations) ? candidate : nil
+    }
+
+    public mutating func reset() {
+        observationCounts.removeAll()
+    }
+}
+
 public protocol BrokerFoodSearchClient: Sendable {
     func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult]
 }

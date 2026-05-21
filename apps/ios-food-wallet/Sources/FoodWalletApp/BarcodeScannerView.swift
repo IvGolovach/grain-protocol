@@ -100,6 +100,7 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
         private var didEmit = false
         private var didReportScannerError = false
+        private var barcodeStabilityTracker = CameraBarcodeStabilityTracker()
         private let onBarcode: (String) -> Void
         private let onQRCode: (String) -> Void
         private let onScannerError: (String) -> Void
@@ -157,9 +158,10 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
                 onQRCode(qrValue)
                 return
             }
-            if let normalizedValue = BrokerFoodSearchRequest.preferredCameraBarcode(
-                from: values,
-                allowsShortBarcode: allowsShortBarcode
+            if let normalizedValue = barcodeStabilityTracker.observe(
+                values,
+                allowsShortBarcode: allowsShortBarcode,
+                requiredObservations: allowsShortBarcode ? 1 : 2
             ) {
                 didEmit = true
                 dataScanner.stopScanning()

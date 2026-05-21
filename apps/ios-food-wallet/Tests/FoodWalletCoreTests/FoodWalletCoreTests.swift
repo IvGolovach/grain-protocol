@@ -617,6 +617,20 @@ struct FoodWalletCoreTests {
             BrokerFoodSearchRequest.preferredCameraBarcode(from: ["033617000026", "0033617000026"]) == "0033617000026",
             "expected EAN-13 provider form to win when both UPC-A and EAN-13 are visible"
         )
+
+        var tracker = CameraBarcodeStabilityTracker()
+        try expect(
+            tracker.observe(["071537001822"]) == nil,
+            "expected automatic scan to wait for a second stable observation before lookup"
+        )
+        try expect(
+            tracker.observe(["071537001839"]) == nil,
+            "expected a different barcode observation not to inherit the first candidate's count"
+        )
+        try expect(
+            tracker.observe(["071537001839"]) == "071537001839",
+            "expected repeated stable barcode to be emitted"
+        )
     }
 
     @MainActor

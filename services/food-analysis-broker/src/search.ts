@@ -35,6 +35,7 @@ type FetchFn = (url: string | URL, init?: RequestInit) => Promise<Response>;
 const DEFAULT_LIMIT = 8;
 const MAX_LIMIT = 20;
 const DEFAULT_TIMEOUT_MS = 2500;
+const DEFAULT_OPEN_FOOD_FACTS_BASE_URL = "https://world.openfoodfacts.net";
 const DEFAULT_OPEN_FOOD_FACTS_USER_AGENT = "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)";
 const OPEN_FOOD_FACTS_FIELDS = [
   "code",
@@ -164,7 +165,11 @@ export class CompositeFoodSearchProvider implements FoodSearchProvider {
     if (results.length === 0 && firstError) {
       throw firstError;
     }
-    return results
+    const strictBarcodeResults = barcodeLookupCandidates(request.barcode).length > 0
+      ? results.filter((result) => result.match.type === "barcode")
+      : [];
+    const rankableResults = strictBarcodeResults.length > 0 ? strictBarcodeResults : results;
+    return rankableResults
       .sort((left, right) => foodSearchResultRank(right) - foodSearchResultRank(left) ||
         left.primary_label.localeCompare(right.primary_label))
       .slice(0, limit);
@@ -183,7 +188,7 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
     fetchFn?: FetchFn;
     timeoutMs?: number;
   }) {
-    this.baseUrl = options.baseUrl ?? "https://world.openfoodfacts.org";
+    this.baseUrl = options.baseUrl ?? DEFAULT_OPEN_FOOD_FACTS_BASE_URL;
     this.userAgent = options.userAgent;
     this.fetchFn = options.fetchFn ?? fetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -197,7 +202,8 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
       const response = await fetchWithTimeout(this.fetchFn, url, {
         headers: {
           "Accept": "application/json",
-          "User-Agent": this.userAgent
+          "User-Agent": this.userAgent,
+          "X-User-Agent": this.userAgent
         }
       }, this.timeoutMs);
       if (!response.ok) continue;
@@ -207,14 +213,22 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
         "Open Food Facts response was not valid JSON"
       );
       if (body.status !== 1 || !body.product) continue;
+      const returnedCode = cleanText(body.product.code);
+      if (returnedCode && !haveSharedBarcodeCandidate(barcodes, barcodeLookupCandidates(returnedCode))) {
+        continue;
+      }
       const result = openFoodFactsResult({
-        providerID: cleanText(body.product.code) ?? barcode,
+        providerID: returnedCode ?? barcode,
         product: body.product,
         matchType: "barcode",
         matchScore: 1,
         trustLabel: "barcode_provider"
       });
       if (result) return [result];
+    }
+
+    if (barcodes.length > 0) {
+      return [];
     }
 
     const query = cleanText(request.query);
@@ -234,7 +248,8 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
     const response = await fetchWithTimeout(this.fetchFn, url, {
       headers: {
         "Accept": "application/json",
-        "User-Agent": this.userAgent
+        "User-Agent": this.userAgent,
+        "X-User-Agent": this.userAgent
       }
     }, this.timeoutMs);
     if (!response.ok) return [];
@@ -353,6 +368,9 @@ export class UsdaGenericFoodSearchProvider implements FoodSearchProvider {
   }
 
   async search(request: FoodSearchRequest): Promise<FoodSearchResult[]> {
+    if (barcodeLookupCandidates(request.barcode).length > 0) {
+      return [];
+    }
     const query = cleanText(request.query);
     if (!query || normalizeBarcode(query)) return [];
 
@@ -407,11 +425,13 @@ export function foodSearchProviderFromEnv(env: RuntimeEnv = {}): FoodSearchProvi
         baseUrl: env.USDA_FDC_BASE_URL,
         timeoutMs
       }));
-      providers.push(new UsdaBrandedFoodSearchProvider({
-        apiKey,
-        baseUrl: env.USDA_FDC_BASE_URL,
-        timeoutMs
-      }));
+      if (env.FOOD_SEARCH_ALLOW_USDA_BARCODE_FALLBACK === "1") {
+        providers.push(new UsdaBrandedFoodSearchProvider({
+          apiKey,
+          baseUrl: env.USDA_FDC_BASE_URL,
+          timeoutMs
+        }));
+      }
     }
   }
   if (fixturesEnabled) {
@@ -926,8 +946,17 @@ function servingGramsFromLabel(value: string | undefined): number | null {
 
 function openFoodFactsCategory(value: unknown): string {
   if (!Array.isArray(value)) return "packaged_food";
-  const last = value.map((item) => cleanText(item)).filter((item): item is string => item !== null).at(-1);
-  return last?.replace(/^[a-z]{2}:/u, "").replace(/-/gu, "_") ?? "packaged_food";
+  const categories = value
+    .map((item) => cleanText(item))
+    .filter((item): item is string => item !== null)
+    .map((item) => item.replace(/^[a-z]{2}:/u, "").replace(/-/gu, "_"));
+  const zeroCalorieBeverageCategory = categories.find((category) =>
+    /\b(waters?|seltzers?|sparkling_waters?|mineral_waters?)\b/u.test(category)
+  );
+  if (zeroCalorieBeverageCategory) {
+    return zeroCalorieBeverageCategory;
+  }
+  return categories.at(-1) ?? "packaged_food";
 }
 
 function packagedNutritionQualityIssue(input: {
@@ -1112,7 +1141,7 @@ function foodSearchResultRank(result: FoodSearchResult): number {
   let rank = result.match.score;
   if (result.match.type === "barcode") rank += 3;
   if (result.source_label === "usda_fdc" && result.match.type === "barcode") rank += 0.35;
-  if (result.source_label === "open_food_facts" && result.match.type === "barcode") rank += 0.2;
+  if (result.source_label === "open_food_facts" && result.match.type === "barcode") rank += 0.45;
   if (result.source_label === "deterministic_fixture") rank -= 0.25;
   if (result.trust_label === "barcode_provider") rank += 0.1;
   if (result.trust_label === "provider_estimate") rank -= 0.1;

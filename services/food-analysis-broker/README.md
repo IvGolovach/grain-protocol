@@ -60,6 +60,13 @@ Required production posture:
 - `MEALMARK_AUTH_MODE=session`;
 - `MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH=1` if pre-account ingredient lookup
   should work in the app;
+- keep `FOOD_SEARCH_ALLOW_USDA_BARCODE_FALLBACK` unset unless the deployment
+  deliberately accepts USDA branded UPC fallback risk. MealMark production
+  barcode search should prefer Open Food Facts product records and ask for a
+  label/manual review when no authoritative barcode product is available;
+- `OPEN_FOOD_FACTS_BASE_URL=https://world.openfoodfacts.net` for Cloudflare
+  Worker deployments. This host has the same product API shape and avoids
+  Worker-to-`world.openfoodfacts.org` TLS failures observed in staging;
 - `MEALMARK_SESSION_HMAC_SECRET` set as a Cloudflare secret;
 - `OPENAI_API_KEY` set as a Cloudflare secret;
 - `FOODDATA_CENTRAL_API_KEY` set as a Cloudflare secret;
