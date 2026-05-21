@@ -651,7 +651,7 @@ private struct AddFoodHubView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: AddFoodFocus?
-    @State private var quickText = ""
+    @State private var searchText = ""
     @State private var selectedScope: AddFoodScope = .all
     @State private var mealTitle = ""
     @State private var ingredientRows = [
@@ -671,19 +671,19 @@ private struct AddFoodHubView: View {
     @State private var isShowingBuildMeal = false
     @State private var selectedSavedRecipeID: String?
     @State private var selectedPersonalIngredientID: String?
-    @State private var unresolvedQuickFoodName: String?
-    @State private var isShowingQuickManualNutrition = false
+    @State private var unresolvedFoodName: String?
+    @State private var isShowingManualNutrition = false
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
     var onChoosePhoto: () -> Void
 
-    private var trimmedQuickText: String {
-        quickText.trimmingCharacters(in: .whitespacesAndNewlines)
+    private var trimmedSearchText: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var hasSearchQuery: Bool {
-        !trimmedQuickText.isEmpty
+        !trimmedSearchText.isEmpty
     }
 
     var body: some View {
@@ -691,9 +691,9 @@ private struct AddFoodHubView: View {
             Section {
                 VStack(alignment: .leading, spacing: 16) {
                     AddFoodSearchField(
-                        text: $quickText,
+                        text: $searchText,
                         focusedField: $focusedField,
-                        onSubmit: createQuickTextDraft
+                        onSubmit: createTypedFoodDraft
                     )
 
                     if shouldShowShortcuts {
@@ -847,21 +847,11 @@ private struct AddFoodHubView: View {
                         )
                     }
 
-                    if shouldShowQuickCreateRow {
-                        AddFoodResultRow(
-                            title: "Create \"\(trimmedQuickText)\"",
-                            subtitle: "Parsed text, ready for review",
-                            symbol: "text.badge.plus",
-                            accessibilityIdentifier: "CreateFoodDraft-\(Self.slug(trimmedQuickText))",
-                            action: createQuickTextDraft
-                        )
-                    }
-
                     if shouldShowUnknownFoodResolution {
                         UnknownFoodResolutionView(
-                            foodName: unresolvedQuickFoodName ?? trimmedQuickText,
+                            foodName: unresolvedFoodName ?? trimmedSearchText,
                             searchState: store.foodSearchState,
-                            isManualEntryVisible: isShowingQuickManualNutrition,
+                            isManualEntryVisible: isShowingManualNutrition,
                             onSearchAgain: searchProviderDatabasesForUnresolvedFood,
                             onEnterManually: enterNutritionForUnresolvedFood,
                             onScanCode: {
@@ -876,10 +866,10 @@ private struct AddFoodHubView: View {
         .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Add Food")
         .mealMarkNavigationBarTitleDisplayModeInline()
-        .onChange(of: trimmedQuickText) { _ in
-            resetUnresolvedQuickFood()
+        .onChange(of: trimmedSearchText) { _ in
+            resetUnresolvedFood()
         }
-        .task(id: trimmedQuickText) {
+        .task(id: trimmedSearchText) {
             await refreshBrokerFoodSearchForCurrentQuery()
         }
         .toolbar {
@@ -917,7 +907,7 @@ private struct AddFoodHubView: View {
                 onSavePersonalIngredient: savePersonalIngredient
             )
         }
-        .navigationDestination(isPresented: $isShowingQuickManualNutrition) {
+        .navigationDestination(isPresented: $isShowingManualNutrition) {
             if let personalIngredientName {
                 StandalonePersonalIngredientEntryView(
                     ingredientName: personalIngredientName,
@@ -983,7 +973,7 @@ private struct AddFoodHubView: View {
 
     @MainActor
     private func refreshBrokerFoodSearchForCurrentQuery() async {
-        guard hasSearchQuery, trimmedQuickText.count >= 2 else {
+        guard hasSearchQuery, trimmedSearchText.count >= 2 else {
             store.clearBrokerFoodSearch()
             return
         }
@@ -991,7 +981,7 @@ private struct AddFoodHubView: View {
         guard !Task.isCancelled else {
             return
         }
-        await store.searchBrokerFood(query: trimmedQuickText)
+        await store.searchBrokerFood(query: trimmedSearchText)
     }
 
     private var canCreateIngredientDraft: Bool {
@@ -1042,15 +1032,11 @@ private struct AddFoodHubView: View {
         guard hasSearchQuery, selectedScope == .all || selectedScope == .myFoods else {
             return []
         }
-        return store.addFoodSearchSuggestions(for: trimmedQuickText)
+        return store.addFoodSearchSuggestions(for: trimmedSearchText)
     }
 
     private var shouldShowFoodSearchResults: Bool {
         !filteredFoodSearchRows.isEmpty
-    }
-
-    private var shouldShowQuickCreateRow: Bool {
-        hasSearchQuery && selectedScope == .all && store.canCreateQuickTextDraft(trimmedQuickText)
     }
 
     private var shouldShowRecentResults: Bool {
@@ -1071,7 +1057,6 @@ private struct AddFoodHubView: View {
 
     private var shouldShowEmptyResults: Bool {
         !shouldShowUnknownFoodResolution &&
-            !shouldShowQuickCreateRow &&
             !shouldShowFoodSearchResults &&
             !shouldShowRecentResults &&
             !shouldShowTemplateResults &&
@@ -1082,7 +1067,6 @@ private struct AddFoodHubView: View {
     private var shouldShowUnknownFoodResolution: Bool {
         hasSearchQuery &&
             selectedScope == .all &&
-            !store.canCreateQuickTextDraft(trimmedQuickText) &&
             !shouldShowFoodSearchResults &&
             !shouldShowRecentResults &&
             !shouldShowTemplateResults &&
@@ -1112,35 +1096,35 @@ private struct AddFoodHubView: View {
         guard hasSearchQuery else {
             return false
         }
-        return primary.localizedCaseInsensitiveContains(trimmedQuickText) ||
-            (secondary?.localizedCaseInsensitiveContains(trimmedQuickText) ?? false)
+        return primary.localizedCaseInsensitiveContains(trimmedSearchText) ||
+            (secondary?.localizedCaseInsensitiveContains(trimmedSearchText) ?? false)
     }
 
-    private func createQuickTextDraft() {
-        createQuickTextDraft(trimmedQuickText)
+    private func createTypedFoodDraft() {
+        createTypedFoodDraft(trimmedSearchText)
     }
 
-    private func createQuickTextDraft(_ text: String) {
-        guard store.createQuickTextDraft(text) else {
-            prepareUnresolvedQuickFood(text)
+    private func createTypedFoodDraft(_ text: String) {
+        guard store.createTypedFoodDraft(text) else {
+            prepareUnresolvedFood(text)
             return
         }
         onDraftReady()
     }
 
-    private func prepareUnresolvedQuickFood(_ text: String) {
+    private func prepareUnresolvedFood(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return
         }
-        unresolvedQuickFoodName = trimmed
-        isShowingQuickManualNutrition = false
+        unresolvedFoodName = trimmed
+        isShowingManualNutrition = false
         personalIngredientErrorMessage = nil
     }
 
-    private func resetUnresolvedQuickFood() {
-        unresolvedQuickFoodName = nil
-        isShowingQuickManualNutrition = false
+    private func resetUnresolvedFood() {
+        unresolvedFoodName = nil
+        isShowingManualNutrition = false
         personalIngredientErrorMessage = nil
         if !isShowingBuildMeal {
             personalIngredientName = nil
@@ -1148,26 +1132,26 @@ private struct AddFoodHubView: View {
     }
 
     private func searchProviderDatabasesForUnresolvedFood() {
-        let query = (unresolvedQuickFoodName ?? trimmedQuickText).trimmingCharacters(in: .whitespacesAndNewlines)
+        let query = (unresolvedFoodName ?? trimmedSearchText).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else {
             return
         }
-        unresolvedQuickFoodName = query
+        unresolvedFoodName = query
         Task {
             await store.searchBrokerFood(query: query)
         }
     }
 
     private func enterNutritionForUnresolvedFood() {
-        let name = (unresolvedQuickFoodName ?? trimmedQuickText).trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = (unresolvedFoodName ?? trimmedSearchText).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
             return
         }
         focusedField = nil
         MealMarkKeyboard.dismiss()
-        unresolvedQuickFoodName = name
+        unresolvedFoodName = name
         preparePersonalIngredientForm(for: name)
-        isShowingQuickManualNutrition = true
+        isShowingManualNutrition = true
     }
 
     private func createFoodSearchDraft(id: String) {
@@ -1323,8 +1307,8 @@ private struct AddFoodHubView: View {
             let savedName = personalIngredientName
             let loggedGrams = max(1, Int64(servingGrams.rounded()))
             self.personalIngredientName = nil
-            unresolvedQuickFoodName = nil
-            isShowingQuickManualNutrition = false
+            unresolvedFoodName = nil
+            isShowingManualNutrition = false
             personalIngredientErrorMessage = nil
             let creationResult = store.createIngredientMealDraft(
                 title: savedName,
@@ -1354,7 +1338,7 @@ private struct AddFoodHubView: View {
 
     private func foodSearchAccessibilityIdentifier(for row: AddFoodSuggestionRow, index: Int) -> String {
         if index == 0, hasSearchQuery {
-            return "FoodSearchResult-\(Self.slug(trimmedQuickText))"
+            return "FoodSearchResult-\(Self.slug(trimmedSearchText))"
         }
         return "FoodSearchResult-\(Self.slug(row.title))"
     }
@@ -1867,7 +1851,7 @@ private struct AddFoodSearchField: View {
                 .submitLabel(.search)
                 .onSubmit(onSubmit)
                 .accessibilityLabel("FoodSearchField")
-                .accessibilityIdentifier("QuickTextField")
+                .accessibilityIdentifier("AddFoodSearchField")
 
             Button(action: onSubmit) {
                 Image(systemName: "arrow.up.circle.fill")
@@ -1875,7 +1859,7 @@ private struct AddFoodSearchField: View {
             }
             .disabled(trimmedText.isEmpty)
             .accessibilityLabel("Search food")
-            .accessibilityIdentifier("CreateQuickDraftButton")
+            .accessibilityIdentifier("CreateTypedFoodDraftButton")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -4292,7 +4276,7 @@ private struct MealDetailEvidenceRow: View {
         switch evidence.normalizedProvider {
         case "visible_nutrition_label":
             return "doc.text.viewfinder"
-        case "barcode_provider", "open_food_facts", "open_food_facts_fixture":
+        case "barcode_provider", "open_food_facts":
             return "barcode.viewfinder"
         case "usda_fdc":
             return "books.vertical"
@@ -4639,7 +4623,7 @@ private extension FoodAnalysisCandidate {
         if providers.contains("visible_nutrition_label") {
             return "Label read"
         }
-        if providers.contains("open_food_facts_fixture") || providers.contains("open_food_facts") {
+        if providers.contains("open_food_facts") {
             return "Barcode match"
         }
         if providers.contains("food_wallet_template") {
@@ -4650,9 +4634,6 @@ private extension FoodAnalysisCandidate {
         }
         if providers.contains("food_wallet_history") {
             return "Recent"
-        }
-        if providers.contains("food_wallet_quick_text") {
-            return "Quick add"
         }
         if providers.contains("usda_fdc") {
             return "USDA estimate"

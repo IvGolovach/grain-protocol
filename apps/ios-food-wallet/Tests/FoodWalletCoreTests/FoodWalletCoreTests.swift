@@ -57,17 +57,20 @@ struct FoodWalletCoreTests {
         await run("storeConfirmsOnlyAfterDraftReview") {
             try await testStoreConfirmsOnlyAfterDraftReview()
         }
-        await run("quickTextDraftCreatesSelfIssuedReviewableMeal") {
-            try await testQuickTextDraftCreatesSelfIssuedReviewableMeal()
+        await run("typedFoodDraftCreatesFromKnownSearchResult") {
+            try await testTypedFoodDraftCreatesFromKnownSearchResult()
         }
-        await run("quickTextDraftRejectsUnknownFoodWithoutFakeNutrition") {
-            try await testQuickTextDraftRejectsUnknownFoodWithoutFakeNutrition()
+        await run("typedFoodDraftRejectsUnknownFoodWithoutFakeNutrition") {
+            try await testTypedFoodDraftRejectsUnknownFoodWithoutFakeNutrition()
         }
         await run("addFoodSearchSuggestionsPreferCatalogMatches") {
             try await testAddFoodSearchSuggestionsPreferCatalogMatches()
         }
         await run("addFoodSearchSuggestionsIncludeMacadamiaNuts") {
             try await testAddFoodSearchSuggestionsIncludeMacadamiaNuts()
+        }
+        await run("ingredientLookupDoesNotResolveSubstringMatches") {
+            try await testIngredientLookupDoesNotResolveSubstringMatches()
         }
         await run("portionEditorScalesDraftNutritionRange") {
             try await testPortionEditorScalesDraftNutritionRange()
@@ -492,31 +495,31 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
-    private static func testQuickTextDraftCreatesSelfIssuedReviewableMeal() async throws {
+    private static func testTypedFoodDraftCreatesFromKnownSearchResult() async throws {
         let store = FoodWalletStore()
 
-        let created = store.createQuickTextDraft("2 eggs and toast with butter")
+        let created = store.createTypedFoodDraft("apple")
 
-        try expect(created, "expected quick text to create a draft")
-        try expect(store.currentCandidate?.primaryLabel == "2 eggs and toast with butter", "expected typed label")
-        try expect(store.currentCandidate?.confidence == .medium, "expected medium confidence for parsed text")
-        try expect(store.currentDraft?.trustStatus == .selfIssued, "expected self-issued quick text draft")
+        try expect(created, "expected typed food to create a draft from a known source")
+        try expect(store.currentCandidate?.primaryLabel == "Apple", "expected catalog label")
+        try expect(store.currentCandidate?.confidence == .medium, "expected medium confidence for catalog source")
+        try expect(store.currentDraft?.trustStatus == .selfIssued, "expected self-issued catalog draft")
         try expect(store.currentDraft?.sourceClass == .measured, "expected measured source class")
-        try expect(store.currentDraft?.meal.amountGrams == 220, "expected default parsed grams")
-        try expect(store.currentDraft?.meal.kcal == 330, "expected parsed calories")
+        try expect(store.currentDraft?.meal.amountGrams == 100, "expected default catalog grams")
+        try expect(store.currentDraft?.meal.kcal == 52, "expected catalog calories")
         try expect(store.entries.isEmpty, "expected review boundary before save")
 
         store.confirmDraft()
 
-        try expect(store.entries.count == 1, "expected saved quick text entry")
+        try expect(store.entries.count == 1, "expected saved typed food entry")
         try expect(store.entries.first?.trustStatus == .selfIssued, "expected saved entry to remain self-issued")
     }
 
     @MainActor
-    private static func testQuickTextDraftRejectsUnknownFoodWithoutFakeNutrition() async throws {
+    private static func testTypedFoodDraftRejectsUnknownFoodWithoutFakeNutrition() async throws {
         let store = FoodWalletStore()
 
-        let created = store.createQuickTextDraft("JAANA")
+        let created = store.createTypedFoodDraft("JAANA")
 
         try expect(!created, "expected unknown typed food to be unresolved")
         try expect(store.currentCandidate == nil, "expected no fake candidate for unknown typed food")
@@ -555,6 +558,32 @@ struct FoodWalletCoreTests {
         try expect(first.sourceLabel == "Ingredient catalog", "expected provenance label")
         try expect(first.subtitle == "1 oz (28 g) | 201 kcal", "expected serving kcal summary")
         try expect(first.evidence.contains { $0.providerID == "nuts.macadamia" }, "expected macadamia evidence")
+    }
+
+    @MainActor
+    private static func testIngredientLookupDoesNotResolveSubstringMatches() async throws {
+        let store = FoodWalletStore()
+
+        let almondButter = store.createIngredientMealDraft(
+            title: "Toast",
+            ingredients: [
+                FoodMealIngredientInput(name: "Almond butter", grams: 32),
+            ]
+        )
+        try expect(
+            almondButter == .unknownIngredient("Almond butter"),
+            "expected almond butter to require a real source, got \(almondButter)"
+        )
+        try expect(store.currentDraft == nil, "expected no fake draft for unresolved almond butter")
+
+        let plainButter = store.createIngredientMealDraft(
+            title: "Toast",
+            ingredients: [
+                FoodMealIngredientInput(name: "Butter", grams: 14),
+            ]
+        )
+        try expect(plainButter == .created, "expected exact butter lookup to remain supported, got \(plainButter)")
+        try expect(store.currentCandidate?.evidence.first?.providerID == "butter", "expected exact butter provider evidence")
     }
 
     @MainActor
@@ -718,7 +747,8 @@ struct FoodWalletCoreTests {
 
     @MainActor
     private static func testBrokerSearchResultCanBecomeReusableIngredient() async throws {
-        let store = FoodWalletStore(searchClient: MockBrokerFoodSearchClient())
+        let result = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: brokerGroundBeefSearchEnvelopeJSON()).results[0]
+        let store = FoodWalletStore(searchClient: StaticFoodSearchClient(results: [result]))
 
         await store.searchBrokerFood(query: "beef")
         guard let result = store.brokerFoodSearchRows.first else {
@@ -1001,7 +1031,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testStoreRestoresInjectedEntries() async throws {
         let source = FoodWalletStore()
-        try expect(source.createQuickTextDraft("2 eggs and toast"), "expected source draft")
+        try expect(source.createTypedFoodDraft("apple"), "expected source draft")
         source.confirmDraft()
 
         let restored = FoodWalletStore(entries: source.entries)
@@ -1009,7 +1039,7 @@ struct FoodWalletCoreTests {
         try expect(restored.entries.count == 1, "expected restored entry")
         try expect(restored.entries.first?.entryID == source.entries.first?.entryID, "expected stable restored entry id")
         try expect(restored.safeSummary.totals.entryCount == 1, "expected restored safe summary")
-        try expect(restored.safeSummary.entries.first?.label == "2 eggs and toast", "expected restored safe summary label")
+        try expect(restored.safeSummary.entries.first?.label == "Apple", "expected restored safe summary label")
     }
 
     @MainActor
@@ -1023,7 +1053,7 @@ struct FoodWalletCoreTests {
             }
         )
 
-        try expect(store.createQuickTextDraft("apple"), "expected draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected draft")
         store.confirmDraft()
         let sourceDateKey = store.entries.first!.dateKey
 
@@ -1077,10 +1107,10 @@ struct FoodWalletCoreTests {
             snapshots.append(entries)
         })
 
-        try expect(store.createQuickTextDraft("apple"), "expected first draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected first draft")
         store.confirmDraft()
         let deletedID = store.entries.first!.entryID
-        try expect(store.createQuickTextDraft("2 eggs and toast"), "expected second draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected second draft")
         store.confirmDraft()
 
         try expect(store.deleteEntry(entryID: deletedID), "expected delete")
@@ -1096,7 +1126,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testPortableBundleHasDeterministicIntegrityMetadataAndSummaries() async throws {
         let store = FoodWalletStore()
-        try expect(store.createQuickTextDraft("apple"), "expected quick text draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected sourced typed-food draft")
         store.confirmDraft()
         try expect(store.createVisibleLabelDraft(label: "Bottle label", caloriesPerContainer: 80, grams: 473), "expected label draft")
         store.confirmDraft()
@@ -1126,7 +1156,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testImportPreviewValidatesAndMergeIsIdempotent() async throws {
         let source = FoodWalletStore()
-        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        try expect(source.createTypedFoodDraft("apple"), "expected source draft")
         source.confirmDraft()
         let bundle = try source.exportPortableBundle(generatedAt: Date(timeIntervalSince1970: 42))
 
@@ -1153,7 +1183,7 @@ struct FoodWalletCoreTests {
     private static func testPortableExportIncludesSafeUserDataOnly() async throws {
         let store = FoodWalletStore()
 
-        try expect(store.createQuickTextDraft("2 eggs and toast"), "expected quick text draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected sourced typed-food draft")
         store.confirmDraft()
         try expect(store.createIngredientMealDraft(
             title: "Tomato cucumber salad",
@@ -1270,7 +1300,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testStoreRestoresDurableEntriesAndPublishesLedgerChanges() async throws {
         let seed = FoodWalletStore()
-        try expect(seed.createQuickTextDraft("2 eggs and toast"), "expected seed draft")
+        try expect(seed.createTypedFoodDraft("apple"), "expected seed draft")
         seed.confirmDraft()
         let restoredEntries = seed.entries
 
@@ -1286,7 +1316,7 @@ struct FoodWalletCoreTests {
         try expect(restored.safeSummary.totals.entryCount == 1, "expected restored safe summary")
         try expect(restored.todayTotalLabel != "No meals saved yet", "expected restored total label")
 
-        try expect(restored.createQuickTextDraft("apple"), "expected second draft")
+        try expect(restored.createTypedFoodDraft("apple"), "expected second draft")
         restored.confirmDraft()
         try expect(restored.entries.count == 2, "expected restored store to append entries")
         try expect(publishedCounts == [2], "expected one entry-change publication after append")
@@ -1299,7 +1329,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testLocalLedgerCodecRoundTripsEntries() async throws {
         let store = FoodWalletStore()
-        try expect(store.createQuickTextDraft("apple"), "expected draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected draft")
         store.confirmDraft()
 
         let data = try FoodWalletLocalLedgerCodec.encodeEntries(store.entries)
@@ -1315,7 +1345,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testPortableBundleHasVerifiableIntegrityAndProvenance() async throws {
         let store = FoodWalletStore()
-        try expect(store.createQuickTextDraft("apple"), "expected estimated draft")
+        try expect(store.createTypedFoodDraft("apple"), "expected estimated draft")
         store.confirmDraft()
         try expect(store.createVerifiedServingOfferDraft(), "expected verified draft")
         store.confirmDraft()
@@ -1336,7 +1366,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testPortableImportPreviewsAndMergesIdempotently() async throws {
         let source = FoodWalletStore()
-        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        try expect(source.createTypedFoodDraft("apple"), "expected source draft")
         source.confirmDraft()
         let data = try source.exportPortableJSON()
 
@@ -1370,10 +1400,10 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testPortableImportRejectsTamperedBundle() async throws {
         let source = FoodWalletStore()
-        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        try expect(source.createTypedFoodDraft("apple"), "expected source draft")
         source.confirmDraft()
         let original = String(decoding: try source.exportPortableJSON(), as: UTF8.self)
-        let tampered = original.replacingOccurrences(of: "apple", with: "pear")
+        let tampered = original.replacingOccurrences(of: "Apple", with: "Pear")
 
         let target = FoodWalletStore()
         try expectImportError(.integrityMismatch) {
@@ -1471,7 +1501,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testStoreRefreshesLocalEntriesWithoutPublishingWriteback() async throws {
         let source = FoodWalletStore()
-        try expect(source.createQuickTextDraft("apple"), "expected source draft")
+        try expect(source.createTypedFoodDraft("apple"), "expected source draft")
         source.confirmDraft()
         let restoredEntries = source.entries
         var writebackCount = 0
@@ -1759,6 +1789,58 @@ private func brokerSearchEnvelopeJSON() -> Data {
                   "match_type": "barcode",
                   "source_label": "curated_fixture",
                   "trust_label": "barcode_fixture"
+                }
+              ],
+              "user_confirmation_required": true
+            }
+          ]
+        }
+        """.utf8
+    )
+}
+
+private func brokerGroundBeefSearchEnvelopeJSON() -> Data {
+    Data(
+        """
+        {
+          "ok": true,
+          "request_id": "ground-beef-search-001",
+          "query": "beef",
+          "results": [
+            {
+              "result_id": "food-search:usda-fdc:333333",
+              "primary_label": "Cooked ground beef",
+              "generic_label": "ground beef",
+              "brand_label": null,
+              "category": "Beef Products",
+              "source_label": "usda_fdc",
+              "trust_label": "provider_estimate",
+              "match": {
+                "type": "name",
+                "score": 0.96
+              },
+              "serving": {
+                "basis": "per_100g",
+                "serving_size_g": 100,
+                "serving_label": "100 g"
+              },
+              "nutrition": {
+                "per_100g": {
+                  "kcal": 254,
+                  "protein_g": 25.9,
+                  "carbohydrate_g": 0,
+                  "fat_g": 17.2,
+                  "fiber_g": 0
+                }
+              },
+              "provider_evidence": [
+                {
+                  "provider": "usda_fdc",
+                  "provider_id": "333333",
+                  "matched_name": "BEEF, GROUND, COOKED",
+                  "match_type": "name",
+                  "source_label": "usda_generic_food",
+                  "trust_label": "provider_estimate"
                 }
               ],
               "user_confirmation_required": true

@@ -6,6 +6,7 @@ import type {
   FoodSearchResult,
   FoodSearchTrustLabel
 } from "./types.js";
+import { BrokerError } from "./errors.js";
 
 type FixtureFood = {
   fixtureId: string;
@@ -144,11 +145,13 @@ export class CompositeFoodSearchProvider implements FoodSearchProvider {
     const limit = clampLimit(request.limit);
     const seen = new Set<string>();
     const results: FoodSearchResult[] = [];
+    let firstError: unknown;
     for (const provider of this.providers) {
       let providerResults: FoodSearchResult[];
       try {
         providerResults = await provider.search(request);
-      } catch {
+      } catch (err) {
+        firstError ??= err;
         continue;
       }
       for (const result of providerResults) {
@@ -158,7 +161,22 @@ export class CompositeFoodSearchProvider implements FoodSearchProvider {
         if (results.length >= limit) return results;
       }
     }
+    if (results.length === 0 && firstError) {
+      throw firstError;
+    }
     return results;
+  }
+}
+
+export class MissingUsdaFoodDataCentralProvider implements FoodSearchProvider {
+  async search(request: FoodSearchRequest): Promise<FoodSearchResult[]> {
+    const query = cleanText(request.query);
+    if (!query || normalizeBarcode(query)) return [];
+    throw new BrokerError(
+      503,
+      "UPSTREAM_ERROR",
+      "USDA FoodData Central search is not configured; set FDC_API_KEY, USDA_API_KEY, or FOODDATA_CENTRAL_API_KEY"
+    );
   }
 }
 
@@ -293,15 +311,21 @@ export class UsdaGenericFoodSearchProvider implements FoodSearchProvider {
     const body = await response.json() as UsdaSearchResponse;
     const foods = Array.isArray(body.foods) ? body.foods : [];
     return foods
-      .map((food) => usdaGenericResult(query, food))
-      .filter((result): result is FoodSearchResult => result !== null)
-      .slice(0, clampLimit(request.limit));
+      .map((food) => {
+        const result = usdaGenericResult(query, food);
+        return result === null ? null : { food, result, rank: rankUsdaGenericFood(query, food, result) };
+      })
+      .filter((entry): entry is { food: UsdaSearchFood; result: FoodSearchResult; rank: number } => entry !== null)
+      .sort((left, right) => right.rank - left.rank || left.result.primary_label.localeCompare(right.result.primary_label))
+      .slice(0, clampLimit(request.limit))
+      .map((entry) => entry.result);
   }
 }
 
 export function foodSearchProviderFromEnv(env: NodeJS.ProcessEnv = process.env): FoodSearchProvider {
   const providers: FoodSearchProvider[] = [];
   const timeoutMs = parsePositiveInteger(env.FOOD_SEARCH_TIMEOUT_MS) ?? DEFAULT_TIMEOUT_MS;
+  const fixturesEnabled = env.FOOD_SEARCH_FIXTURES === "1";
   if (env.FOOD_SEARCH_LIVE !== "0") {
     providers.push(new OpenFoodFactsSearchProvider({
       baseUrl: env.OPEN_FOOD_FACTS_BASE_URL,
@@ -321,9 +345,13 @@ export function foodSearchProviderFromEnv(env: NodeJS.ProcessEnv = process.env):
         baseUrl: env.USDA_FDC_BASE_URL,
         timeoutMs
       }));
+    } else {
+      providers.push(new MissingUsdaFoodDataCentralProvider());
     }
   }
-  providers.push(new FixtureFoodSearchProvider());
+  if (fixturesEnabled) {
+    providers.push(new FixtureFoodSearchProvider());
+  }
   return providers.length === 1 ? providers[0] : new CompositeFoodSearchProvider(providers);
 }
 
@@ -469,6 +497,7 @@ type UsdaSearchResponse = {
 type UsdaSearchFood = {
   fdcId?: number;
   description?: string;
+  dataType?: string;
   brandName?: string;
   brandOwner?: string;
   gtinUpc?: string;
@@ -694,6 +723,34 @@ function scoreUsdaGenericMatch(query: string, label: string): number {
   const base = matched / queryTerms.length;
   const exactBoost = label.toLowerCase() === query.trim().toLowerCase() ? 0.15 : 0;
   return roundScore(Math.max(0.7, Math.min(0.98, base + exactBoost)));
+}
+
+function rankUsdaGenericFood(query: string, food: UsdaSearchFood, result: FoodSearchResult): number {
+  const normalizedQuery = tokenize(query).join(" ");
+  const label = cleanText(food.description)?.toLowerCase() ?? "";
+  const labelTerms = tokenize(label);
+  const categoryTerms = tokenize(food.foodCategory ?? "");
+  const dataType = cleanText(food.dataType)?.toLowerCase() ?? "";
+  let rank = result.match.score;
+
+  if (dataType === "foundation") rank += 0.22;
+  if (dataType === "sr legacy") rank += 0.18;
+  if (dataType === "survey (fndds)") rank -= 0.08;
+
+  if (normalizedQuery && categoryTerms.includes(normalizedQuery)) rank += 0.12;
+  if (normalizedQuery && label === normalizedQuery) rank += 0.2;
+  if (normalizedQuery && (label.startsWith(`${normalizedQuery},`) || label.startsWith(`${normalizedQuery} `))) {
+    rank += 0.08;
+  }
+  if (labelTerms.length <= 5) rank += 0.04;
+  if (labelTerms.some((term) => ["raw", "cooked", "roasted", "boiled", "ground"].includes(term))) {
+    rank += 0.03;
+  }
+  if (labelTerms.some((term) => ["burgundy", "casserole", "sandwich", "soup", "sauce", "restaurant"].includes(term))) {
+    rank -= 0.12;
+  }
+
+  return rank;
 }
 
 function numeric(value: unknown): number | null {

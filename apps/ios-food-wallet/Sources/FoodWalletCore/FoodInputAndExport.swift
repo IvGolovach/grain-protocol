@@ -909,7 +909,7 @@ struct FoodIngredientCatalog {
         let normalized = input.normalizedFoodIngredientName
         if let personal = personalIngredients.first(where: { ingredient in
             let normalizedPersonal = ingredient.name.normalizedFoodIngredientName
-            return normalized == normalizedPersonal || normalized.contains(normalizedPersonal)
+            return normalized == normalizedPersonal
         }) {
             return Entry(
                 id: personal.id,
@@ -928,12 +928,7 @@ struct FoodIngredientCatalog {
         }) {
             return exact
         }
-        return entries.first { entry in
-            entry.aliases.contains { alias in
-                let normalizedAlias = alias.normalizedFoodIngredientName
-                return !normalizedAlias.isEmpty && normalized.contains(normalizedAlias)
-            }
-        }
+        return nil
     }
 
     private static func suggestionRow(entry: Entry) -> AddFoodSuggestionRow {
@@ -1805,118 +1800,6 @@ private extension String {
             .replacingOccurrences(of: "[^a-z0-9 ]+", with: " ", options: .regularExpression)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-}
-
-enum QuickTextFoodParser {
-    static func candidate(for text: String) -> FoodAnalysisCandidate? {
-        let normalized = text.lowercased()
-        let meal: MealEstimate
-        let confidence: EstimateConfidence
-        let assumptions: [FoodAssumption]
-
-        if normalized.contains("egg") && normalized.contains("toast") {
-            meal = MealEstimate(
-                label: text,
-                kcal: 330,
-                varianceKcal: 35,
-                amountGrams: 220,
-                servingGrams: 220,
-                servings: 1,
-                macronutrients: MealMacronutrients(
-                    proteinGrams: 20,
-                    carbohydrateGrams: 28,
-                    fatGrams: 15,
-                    fiberGrams: 4
-                )
-            )
-            confidence = .medium
-            assumptions = [
-                FoodAssumption(id: "quick-text", label: "parsed from typed food"),
-                FoodAssumption(id: "egg-toast-default", label: "two eggs and one toast serving"),
-                FoodAssumption(id: "review-portion", label: "review portion before saving"),
-            ]
-        } else if normalized.contains("apple") {
-            meal = MealEstimate(
-                label: text,
-                kcal: 102,
-                varianceKcal: 12,
-                amountGrams: 170,
-                servingGrams: 170,
-                servings: 1,
-                macronutrients: MealMacronutrients(
-                    proteinGrams: 0.5,
-                    carbohydrateGrams: 27,
-                    fatGrams: 0.3,
-                    fiberGrams: 4.8
-                )
-            )
-            confidence = .medium
-            assumptions = [
-                FoodAssumption(id: "quick-text", label: "parsed from typed food"),
-                FoodAssumption(id: "apple-medium", label: "medium apple serving"),
-            ]
-        } else if normalized.contains("salad") {
-            meal = MealEstimate(
-                label: text,
-                kcal: 260,
-                varianceKcal: 90,
-                amountGrams: 280,
-                servingGrams: 280,
-                servings: 1,
-                macronutrients: MealMacronutrients(
-                    proteinGrams: 7,
-                    carbohydrateGrams: 24,
-                    fatGrams: 16,
-                    fiberGrams: 8
-                )
-            )
-            confidence = .low
-            assumptions = [
-                FoodAssumption(id: "quick-text", label: "parsed from typed food"),
-                FoodAssumption(id: "salad-dressing", label: "dressing or oil may change calories"),
-                FoodAssumption(id: "review-portion", label: "review portion before saving"),
-            ]
-        } else {
-            return nil
-        }
-
-        let slug = normalized
-            .replacingOccurrences(of: "[^a-z0-9]+", with: "-", options: .regularExpression)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-        return FoodAnalysisCandidate(
-            id: "quick-text-\(slug.isEmpty ? "food" : slug)",
-            primaryLabel: meal.label,
-            genericLabel: normalized,
-            dishType: normalized.contains("salad") || normalized.contains("toast") ? .mixed : .single,
-            portion: PortionEstimate(
-                gramsMin: max(1, meal.amountGrams - max(1, meal.amountGrams / 5)),
-                gramsMode: meal.amountGrams,
-                gramsMax: meal.amountGrams + max(1, meal.amountGrams / 5)
-            ),
-            nutrition: NutritionRange(
-                minKcal: max(0, meal.kcal - meal.varianceKcal),
-                modeKcal: meal.kcal,
-                maxKcal: meal.kcal + meal.varianceKcal
-            ),
-            macronutrients: meal.macronutrients ?? MealMacronutrients(
-                proteinGrams: 0,
-                carbohydrateGrams: 0,
-                fatGrams: 0,
-                fiberGrams: 0
-            ),
-            confidence: confidence,
-            assumptions: assumptions,
-            evidence: [
-                ProviderEvidence(
-                    provider: "food_wallet_quick_text",
-                    providerID: "local-parser-v1",
-                    matchedName: meal.label,
-                    servingBasis: "typed_user_input"
-                ),
-            ],
-            userConfirmationRequired: true
-        )
     }
 }
 

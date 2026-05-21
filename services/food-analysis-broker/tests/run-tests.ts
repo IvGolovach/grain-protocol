@@ -59,8 +59,10 @@ async function main(): Promise<number> {
   await testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates();
   await testUsdaBrandedBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
   await testUsdaGenericFoodSearchProvider();
+  await testUsdaGenericFoodSearchProviderRanksIngredientResults();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
-  await testFoodSearchProviderFromEnvCanDisableExternalProviders();
+  await testFoodSearchProviderFromEnvRequiresUsdaForTextSearch();
+  await testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
@@ -568,6 +570,53 @@ async function testUsdaGenericFoodSearchProvider(): Promise<void> {
   pass("USDA generic food provider maps query result to search result");
 }
 
+async function testUsdaGenericFoodSearchProviderRanksIngredientResults(): Promise<void> {
+  const provider = new UsdaGenericFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (url: string | URL, init?: RequestInit) => {
+      assert.equal(String(url), "https://fdc.example.test/fdc/v1/foods/search?api_key=test-fdc-key");
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.query, "beef");
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 111111,
+            description: "Beef Burgundy",
+            dataType: "Survey (FNDDS)",
+            foodCategory: "Mixed Dishes",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 156 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 10 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 8 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 8 }
+            ]
+          },
+          {
+            fdcId: 333333,
+            description: "Beef, ground, cooked",
+            dataType: "SR Legacy",
+            foodCategory: "Beef Products",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 254 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 25.9 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 0 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 17.2 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ query: "beef", limit: 2 });
+
+  assert.equal(results.length, 2);
+  assert.equal(results[0].primary_label, "Beef, Ground, Cooked");
+  assert.equal(results[0].provider_evidence[0].provider_id, "333333");
+  pass("USDA generic food provider ranks ingredient records before prepared dishes");
+}
+
 async function testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault(): Promise<void> {
   const server = createServer((req, res) => {
     assert.equal(req.url, "/api/v2/product/4860019001346.json?fields=code%2Cproduct_name%2Cgeneric_name%2Cbrands%2Ccategories_tags%2Cserving_quantity%2Cserving_size%2Cnutriments");
@@ -613,13 +662,29 @@ async function testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault(): Promis
   pass("food search env provider uses Open Food Facts by default");
 }
 
-async function testFoodSearchProviderFromEnvCanDisableExternalProviders(): Promise<void> {
-  const provider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "0" });
+async function testFoodSearchProviderFromEnvRequiresUsdaForTextSearch(): Promise<void> {
+  const provider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "1" });
+  await assert.rejects(
+    () => provider.search({ query: "almond butter" }),
+    (error: unknown) => {
+      assert(error instanceof Error);
+      assert.equal(error.message.includes("USDA FoodData Central search is not configured"), true);
+      return true;
+    }
+  );
+  pass("food search env provider requires USDA FoodData Central for text search");
+}
+
+async function testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested(): Promise<void> {
+  const disabledProvider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "0" });
+  assert.deepEqual(await disabledProvider.search({ barcode: "012345678905" }), []);
+
+  const provider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "0", FOOD_SEARCH_FIXTURES: "1" });
   const results = await provider.search({ barcode: "012345678905" });
   assert.equal(results.length, 1);
   assert.equal(results[0].source_label, "deterministic_fixture");
   assert.equal(results[0].trust_label, "barcode_fixture");
-  pass("food search env provider can disable external providers for deterministic tests");
+  pass("food search env provider keeps deterministic fixtures opt-in only");
 }
 
 async function testCompositeFoodSearchProviderFallsBackAfterProviderFailure(): Promise<void> {

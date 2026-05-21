@@ -159,7 +159,7 @@ public struct FoodEvidenceSource: Codable, Equatable, Sendable {
             return "Label read"
         case "barcode_provider":
             return "Barcode match"
-        case "open_food_facts", "open_food_facts_fixture":
+        case "open_food_facts":
             return "Barcode match"
         case "food_wallet_template":
             return "Template"
@@ -167,8 +167,6 @@ public struct FoodEvidenceSource: Codable, Equatable, Sendable {
             return "Recipe"
         case "food_wallet_history":
             return "Recent"
-        case "food_wallet_quick_text":
-            return "Quick add"
         case "food_wallet_ingredient_catalog":
             return "Ingredient catalog"
         case "food_wallet_personal_ingredient":
@@ -303,7 +301,6 @@ public enum AddFoodSuggestionKind: String, Codable, Equatable, Sendable {
     case savedTemplate = "saved_template"
     case savedRecipe = "saved_recipe"
     case personalIngredient = "personal_ingredient"
-    case quickText = "quick_text"
     case manual
 }
 
@@ -569,11 +566,9 @@ public struct FoodAnalysisCandidate: Identifiable, Codable, Equatable, Sendable 
             "visible_nutrition_label",
             "barcode_provider",
             "open_food_facts",
-            "open_food_facts_fixture",
             "food_wallet_template",
             "food_wallet_recipe",
             "food_wallet_history",
-            "food_wallet_quick_text",
             "food_wallet_ingredient_catalog",
             "food_wallet_personal_ingredient",
             "usda_fdc",

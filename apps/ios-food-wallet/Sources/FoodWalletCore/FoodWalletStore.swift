@@ -336,20 +336,19 @@ public final class FoodWalletStore: ObservableObject {
         }
     }
 
-    public func createQuickTextDraft(_ text: String) -> Bool {
+    public func createTypedFoodDraft(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return false
         }
-        guard let candidate = QuickTextFoodParser.candidate(for: trimmed) else {
+        guard let suggestion = bestFoodSearchDraftSuggestion(for: trimmed) else {
             return false
         }
-        presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
-        return true
+        return createFoodSearchSuggestionDraft(id: suggestion.id)
     }
 
-    public func canCreateQuickTextDraft(_ text: String) -> Bool {
-        QuickTextFoodParser.candidate(for: text.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
+    public func canCreateTypedFoodDraft(_ text: String) -> Bool {
+        bestFoodSearchDraftSuggestion(for: text.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
     }
 
     public func addFoodSearchSuggestions(for text: String) -> [AddFoodSuggestionRow] {
@@ -397,6 +396,25 @@ public final class FoodWalletStore: ObservableObject {
             }
             .prefix(limit)
             .map { $0 }
+    }
+
+    private func bestFoodSearchDraftSuggestion(for text: String) -> AddFoodSuggestionRow? {
+        let query = AddFoodSearchQuery(text)
+        guard !query.isEmpty else {
+            return nil
+        }
+        return mergedFoodSearchSuggestions(for: text, limit: 12).first { row in
+            guard row.kind == .providerMatch || row.kind == .personalIngredient else {
+                return false
+            }
+            let normalizedTitle = AddFoodSearchQuery.normalize(row.title)
+            if normalizedTitle == query.normalizedValue {
+                return true
+            }
+            let titleTokens = Set(normalizedTitle.split(separator: " ").map(String.init))
+            let queryTokens = Set(query.tokens)
+            return !queryTokens.isEmpty && queryTokens.isSubset(of: titleTokens)
+        }
     }
 
     public func searchBrokerFood(query: String) async {

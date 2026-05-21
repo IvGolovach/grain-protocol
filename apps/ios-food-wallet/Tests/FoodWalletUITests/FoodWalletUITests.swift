@@ -35,7 +35,7 @@ final class FoodWalletUITests: XCTestCase {
     }
 
     private func addFoodSearchField() -> XCUIElement {
-        app.textFields["QuickTextField"]
+        app.textFields["AddFoodSearchField"]
     }
 
     private func clearAndType(_ field: XCUIElement, text: String) {
@@ -194,10 +194,10 @@ final class FoodWalletUITests: XCTestCase {
 
         app.buttons["EnterFoodManuallyButton"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.textFields["QuickTextField"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["AddFoodSearchField"].waitForExistence(timeout: 5))
     }
 
-    func testAddFoodHubCreatesQuickTextDraftAndAdjustsPortion() throws {
+    func testAddFoodHubCreatesTypedFoodDraftAndAdjustsPortion() throws {
         launch(arguments: [])
 
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 5))
@@ -217,16 +217,16 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertFalse(app.buttons["Recipe-tomato-cucumber-salad"].exists)
         XCTAssertFalse(app.textFields["MealTitleField"].exists)
 
-        let quickText = app.textFields["QuickTextField"]
-        XCTAssertTrue(quickText.waitForExistence(timeout: 5))
-        quickText.tap()
-        quickText.typeText("2 eggs and toast")
-        app.buttons["CreateQuickDraftButton"].tap()
+        let searchText = app.textFields["AddFoodSearchField"]
+        XCTAssertTrue(searchText.waitForExistence(timeout: 5))
+        searchText.tap()
+        searchText.typeText("apple")
+        app.buttons["CreateTypedFoodDraftButton"].tap()
 
         XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "2 eggs and toast")
-        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 220 g • 295-365 kcal")
+        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Apple")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 100 g • 47-57 kcal")
         XCTAssertFalse(app.switches.matching(identifier: "Assumption-user-portion").firstMatch.exists)
         XCTAssertFalse(app.buttons["PortionHalfButton"].exists)
         XCTAssertFalse(app.buttons["ApplyPortionGramsButton"].exists)
@@ -238,12 +238,12 @@ final class FoodWalletUITests: XCTestCase {
         gramsField.typeText("150")
         XCTAssertTrue(app.buttons["PortionKeyboardDoneButton"].waitForExistence(timeout: 2))
         app.buttons["PortionKeyboardDoneButton"].tap()
-        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 150 g • 201-249 kcal")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 150 g • 71-86 kcal")
 
         saveCurrentDraft()
         app.tabBars.buttons["History"].tap()
-        XCTAssertTrue(app.staticTexts["MealRowLabel-2 eggs and toast"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts["MealRowNutrition-2 eggs and toast"].label, "150 g • 225 kcal")
+        XCTAssertTrue(app.staticTexts["MealRowLabel-Apple"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["MealRowNutrition-Apple"].label, "150 g • 78 kcal")
     }
 
     func testAddFoodHubDoesNotInventNutritionForUnknownTypedFood() throws {
@@ -254,11 +254,11 @@ final class FoodWalletUITests: XCTestCase {
         app.buttons["Add food"].tap()
         XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
 
-        let quickText = app.textFields["QuickTextField"]
-        XCTAssertTrue(quickText.waitForExistence(timeout: 5))
-        quickText.tap()
-        quickText.typeText("JAANA")
-        app.buttons["CreateQuickDraftButton"].tap()
+        let searchText = app.textFields["AddFoodSearchField"]
+        XCTAssertTrue(searchText.waitForExistence(timeout: 5))
+        searchText.tap()
+        searchText.typeText("JAANA")
+        app.buttons["CreateTypedFoodDraftButton"].tap()
 
         XCTAssertTrue(app.buttons["SearchDeeperFoodButton"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["UnknownFoodResolutionTitle"].exists)
