@@ -1211,35 +1211,9 @@ private struct AddFoodHubView: View {
         case let .invalidGrams(name):
             ingredientErrorMessage = "Check amount for \(name)."
         case let .unknownIngredient(name):
-            if saveBestProviderIngredientMatch(for: name) {
-                createIngredientMealDraft()
-                return
-            }
-            ingredientErrorMessage = "Add nutrition for \(name) once, then use it in meals."
+            ingredientErrorMessage = "Choose a verified result for \(name), or add the label nutrition manually."
             preparePersonalIngredientForm(for: name)
         }
-    }
-
-    @discardableResult
-    private func saveBestProviderIngredientMatch(for name: String) -> Bool {
-        let query = AddFoodSearchQuery(name)
-        guard let row = store.ingredientSuggestions(for: name, limit: 12).first(where: { suggestion in
-            suggestion.id.hasPrefix("food-search:") && query.matches(suggestion)
-        }),
-        let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: row.id) else {
-            return false
-        }
-
-        for index in ingredientRows.indices {
-            let normalizedRow = AddFoodSearchQuery.normalize(ingredientRows[index].name)
-            if normalizedRow == query.normalizedValue {
-                ingredientRows[index].name = ingredient.name
-                if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    ingredientRows[index].setAmount(fromGrams: max(1, Int64(ingredient.sourceServingGrams.rounded())))
-                }
-            }
-        }
-        return true
     }
 
     private func preparePersonalIngredientForm(for name: String) {
@@ -4622,6 +4596,10 @@ private extension FoodAnalysisCandidate {
         let providers = Set(evidence.map(\.provider))
         if providers.contains("visible_nutrition_label") {
             return "Label read"
+        }
+        let sourceIDs = Set(evidence.compactMap(\.sourceLabelID).map(FoodEvidenceSource.normalize))
+        if sourceIDs.contains("barcode_provider") {
+            return "Barcode match"
         }
         if providers.contains("open_food_facts") {
             return "Barcode match"

@@ -16,7 +16,7 @@ import {
   foodSearchProviderFromEnv
 } from "../src/search.js";
 import { FixtureNutritionProvider, type NutritionProvider } from "../src/usda.js";
-import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation, FoodSearchProvider } from "../src/types.js";
+import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation, FoodSearchProvider, FoodSearchResult } from "../src/types.js";
 
 const sampleRequest: FoodAnalyzePhotoRequest = {
   request_id: "test-request-001",
@@ -53,13 +53,17 @@ async function main(): Promise<number> {
   await testOpenFoodFactsBarcodeProviderExpandsUpcE();
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromKilojoules();
   await testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing();
+  await testOpenFoodFactsBarcodeProviderPrefersServingNutritionWhenPer100gDisagrees();
   await testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
   await testOpenFoodFactsBarcodeProviderAcceptsPlausibleCreamCheeseNutrition();
   await testUsdaBrandedBarcodeProvider();
   await testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates();
   await testUsdaBrandedBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
   await testUsdaGenericFoodSearchProvider();
+  await testUsdaGenericFoodSearchProviderConvertsKilojouleEnergy();
+  await testUsdaGenericFoodSearchProviderRejectsUnrelatedResults();
   await testUsdaGenericFoodSearchProviderRanksIngredientResults();
+  await testCompositeFoodSearchProviderRanksBarcodeSourceFidelity();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
   await testFoodSearchProviderFromEnvRequiresUsdaForTextSearch();
   await testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested();
@@ -341,6 +345,43 @@ async function testOpenFoodFactsBarcodeProviderDerivesEnergyFromServing(): Promi
   pass("Open Food Facts barcode provider derives per-100g nutrition from serving values");
 }
 
+async function testOpenFoodFactsBarcodeProviderPrefersServingNutritionWhenPer100gDisagrees(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async () => new Response(JSON.stringify({
+      status: 1,
+      product: {
+        code: "071111111113",
+        product_name: "Spicy Jalapeno Cream Cheese",
+        generic_name: "cream cheese spread",
+        brands: "Example Dairy",
+        categories_tags: ["en:dairies", "en:cheeses", "en:cream-cheeses"],
+        serving_quantity: "31",
+        serving_size: "2 tbsp (31 g)",
+        nutriments: {
+          "energy-kcal_100g": 52,
+          "energy-kcal_serving": 100,
+          proteins_100g: 2.9,
+          proteins_serving: 2,
+          carbohydrates_100g: 1.9,
+          carbohydrates_serving: 2,
+          fat_100g: 5.2,
+          fat_serving: 10
+        }
+      }
+    }), { status: 200, headers: { "content-type": "application/json" } })
+  });
+
+  const results = await provider.search({ barcode: "071111111113" });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].nutrition.per_100g.kcal, 322.6);
+  assert.equal(results[0].nutrition.per_100g.fat_g, 32.3);
+  assert.equal(results[0].serving.serving_size_g, 31);
+  pass("Open Food Facts barcode provider prefers serving nutrition when per-100g values disagree");
+}
+
 async function testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition(): Promise<void> {
   const provider = new OpenFoodFactsSearchProvider({
     baseUrl: "https://off.example.test",
@@ -409,6 +450,25 @@ async function testUsdaBrandedBarcodeProvider(): Promise<void> {
     apiKey: "test-fdc-key",
     baseUrl: "https://fdc.example.test/fdc/v1",
     fetchFn: async (url: string | URL, init?: RequestInit) => {
+      if (String(url) === "https://fdc.example.test/fdc/v1/food/2105222?api_key=test-fdc-key") {
+        return new Response(JSON.stringify({
+          fdcId: 2105222,
+          description: "GINGER LEMON KOMBUCHA",
+          brandName: "Example Ferments",
+          brandOwner: "Example Ferments LLC",
+          gtinUpc: "012345678905",
+          foodCategory: "Beverages",
+          servingSize: 473,
+          servingSizeUnit: "ml",
+          labelNutrients: {
+            calories: { value: 80 },
+            protein: { value: 0 },
+            carbohydrates: { value: 20 },
+            fat: { value: 0 },
+            fiber: { value: 0 }
+          }
+        }), { status: 200, headers: { "content-type": "application/json" } });
+      }
       assert.equal(String(url), "https://fdc.example.test/fdc/v1/foods/search?api_key=test-fdc-key");
       assert.equal((init?.headers as Record<string, string>)["content-type"], "application/json");
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
@@ -445,6 +505,8 @@ async function testUsdaBrandedBarcodeProvider(): Promise<void> {
   assert.equal(results[0].brand_label, "Example Ferments");
   assert.equal(results[0].source_label, "usda_fdc");
   assert.equal(results[0].trust_label, "barcode_provider");
+  assert.equal(results[0].nutrition.per_100g.kcal, 16.9);
+  assert.equal(results[0].nutrition.per_100g.carbohydrate_g, 4.2);
   assert.equal(results[0].provider_evidence[0].provider, "usda_fdc");
   assert.equal(results[0].provider_evidence[0].provider_id, "2105222");
   assert.equal(results[0].provider_evidence[0].match_type, "barcode");
@@ -456,6 +518,9 @@ async function testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates(): Promi
     apiKey: "test-fdc-key",
     baseUrl: "https://fdc.example.test/fdc/v1",
     fetchFn: async (_url: string | URL, init?: RequestInit) => {
+      if (String(_url).includes("/food/")) {
+        return new Response(JSON.stringify({}), { status: 404, headers: { "content-type": "application/json" } });
+      }
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       if (body.query !== "042100005264") {
         return new Response(JSON.stringify({ foods: [] }), { status: 200, headers: { "content-type": "application/json" } });
@@ -496,6 +561,9 @@ async function testUsdaBrandedBarcodeProviderRejectsImplausibleCreamCheeseNutrit
     apiKey: "test-fdc-key",
     baseUrl: "https://fdc.example.test/fdc/v1",
     fetchFn: async (_url: string | URL, init?: RequestInit) => {
+      if (String(_url).includes("/food/")) {
+        return new Response(JSON.stringify({}), { status: 404, headers: { "content-type": "application/json" } });
+      }
       const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       const query = body.query;
       if (typeof query !== "string") {
@@ -568,6 +636,71 @@ async function testUsdaGenericFoodSearchProvider(): Promise<void> {
   assert.equal(results[0].provider_evidence[0].source_label, "usda_generic_food");
   assert.equal(results[0].provider_evidence[0].match_type, "name");
   pass("USDA generic food provider maps query result to search result");
+}
+
+async function testUsdaGenericFoodSearchProviderConvertsKilojouleEnergy(): Promise<void> {
+  const provider = new UsdaGenericFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (_url: string | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.query, "rice");
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 444444,
+            description: "Rice, cooked",
+            dataType: "Foundation",
+            foodCategory: "Cereal Grains and Pasta",
+            foodNutrients: [
+              { nutrientNumber: "268", nutrientName: "Energy", unitName: "kJ", value: 418.4 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 2.4 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 21.1 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 0.3 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ query: "rice", limit: 5 });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].nutrition.per_100g.kcal, 100);
+  pass("USDA generic provider converts kJ energy instead of treating it as kcal");
+}
+
+async function testUsdaGenericFoodSearchProviderRejectsUnrelatedResults(): Promise<void> {
+  const provider = new UsdaGenericFoodSearchProvider({
+    apiKey: "test-fdc-key",
+    baseUrl: "https://fdc.example.test/fdc/v1",
+    fetchFn: async (_url: string | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      assert.equal(body.query, "almond butter");
+      return new Response(JSON.stringify({
+        foods: [
+          {
+            fdcId: 555555,
+            description: "Butter, salted",
+            dataType: "SR Legacy",
+            foodCategory: "Dairy and Egg Products",
+            foodNutrients: [
+              { nutrientNumber: "208", nutrientName: "Energy", unitName: "KCAL", value: 717 },
+              { nutrientNumber: "203", nutrientName: "Protein", unitName: "G", value: 0.9 },
+              { nutrientNumber: "205", nutrientName: "Carbohydrate, by difference", unitName: "G", value: 0.1 },
+              { nutrientNumber: "204", nutrientName: "Total lipid (fat)", unitName: "G", value: 81.1 }
+            ]
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ query: "almond butter", limit: 5 });
+
+  assert.equal(results.length, 0);
+  pass("USDA generic food provider rejects partial-token false matches");
 }
 
 async function testUsdaGenericFoodSearchProviderRanksIngredientResults(): Promise<void> {
@@ -685,6 +818,34 @@ async function testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested(): 
   assert.equal(results[0].source_label, "deterministic_fixture");
   assert.equal(results[0].trust_label, "barcode_fixture");
   pass("food search env provider keeps deterministic fixtures opt-in only");
+}
+
+async function testCompositeFoodSearchProviderRanksBarcodeSourceFidelity(): Promise<void> {
+  const openFoodFactsResult = foodSearchResultFixture({
+    id: "food-search:off:071111111113",
+    label: "Spicy Jalapeno Cream Cheese",
+    sourceLabel: "open_food_facts",
+    kcal: 322.6,
+    fat: 32.3
+  });
+  const usdaResult = foodSearchResultFixture({
+    id: "food-search:usda-fdc:123456",
+    label: "SPICY JALAPENO CREAM CHEESE",
+    sourceLabel: "usda_fdc",
+    kcal: 322.6,
+    fat: 32.3
+  });
+  const provider = new CompositeFoodSearchProvider([
+    { async search() { return [openFoodFactsResult]; } },
+    { async search() { return [usdaResult]; } }
+  ]);
+
+  const results = await provider.search({ barcode: "071111111113", limit: 2 });
+
+  assert.equal(results.length, 2);
+  assert.equal(results[0].source_label, "usda_fdc");
+  assert.equal(results[1].source_label, "open_food_facts");
+  pass("composite food search ranks stronger barcode sources before weaker provider order");
 }
 
 async function testCompositeFoodSearchProviderFallsBackAfterProviderFailure(): Promise<void> {
@@ -948,6 +1109,53 @@ async function postJson(url: string, body: unknown): Promise<Response> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body)
   });
+}
+
+function foodSearchResultFixture(input: {
+  id: string;
+  label: string;
+  sourceLabel: "open_food_facts" | "usda_fdc";
+  kcal: number;
+  fat: number;
+}): FoodSearchResult {
+  const evidenceSourceLabel = input.sourceLabel === "usda_fdc" ? "usda_branded_food" : "open_food_facts_product";
+  return {
+    result_id: input.id,
+    primary_label: input.label,
+    generic_label: input.label.toLowerCase(),
+    brand_label: "Example Dairy",
+    category: "Cheese",
+    source_label: input.sourceLabel,
+    trust_label: "barcode_provider",
+    match: {
+      type: "barcode",
+      score: 1
+    },
+    serving: {
+      basis: "per_100g",
+      serving_size_g: 31,
+      serving_label: "2 tbsp (31 g)"
+    },
+    nutrition: {
+      per_100g: {
+        kcal: input.kcal,
+        protein_g: 6.5,
+        carbohydrate_g: 6.5,
+        fat_g: input.fat
+      }
+    },
+    provider_evidence: [
+      {
+        provider: input.sourceLabel,
+        provider_id: input.id,
+        matched_name: input.label,
+        match_type: "barcode",
+        source_label: evidenceSourceLabel,
+        trust_label: "barcode_provider"
+      }
+    ],
+    user_confirmation_required: true
+  };
 }
 
 function fakeObservation(): FoodObservation {

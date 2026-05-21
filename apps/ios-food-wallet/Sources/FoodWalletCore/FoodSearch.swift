@@ -227,6 +227,9 @@ public struct BrokerFoodSearchResult: Decodable, Equatable, Sendable {
         guard userConfirmationRequired else {
             throw BrokerFoodSearchError.unsafeResult("broker search result must require user confirmation")
         }
+        let matchAssumption = match.type == .barcode
+            ? FoodAssumption(id: "barcode-match", label: "barcode matched packaged food database")
+            : FoodAssumption(id: "provider-name-match", label: "matched provider nutrition database")
         return FoodAnalysisCandidate(
             id: resultID,
             primaryLabel: primaryLabel,
@@ -237,7 +240,7 @@ public struct BrokerFoodSearchResult: Decodable, Equatable, Sendable {
             macronutrients: macronutrients,
             confidence: confidence,
             assumptions: [
-                FoodAssumption(id: "barcode-match", label: "barcode matched packaged food database"),
+                matchAssumption,
                 FoodAssumption(id: "review-portion", label: "review serving before saving"),
             ],
             evidence: providerEvidence.map { $0.providerEvidence(isBarcode: match.type == .barcode) },

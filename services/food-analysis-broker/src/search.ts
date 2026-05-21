@@ -158,13 +158,15 @@ export class CompositeFoodSearchProvider implements FoodSearchProvider {
         if (seen.has(result.result_id)) continue;
         seen.add(result.result_id);
         results.push(result);
-        if (results.length >= limit) return results;
       }
     }
     if (results.length === 0 && firstError) {
       throw firstError;
     }
-    return results;
+    return results
+      .sort((left, right) => foodSearchResultRank(right) - foodSearchResultRank(left) ||
+        left.primary_label.localeCompare(right.primary_label))
+      .slice(0, limit);
   }
 }
 
@@ -263,10 +265,24 @@ export class UsdaBrandedFoodSearchProvider implements FoodSearchProvider {
       const foods = Array.isArray(body.foods) ? body.foods : [];
       const exact = foods.find((food) => haveSharedBarcodeCandidate(barcodes, barcodeLookupCandidates(food.gtinUpc)));
       if (!exact) continue;
-      const result = usdaBrandedResult(barcode, exact);
+      const details = await this.fetchDetails(exact.fdcId);
+      const result = usdaBrandedResult(barcode, exact, details);
       if (result) return [result];
     }
     return [];
+  }
+
+  private async fetchDetails(fdcID: number | undefined): Promise<UsdaFoodDetails | null> {
+    if (!Number.isFinite(fdcID)) return null;
+    const url = new URL(`food/${fdcID}`, ensureTrailingSlash(this.baseUrl));
+    url.searchParams.set("api_key", this.apiKey);
+    const response = await fetchWithTimeout(this.fetchFn, url, {
+      headers: {
+        "accept": "application/json"
+      }
+    }, this.timeoutMs);
+    if (!response.ok) return null;
+    return await response.json() as UsdaFoodDetails;
   }
 }
 
@@ -512,24 +528,31 @@ type UsdaSearchFood = {
   }>;
 };
 
-function usdaBrandedResult(barcode: string, food: UsdaSearchFood): FoodSearchResult | null {
-  const label = cleanText(food.description);
-  const fdcID = food.fdcId?.toString();
-  const kcal = usdaNutrient(food, "208", "energy");
+type UsdaFoodDetails = UsdaSearchFood & {
+  labelNutrients?: Record<string, { value?: unknown } | undefined>;
+};
+
+function usdaBrandedResult(barcode: string, food: UsdaSearchFood, details: UsdaFoodDetails | null = null): FoodSearchResult | null {
+  const source = details ?? food;
+  const label = cleanText(source.description) ?? cleanText(food.description);
+  const fdcID = (source.fdcId ?? food.fdcId)?.toString();
+  const servingSizeG = servingSizeGrams(source.servingSize, source.servingSizeUnit) ??
+    servingSizeGrams(food.servingSize, food.servingSizeUnit);
+  const labelNutrition = usdaLabelNutritionPer100g(details, servingSizeG);
+  const kcal = labelNutrition.kcal ?? usdaNutrient(source, "208", "energy") ?? usdaNutrient(food, "208", "energy");
   if (!label || !fdcID || kcal === null) return null;
 
-  const servingSizeG = numeric(food.servingSize);
-  const servingLabel = servingSizeG === null ? null : `${servingSizeG} ${food.servingSizeUnit ?? "g"}`;
-  const protein = usdaNutrient(food, "203", "protein");
-  const carbohydrate = usdaNutrient(food, "205", "carbohydrate");
-  const fat = usdaNutrient(food, "204", "lipid");
-  const category = cleanText(food.foodCategory) ?? "branded_food";
+  const servingLabel = servingSizeG === null ? null : `${roundNutrition(servingSizeG)} ${source.servingSizeUnit ?? food.servingSizeUnit ?? "g"}`;
+  const protein = labelNutrition.protein_g ?? usdaNutrient(source, "203", "protein") ?? usdaNutrient(food, "203", "protein");
+  const carbohydrate = labelNutrition.carbohydrate_g ?? usdaNutrient(source, "205", "carbohydrate") ?? usdaNutrient(food, "205", "carbohydrate");
+  const fat = labelNutrition.fat_g ?? usdaNutrient(source, "204", "lipid") ?? usdaNutrient(food, "204", "lipid");
+  const category = cleanText(source.foodCategory) ?? cleanText(food.foodCategory) ?? "branded_food";
   const per100g = {
     kcal,
     protein_g: protein ?? 0,
     carbohydrate_g: carbohydrate ?? 0,
     fat_g: fat ?? 0,
-    fiber_g: usdaNutrient(food, "291", "fiber") ?? undefined
+    fiber_g: labelNutrition.fiber_g ?? usdaNutrient(source, "291", "fiber") ?? usdaNutrient(food, "291", "fiber") ?? undefined
   };
   if (packagedNutritionQualityIssue({
     label,
@@ -546,7 +569,7 @@ function usdaBrandedResult(barcode: string, food: UsdaSearchFood): FoodSearchRes
     result_id: `food-search:usda-fdc:${fdcID}`,
     primary_label: label,
     generic_label: label.toLowerCase(),
-    brand_label: cleanText(food.brandName) ?? cleanText(food.brandOwner),
+    brand_label: cleanText(source.brandName) ?? cleanText(source.brandOwner) ?? cleanText(food.brandName) ?? cleanText(food.brandOwner),
     category,
     source_label: "usda_fdc",
     trust_label: "barcode_provider",
@@ -581,6 +604,8 @@ function usdaGenericResult(query: string, food: UsdaSearchFood): FoodSearchResul
   const fdcID = food.fdcId?.toString();
   const kcal = usdaNutrient(food, "208", "energy");
   if (!label || !fdcID || kcal === null) return null;
+  const matchScore = scoreUsdaGenericMatch(query, label);
+  if (matchScore <= 0) return null;
 
   return {
     result_id: `food-search:usda-fdc:${fdcID}`,
@@ -592,7 +617,7 @@ function usdaGenericResult(query: string, food: UsdaSearchFood): FoodSearchResul
     trust_label: "provider_estimate",
     match: {
       type: "name",
-      score: scoreUsdaGenericMatch(query, label)
+      score: matchScore
     },
     serving: {
       basis: "per_100g",
@@ -718,11 +743,14 @@ function titleCaseFoodLabel(value: string): string {
 function scoreUsdaGenericMatch(query: string, label: string): number {
   const queryTerms = tokenize(query);
   const labelTerms = tokenize(label);
-  if (queryTerms.length === 0 || labelTerms.length === 0) return 0.7;
+  if (queryTerms.length === 0 || labelTerms.length === 0) return 0;
   const matched = queryTerms.filter((term) => labelTerms.includes(term)).length;
+  if (matched === 0) return 0;
+  if (queryTerms.length > 1 && matched < queryTerms.length) return 0;
   const base = matched / queryTerms.length;
+  if (base < 0.5) return 0;
   const exactBoost = label.toLowerCase() === query.trim().toLowerCase() ? 0.15 : 0;
-  return roundScore(Math.max(0.7, Math.min(0.98, base + exactBoost)));
+  return roundScore(Math.min(0.98, base + exactBoost));
 }
 
 function rankUsdaGenericFood(query: string, food: UsdaSearchFood, result: FoodSearchResult): number {
@@ -763,10 +791,6 @@ function numeric(value: unknown): number | null {
 }
 
 function openFoodFactsKcalPer100g(nutriments: Record<string, unknown>, servingSizeG: number | null): number | null {
-  const kcal = numeric(nutriments["energy-kcal_100g"] ?? nutriments["energy_kcal_100g"]);
-  if (kcal !== null) return roundNutrition(kcal);
-  const kilojoules = numeric(nutriments["energy-kj_100g"] ?? nutriments["energy_100g"]);
-  if (kilojoules !== null) return roundNutrition(kilojoules / 4.184);
   const kcalServing = numeric(nutriments["energy-kcal_serving"] ?? nutriments["energy_kcal_serving"]);
   if (kcalServing !== null && servingSizeG !== null && servingSizeG > 0) {
     return roundNutrition((kcalServing * 100) / servingSizeG);
@@ -775,6 +799,10 @@ function openFoodFactsKcalPer100g(nutriments: Record<string, unknown>, servingSi
   if (kilojoulesServing !== null && servingSizeG !== null && servingSizeG > 0) {
     return roundNutrition((kilojoulesServing / 4.184 * 100) / servingSizeG);
   }
+  const kcal = numeric(nutriments["energy-kcal_100g"] ?? nutriments["energy_kcal_100g"]);
+  if (kcal !== null) return roundNutrition(kcal);
+  const kilojoules = numeric(nutriments["energy-kj_100g"] ?? nutriments["energy_100g"]);
+  if (kilojoules !== null) return roundNutrition(kilojoules / 4.184);
   return null;
 }
 
@@ -783,14 +811,15 @@ function openFoodFactsNutrientPer100g(
   names: string[],
   servingSizeG: number | null
 ): number | null {
+  if (servingSizeG !== null && servingSizeG > 0) {
+    for (const name of names) {
+      const serving = numeric(nutriments[`${name}_serving`]);
+      if (serving !== null) return roundNutrition((serving * 100) / servingSizeG);
+    }
+  }
   for (const name of names) {
     const direct = numeric(nutriments[`${name}_100g`]);
     if (direct !== null) return roundNutrition(direct);
-  }
-  if (servingSizeG === null || servingSizeG <= 0) return null;
-  for (const name of names) {
-    const serving = numeric(nutriments[`${name}_serving`]);
-    if (serving !== null) return roundNutrition((serving * 100) / servingSizeG);
   }
   return null;
 }
@@ -836,8 +865,8 @@ function packagedNutritionQualityIssue(input: {
   }
 
   if (/\b(cream cheese|cheese spread|cheese)\b/u.test(descriptor) &&
-      !/\b(fat free|nonfat|reduced fat|light)\b/u.test(descriptor) &&
-      kcal < 120) {
+      !/\b(fat free|nonfat|reduced fat|light|lite)\b/u.test(descriptor) &&
+      (kcal < 180 || input.per100g.fat_g < 12)) {
     return "implausibly low energy for cheese";
   }
   if (/\b(butter|oil|mayonnaise|mayo|peanut butter|almond butter)\b/u.test(descriptor) && kcal < 250) {
@@ -860,7 +889,60 @@ function packagedNutritionQualityIssue(input: {
   return null;
 }
 
+function usdaLabelNutritionPer100g(
+  details: UsdaFoodDetails | null,
+  servingSizeG: number | null
+): {
+  kcal: number | null;
+  protein_g: number | null;
+  carbohydrate_g: number | null;
+  fat_g: number | null;
+  fiber_g: number | null;
+} {
+  if (!details?.labelNutrients || servingSizeG === null || servingSizeG <= 0) {
+    return { kcal: null, protein_g: null, carbohydrate_g: null, fat_g: null, fiber_g: null };
+  }
+  return {
+    kcal: labelNutrientPer100g(details.labelNutrients, ["calories", "energy"], servingSizeG),
+    protein_g: labelNutrientPer100g(details.labelNutrients, ["protein"], servingSizeG),
+    carbohydrate_g: labelNutrientPer100g(details.labelNutrients, ["carbohydrates", "carbohydrate"], servingSizeG),
+    fat_g: labelNutrientPer100g(details.labelNutrients, ["fat", "totalFat"], servingSizeG),
+    fiber_g: labelNutrientPer100g(details.labelNutrients, ["fiber"], servingSizeG)
+  };
+}
+
+function labelNutrientPer100g(
+  labelNutrients: Record<string, { value?: unknown } | undefined>,
+  names: string[],
+  servingSizeG: number
+): number | null {
+  for (const name of names) {
+    const value = numeric(labelNutrients[name]?.value);
+    if (value !== null) {
+      return roundNutrition((value * 100) / servingSizeG);
+    }
+  }
+  return null;
+}
+
+function servingSizeGrams(value: unknown, unit: string | undefined): number | null {
+  const size = numeric(value);
+  if (size === null || size <= 0) return null;
+  const normalizedUnit = unit?.trim().toLowerCase().replace(/\./gu, "") ?? "g";
+  if (["g", "grm", "gram", "grams", "ml", "mlt", "milliliter", "milliliters"].includes(normalizedUnit)) {
+    return size;
+  }
+  if (["oz", "ounce", "ounces"].includes(normalizedUnit)) {
+    return size * 28.3495;
+  }
+  return null;
+}
+
 function usdaNutrient(food: UsdaSearchFood, nutrientNumber: string, nameNeedle: string): number | null {
+  if (nameNeedle === "energy") {
+    return usdaEnergyKcal(food);
+  }
+
   for (const nutrient of food.foodNutrients ?? []) {
     const numberMatch = nutrient.nutrientNumber === nutrientNumber;
     const nameMatch = nutrient.nutrientName?.toLowerCase().includes(nameNeedle) ?? false;
@@ -870,6 +952,25 @@ function usdaNutrient(food: UsdaSearchFood, nutrientNumber: string, nameNeedle: 
     }
   }
   return null;
+}
+
+function usdaEnergyKcal(food: UsdaSearchFood): number | null {
+  let kilojouleFallback: number | null = null;
+  for (const nutrient of food.foodNutrients ?? []) {
+    const value = numeric(nutrient.value);
+    if (value === null) continue;
+    const unit = nutrient.unitName?.trim().toLowerCase() ?? "";
+    const name = nutrient.nutrientName?.toLowerCase() ?? "";
+    const number = nutrient.nutrientNumber ?? "";
+    if ((number === "208" || name.includes("energy")) &&
+        ["kcal", "calorie", "calories"].includes(unit)) {
+      return roundNutrition(value);
+    }
+    if (number === "268" || unit === "kj" || unit === "kilojoule" || unit === "kilojoules") {
+      kilojouleFallback = kilojouleFallback ?? value;
+    }
+  }
+  return kilojouleFallback === null ? null : roundNutrition(kilojouleFallback / 4.184);
 }
 
 function foodDataCentralAPIKey(env: NodeJS.ProcessEnv): string | null {
@@ -905,4 +1006,15 @@ function tokenize(value: string): string[] {
 
 function roundScore(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function foodSearchResultRank(result: FoodSearchResult): number {
+  let rank = result.match.score;
+  if (result.match.type === "barcode") rank += 3;
+  if (result.source_label === "usda_fdc" && result.match.type === "barcode") rank += 0.35;
+  if (result.source_label === "open_food_facts" && result.match.type === "barcode") rank += 0.2;
+  if (result.source_label === "deterministic_fixture") rank -= 0.25;
+  if (result.trust_label === "barcode_provider") rank += 0.1;
+  if (result.trust_label === "provider_estimate") rank -= 0.1;
+  return rank;
 }

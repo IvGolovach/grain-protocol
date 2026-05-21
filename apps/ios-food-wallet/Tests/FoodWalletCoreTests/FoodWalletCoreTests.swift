@@ -51,6 +51,9 @@ struct FoodWalletCoreTests {
         await run("storeCreatesReviewableDraftFromBrokerBarcodeSearch") {
             try await testStoreCreatesReviewableDraftFromBrokerBarcodeSearch()
         }
+        await run("brokerNameSearchDoesNotClaimBarcodeAssumption") {
+            try testBrokerNameSearchDoesNotClaimBarcodeAssumption()
+        }
         await run("storeReportsUnavailableBarcodeLookupWithoutBroker") {
             try await testStoreReportsUnavailableBarcodeLookupWithoutBroker()
         }
@@ -462,6 +465,15 @@ struct FoodWalletCoreTests {
         try expect(store.currentDraft?.meal.amountGrams == 473, "expected bottle grams")
         try expect(store.currentDraft?.meal.kcal == 80, "expected serving kcal from per-100g data")
         try expect(store.currentCandidate?.primarySourceLabel() == "Barcode match", "expected barcode provenance")
+    }
+
+    private static func testBrokerNameSearchDoesNotClaimBarcodeAssumption() throws {
+        let result = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: brokerGroundBeefSearchEnvelopeJSON()).results[0]
+        let candidate = try result.candidate()
+
+        try expect(!candidate.assumptions.contains { $0.id == "barcode-match" }, "expected name search not to claim barcode")
+        try expect(candidate.assumptions.contains { $0.id == "provider-name-match" }, "expected provider name provenance")
+        try expect(candidate.primarySourceLabel() == "USDA estimate", "expected name search to keep USDA source label")
     }
 
     @MainActor
