@@ -14,6 +14,8 @@ export type BrokerAuthContext = {
   mode: BrokerAuthMode;
   accountId: string;
   deviceId?: string;
+  sessionId?: string;
+  sessionExpiresAtMs?: number;
   tier: "free" | "pro";
 };
 
@@ -26,10 +28,14 @@ export type SessionTokenPayload = {
   exp_ms: number;
 };
 
+export type BrokerSessionVerifier = {
+  authenticateSessionToken(token: string): Promise<BrokerAuthContext>;
+};
+
 export async function authenticateBrokerRequest(
   request: Request,
   config: BrokerAuthConfig,
-  options: { allowAnonymous?: boolean } = {}
+  options: { allowAnonymous?: boolean; sessionVerifier?: BrokerSessionVerifier } = {}
 ): Promise<BrokerAuthContext> {
   if (config.mode === "anonymous") {
     return await anonymousBrokerAuthContext(request);
@@ -50,6 +56,10 @@ export async function authenticateBrokerRequest(
     return { mode: "dev_bearer", accountId: "local-dev", tier: "pro" };
   }
 
+  if (options.sessionVerifier) {
+    return options.sessionVerifier.authenticateSessionToken(bearerToken);
+  }
+
   const payload = await verifySignedSessionToken(bearerToken, config.sessionHmacSecret);
   return {
     mode: "session",
@@ -59,13 +69,21 @@ export async function authenticateBrokerRequest(
   };
 }
 
+export function requireBearerToken(request: Request): string {
+  const bearerToken = bearerTokenFrom(request.headers.get("authorization"));
+  if (!bearerToken) {
+    throw new BrokerError(401, "UNAUTHORIZED", "authorization bearer token is required");
+  }
+  return bearerToken;
+}
+
 async function anonymousBrokerAuthContext(request: Request): Promise<BrokerAuthContext> {
-  const fingerprint = anonymousFingerprint(request);
-  const digest = (await sha256Hex(fingerprint)).slice(0, 16);
+  const requestKey = anonymousRequestKey(request);
+  const digest = (await sha256Hex(requestKey)).slice(0, 16);
   return { mode: "anonymous", accountId: `anonymous:${digest}`, tier: "free" };
 }
 
-function anonymousFingerprint(request: Request): string {
+function anonymousRequestKey(request: Request): string {
   const forwardedFor = request.headers.get("cf-connecting-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const userAgent = request.headers.get("user-agent") ?? "";
@@ -107,7 +125,7 @@ export async function verifySignedSessionToken(token: string, secret: string | u
   return payload;
 }
 
-function bearerTokenFrom(value: string | null): string | null {
+export function bearerTokenFrom(value: string | null): string | null {
   if (!value) return null;
   const match = value.match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() || null;

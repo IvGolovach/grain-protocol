@@ -24,6 +24,8 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: Sources/FoodWalletApp
+      - path: AppStore/MealMark.storekit
+        buildPhase: none
       - path: AppStore/PrivacyInfo.xcprivacy
         buildPhase: resources
       - path: AppStore/Assets.xcassets
@@ -55,3 +57,23 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet.uitests
         TEST_TARGET_NAME: FoodWallet
+
+schemes:
+  FoodWallet:
+    build:
+      targets:
+        FoodWallet: all
+        FoodWalletUITests: [test]
+    run:
+      config: Debug
+      storeKitConfiguration: AppStore/MealMark.storekit
+    test:
+      config: Debug
+      targets:
+        - FoodWalletUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

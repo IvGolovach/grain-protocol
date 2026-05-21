@@ -5,6 +5,7 @@ public enum FoodAnalysisBrokerClientError: Error, Equatable, Sendable, CustomStr
     case invalidResponse
     case httpStatus(Int)
     case brokerError(code: String, message: String, status: Int)
+    case entitlementRequired(usage: MealMarkUsageSnapshot, message: String, status: Int)
     case requestTimedOut
     case networkUnavailable
     case unsafeCandidate(String)
@@ -19,6 +20,8 @@ public enum FoodAnalysisBrokerClientError: Error, Equatable, Sendable, CustomStr
             return "broker returned HTTP \(statusCode)"
         case let .brokerError(code, message, status):
             return "broker returned \(code) HTTP \(status): \(message)"
+        case let .entitlementRequired(usage, message, status):
+            return "broker requires MealMark Plus HTTP \(status): \(message) (\(usage.used)/\(usage.limit) \(usage.feature.rawValue))"
         case .requestTimedOut:
             return "analysis request timed out"
         case .networkUnavailable:
@@ -207,14 +210,20 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         return candidate
     }
 
-    private static func decodeBrokerError(from data: Data, status: Int) -> FoodAnalysisBrokerClientError {
+    static func decodePublicBrokerError(from data: Data, status: Int) -> FoodAnalysisBrokerClientError {
         if let envelope = try? JSONDecoder().decode(BrokerErrorEnvelope.self, from: data) {
+            if status == 429,
+               envelope.error.code == "RATE_LIMITED",
+               envelope.error.details?.entitlementRequired == true,
+               let usage = envelope.error.details?.usageSnapshot {
+                return .entitlementRequired(usage: usage, message: envelope.error.message, status: status)
+            }
             return .brokerError(code: envelope.error.code, message: envelope.error.message, status: status)
         }
         return .httpStatus(status)
     }
 
-    private static func mapTransportError(_ error: Error) -> FoodAnalysisBrokerClientError {
+    static func mapPublicTransportError(_ error: Error) -> FoodAnalysisBrokerClientError {
         guard let urlError = error as? URLError else {
             return .invalidResponse
         }
@@ -226,6 +235,14 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         default:
             return .invalidResponse
         }
+    }
+
+    private static func decodeBrokerError(from data: Data, status: Int) -> FoodAnalysisBrokerClientError {
+        decodePublicBrokerError(from: data, status: status)
+    }
+
+    private static func mapTransportError(_ error: Error) -> FoodAnalysisBrokerClientError {
+        mapPublicTransportError(error)
     }
 
     private static func analysisEndpoint(from endpoint: URL) -> URL {
@@ -283,4 +300,43 @@ private struct BrokerErrorEnvelope: Decodable {
 private struct BrokerErrorBody: Decodable {
     var code: String
     var message: String
+    var details: BrokerErrorDetails?
+}
+
+private struct BrokerErrorDetails: Decodable {
+    var feature: MealMarkUsageFeature?
+    var limit: Int?
+    var used: Int?
+    var resetAtMs: Int64?
+    var entitlementRequired: Bool?
+
+    var usageSnapshot: MealMarkUsageSnapshot? {
+        guard let feature, let limit, let used else {
+            return nil
+        }
+        return MealMarkUsageSnapshot(
+            feature: feature,
+            limit: limit,
+            used: used,
+            resetAtMs: resetAtMs,
+            entitlementRequired: entitlementRequired ?? false
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case feature
+        case limit
+        case used
+        case resetAtMs = "reset_at_ms"
+        case entitlementRequired = "entitlement_required"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.feature = try? container.decode(MealMarkUsageFeature.self, forKey: .feature)
+        self.limit = try? container.decode(Int.self, forKey: .limit)
+        self.used = try? container.decode(Int.self, forKey: .used)
+        self.resetAtMs = try? container.decode(Int64.self, forKey: .resetAtMs)
+        self.entitlementRequired = try? container.decode(Bool.self, forKey: .entitlementRequired)
+    }
 }

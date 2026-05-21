@@ -37,6 +37,14 @@ wrangler secret put FOODDATA_CENTRAL_API_KEY --env staging
 wrangler secret put FOODDATA_CENTRAL_API_KEY --env production
 wrangler secret put MEALMARK_SESSION_HMAC_SECRET --env staging
 wrangler secret put MEALMARK_SESSION_HMAC_SECRET --env production
+wrangler secret put APP_STORE_BUNDLE_ID --env staging
+wrangler secret put APP_STORE_BUNDLE_ID --env production
+wrangler secret put APP_STORE_CONNECT_ISSUER_ID --env staging
+wrangler secret put APP_STORE_CONNECT_ISSUER_ID --env production
+wrangler secret put APP_STORE_CONNECT_KEY_ID --env staging
+wrangler secret put APP_STORE_CONNECT_KEY_ID --env production
+wrangler secret put APP_STORE_CONNECT_PRIVATE_KEY_P8 --env staging
+wrangler secret put APP_STORE_CONNECT_PRIVATE_KEY_P8 --env production
 ```
 
 Then replace the placeholder D1 IDs in `wrangler.jsonc` and deploy:
@@ -55,7 +63,10 @@ Required production posture:
 - `MEALMARK_SESSION_HMAC_SECRET` set as a Cloudflare secret;
 - `OPENAI_API_KEY` set as a Cloudflare secret;
 - `FOODDATA_CENTRAL_API_KEY` set as a Cloudflare secret;
-- D1 migration `0001_account_entitlement.sql` applied before traffic;
+- `APP_STORE_SERVER_ENVIRONMENT=Sandbox` for TestFlight/staging and
+  `Production` for App Store production entitlement verification;
+- App Store Server API secrets set before enabling visible paid products;
+- D1 migrations applied before traffic;
 - iOS app configured with an HTTPS broker URL, never a bundled dev token.
 
 ## Validation

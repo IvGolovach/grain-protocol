@@ -7,15 +7,27 @@ import SwiftUI
 @main
 struct FoodWalletAppMain: App {
     @StateObject private var store = FoodWalletAppConfiguration.makeStore()
+    @StateObject private var accountManager = FoodWalletAppConfiguration.makeAccountManager()
 
     var body: some Scene {
         WindowGroup {
             FoodWalletRootView()
                 .environmentObject(store)
+                .environmentObject(accountManager)
                 .task {
+                    await accountManager.bootstrapIfNeeded()
+                    applyAccountState(accountManager.accountState)
                     await runDeviceSmokeIfRequested()
                 }
+                .onReceive(accountManager.$accountState) { accountState in
+                    applyAccountState(accountState)
+                }
         }
+    }
+
+    @MainActor
+    private func applyAccountState(_ accountState: FoodWalletAccountState) {
+        store.subscription = accountState.entitlement
     }
 
     @MainActor
@@ -50,6 +62,7 @@ private enum FoodWalletAppConfiguration {
     private static let uiTestResetFoodWalletStorageArgument = "--grain-ui-test-reset-food-wallet-storage"
     private static let uiTestResetPersonalIngredientsArgument = "--grain-ui-test-reset-personal-ingredients"
     private static let uiTestAnalysisDelayArgument = "--grain-analysis-delay-ms"
+    private static let sessionTokenStore = KeychainFoodWalletSessionTokenStore()
 
     @MainActor
     static func makeStore() -> FoodWalletStore {
@@ -101,13 +114,11 @@ private enum FoodWalletAppConfiguration {
         else {
             return UnavailableFoodAnalysisClient()
         }
-        guard let brokerToken = configuredBrokerToken() else {
-            return UnavailableFoodAnalysisClient()
-        }
-
+        let brokerToken = configuredBrokerToken()
         return FoodAnalysisBrokerClient(
             endpoint: analysisEndpoint(from: endpoint),
-            bearerToken: brokerToken
+            bearerToken: brokerToken,
+            authorizationProvider: authorizationProvider(fallbackToken: brokerToken)
         )
     }
 
@@ -129,7 +140,16 @@ private enum FoodWalletAppConfiguration {
         return FoodAnalysisBrokerClient(
             analysisEndpoint: analysisEndpoint(from: endpoint),
             searchEndpoint: searchEndpoint(from: endpoint),
-            bearerToken: configuredBrokerToken()
+            bearerToken: configuredBrokerToken(),
+            authorizationProvider: authorizationProvider(fallbackToken: configuredBrokerToken())
+        )
+    }
+
+    @MainActor
+    static func makeAccountManager() -> FoodWalletAppAccountManager {
+        FoodWalletAppAccountManager(
+            brokerBaseURL: configuredBrokerBaseURL(),
+            tokenStore: sessionTokenStore
         )
     }
 
@@ -142,6 +162,36 @@ private enum FoodWalletAppConfiguration {
 
     private static func configuredBrokerToken() -> String? {
         usableConfiguredValue(ProcessInfo.processInfo.environment[brokerTokenEnvironmentKey])
+    }
+
+    private static func configuredBrokerBaseURL() -> URL? {
+        guard
+            let endpointValue = configuredBrokerEndpoint(),
+            let endpoint = URL(string: endpointValue),
+            endpoint.scheme != nil,
+            endpoint.host != nil,
+            brokerEndpointIsAllowed(endpoint)
+        else {
+            return nil
+        }
+        if endpoint.path.hasSuffix("/v1/food/analyze-photo") {
+            var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+            components?.path = String(endpoint.path.dropLast("/v1/food/analyze-photo".count))
+            return components?.url ?? endpoint
+        }
+        if endpoint.path.hasSuffix("/v1/food/search") {
+            var components = URLComponents(url: endpoint, resolvingAgainstBaseURL: false)
+            components?.path = String(endpoint.path.dropLast("/v1/food/search".count))
+            return components?.url ?? endpoint
+        }
+        return endpoint
+    }
+
+    private static func authorizationProvider(fallbackToken: String?) -> any FoodAnalysisBrokerAuthorizationProvider {
+        if fallbackToken?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return StaticFoodAnalysisBrokerAuthorizationProvider(token: fallbackToken)
+        }
+        return FoodWalletSessionAuthorizationProvider(tokenStore: sessionTokenStore)
     }
 
     private static func brokerEndpointIsAllowed(_ endpoint: URL) -> Bool {

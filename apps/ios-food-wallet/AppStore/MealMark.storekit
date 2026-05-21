@@ -1,0 +1,61 @@
+{
+  "identifier": "MEALMARK01",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {},
+  "subscriptionGroups": [
+    {
+      "id": "MMPLUS01",
+      "localizations": [],
+      "name": "MealMark Plus",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "4.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "MMPLUSMONTHLY01",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Higher photo estimate limits, advanced mixed dish analysis, weekly insights, and future encrypted backup.",
+              "displayName": "MealMark Plus Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "dev.grain.foodwallet.plus.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "MealMark Plus Monthly",
+          "subscriptionGroupID": "MMPLUS01",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "39.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "MMPLUSYEARLY01",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Higher photo estimate limits, advanced mixed dish analysis, weekly insights, and future encrypted backup.",
+              "displayName": "MealMark Plus Yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "dev.grain.foodwallet.plus.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "MealMark Plus Yearly",
+          "subscriptionGroupID": "MMPLUS01",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 2,
+    "minor": 0
+  }
+}

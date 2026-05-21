@@ -14,7 +14,7 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
     case today
     case history
     case wallet
-    case pro
+    case plus
 
     var id: String { rawValue }
 
@@ -23,7 +23,7 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
         case .today: return "Today"
         case .history: return "History"
         case .wallet: return "Wallet"
-        case .pro: return "Pro"
+        case .plus: return "Plus"
         }
     }
 
@@ -32,7 +32,7 @@ private enum FoodWalletTab: String, CaseIterable, Identifiable {
         case .today: return "list.bullet.rectangle"
         case .history: return "calendar"
         case .wallet: return "checkmark.seal"
-        case .pro: return "sparkles"
+        case .plus: return "sparkles"
         }
     }
 }
@@ -313,10 +313,10 @@ struct FoodWalletRootView: View {
             .tag(FoodWalletTab.wallet)
 
             NavigationStack {
-                ProView()
+                PlusTabView()
             }
-            .tabItem { Label(FoodWalletTab.pro.title, systemImage: FoodWalletTab.pro.symbol) }
-            .tag(FoodWalletTab.pro)
+            .tabItem { Label(FoodWalletTab.plus.title, systemImage: FoodWalletTab.plus.symbol) }
+            .tag(FoodWalletTab.plus)
         }
     }
 
@@ -1390,7 +1390,7 @@ private struct BuildMealEditorView: View {
 
             Section {
                 MealMarkFilledActionButton(
-                    title: "Create meal draft",
+                    title: "Review meal",
                     subtitle: "Review before saving",
                     symbol: "fork.knife.circle.fill",
                     tint: .green,
@@ -4544,41 +4544,45 @@ private struct RestorePreviewView: View {
     }
 }
 
-private struct ProView: View {
+private struct PlusTabView: View {
     @EnvironmentObject private var store: FoodWalletStore
+    @EnvironmentObject private var accountManager: FoodWalletAppAccountManager
+    @StateObject private var plusStore = MealMarkPlusStore()
 
     var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("MealMark Pro")
-                        .font(.largeTitle.bold())
-                    Text("More photo estimates, advanced mixed-dish analysis, weekly insights, and future encrypted sync.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                    Text(store.subscription.summary)
-                        .font(.headline)
-                }
-                .padding(.vertical, 8)
+        MealMarkPlusView(
+            subscription: store.subscription,
+            accountManager: accountManager,
+            storeKit: plusStore
+        )
+            .task {
+                await plusStore.start(accountManager: accountManager)
+                applySubscriptionEntitlement()
+                await accountManager.refreshAccount()
             }
+            .onChange(of: plusStore.activeProductIDs) { _ in
+                applySubscriptionEntitlement()
+            }
+            .onChange(of: accountManager.accountState) { accountState in
+                store.subscription = accountState.entitlement
+            }
+    }
 
-            Section("Pro value") {
-                Label("Higher photo-estimate limits", systemImage: "camera.badge.ellipsis")
-                Label("Advanced mixed-dish assumptions", systemImage: "slider.horizontal.3")
-                Label("Weekly nutrition patterns", systemImage: "chart.line.uptrend.xyaxis")
-                Label("Future encrypted backup", systemImage: "lock.icloud")
-            }
-
-            Section {
-                Button {
-                    // StoreKit products are wired in a later App Store lane.
-                } label: {
-                    Label("Review subscription options", systemImage: "sparkles")
-                }
-                .buttonStyle(.borderedProminent)
-            }
+    private func applySubscriptionEntitlement() {
+        if accountManager.accountState.status != .localOnly {
+            store.subscription = accountManager.accountState.entitlement
+            return
         }
-        .navigationTitle("Pro")
+        let currentUsage = store.subscription.usedPhotoEstimates
+        let limit = plusStore.isPlusActive
+            ? SubscriptionState.plus.monthlyPhotoEstimateLimit
+            : SubscriptionState.free.monthlyPhotoEstimateLimit
+        let tier: SubscriptionTier = plusStore.isPlusActive ? .plus : .free
+        store.subscription = SubscriptionState(
+            tier: tier,
+            monthlyPhotoEstimateLimit: limit,
+            usedPhotoEstimates: min(currentUsage, limit)
+        )
     }
 }
 

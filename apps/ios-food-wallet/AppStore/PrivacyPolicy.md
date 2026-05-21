@@ -27,11 +27,23 @@ keep provider keys out of the app, use nutrition sources such as USDA FoodData
 Central only from the backend, and discard image bytes after the analysis
 request completes.
 
+If a submitted build does not include a configured remote analysis broker, the
+photo analysis path is unavailable and selected photos do not leave the device.
+If a submitted build enables remote analysis, the App Store privacy answers must
+disclose the exact remote data flow for selected photos, typed food content, and
+derived nutrition data that leaves the device.
+
 ## Subscriptions
 
-MealMark Pro may use Apple StoreKit subscriptions. Apple processes payments
-and subscription management. MealMark should use entitlement status only to
-unlock Pro features.
+MealMark Plus uses Apple StoreKit subscriptions. Apple processes payments and
+subscription management. MealMark sends the Apple signed transaction identifier
+to the MealMark backend so the backend can verify the purchase with Apple's App
+Store Server API and unlock the server-side entitlement for that MealMark
+account.
+
+MealMark does not receive card numbers or Apple ID credentials. It stores only
+the account entitlement state and minimal StoreKit transaction identifiers
+needed to unlock and restore MealMark Plus.
 
 ## Export
 
@@ -41,9 +53,18 @@ bundles, or hidden AI request data.
 
 ## Accounts
 
-The first version does not require a MealMark account. If account sync is
-added later, the app must provide in-app account deletion and delete associated
-account data unless retention is legally required.
+MealMark creates a lightweight app account for server-side analysis quotas and
+MealMark Plus entitlement sync. The account is not a password login and does not
+require an email address. The app provides in-app cloud account deletion, which
+revokes active sessions and marks the server account deleted unless retention is
+legally required.
+
+## App Privacy Updates
+
+The published privacy policy URL and App Store Connect App Privacy answers must
+match the exact submitted binary. Add new disclosures before shipping analytics,
+crash reporting, account sync, cloud backup, remote photo analysis, support-log
+upload, or third-party SDK collection.
 
 ## No Medical Claims
 

@@ -5,11 +5,13 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 
 import { MockFoodAnalyzer, OpenAiFoodAnalyzer } from "../src/analyzers.js";
-import { createSignedSessionToken } from "../src/auth.js";
+import { D1AccountStore, InMemoryAccountStore } from "../src/accounts.js";
 import { createBrokerDependencies } from "../src/dependencies.js";
+import { InMemoryEntitlementStore } from "../src/entitlements.js";
 import { handleBrokerRequest } from "../src/handler.js";
 import { FoodAnalysisCandidateResolver } from "../src/resolver.js";
 import { createBrokerServer } from "../src/server.js";
+import { InMemorySessionStore } from "../src/sessions.js";
 import {
   CompositeFoodSearchProvider,
   FixtureFoodSearchProvider,
@@ -18,7 +20,10 @@ import {
   UsdaGenericFoodSearchProvider,
   foodSearchProviderFromEnv
 } from "../src/search.js";
+import { InMemoryStoreKitTransactionStore, type StoreKitTransactionVerifier } from "../src/storekit.js";
+import { AppStoreServerApiTransactionVerifier } from "../src/storekit_appstore.js";
 import { FixtureNutritionProvider, nutritionProviderFromEnv, type NutritionProvider } from "../src/usda.js";
+import { D1UsageLimiter, type D1DatabaseBinding, type D1PreparedStatementBinding } from "../src/usage.js";
 import type { FoodAnalyzer, FoodAnalyzePhotoRequest, FoodObservation, FoodSearchProvider, FoodSearchResult } from "../src/types.js";
 
 const sampleRequest: FoodAnalyzePhotoRequest = {
@@ -77,7 +82,13 @@ async function main(): Promise<number> {
   await testNutritionProviderFromEnvKeepsFixturesExplicit();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testBrokerAuthRejectsMissingBearerBeforeBody();
-  await testFetchHandlerAcceptsSignedSessionToken();
+  await testAuthBootstrapRefreshLogoutAndAccountMeUseOpaqueSessions();
+  await testD1AccountBootstrapUpgradesExistingDeviceAccountWithAppAccountToken();
+  await testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitlement();
+  await testStoreKitTransactionIngestionRejectsMismatchedAppAccountToken();
+  await testStoreKitTransactionIngestionRejectsUnknownProduct();
+  await testAppStoreServerApiVerifierFetchesAppleTransaction();
+  await testD1UsageLimiterTreatsRepeatedRequestIdAsOneReservation();
   await testFetchHandlerAllowsAnonymousFoodSearchWhenConfigured();
   await testFetchHandlerEnforcesUsageLimiter();
   await testPayloadCap();
@@ -88,7 +99,7 @@ async function main(): Promise<number> {
   await testUpstreamSchemaValidation();
 
   const failed = checks.filter((entry) => !entry.pass);
-  process.stdout.write(`${JSON.stringify({ total: checks.length, failed: failed.length, checks }, null, 2)}\n`);
+  await writeStdout(`${JSON.stringify({ total: checks.length, failed: failed.length, checks }, null, 2)}\n`);
   return failed.length === 0 ? 0 : 1;
 }
 
@@ -235,7 +246,7 @@ async function testOpenFoodFactsBarcodeProvider(): Promise<void> {
   const provider = new OpenFoodFactsSearchProvider({
     baseUrl: "https://off.example.test",
     userAgent: "MealMarkTests/1.0 (test@example.com)",
-    fetchFn: async (url: string | URL, init?: RequestInit) => {
+    fetchFn: async (url: string | URL | Request, init?: RequestInit) => {
       assert.equal(String(url), "https://off.example.test/api/v2/product/012345678905.json?fields=code%2Cproduct_name%2Cgeneric_name%2Cbrands%2Ccategories_tags%2Cserving_quantity%2Cserving_size%2Cnutriments");
       assert.equal((init?.headers as Record<string, string>)["User-Agent"], "MealMarkTests/1.0 (test@example.com)");
       return new Response(JSON.stringify({
@@ -474,7 +485,7 @@ async function testOpenFoodFactsTextSearchProvider(): Promise<void> {
   const provider = new OpenFoodFactsSearchProvider({
     baseUrl: "https://off.example.test",
     userAgent: "MealMarkTests/1.0 (test@example.com)",
-    fetchFn: async (url: string | URL, init?: RequestInit) => {
+    fetchFn: async (url: string | URL | Request, init?: RequestInit) => {
       const parsed = new URL(String(url));
       assert.equal(parsed.pathname, "/cgi/search.pl");
       assert.equal(parsed.searchParams.get("search_terms"), "almond butter");
@@ -1112,42 +1123,308 @@ async function testBrokerAuthRejectsMissingBearerBeforeBody(): Promise<void> {
   pass("broker auth rejects missing bearer token before upstream work");
 }
 
-async function testFetchHandlerAcceptsSignedSessionToken(): Promise<void> {
-  const secret = "session-secret-for-tests";
-  const token = await createSignedSessionToken({
-    account_id: "acct_test",
-    device_id: "device_test",
-    tier: "pro",
-    iat_ms: Date.now() - 1_000,
-    exp_ms: Date.now() + 60_000
-  }, secret);
+async function testAuthBootstrapRefreshLogoutAndAccountMeUseOpaqueSessions(): Promise<void> {
+  const stores = createMemoryAccountStores();
   const dependencies = createBrokerDependencies({
     FOOD_SEARCH_LIVE: "0",
     FOOD_SEARCH_FIXTURES: "1",
-    MEALMARK_AUTH_MODE: "session",
-    MEALMARK_SESSION_HMAC_SECRET: secret
-  });
+    MEALMARK_AUTH_MODE: "session"
+  }, stores);
 
-  const unauthorized = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/search", {
+  const bootstrap = await handleBrokerRequest(new Request("https://mealmark.test/v1/auth/bootstrap", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ query: "banana" })
+    body: JSON.stringify({
+      device_id_hash: "ios-device-hash-001",
+      client: {
+        platform: "ios",
+        app_version: "1.0.0"
+      }
+    })
   }), dependencies);
-  assert.equal(unauthorized.status, 401);
+  assert.equal(bootstrap.status, 200);
+  const bootstrapBody = await bootstrap.json() as Record<string, unknown>;
+  assert.equal(bootstrapBody.ok, true);
+  const bootstrapAccount = bootstrapBody.account as Record<string, unknown>;
+  const bootstrapSession = bootstrapBody.session as Record<string, unknown>;
+  const firstToken = String(bootstrapSession.access_token);
+  assert.equal(firstToken.startsWith("mm_sess."), false);
+  assert.equal(firstToken.includes(String(bootstrapAccount.account_id)), false);
+  assert.equal((bootstrapBody.entitlement as Record<string, unknown>).tier, "free");
 
-  const authorized = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/search", {
+  const accountMe = await handleBrokerRequest(new Request("https://mealmark.test/v1/account/me", {
+    method: "GET",
+    headers: { "authorization": `Bearer ${firstToken}` }
+  }), dependencies);
+  assert.equal(accountMe.status, 200);
+  const accountMeBody = await accountMe.json() as Record<string, unknown>;
+  assert.equal((accountMeBody.account as Record<string, unknown>).account_id, bootstrapAccount.account_id);
+  assert.equal((accountMeBody.entitlement as Record<string, unknown>).tier, "free");
+
+  const refresh = await handleBrokerRequest(new Request("https://mealmark.test/v1/auth/refresh", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${firstToken}`
+    }
+  }), dependencies);
+  assert.equal(refresh.status, 200);
+  const refreshBody = await refresh.json() as Record<string, unknown>;
+  const secondToken = String((refreshBody.session as Record<string, unknown>).access_token);
+  assert.notEqual(secondToken, firstToken);
+
+  const oldTokenAccountMe = await handleBrokerRequest(new Request("https://mealmark.test/v1/account/me", {
+    method: "GET",
+    headers: { "authorization": `Bearer ${firstToken}` }
+  }), dependencies);
+  assert.equal(oldTokenAccountMe.status, 401);
+
+  const logout = await handleBrokerRequest(new Request("https://mealmark.test/v1/auth/logout", {
+    method: "POST",
+    headers: { "authorization": `Bearer ${secondToken}` }
+  }), dependencies);
+  assert.equal(logout.status, 200);
+
+  const loggedOutAccountMe = await handleBrokerRequest(new Request("https://mealmark.test/v1/account/me", {
+    method: "GET",
+    headers: { "authorization": `Bearer ${secondToken}` }
+  }), dependencies);
+  assert.equal(loggedOutAccountMe.status, 401);
+  pass("auth bootstrap, refresh, logout, and account/me use opaque revocable sessions");
+}
+
+async function testD1AccountBootstrapUpgradesExistingDeviceAccountWithAppAccountToken(): Promise<void> {
+  const accountStore = new D1AccountStore(new InMemoryAccountD1Database());
+  const anonymous = await accountStore.bootstrapAccount({
+    deviceIdHash: "ios-device-hash-upgrade",
+    nowMs: 1_800_000_000_000
+  });
+  const upgraded = await accountStore.bootstrapAccount({
+    deviceIdHash: "ios-device-hash-upgrade",
+    appAccountToken: "11111111-1111-4111-8111-111111111111",
+    nowMs: 1_800_000_001_000
+  });
+
+  assert.equal(upgraded.accountId, anonymous.accountId);
+  assert.equal(upgraded.anonymousDeviceHash, "ios-device-hash-upgrade");
+  assert.equal(upgraded.appAccountToken, "11111111-1111-4111-8111-111111111111");
+  pass("D1 account bootstrap upgrades an existing anonymous device account with StoreKit app account token");
+}
+
+async function testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitlement(): Promise<void> {
+  const noVerifierStores = createMemoryAccountStores();
+  const noVerifierDependencies = createBrokerDependencies({
+    MEALMARK_AUTH_MODE: "session"
+  }, noVerifierStores);
+  const noVerifierToken = await bootstrapSessionToken(noVerifierDependencies);
+
+  const missingVerifier = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${noVerifierToken}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ signed_transaction_info: "signed-pro-transaction" })
+  }), noVerifierDependencies);
+  assert.equal(missingVerifier.status, 503);
+  assert.equal(((await missingVerifier.json() as Record<string, unknown>).error as Record<string, unknown>).code, "PROVIDER_NOT_CONFIGURED");
+
+  const stores = createMemoryAccountStores();
+  let verifierCallCount = 0;
+  const purchaseDateMs = Date.now() - 60_000;
+  const expiresDateMs = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const verifier: StoreKitTransactionVerifier = {
+    async verifySignedTransaction(input) {
+      verifierCallCount += 1;
+      assert.equal(input.signedTransaction, "signed-pro-transaction");
+      return {
+        transactionId: "txn_storekit_001",
+        originalTransactionId: "orig_storekit_001",
+        productId: "dev.grain.foodwallet.plus.monthly",
+        environment: "Sandbox",
+        purchaseDateMs,
+        expiresDateMs
+      };
+    }
+  };
+  const dependencies = createBrokerDependencies({
+    MEALMARK_AUTH_MODE: "session"
+  }, {
+    ...stores,
+    storeKitVerifier: verifier
+  });
+  const token = await bootstrapSessionToken(dependencies);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${token}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({ signed_transaction_info: "signed-pro-transaction" })
+    }), dependencies);
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal((body.entitlement as Record<string, unknown>).tier, "pro");
+    assert.equal((body.transaction as Record<string, unknown>).transaction_id, "txn_storekit_001");
+  }
+  assert.equal(verifierCallCount, 2);
+
+  const accountMe = await handleBrokerRequest(new Request("https://mealmark.test/v1/account/me", {
+    method: "GET",
+    headers: { "authorization": `Bearer ${token}` }
+  }), dependencies);
+  assert.equal(accountMe.status, 200);
+  const accountMeBody = await accountMe.json() as Record<string, unknown>;
+  assert.equal((accountMeBody.entitlement as Record<string, unknown>).tier, "pro");
+  assert.equal((accountMeBody.entitlement as Record<string, unknown>).source, "storekit");
+  pass("StoreKit transaction ingestion requires a verifier and updates entitlement idempotently");
+}
+
+async function testStoreKitTransactionIngestionRejectsMismatchedAppAccountToken(): Promise<void> {
+  const stores = createMemoryAccountStores();
+  const verifier: StoreKitTransactionVerifier = {
+    async verifySignedTransaction() {
+      return {
+        transactionId: "txn_storekit_bound_001",
+        originalTransactionId: "orig_storekit_bound_001",
+        productId: "dev.grain.foodwallet.plus.monthly",
+        environment: "Sandbox",
+        purchaseDateMs: Date.now() - 60_000,
+        appAccountToken: "00000000-0000-4000-8000-000000000999"
+      };
+    }
+  };
+  const dependencies = createBrokerDependencies({
+    MEALMARK_AUTH_MODE: "session"
+  }, {
+    ...stores,
+    storeKitVerifier: verifier
+  });
+  const token = await bootstrapSessionToken(
+    dependencies,
+    "00000000-0000-4000-8000-000000000123"
+  );
+
+  const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
     method: "POST",
     headers: {
       "authorization": `Bearer ${token}`,
       "content-type": "application/json"
     },
-    body: JSON.stringify({ query: "banana" })
+    body: JSON.stringify({ signed_transaction_info: "signed-pro-transaction" })
   }), dependencies);
-  assert.equal(authorized.status, 200);
-  const body = await authorized.json() as Record<string, unknown>;
-  assert.equal(body.ok, true);
-  assert.equal((body.results as unknown[]).length, 1);
-  pass("fetch handler accepts signed session tokens and rejects anonymous session requests");
+  assert.equal(response.status, 403);
+  const body = await response.json() as Record<string, unknown>;
+  assert.equal((body.error as Record<string, unknown>).code, "FORBIDDEN");
+  pass("StoreKit transaction ingestion rejects appAccountToken mismatches");
+}
+
+async function testStoreKitTransactionIngestionRejectsUnknownProduct(): Promise<void> {
+  const stores = createMemoryAccountStores();
+  const verifier: StoreKitTransactionVerifier = {
+    async verifySignedTransaction() {
+      return {
+        transactionId: "txn_storekit_other_001",
+        originalTransactionId: "orig_storekit_other_001",
+        productId: "com.example.other.monthly",
+        environment: "Sandbox",
+        purchaseDateMs: Date.now() - 60_000
+      };
+    }
+  };
+  const dependencies = createBrokerDependencies({
+    MEALMARK_AUTH_MODE: "session"
+  }, {
+    ...stores,
+    storeKitVerifier: verifier
+  });
+  const token = await bootstrapSessionToken(dependencies);
+
+  const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ signed_transaction_info: "signed-other-product" })
+  }), dependencies);
+  assert.equal(response.status, 400);
+  const body = await response.json() as Record<string, unknown>;
+  assert.equal((body.error as Record<string, unknown>).code, "BAD_REQUEST");
+  pass("StoreKit transaction ingestion rejects non-MealMark products");
+}
+
+async function testAppStoreServerApiVerifierFetchesAppleTransaction(): Promise<void> {
+  const privateKeyPem = await generateTestP8Key();
+  const verifier = new AppStoreServerApiTransactionVerifier({
+    bundleId: "dev.grain.foodwallet",
+    environment: "Sandbox",
+    issuerId: "issuer-id",
+    keyId: "key-id",
+    privateKeyPem,
+    baseUrl: "https://apple-api.example.test",
+    nowSeconds: () => 1_717_200_000,
+    fetchFn: async (url: string | URL | Request, init?: RequestInit) => {
+      assert.equal(String(url), "https://apple-api.example.test/inApps/v1/transactions/200000000000001");
+      assert.equal(init?.method, "GET");
+      const headers = init?.headers as Record<string, string>;
+      assert.equal(headers.accept, "application/json");
+      assert.equal(headers.authorization.startsWith("Bearer "), true);
+      const bearerParts = headers.authorization.slice("Bearer ".length).split(".");
+      assert.equal(bearerParts.length, 3);
+      const bearerPayload = JSON.parse(Buffer.from(bearerParts[1], "base64url").toString("utf8")) as Record<string, unknown>;
+      assert.equal(bearerPayload.iss, "issuer-id");
+      assert.equal(bearerPayload.aud, "appstoreconnect-v1");
+      assert.equal(bearerPayload.bid, "dev.grain.foodwallet");
+      return new Response(JSON.stringify({
+        signedTransactionInfo: fakeJws({
+          transactionId: "200000000000001",
+          originalTransactionId: "200000000000000",
+          productId: "dev.grain.foodwallet.plus.monthly",
+          bundleId: "dev.grain.foodwallet",
+          environment: "Sandbox",
+          purchaseDate: 1_717_200_001_000,
+          expiresDate: 1_719_792_001_000,
+          appAccountToken: "00000000-0000-4000-8000-000000000123"
+        })
+      }), { status: 200 });
+    }
+  });
+
+  const verified = await verifier.verifySignedTransaction({
+    signedTransaction: fakeJws({
+      transactionId: "200000000000001"
+    })
+  });
+  assert.equal(verified.transactionId, "200000000000001");
+  assert.equal(verified.originalTransactionId, "200000000000000");
+  assert.equal(verified.productId, "dev.grain.foodwallet.plus.monthly");
+  assert.equal(verified.environment, "Sandbox");
+  assert.equal(verified.purchaseDateMs, 1_717_200_001_000);
+  assert.equal(verified.expiresDateMs, 1_719_792_001_000);
+  assert.equal(verified.appAccountToken, "00000000-0000-4000-8000-000000000123");
+  pass("App Store Server API verifier fetches and normalizes Apple transaction data");
+}
+
+async function testD1UsageLimiterTreatsRepeatedRequestIdAsOneReservation(): Promise<void> {
+  const database = new InMemoryUsageD1Database();
+  const limiter = new D1UsageLimiter(database);
+  const auth = {
+    mode: "session" as const,
+    accountId: "acct_usage_test",
+    tier: "free" as const
+  };
+
+  const first = await limiter.reserve({ auth, feature: "photo_analysis", requestId: "same-request-id" });
+  const second = await limiter.reserve({ auth, feature: "photo_analysis", requestId: "same-request-id" });
+  const third = await limiter.reserve({ auth, feature: "photo_analysis", requestId: "different-request-id" });
+
+  assert.equal(first.used, 1);
+  assert.equal(second.used, 1);
+  assert.equal(third.used, 2);
+  assert.equal(second.allowed, true);
+  pass("D1 usage limiter treats a repeated request id as one reservation");
 }
 
 async function testFetchHandlerAllowsAnonymousFoodSearchWhenConfigured(): Promise<void> {
@@ -1445,9 +1722,215 @@ async function withServer(
   try {
     await run(`http://127.0.0.1:${address.port}`);
   } finally {
-    server.close();
-    await once(server, "close");
+    await closeServer(server);
   }
+}
+
+function closeServer(server: ReturnType<typeof createBrokerServer>): Promise<void> {
+  const closing = new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+  const forceClosableServer = server as typeof server & {
+    closeAllConnections?: () => void;
+    closeIdleConnections?: () => void;
+  };
+  forceClosableServer.closeIdleConnections?.();
+  forceClosableServer.closeAllConnections?.();
+  return closing;
+}
+
+function createMemoryAccountStores(): {
+  accountStore: InMemoryAccountStore;
+  sessionStore: InMemorySessionStore;
+  entitlementStore: InMemoryEntitlementStore;
+  storeKitTransactionStore: InMemoryStoreKitTransactionStore;
+} {
+  const accountStore = new InMemoryAccountStore();
+  return {
+    accountStore,
+    sessionStore: new InMemorySessionStore(),
+    entitlementStore: new InMemoryEntitlementStore(),
+    storeKitTransactionStore: new InMemoryStoreKitTransactionStore()
+  };
+}
+
+async function bootstrapSessionToken(
+  dependencies: ReturnType<typeof createBrokerDependencies>,
+  appAccountToken?: string
+): Promise<string> {
+  const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/auth/bootstrap", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      device_id_hash: `ios-device-hash-${randomTestSuffix()}`,
+      ...(appAccountToken ? { app_account_token: appAccountToken } : {}),
+      client: {
+        platform: "ios",
+        app_version: "1.0.0"
+      }
+    })
+  }), dependencies);
+  assert.equal(response.status, 200);
+  const body = await response.json() as Record<string, unknown>;
+  return String((body.session as Record<string, unknown>).access_token);
+}
+
+async function generateTestP8Key(): Promise<string> {
+  const keys = await globalThis.crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign", "verify"]
+  );
+  const exported = await globalThis.crypto.subtle.exportKey("pkcs8", keys.privateKey);
+  const body = Buffer.from(exported).toString("base64").match(/.{1,64}/g)?.join("\n") ?? "";
+  return `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----`;
+}
+
+function fakeJws(payload: Record<string, unknown>): string {
+  return `${base64UrlJson({ alg: "ES256", kid: "test" })}.${base64UrlJson(payload)}.signature`;
+}
+
+function base64UrlJson(value: Record<string, unknown>): string {
+  return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
+}
+
+class InMemoryUsageD1Database implements D1DatabaseBinding {
+  readonly accounts = new Set<string>();
+  readonly reservations = new Set<string>();
+  readonly buckets = new Map<string, number>();
+
+  prepare(query: string): D1PreparedStatementBinding {
+    return new InMemoryUsageD1Statement(this, query);
+  }
+}
+
+class InMemoryUsageD1Statement implements D1PreparedStatementBinding {
+  private values: Array<string | number | null> = [];
+
+  constructor(private readonly database: InMemoryUsageD1Database, private readonly query: string) {}
+
+  bind(...values: Array<string | number | null>): D1PreparedStatementBinding {
+    this.values = values;
+    return this;
+  }
+
+  async first<T = Record<string, unknown>>(): Promise<T | null> {
+    if (this.query.includes("INSERT INTO accounts")) {
+      const accountId = String(this.values[0]);
+      this.database.accounts.add(accountId);
+      return { account_id: accountId } as T;
+    }
+
+    if (this.query.includes("INSERT INTO usage_reservations")) {
+      const [accountId, feature, bucketStartMs, requestId] = this.values;
+      const reservationKey = `${accountId}:${feature}:${bucketStartMs}:${requestId}`;
+      if (this.database.reservations.has(reservationKey)) return null;
+      this.database.reservations.add(reservationKey);
+      return { request_id: String(requestId) } as T;
+    }
+
+    if (this.query.includes("INSERT INTO usage_buckets")) {
+      const [accountId, feature, bucketStartMs] = this.values;
+      const bucketKey = `${accountId}:${feature}:${bucketStartMs}`;
+      const used = (this.database.buckets.get(bucketKey) ?? 0) + 1;
+      this.database.buckets.set(bucketKey, used);
+      return { used } as T;
+    }
+
+    if (this.query.includes("SELECT used FROM usage_buckets")) {
+      const [accountId, feature, bucketStartMs] = this.values;
+      const bucketKey = `${accountId}:${feature}:${bucketStartMs}`;
+      return { used: this.database.buckets.get(bucketKey) ?? 0 } as T;
+    }
+
+    throw new Error(`unhandled in-memory D1 query: ${this.query}`);
+  }
+}
+
+type InMemoryAccountRow = {
+  account_id: string;
+  created_at_ms: number;
+  updated_at_ms: number;
+  status: "active" | "deleted";
+  anonymous_device_hash: string | null;
+  app_account_token: string | null;
+};
+
+class InMemoryAccountD1Database implements D1DatabaseBinding {
+  readonly accounts = new Map<string, InMemoryAccountRow>();
+
+  prepare(query: string): D1PreparedStatementBinding {
+    return new InMemoryAccountD1Statement(this, query);
+  }
+}
+
+class InMemoryAccountD1Statement implements D1PreparedStatementBinding {
+  private values: Array<string | number | null> = [];
+
+  constructor(private readonly database: InMemoryAccountD1Database, private readonly query: string) {}
+
+  bind(...values: Array<string | number | null>): D1PreparedStatementBinding {
+    this.values = values;
+    return this;
+  }
+
+  async first<T = Record<string, unknown>>(): Promise<T | null> {
+    if (this.query.includes("WHERE app_account_token = ?1")) {
+      const [appAccountToken] = this.values;
+      return this.accountRow((row) => row.app_account_token === appAccountToken);
+    }
+
+    if (this.query.includes("WHERE anonymous_device_hash = ?1")) {
+      const [deviceIdHash] = this.values;
+      return this.accountRow((row) => row.anonymous_device_hash === deviceIdHash);
+    }
+
+    if (this.query.includes("INSERT INTO accounts")) {
+      const [accountIdValue, nowMsValue, deviceIdHashValue, appAccountTokenValue] = this.values;
+      const accountId = String(accountIdValue);
+      const nowMs = Number(nowMsValue);
+      const existing = this.database.accounts.get(accountId);
+      const row: InMemoryAccountRow = existing
+        ? {
+            ...existing,
+            updated_at_ms: nowMs,
+            status: "active",
+            anonymous_device_hash: coalesceString(deviceIdHashValue, existing.anonymous_device_hash),
+            app_account_token: coalesceString(appAccountTokenValue, existing.app_account_token)
+          }
+        : {
+            account_id: accountId,
+            created_at_ms: nowMs,
+            updated_at_ms: nowMs,
+            status: "active",
+            anonymous_device_hash: coalesceString(deviceIdHashValue, null),
+            app_account_token: coalesceString(appAccountTokenValue, null)
+          };
+      this.database.accounts.set(accountId, row);
+      return row as T;
+    }
+
+    throw new Error(`unhandled in-memory account D1 query: ${this.query}`);
+  }
+
+  private accountRow<T>(predicate: (row: InMemoryAccountRow) => boolean): T | null {
+    return Array.from(this.database.accounts.values()).find(predicate) as T | undefined ?? null;
+  }
+}
+
+function coalesceString(value: string | number | null, fallback: string | null): string | null {
+  if (typeof value !== "string" || value.trim() === "") return fallback;
+  return value;
+}
+
+function randomTestSuffix(): string {
+  return Math.random().toString(16).slice(2);
 }
 
 async function postJson(url: string, body: unknown, headers: Record<string, string> = {}): Promise<Response> {
@@ -1531,8 +2014,22 @@ function pass(name: string): void {
   checks.push({ name, pass: true });
 }
 
-main().then((code) => process.exit(code)).catch((err: unknown) => {
+function writeStdout(value: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    process.stdout.write(value, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+main().then((code) => {
+  process.exitCode = code;
+}).catch(async (err: unknown) => {
   checks.push({ name: "unexpected exception", pass: false, detail: err instanceof Error ? err.message : String(err) });
-  process.stdout.write(`${JSON.stringify({ total: checks.length, failed: 1, checks }, null, 2)}\n`);
-  process.exit(1);
+  await writeStdout(`${JSON.stringify({ total: checks.length, failed: 1, checks }, null, 2)}\n`);
+  process.exitCode = 1;
 });

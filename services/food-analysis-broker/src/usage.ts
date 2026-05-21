@@ -52,6 +52,41 @@ export class D1UsageLimiter implements UsageLimiter {
     const limit = monthlyLimit(input.auth.tier, input.feature);
     const nowMs = Date.now();
     await this.ensureAccount(input.auth.accountId, nowMs);
+    const reservation = await this.database
+      .prepare(`
+        INSERT INTO usage_reservations (
+          account_id,
+          feature,
+          bucket_start_ms,
+          request_id,
+          created_at_ms
+        )
+        VALUES (?1, ?2, ?3, ?4, ?5)
+        ON CONFLICT(account_id, feature, bucket_start_ms, request_id)
+        DO NOTHING
+        RETURNING request_id
+      `)
+      .bind(input.auth.accountId, input.feature, bucketStartMs, input.requestId, nowMs)
+      .first<{ request_id: string }>();
+    if (!reservation) {
+      const existing = await this.database
+        .prepare(`
+          SELECT used FROM usage_buckets
+          WHERE account_id = ?1
+            AND feature = ?2
+            AND bucket_start_ms = ?3
+        `)
+        .bind(input.auth.accountId, input.feature, bucketStartMs)
+        .first<{ used: number }>();
+      const used = integerFrom(existing?.used) ?? 0;
+      return {
+        allowed: used <= limit,
+        limit,
+        used,
+        resetAtMs
+      };
+    }
+
     const row = await this.database
       .prepare(`
         INSERT INTO usage_buckets (account_id, feature, bucket_start_ms, used, limit_value, updated_at_ms)

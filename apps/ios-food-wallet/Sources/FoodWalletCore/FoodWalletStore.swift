@@ -39,6 +39,7 @@ public enum FoodAnalysisFailureCode: Equatable, Sendable {
     case invalidResponse
     case httpStatus(Int)
     case noFoodDetected
+    case entitlementRequired
     case timeout
     case unsafeCandidate
     case network
@@ -1360,6 +1361,11 @@ public final class FoodWalletStore: ObservableObject {
                 code: .httpStatus(status),
                 message: message.isEmpty ? "The analysis service returned \(code). Try again." : message
             )
+        case let .entitlementRequired(usage, message, _):
+            return FoodAnalysisFailure(
+                code: .entitlementRequired,
+                message: entitlementMessage(for: usage, fallback: message)
+            )
         case .requestTimedOut:
             return FoodAnalysisFailure(
                 code: .timeout,
@@ -1404,6 +1410,8 @@ public final class FoodWalletStore: ObservableObject {
                     return "Food lookup took too long. Check your connection and try again."
                 }
                 return message.isEmpty ? "Food lookup returned HTTP \(status). Try again." : message
+            case let .entitlementRequired(usage, message, _):
+                return entitlementMessage(for: usage, fallback: message)
             case .requestTimedOut:
                 return "Food lookup took too long. Check your connection and try again."
             case .networkUnavailable:
@@ -1422,6 +1430,13 @@ public final class FoodWalletStore: ObservableObject {
         }
 
         return "Food lookup failed. Try again, use photo, or enter the food manually."
+    }
+
+    private static func entitlementMessage(for usage: MealMarkUsageSnapshot, fallback: String) -> String {
+        if usage.entitlementRequired {
+            return "MealMark Plus is needed for more \(usage.feature.label.lowercased()) this month."
+        }
+        return fallback.isEmpty ? "MealMark usage limit reached. Try again after the monthly reset." : fallback
     }
 }
 

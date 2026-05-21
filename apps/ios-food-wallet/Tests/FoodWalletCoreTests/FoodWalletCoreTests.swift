@@ -15,6 +15,9 @@ struct FoodWalletCoreTests {
         await run("providerEvidenceNormalizesSourceLabels") {
             try await testProviderEvidenceNormalizesSourceLabels()
         }
+        await run("mealMarkPlusEntitlementUsageModels") {
+            try testMealMarkPlusEntitlementUsageModels()
+        }
         await run("mealMarkProvenanceSnapshotPreservesCandidateEvidence") {
             try await testMealMarkProvenanceSnapshotPreservesCandidateEvidence()
         }
@@ -33,6 +36,9 @@ struct FoodWalletCoreTests {
         await run("brokerClientUsesSessionTokenProvider") {
             try await testBrokerClientUsesSessionTokenProvider()
         }
+        await run("accountClientRequestsBuildBootstrapMeAndStoreKitRequests") {
+            try testAccountClientRequestsBuildBootstrapMeAndStoreKitRequests()
+        }
         await run("brokerRejectsUnsafeCandidateWithoutConfirmation") {
             try await testBrokerRejectsUnsafeCandidateWithoutConfirmation()
         }
@@ -41,6 +47,9 @@ struct FoodWalletCoreTests {
         }
         await run("brokerMapsNoFoodError") {
             try await testBrokerMapsNoFoodError()
+        }
+        await run("brokerDecodesEntitlementRequired429") {
+            try await testBrokerDecodesEntitlementRequired429()
         }
         await run("brokerSearchPostsBarcodeEnvelope") {
             try await testBrokerSearchPostsBarcodeEnvelope()
@@ -180,6 +189,9 @@ struct FoodWalletCoreTests {
         await run("storePublishesFailureStateWhenPhotoAnalysisFails") {
             try await testStorePublishesFailureStateWhenPhotoAnalysisFails()
         }
+        await run("storePublishesEntitlementRequiredFailure") {
+            try await testStorePublishesEntitlementRequiredFailure()
+        }
         await run("storePublishesNoFoodStateWithoutDraft") {
             try await testStorePublishesNoFoodStateWithoutDraft()
         }
@@ -287,6 +299,42 @@ struct FoodWalletCoreTests {
         try expect(FoodEvidenceSource(id: "open-food-facts").label == "Barcode match", "expected barcode source label")
     }
 
+    private static func testMealMarkPlusEntitlementUsageModels() throws {
+        let decoder = JSONDecoder()
+        let legacyTier = try decoder.decode(SubscriptionTier.self, from: Data(#""pro""#.utf8))
+        let plusTier = try decoder.decode(SubscriptionTier.self, from: Data(#""plus""#.utf8))
+
+        try expect(legacyTier == .plus, "expected legacy pro tier to decode as MealMark Plus")
+        try expect(plusTier == .plus, "expected plus tier alias to decode")
+        try expect(SubscriptionTier.plus.rawValue == "pro", "expected broker-compatible tier wire value")
+        try expect(SubscriptionTier.plus.label == "MealMark Plus", "expected consumer-facing Plus label")
+        try expect(MealMarkPlusProductID.recognizes("dev.grain.foodwallet.plus.monthly"), "expected monthly product")
+        try expect(MealMarkPlusProductID.recognizes("dev.grain.foodwallet.plus.yearly"), "expected yearly product")
+
+        let usage = MealMarkUsageSnapshot(
+            feature: .photoAnalysis,
+            limit: 500,
+            used: 37,
+            resetAtMs: 1_800_000_000_000
+        )
+        let entitlement = MealMarkEntitlement.storeKitPlus(
+            productID: .monthly,
+            originalTransactionID: "orig-transaction-1",
+            effectiveAtMs: 1_700_000_000_000,
+            expiresAtMs: 1_900_000_000_000,
+            updatedAtMs: 1_750_000_000_000
+        )
+        let subscription = SubscriptionState(entitlement: entitlement, usage: [usage])
+
+        try expect(entitlement.isPlus, "expected plus entitlement")
+        try expect(entitlement.isActive(nowMs: 1_800_000_000_000), "expected active entitlement")
+        try expect(subscription.tier == .plus, "expected subscription tier from entitlement")
+        try expect(subscription.monthlyPhotoEstimateLimit == 500, "expected photo limit from usage")
+        try expect(subscription.usedPhotoEstimates == 37, "expected used count from usage")
+        try expect(subscription.remainingPhotoEstimates == 463, "expected remaining photo estimates")
+        try expect(subscription.summary == "MealMark Plus: 463 photo estimates left", "expected Plus summary")
+    }
+
     private static func testMealMarkProvenanceSnapshotPreservesCandidateEvidence() async throws {
         let candidate = try await MockFoodAnalysisClient().estimate(example: .mushroomRisotto)
         let wallet = GrainFoodWallet()
@@ -381,6 +429,60 @@ struct FoodWalletCoreTests {
         try expect(capture.authorization == "Bearer session-token", "expected broker session token header")
     }
 
+    private static func testAccountClientRequestsBuildBootstrapMeAndStoreKitRequests() throws {
+        let baseURL = URL(string: "https://mealmark.example.test/api")!
+        let bootstrap = FoodWalletAccountBootstrapRequest(
+            deviceIDHash: "device-abc",
+            appAccountToken: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
+            appVersion: "1.2.3",
+            buildNumber: "45",
+            localeIdentifier: "en_US",
+            storefrontCountryCode: "US",
+            clientGeneratedAtMs: 1_800_000_000_000
+        )
+        let bootstrapClientRequest = try bootstrap.clientRequest()
+        let bootstrapURLRequest = try bootstrapClientRequest.urlRequest(baseURL: baseURL)
+        let bootstrapBody = try JSONSerialization.jsonObject(
+            with: bootstrapClientRequest.body ?? Data()
+        ) as? [String: Any]
+
+        try expect(bootstrapClientRequest.method == "POST", "expected bootstrap POST")
+        try expect(bootstrapClientRequest.path == "/v1/auth/bootstrap", "expected bootstrap path")
+        try expect(!bootstrapClientRequest.requiresSessionToken, "expected bootstrap without session token")
+        try expect(bootstrapURLRequest.url?.path == "/api/v1/auth/bootstrap", "expected base path preservation")
+        try expect(bootstrapURLRequest.value(forHTTPHeaderField: "Content-Type") == "application/json", "expected JSON content type")
+        try expect(bootstrapBody?["device_id_hash"] as? String == "device-abc", "expected device id hash in bootstrap body")
+        try expect(bootstrapBody?["app_account_token"] as? String == "11111111-1111-4111-8111-111111111111", "expected app account token")
+        try expect(bootstrapBody?["app_bundle_id"] as? String == "dev.grain.foodwallet", "expected bundle id")
+        try expect(bootstrapBody?["client_generated_at_ms"] as? Int == 1_800_000_000_000, "expected client timestamp")
+
+        let meClientRequest = FoodWalletAccountMeRequest().clientRequest()
+        do {
+            _ = try meClientRequest.urlRequest(baseURL: baseURL)
+            throw FoodWalletTestFailure("expected missing session token error")
+        } catch let error as FoodWalletAccountClientError {
+            try expect(error == .missingSessionToken, "expected missing token error")
+        }
+        let meURLRequest = try meClientRequest.urlRequest(baseURL: baseURL, sessionToken: " session-token ")
+        try expect(meClientRequest.method == "GET", "expected me GET")
+        try expect(meClientRequest.path == "/v1/account/me", "expected me path")
+        try expect(meClientRequest.requiresSessionToken, "expected me to require session")
+        try expect(meURLRequest.value(forHTTPHeaderField: "Authorization") == "Bearer session-token", "expected trimmed bearer token")
+
+        let transaction = FoodWalletStoreKitTransactionRequest(signedTransactionInfo: "signed-storekit-jws")
+        let transactionClientRequest = try transaction.clientRequest()
+        let transactionURLRequest = try transactionClientRequest.urlRequest(baseURL: baseURL, sessionToken: "session-token")
+        let transactionBody = try JSONSerialization.jsonObject(
+            with: transactionClientRequest.body ?? Data()
+        ) as? [String: Any]
+
+        try expect(transactionClientRequest.method == "POST", "expected transaction POST")
+        try expect(transactionClientRequest.path == "/v1/storekit/transactions", "expected transaction path")
+        try expect(transactionClientRequest.requiresSessionToken, "expected transaction to require session")
+        try expect(transactionURLRequest.url?.path == "/api/v1/storekit/transactions", "expected transaction URL")
+        try expect(transactionBody?["signed_transaction_info"] as? String == "signed-storekit-jws", "expected signed transaction")
+    }
+
     private static func testBrokerRejectsUnsafeCandidateWithoutConfirmation() async throws {
         let client = brokerClient { _ in
             BrokerResponse(statusCode: 200, body: brokerEnvelopeJSON(userConfirmationRequired: false))
@@ -418,6 +520,36 @@ struct FoodWalletCoreTests {
             status: 422
         )) {
             try await client.estimate(photoPayload: payload)
+        }
+    }
+
+    private static func testBrokerDecodesEntitlementRequired429() async throws {
+        let client = brokerClient { _ in
+            BrokerResponse(statusCode: 429, body: brokerRateLimitErrorJSON(
+                feature: "photo_analysis",
+                limit: 10,
+                used: 11,
+                resetAtMs: 1_800_000_000_000,
+                entitlementRequired: true
+            ))
+        }
+        let payload = TransientMealPhotoPayload(photo: .uiTestFujiApple, jpegData: Data([0xff, 0xd8]))
+
+        do {
+            _ = try await client.estimate(photoPayload: payload)
+            throw FoodWalletTestFailure("expected entitlement required error")
+        } catch let error as FoodAnalysisBrokerClientError {
+            guard case let .entitlementRequired(usage, message, status) = error else {
+                throw FoodWalletTestFailure("expected entitlement error, got \(error)")
+            }
+            try expect(status == 429, "expected 429 status")
+            try expect(message == "MealMark usage limit reached", "expected broker message")
+            try expect(usage.feature == .photoAnalysis, "expected photo usage feature")
+            try expect(usage.limit == 10, "expected free photo limit")
+            try expect(usage.used == 11, "expected over-limit usage")
+            try expect(usage.remaining == 0, "expected zero remaining")
+            try expect(usage.resetAtMs == 1_800_000_000_000, "expected reset time")
+            try expect(usage.entitlementRequired, "expected entitlement flag")
         }
     }
 
@@ -1505,6 +1637,21 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStorePublishesEntitlementRequiredFailure() async throws {
+        let store = FoodWalletStore(analysisClient: EntitlementRequiredFoodAnalysisClient(), privacy: .granted)
+
+        await store.analyze(photo: .uiTestFujiApple)
+
+        try expect(store.analysisState.isFailed, "expected entitlement failure state")
+        guard case let .failed(failure) = store.analysisState else {
+            throw FoodWalletTestFailure("expected failed state")
+        }
+        try expect(failure.code == .entitlementRequired, "expected entitlement failure code")
+        try expect(failure.message == "MealMark Plus is needed for more photo analysis this month.", "expected Plus upgrade message")
+        try expect(store.currentDraft == nil, "expected no draft after entitlement failure")
+    }
+
+    @MainActor
     private static func testStorePublishesNoFoodStateWithoutDraft() async throws {
         let store = FoodWalletStore(analysisClient: NoFoodFoodAnalysisClient(), privacy: .granted)
 
@@ -1772,6 +1919,34 @@ private struct NoFoodFoodAnalysisClient: FoodAnalysisClient {
     }
 }
 
+private struct EntitlementRequiredFoodAnalysisClient: FoodAnalysisClient {
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        throw entitlementError()
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        throw entitlementError()
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        throw entitlementError()
+    }
+
+    private func entitlementError() -> FoodAnalysisBrokerClientError {
+        .entitlementRequired(
+            usage: MealMarkUsageSnapshot(
+                feature: .photoAnalysis,
+                limit: 10,
+                used: 11,
+                resetAtMs: 1_800_000_000_000,
+                entitlementRequired: true
+            ),
+            message: "MealMark usage limit reached",
+            status: 429
+        )
+    }
+}
+
 private struct StaticFoodSearchClient: BrokerFoodSearchClient {
     var results: [BrokerFoodSearchResult]
 
@@ -1947,6 +2122,34 @@ private func brokerErrorJSON(code: String, message: String) -> Data {
             "code": "\(code)",
             "message": "\(message)",
             "request_id": "broker-error-fixture"
+          }
+        }
+        """.utf8
+    )
+}
+
+private func brokerRateLimitErrorJSON(
+    feature: String,
+    limit: Int,
+    used: Int,
+    resetAtMs: Int64,
+    entitlementRequired: Bool
+) -> Data {
+    Data(
+        """
+        {
+          "ok": false,
+          "error": {
+            "code": "RATE_LIMITED",
+            "message": "MealMark usage limit reached",
+            "request_id": "broker-rate-limit-fixture",
+            "details": {
+              "feature": "\(feature)",
+              "limit": \(limit),
+              "used": \(used),
+              "reset_at_ms": \(resetAtMs),
+              "entitlement_required": \(entitlementRequired)
+            }
           }
         }
         """.utf8

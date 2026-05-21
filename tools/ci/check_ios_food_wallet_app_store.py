@@ -11,17 +11,25 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
+PROJECT_YML = ROOT / "apps" / "ios-food-wallet" / "project.yml"
 APP_STORE = ROOT / "apps" / "ios-food-wallet" / "AppStore"
 APP_ICONSET = APP_STORE / "Assets.xcassets" / "AppIcon.appiconset"
+STOREKIT_FILE = "MealMark.storekit"
+STOREKIT_PRODUCTS = {
+    "dev.grain.foodwallet.plus.monthly": "P1M",
+    "dev.grain.foodwallet.plus.yearly": "P1Y",
+}
 
 
 REQUIRED_FILES = [
     "Info.plist",
+    STOREKIT_FILE,
     "PrivacyInfo.xcprivacy",
     "AppPrivacyAnswers.md",
     "AppReviewNotes.md",
     "PrivacyPolicy.md",
     "StoreKitProducts.md",
+    "TestFlightReleaseGuide.md",
 ]
 
 FORBIDDEN_CLAIMS = [
@@ -51,6 +59,88 @@ def require_text(name: str, tokens: list[str]) -> int:
     forbidden = [claim for claim in FORBIDDEN_CLAIMS if claim in text]
     if forbidden:
         return fail(f"{name} contains forbidden medical/accuracy claim: {', '.join(forbidden)}")
+    return 0
+
+
+def require_project_yml() -> int:
+    if not PROJECT_YML.is_file():
+        return fail("apps/ios-food-wallet/project.yml is required")
+
+    text = PROJECT_YML.read_text(encoding="utf-8")
+    tokens = [
+        "CURRENT_PROJECT_VERSION",
+        "MARKETING_VERSION",
+        "PRODUCT_BUNDLE_IDENTIFIER: dev.grain.foodwallet",
+        "AppStore/MealMark.storekit",
+        "buildPhase: none",
+        "storeKitConfiguration: AppStore/MealMark.storekit",
+        "archive:",
+        "config: Release",
+    ]
+    missing = [token for token in tokens if token not in text]
+    if missing:
+        return fail(f"project.yml missing App Store/TestFlight wiring: {', '.join(missing)}")
+    if "GRAIN_FOOD_BROKER_DEV_TOKEN" in text:
+        return fail("project.yml must not embed the local broker dev token setting")
+    return 0
+
+
+def require_storekit_config() -> int:
+    path = APP_STORE / STOREKIT_FILE
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return fail(f"{STOREKIT_FILE} is not valid JSON: {exc}")
+
+    version = payload.get("version")
+    if not isinstance(version, dict) or version.get("major", 0) < 2:
+        return fail(f"{STOREKIT_FILE} must declare StoreKit config version 2 or newer")
+    if payload.get("products") != [] or payload.get("nonRenewingSubscriptions") != []:
+        return fail(f"{STOREKIT_FILE} should contain subscriptions only")
+
+    groups = payload.get("subscriptionGroups")
+    if not isinstance(groups, list) or len(groups) != 1:
+        return fail(f"{STOREKIT_FILE} must contain exactly one subscription group")
+    group = groups[0]
+    if not isinstance(group, dict) or group.get("name") != "MealMark Plus":
+        return fail(f"{STOREKIT_FILE} subscription group must be MealMark Plus")
+
+    subscriptions = group.get("subscriptions")
+    if not isinstance(subscriptions, list) or len(subscriptions) != len(STOREKIT_PRODUCTS):
+        return fail(f"{STOREKIT_FILE} must contain monthly and yearly Plus subscriptions")
+
+    seen: dict[str, str] = {}
+    for subscription in subscriptions:
+        if not isinstance(subscription, dict):
+            return fail(f"{STOREKIT_FILE} contains an invalid subscription entry")
+        product_id = subscription.get("productID")
+        if product_id not in STOREKIT_PRODUCTS:
+            return fail(f"{STOREKIT_FILE} contains unexpected product ID {product_id!r}")
+        if subscription.get("type") != "RecurringSubscription":
+            return fail(f"{product_id} must be a recurring subscription")
+        expected_period = STOREKIT_PRODUCTS[product_id]
+        if subscription.get("recurringSubscriptionPeriod") != expected_period:
+            return fail(f"{product_id} must use period {expected_period}")
+        if subscription.get("subscriptionGroupID") != group.get("id"):
+            return fail(f"{product_id} must reference the MealMark Plus subscription group")
+        if not subscription.get("referenceName"):
+            return fail(f"{product_id} missing referenceName")
+        if not subscription.get("displayPrice"):
+            return fail(f"{product_id} missing local displayPrice")
+        localizations = subscription.get("localizations")
+        if not isinstance(localizations, list) or not any(
+            loc.get("locale") == "en_US"
+            and loc.get("displayName")
+            and loc.get("description")
+            for loc in localizations
+            if isinstance(loc, dict)
+        ):
+            return fail(f"{product_id} missing en_US display name and description")
+        seen[product_id] = subscription["recurringSubscriptionPeriod"]
+
+    missing_products = [product_id for product_id in STOREKIT_PRODUCTS if product_id not in seen]
+    if missing_products:
+        return fail(f"{STOREKIT_FILE} missing products: {', '.join(missing_products)}")
     return 0
 
 
@@ -112,6 +202,14 @@ def main() -> int:
         if not (APP_STORE / name).is_file():
             return fail(f"missing {name}")
 
+    status = require_project_yml()
+    if status:
+        return status
+
+    status = require_storekit_config()
+    if status:
+        return status
+
     with (APP_STORE / "Info.plist").open("rb") as handle:
         info = plistlib.load(handle)
     if info.get("CFBundleDisplayName") != "MealMark":
@@ -141,10 +239,63 @@ def main() -> int:
         return fail("PrivacyInfo.xcprivacy must declare UserDefaults required-reason API use")
 
     checks = [
-        ("AppPrivacyAnswers.md", ["Tracking: no", "Raw photo retention: no", "Third-party AI", "StoreKit"]),
-        ("AppReviewNotes.md", ["What To Test", "AI And Photos", "restore/manage subscription", "not medical advice"]),
-        ("PrivacyPolicy.md", ["does not store raw meal photos", "consent", "StoreKit", "No Medical Claims"]),
-        ("StoreKitProducts.md", ["dev.grain.foodwallet.plus.monthly", "dev.grain.foodwallet.plus.yearly", "restore purchases"]),
+        (
+            "AppPrivacyAnswers.md",
+            [
+                "Tracking: no",
+                "Raw photo retention: no",
+                "Third-party AI",
+                "StoreKit",
+                "lightweight server",
+                "StoreKit entitlement sync",
+                "Photos or Videos",
+                "Health & Fitness",
+                "Other User Content",
+            ],
+        ),
+        (
+            "AppReviewNotes.md",
+            [
+                "Build Access",
+                "What To Test",
+                "AI And Photos",
+                "Account required: no",
+                "restore/manage subscription",
+                "not medical advice",
+            ],
+        ),
+        (
+            "PrivacyPolicy.md",
+            [
+                "does not store raw meal photos",
+                "consent",
+                "StoreKit",
+                "App Privacy Updates",
+                "No Medical Claims",
+            ],
+        ),
+        (
+            "StoreKitProducts.md",
+            [
+                "MealMark.storekit",
+                "MealMark Plus",
+                "dev.grain.foodwallet.plus.monthly",
+                "dev.grain.foodwallet.plus.yearly",
+                "restore purchases",
+                "manage subscription",
+            ],
+        ),
+        (
+            "TestFlightReleaseGuide.md",
+            [
+                "App Store Connect Setup",
+                "MealMark.storekit",
+                "xcodebuild archive",
+                "GRAIN_IOS_DISTRIBUTION_TEAM",
+                "GRAIN_FOOD_BROKER_DEV_TOKEN",
+                "Release Blockers",
+            ],
+        ),
     ]
     for name, tokens in checks:
         status = require_text(name, tokens)

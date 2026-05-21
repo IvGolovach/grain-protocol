@@ -6,7 +6,7 @@ the consumer-facing app name is MealMark.
 
 The current build is a Swift package app surface with:
 
-- SwiftUI Today, Capture, History, Wallet, and Pro tabs;
+- SwiftUI Today, Capture, History, Wallet, and Plus tabs;
 - real iPhone camera capture with transient in-memory photo analysis input;
 - deterministic mock analysis fixtures for local tests and device smoke;
 - calorie, portion, and macro estimates before confirmation;
@@ -143,7 +143,7 @@ Free:
 - verified scan proof;
 - basic export.
 
-Pro:
+Plus:
 
 - higher photo-estimate limits;
 - advanced mixed-dish analysis;
@@ -170,11 +170,19 @@ wrap, not the final signed release artifact.
 Draft App Store artifacts live in `AppStore/`:
 
 - `Info.plist`
+- `MealMark.storekit`
 - `PrivacyInfo.xcprivacy`
 - `AppPrivacyAnswers.md`
 - `AppReviewNotes.md`
 - `PrivacyPolicy.md`
 - `StoreKitProducts.md`
+- `TestFlightReleaseGuide.md`
+
+Use `AppStore/TestFlightReleaseGuide.md` for the first TestFlight archive lane.
+It covers App Store Connect setup, local StoreKit testing, pre-archive checks,
+archive commands, review notes, and release blockers. Keep that guide aligned
+with `project.yml` and the exact submitted binary before claiming TestFlight or
+App Store readiness.
 
 ## Real iPhone Run
 
