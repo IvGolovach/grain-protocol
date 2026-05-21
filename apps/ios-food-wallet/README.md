@@ -201,3 +201,7 @@ GRAIN_FOOD_ANALYSIS_BROKER_URL=http://<mac-lan-ip>:8788 \
 GRAIN_FOOD_BROKER_DEV_TOKEN=<same-dev-token> \
 scripts/sdk/run_ios_food_wallet_device.sh
 ```
+
+`GRAIN_FOOD_BROKER_DEV_TOKEN` is a local device-run environment override only.
+It is intentionally not present in `Info.plist`, so App Store/TestFlight builds
+cannot accidentally ship a development broker token.

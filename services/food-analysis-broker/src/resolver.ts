@@ -1,18 +1,17 @@
-import { createHash } from "node:crypto";
-
 import { estimateFromExplicitCalories, estimateFromPer100g, fallbackEstimate, portionFromObservation } from "./nutrition.js";
+import { stableDigest } from "./runtime.js";
 import { nutritionProviderFromEnv, type NutritionProvider } from "./usda.js";
 import type { CandidateResolver, DishType, EstimateConfidence, FoodAnalysisCandidate, FoodIntakeDraft, FoodObservation, ObservationResolver } from "./types.js";
 
 export class GrainDraftResolver implements ObservationResolver {
-  resolve(input: Parameters<ObservationResolver["resolve"]>[0]): FoodIntakeDraft {
+  async resolve(input: Parameters<ObservationResolver["resolve"]>[0]): Promise<FoodIntakeDraft> {
     const draftId = input.request.draft?.draft_id ?? `draft-photo:${input.photoSha25616}`;
     const captureId = input.request.capture_id;
     const payloadCid = input.request.draft?.payload_cid ?? `food-photo:${captureId ?? input.photoSha25616}`;
     const explicitLabelCalories = caloriesFromNutritionLabel(input.observation);
     const meanKcal = explicitLabelCalories?.kcal ?? input.observation.total_kcal;
     const varianceKcal = explicitLabelCalories ? 0 : input.observation.kcal_variance;
-    const estimateId = `photo-estimate:${stableDigest([
+    const estimateId = `photo-estimate:${await stableDigest([
       input.photoSha25616,
       input.modelId,
       String(meanKcal),
@@ -73,7 +72,7 @@ export class FoodAnalysisCandidateResolver implements CandidateResolver {
     const confidence = explicitLabelCalories ? "high" : confidenceFrom(input.observation.confidence, Boolean(match), dishType);
 
     return {
-      id: `broker-${stableDigest([input.photoSha25616, input.modelId, label])}`,
+      id: `broker-${await stableDigest([input.photoSha25616, input.modelId, label])}`,
       primaryLabel: titleCase(label),
       genericLabel,
       dishType,
@@ -118,10 +117,6 @@ export class FoodAnalysisCandidateResolver implements CandidateResolver {
       return null;
     }
   }
-}
-
-function stableDigest(parts: string[]): string {
-  return createHash("sha256").update(parts.join("\n")).digest("hex").slice(0, 16);
 }
 
 function genericFoodLabel(label: string): string {

@@ -1,4 +1,5 @@
 import { BrokerError } from "./errors.js";
+import type { RuntimeEnv } from "./runtime.js";
 import { FOOD_OBSERVATION_SCHEMA } from "./schema.js";
 import { assertObservation } from "./validation.js";
 import type { FoodAnalyzePhotoRequest, FoodAnalyzer, FoodObservation } from "./types.js";
@@ -173,7 +174,7 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
   }
 }
 
-export function analyzerFromEnv(env: NodeJS.ProcessEnv = process.env): FoodAnalyzer {
+export function analyzerFromEnv(env: RuntimeEnv = {}): FoodAnalyzer {
   if (env.FOOD_ANALYSIS_MOCK === "1") {
     return new MockFoodAnalyzer();
   }

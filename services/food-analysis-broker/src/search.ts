@@ -7,6 +7,7 @@ import type {
   FoodSearchTrustLabel
 } from "./types.js";
 import { BrokerError } from "./errors.js";
+import type { RuntimeEnv } from "./runtime.js";
 
 type FixtureFood = {
   fixtureId: string;
@@ -350,7 +351,7 @@ export class UsdaGenericFoodSearchProvider implements FoodSearchProvider {
   }
 }
 
-export function foodSearchProviderFromEnv(env: NodeJS.ProcessEnv = process.env): FoodSearchProvider {
+export function foodSearchProviderFromEnv(env: RuntimeEnv = {}): FoodSearchProvider {
   const providers: FoodSearchProvider[] = [];
   const timeoutMs = parsePositiveInteger(env.FOOD_SEARCH_TIMEOUT_MS) ?? DEFAULT_TIMEOUT_MS;
   const fixturesEnabled = env.FOOD_SEARCH_FIXTURES === "1";
@@ -987,7 +988,7 @@ function usdaEnergyKcal(food: UsdaSearchFood): number | null {
   return kilojouleFallback === null ? null : roundNutrition(kilojouleFallback / 4.184);
 }
 
-function foodDataCentralAPIKey(env: NodeJS.ProcessEnv): string | null {
+function foodDataCentralAPIKey(env: RuntimeEnv): string | null {
   return cleanText(env.FDC_API_KEY) ?? cleanText(env.USDA_API_KEY) ?? cleanText(env.FOODDATA_CENTRAL_API_KEY);
 }
 

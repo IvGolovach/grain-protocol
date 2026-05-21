@@ -1,20 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 
-import { analyzerFromEnv } from "./analyzers.js";
-import { BrokerError, errorShape, internalError } from "./errors.js";
-import { FoodAnalysisCandidateResolver, GrainDraftResolver } from "./resolver.js";
-import { MAX_JSON_BODY_BYTES } from "./schema.js";
-import { foodSearchProviderFromEnv } from "./search.js";
-import { assertObservation, assertReviewableFoodObservation, parseAnalyzePhotoRequest, parseFoodSearchRequest } from "./validation.js";
-import type {
-  CandidateResolver,
-  FoodAnalyzer,
-  FoodAnalyzePhotoSuccess,
-  FoodSearchProvider,
-  FoodSearchSuccess,
-  ObservationResolver
-} from "./types.js";
+import type { BrokerAuthConfig } from "./auth.js";
+import { createBrokerDependencies, type BrokerDependencyOptions } from "./dependencies.js";
+import { handleBrokerRequest } from "./handler.js";
+import type { CandidateResolver, FoodAnalyzer, FoodSearchProvider, ObservationResolver } from "./types.js";
 
 export type BrokerServerOptions = {
   analyzer?: FoodAnalyzer;
@@ -26,155 +16,88 @@ export type BrokerServerOptions = {
 };
 
 export function createBrokerServer(options: BrokerServerOptions = {}): Server {
-  const analyzer = options.analyzer ?? analyzerFromEnv();
-  const candidateResolver = options.candidateResolver ?? new FoodAnalysisCandidateResolver();
-  const searchProvider = options.searchProvider ?? foodSearchProviderFromEnv();
-  const resolver = options.resolver ?? new GrainDraftResolver();
-  const maxBodyBytes = options.maxBodyBytes ?? MAX_JSON_BODY_BYTES;
-  const authToken = normalizeAuthToken(options.authToken ?? process.env.FOOD_BROKER_DEV_TOKEN);
+  const dependencies = createBrokerDependencies(process.env, nodeDependencyOptions(options));
 
-  return createServer(async (req, res) => {
-    const requestId = req.headers["x-request-id"]?.toString() || randomUUID();
+  return createServer(async (incoming, outgoing) => {
     try {
-      await routeRequest(req, res, { analyzer, authToken, candidateResolver, searchProvider, resolver, maxBodyBytes, requestId });
-    } catch (err) {
-      if (err instanceof BrokerError) {
-        writeJson(res, err.status, errorShape(err, requestId));
-        return;
-      }
-      writeJson(res, 500, internalError(requestId));
+      const request = nodeRequestFrom(incoming);
+      const response = await handleBrokerRequest(request, dependencies);
+      await writeNodeResponse(outgoing, response);
+    } catch {
+      outgoing.statusCode = 500;
+      outgoing.setHeader("content-type", "application/json; charset=utf-8");
+      outgoing.end(`${JSON.stringify({ ok: false, error: { code: "INTERNAL_ERROR", message: "internal server error" } })}\n`);
     }
   });
 }
 
-async function routeRequest(
-  req: IncomingMessage,
-  res: ServerResponse,
-  context: {
-    analyzer: FoodAnalyzer;
-    authToken: string | null;
-    candidateResolver: CandidateResolver;
-    searchProvider: FoodSearchProvider;
-    resolver: ObservationResolver;
-    maxBodyBytes: number;
-    requestId: string;
-  }
-): Promise<void> {
-  const pathname = req.url?.split("?")[0] ?? "/";
-  if (pathname !== "/v1/food/analyze-photo" && pathname !== "/v1/food/search") {
-    throw new BrokerError(404, "NOT_FOUND", "route not found");
-  }
-  enforceAuth(req, context.authToken);
-  if (req.method !== "POST") {
-    throw new BrokerError(405, "METHOD_NOT_ALLOWED", "POST is required");
-  }
-  if (!contentTypeIsJson(req.headers["content-type"])) {
-    throw new BrokerError(400, "BAD_REQUEST", "content-type must be application/json");
+function nodeDependencyOptions(options: BrokerServerOptions): BrokerDependencyOptions {
+  const auth = authOptionsFromLegacyToken(options.authToken);
+  return {
+    ...(options.analyzer ? { analyzer: options.analyzer } : {}),
+    ...(options.candidateResolver ? { candidateResolver: options.candidateResolver } : {}),
+    ...(options.searchProvider ? { searchProvider: options.searchProvider } : {}),
+    ...(options.resolver ? { resolver: options.resolver } : {}),
+    ...(options.maxBodyBytes === undefined ? {} : { maxBodyBytes: options.maxBodyBytes }),
+    ...(auth ? { auth } : {})
+  };
+}
+
+function authOptionsFromLegacyToken(value: string | undefined): Partial<BrokerAuthConfig> | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  return {
+    mode: "dev_bearer",
+    devBearerToken: trimmed
+  };
+}
+
+function nodeRequestFrom(incoming: IncomingMessage): Request {
+  const host = incoming.headers.host ?? "127.0.0.1";
+  const url = new URL(incoming.url ?? "/", `http://${host}`);
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(incoming.headers)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        headers.append(key, entry);
+      }
+      continue;
+    }
+    headers.set(key, value);
   }
 
-  const rawBody = await readBody(req, context.maxBodyBytes);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(rawBody);
-  } catch {
-    throw new BrokerError(400, "BAD_JSON", "request body must be valid JSON");
+  const method = incoming.method ?? "GET";
+  const init: RequestInit & { duplex?: "half" } = {
+    method,
+    headers
+  };
+  if (method !== "GET" && method !== "HEAD") {
+    init.body = Readable.toWeb(incoming) as ReadableStream<Uint8Array>;
+    init.duplex = "half";
   }
+  return new Request(url, init);
+}
 
-  if (pathname === "/v1/food/search") {
-    const { request, requestId } = parseFoodSearchRequest(parsed);
-    const results = await context.searchProvider.search(request);
-    const body: FoodSearchSuccess = {
-      ok: true,
-      request_id: request.request_id ?? requestId,
-      ...(request.query ? { query: request.query } : {}),
-      ...(request.barcode ? { barcode: request.barcode } : {}),
-      results
-    };
-    writeJson(res, 200, body);
+async function writeNodeResponse(outgoing: ServerResponse, response: Response): Promise<void> {
+  outgoing.statusCode = response.status;
+  for (const [key, value] of response.headers) {
+    outgoing.setHeader(key, value);
+  }
+  if (!response.body) {
+    outgoing.end();
     return;
   }
 
-  const { request, imageBytes, photoSha25616, requestId } = parseAnalyzePhotoRequest(parsed);
-  const analysis = await context.analyzer.analyze({ request, imageBytes, photoSha25616 });
-  const observation = assertObservation(analysis.observation);
-  assertReviewableFoodObservation(observation);
-  const candidate = await context.candidateResolver.resolveCandidate({
-    request,
-    observation,
-    photoSha25616,
-    modelId: analysis.modelId
-  });
-  const draft = context.resolver.resolve({
-    request,
-    observation,
-    photoSha25616,
-    modelId: analysis.modelId
-  });
-
-  const body: FoodAnalyzePhotoSuccess = {
-    ok: true,
-    request_id: request.request_id ?? requestId,
-    mode: analysis.mode,
-    analysis_id: draft.source_ref.estimate_id,
-    observation,
-    candidate,
-    draft,
-    privacy: {
-      store: false,
-      raw_image_logged: false,
-      raw_image_persisted: false
+  const reader = response.body.getReader();
+  try {
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      outgoing.write(Buffer.from(chunk.value));
     }
-  };
-  writeJson(res, 200, body);
-}
-
-function enforceAuth(req: IncomingMessage, authToken: string | null): void {
-  if (!authToken) return;
-  const expected = `Bearer ${authToken}`;
-  if (req.headers.authorization !== expected) {
-    throw new BrokerError(401, "UNAUTHORIZED", "valid broker bearer token is required");
+    outgoing.end();
+  } finally {
+    reader.releaseLock();
   }
-}
-
-function normalizeAuthToken(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-function readBody(req: IncomingMessage, maxBodyBytes: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let seen = 0;
-    let overLimit = false;
-    req.on("data", (chunk: Buffer) => {
-      seen += chunk.byteLength;
-      if (seen > maxBodyBytes) {
-        overLimit = true;
-        return;
-      }
-      if (!overLimit) chunks.push(chunk);
-    });
-    req.on("error", reject);
-    req.on("end", () => {
-      if (overLimit) {
-        reject(new BrokerError(413, "PAYLOAD_TOO_LARGE", "request body exceeds JSON byte cap", {
-          max_json_body_bytes: maxBodyBytes
-        }));
-        return;
-      }
-      resolve(Buffer.concat(chunks).toString("utf8"));
-    });
-  });
-}
-
-function contentTypeIsJson(value: string | string[] | undefined): boolean {
-  if (!value) return false;
-  const header = Array.isArray(value) ? value[0] : value;
-  return header.toLowerCase().split(";")[0].trim() === "application/json";
-}
-
-function writeJson(res: ServerResponse, status: number, body: unknown): void {
-  res.statusCode = status;
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  res.end(`${JSON.stringify(body)}\n`);
 }

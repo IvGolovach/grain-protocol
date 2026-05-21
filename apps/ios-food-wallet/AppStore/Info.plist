@@ -22,8 +22,6 @@
   <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>GRAIN_FOOD_ANALYSIS_BROKER_URL</key>
   <string>$(GRAIN_FOOD_ANALYSIS_BROKER_URL)</string>
-  <key>GRAIN_FOOD_BROKER_DEV_TOKEN</key>
-  <string>$(GRAIN_FOOD_BROKER_DEV_TOKEN)</string>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsLocalNetworking</key>

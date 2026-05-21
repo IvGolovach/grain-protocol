@@ -206,13 +206,16 @@ export type FoodSearchSuccess = {
 };
 
 export type ErrorCode =
+  | "ACCOUNT_REQUIRED"
   | "BAD_JSON"
   | "BAD_REQUEST"
+  | "FORBIDDEN"
   | "METHOD_NOT_ALLOWED"
   | "NO_FOOD_DETECTED"
   | "NOT_FOUND"
   | "PAYLOAD_TOO_LARGE"
   | "PROVIDER_NOT_CONFIGURED"
+  | "RATE_LIMITED"
   | "UNAUTHORIZED"
   | "UPSTREAM_ERROR"
   | "UPSTREAM_TIMEOUT"
@@ -246,7 +249,7 @@ export type ObservationResolver = {
     observation: FoodObservation;
     photoSha25616: string;
     modelId: string;
-  }): FoodIntakeDraft;
+  }): Promise<FoodIntakeDraft>;
 };
 
 export type CandidateResolver = {

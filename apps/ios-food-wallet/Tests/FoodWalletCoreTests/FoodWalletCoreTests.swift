@@ -30,6 +30,9 @@ struct FoodWalletCoreTests {
         await run("brokerClientAddsBearerToken") {
             try await testBrokerClientAddsBearerToken()
         }
+        await run("brokerClientUsesSessionTokenProvider") {
+            try await testBrokerClientUsesSessionTokenProvider()
+        }
         await run("brokerRejectsUnsafeCandidateWithoutConfirmation") {
             try await testBrokerRejectsUnsafeCandidateWithoutConfirmation()
         }
@@ -192,6 +195,9 @@ struct FoodWalletCoreTests {
         await run("deniedPrivacyBlocksSelectedAnalysis") {
             try await testDeniedPrivacyBlocksSelectedAnalysis()
         }
+        await run("notRequestedPrivacyRequiresExplicitConsent") {
+            try await testNotRequestedPrivacyRequiresExplicitConsent()
+        }
         await run("safeSummaryDoesNotExposeRawPhotoOrProtocolMaterial") {
             try await testSafeSummaryDoesNotExposeRawPhotoOrProtocolMaterial()
         }
@@ -317,7 +323,7 @@ struct FoodWalletCoreTests {
         try expect(candidate.primaryLabel == "Fuji apple", "expected photo heuristic apple candidate")
         try expect(candidate.evidence.contains { $0.provider == "on_device_photo_heuristic" }, "expected photo evidence")
 
-        let store = FoodWalletStore()
+        let store = FoodWalletStore(privacy: .granted)
         await store.analyze(photo: .uiTestFujiApple)
         try expect(store.currentDraft != nil, "expected photo draft")
         try expect(store.currentCandidate?.macronutrients.shortLabel == "P 0.5g • C 27g • F 0.3g", "expected macro label")
@@ -359,6 +365,20 @@ struct FoodWalletCoreTests {
         _ = try await client.estimate(photoPayload: TransientMealPhotoPayload(photo: .uiTestFujiApple, jpegData: jpegBytes))
 
         try expect(capture.authorization == "Bearer dev-token", "expected broker bearer token header")
+    }
+
+    private static func testBrokerClientUsesSessionTokenProvider() async throws {
+        let tokenStore = InMemoryFoodWalletSessionTokenStore(token: "session-token")
+        let provider = FoodWalletSessionAuthorizationProvider(tokenStore: tokenStore)
+        let capture = BrokerRequestCapture()
+        let client = brokerClient(authorizationProvider: provider) { request in
+            capture.authorization = request.value(forHTTPHeaderField: "Authorization")
+            return BrokerResponse(statusCode: 200, body: brokerSearchEnvelopeJSON())
+        }
+
+        _ = try await client.searchFood(BrokerFoodSearchRequest(query: "apple"))
+
+        try expect(capture.authorization == "Bearer session-token", "expected broker session token header")
     }
 
     private static func testBrokerRejectsUnsafeCandidateWithoutConfirmation() async throws {
@@ -652,7 +672,7 @@ struct FoodWalletCoreTests {
     @MainActor
     private static func testPortionEditorPreservesProviderEvidenceAndDraftProvenance() async throws {
         let clock = MutableFoodWalletClock(now: Date(timeIntervalSince1970: 1_700_000_000))
-        let store = FoodWalletStore(wallet: GrainFoodWallet(clock: clock))
+        let store = FoodWalletStore(wallet: GrainFoodWallet(clock: clock), privacy: .granted)
         await store.analyze(photo: .uiTestFujiApple)
 
         guard let originalEvidence = store.currentCandidate?.evidence else {
@@ -1454,7 +1474,10 @@ struct FoodWalletCoreTests {
 
     @MainActor
     private static func testStorePublishesAnalysisStateWhilePhotoEstimateRuns() async throws {
-        let store = FoodWalletStore(analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 100_000_000))
+        let store = FoodWalletStore(
+            analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 100_000_000),
+            privacy: .granted
+        )
 
         let task = Task {
             await store.analyze(photo: .uiTestFujiApple)
@@ -1472,7 +1495,7 @@ struct FoodWalletCoreTests {
 
     @MainActor
     private static func testStorePublishesFailureStateWhenPhotoAnalysisFails() async throws {
-        let store = FoodWalletStore(analysisClient: FailingFoodAnalysisClient())
+        let store = FoodWalletStore(analysisClient: FailingFoodAnalysisClient(), privacy: .granted)
 
         await store.analyze(photo: .uiTestFujiApple)
 
@@ -1483,7 +1506,7 @@ struct FoodWalletCoreTests {
 
     @MainActor
     private static func testStorePublishesNoFoodStateWithoutDraft() async throws {
-        let store = FoodWalletStore(analysisClient: NoFoodFoodAnalysisClient())
+        let store = FoodWalletStore(analysisClient: NoFoodFoodAnalysisClient(), privacy: .granted)
 
         await store.analyze(photo: .uiTestFujiApple)
 
@@ -1499,6 +1522,7 @@ struct FoodWalletCoreTests {
     private static func testStorePublishesTimeoutStateWithoutDraft() async throws {
         let store = FoodWalletStore(
             analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 200_000_000),
+            privacy: .granted,
             slowAnalysisThresholdNanoseconds: 20_000_000,
             analysisTimeoutNanoseconds: 60_000_000
         )
@@ -1565,13 +1589,31 @@ struct FoodWalletCoreTests {
     private static func testDeniedPrivacyBlocksSelectedAnalysis() async throws {
         let store = FoodWalletStore(privacy: .denied)
 
-        await store.analyzeSelectedExample()
+        await store.analyze(photo: .uiTestFujiApple)
 
         try expect(store.privacy == .denied, "expected denied privacy to remain denied")
         try expect(store.analysisState == .blockedPrivacy, "expected denied privacy state")
         try expect(store.currentCandidate == nil, "expected denied privacy to block candidate")
         try expect(store.currentDraft == nil, "expected denied privacy to block draft")
         try expect(store.entries.isEmpty, "expected denied privacy to avoid entries")
+    }
+
+    @MainActor
+    private static func testNotRequestedPrivacyRequiresExplicitConsent() async throws {
+        let store = FoodWalletStore(privacy: .notRequested)
+
+        await store.analyze(photo: .uiTestFujiApple)
+
+        try expect(store.privacy == .notRequested, "expected consent state to stay pending")
+        try expect(store.analysisState == .blockedPrivacy, "expected privacy gate before AI analysis")
+        try expect(store.currentCandidate == nil, "expected no candidate before explicit consent")
+
+        store.grantAIConsent()
+        await store.analyze(photo: .uiTestFujiApple)
+
+        try expect(store.privacy == .granted, "expected explicit consent")
+        try expect(store.analysisState == .draftReady, "expected analysis after explicit consent")
+        try expect(store.currentCandidate != nil, "expected candidate after explicit consent")
     }
 
     @MainActor
@@ -1740,6 +1782,7 @@ private struct StaticFoodSearchClient: BrokerFoodSearchClient {
 
 private func brokerClient(
     bearerToken: String? = nil,
+    authorizationProvider: (any FoodAnalysisBrokerAuthorizationProvider)? = nil,
     handler: @escaping @Sendable (URLRequest) throws -> BrokerResponse
 ) -> FoodAnalysisBrokerClient {
     BrokerURLProtocol.setHandler(handler)
@@ -1748,6 +1791,7 @@ private func brokerClient(
     return FoodAnalysisBrokerClient(
         endpoint: URL(string: "https://broker.example.test/v1/food/analyze-photo")!,
         bearerToken: bearerToken,
+        authorizationProvider: authorizationProvider,
         session: URLSession(configuration: configuration)
     )
 }

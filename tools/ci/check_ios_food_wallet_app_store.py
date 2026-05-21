@@ -116,6 +116,8 @@ def main() -> int:
         info = plistlib.load(handle)
     if info.get("CFBundleDisplayName") != "MealMark":
         return fail("Info.plist CFBundleDisplayName must be MealMark")
+    if "GRAIN_FOOD_BROKER_DEV_TOKEN" in info:
+        return fail("Info.plist must not embed the local broker dev token setting")
     for key in ["NSCameraUsageDescription", "NSPhotoLibraryUsageDescription"]:
         value = info.get(key)
         if not isinstance(value, str) or len(value.strip()) < 24:
@@ -129,6 +131,14 @@ def main() -> int:
         privacy = plistlib.load(handle)
     if privacy.get("NSPrivacyTracking") is not False:
         return fail("PrivacyInfo.xcprivacy must keep NSPrivacyTracking false")
+    accessed = privacy.get("NSPrivacyAccessedAPITypes")
+    if not isinstance(accessed, list) or not any(
+        entry.get("NSPrivacyAccessedAPIType") == "NSPrivacyAccessedAPICategoryUserDefaults"
+        and "CA92.1" in entry.get("NSPrivacyAccessedAPITypeReasons", [])
+        for entry in accessed
+        if isinstance(entry, dict)
+    ):
+        return fail("PrivacyInfo.xcprivacy must declare UserDefaults required-reason API use")
 
     checks = [
         ("AppPrivacyAnswers.md", ["Tracking: no", "Raw photo retention: no", "Third-party AI", "StoreKit"]),

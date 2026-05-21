@@ -146,6 +146,7 @@ public final class FoodWalletStore: ObservableObject {
     private let personalIngredientsDidChange: @MainActor ([PersonalFoodIngredient]) -> Void
     private let userLibraryDidChange: @MainActor (FoodWalletUserLibraryState) -> Void
     private let entriesDidChange: @MainActor ([FoodIntakeEntry]) -> Void
+    private let privacyDidChange: @MainActor (PrivacyConsentState) -> Void
     private let entriesReload: (@MainActor () -> [FoodIntakeEntry])?
     private var slowAnalysisTask: Task<Void, Never>?
     private var analysisTimeoutTask: Task<Void, Never>?
@@ -166,6 +167,7 @@ public final class FoodWalletStore: ObservableObject {
         onEntriesChange: @escaping @MainActor ([FoodIntakeEntry]) -> Void = { _ in },
         onPersonalIngredientsChange: @escaping @MainActor ([PersonalFoodIngredient]) -> Void = { _ in },
         onUserLibraryChange: @escaping @MainActor (FoodWalletUserLibraryState) -> Void = { _ in },
+        onPrivacyChange: @escaping @MainActor (PrivacyConsentState) -> Void = { _ in },
         onEntriesReload: (@MainActor () -> [FoodIntakeEntry])? = nil,
         slowAnalysisThresholdNanoseconds: UInt64 = 8_000_000_000,
         analysisTimeoutNanoseconds: UInt64 = 30_000_000_000
@@ -177,6 +179,7 @@ public final class FoodWalletStore: ObservableObject {
         self.personalIngredientsDidChange = onPersonalIngredientsChange
         self.userLibraryDidChange = onUserLibraryChange
         self.entriesDidChange = onEntriesChange
+        self.privacyDidChange = onPrivacyChange
         self.entriesReload = onEntriesReload
         self.wallet = wallet
         self.analysisState = .idle
@@ -248,6 +251,19 @@ public final class FoodWalletStore: ObservableObject {
 
     public func grantAIConsent() {
         privacy = .granted
+        privacyDidChange(privacy)
+        if analysisState == .blockedPrivacy {
+            analysisState = .idle
+        }
+    }
+
+    public func denyAIConsent() {
+        privacy = .denied
+        privacyDidChange(privacy)
+        cancelAnalysisTimers()
+        currentCandidate = nil
+        currentDraft = nil
+        analysisState = .blockedPrivacy
     }
 
     public func chooseExample(_ example: FoodCaptureExample) {
@@ -255,16 +271,10 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     public func analyzeSelectedExample() async {
-        guard preparePrivacyForAnalysis() else {
-            return
-        }
         await analyze(example: selectedExample)
     }
 
     public func analyze(example: FoodCaptureExample) async {
-        guard preparePrivacyForAnalysis() else {
-            return
-        }
         let operation = beginAnalysis(source: .example(example))
         do {
             let candidate = try await analysisClient.estimate(example: example)
@@ -973,6 +983,7 @@ public final class FoodWalletStore: ObservableObject {
 
     public func runDeviceSmoke() async -> FoodWalletDeviceSmokeResult {
         resetLocalData()
+        grantAIConsent()
 
         await analyze(photo: .uiTestFujiApple)
         guard currentCandidate?.primaryLabel == "Fuji apple", currentDraft != nil else {
@@ -1018,15 +1029,12 @@ public final class FoodWalletStore: ObservableObject {
     }
 
     private func preparePrivacyForAnalysis() -> Bool {
-        if privacy == .denied {
+        if privacy != .granted {
             cancelAnalysisTimers()
             currentCandidate = nil
             currentDraft = nil
             analysisState = .blockedPrivacy
             return false
-        }
-        if privacy == .notRequested {
-            grantAIConsent()
         }
         return true
     }

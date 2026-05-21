@@ -1,5 +1,6 @@
 import { BrokerError } from "./errors.js";
 import type { Per100gNutrients } from "./nutrition.js";
+import type { RuntimeEnv } from "./runtime.js";
 
 export type NutritionMatch = {
   provider: "deterministic_fixture" | "usda_fdc";
@@ -92,7 +93,7 @@ export class LiveUsdaFoodDataCentralProvider implements NutritionProvider {
   }
 }
 
-export function nutritionProviderFromEnv(env: NodeJS.ProcessEnv = process.env): NutritionProvider {
+export function nutritionProviderFromEnv(env: RuntimeEnv = {}): NutritionProvider {
   const apiKey = env.FDC_API_KEY || env.USDA_API_KEY || env.FOODDATA_CENTRAL_API_KEY;
   if (apiKey && apiKey.trim().length > 0) {
     return new LiveUsdaFoodDataCentralProvider({ apiKey });

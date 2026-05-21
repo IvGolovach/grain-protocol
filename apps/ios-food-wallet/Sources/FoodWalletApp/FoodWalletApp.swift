@@ -65,12 +65,14 @@ private enum FoodWalletAppConfiguration {
             analysisClient: makeAnalysisClient(),
             searchClient: makeFoodSearchClient(),
             entries: FoodWalletLocalLedgerStore.loadEntries(),
+            privacy: FoodWalletPrivacyPreferenceStore.load(),
             savedTemplates: userLibrary.templates,
             savedRecipes: userLibrary.recipes,
             personalIngredients: userLibrary.personalIngredients,
             onEntriesChange: FoodWalletLocalLedgerStore.save,
             onPersonalIngredientsChange: { _ in },
             onUserLibraryChange: FoodWalletUserLibraryStore.save,
+            onPrivacyChange: FoodWalletPrivacyPreferenceStore.save,
             onEntriesReload: FoodWalletLocalLedgerStore.loadEntries
         )
     }
@@ -136,10 +138,7 @@ private enum FoodWalletAppConfiguration {
     }
 
     private static func configuredBrokerToken() -> String? {
-        if let token = usableConfiguredValue(ProcessInfo.processInfo.environment[brokerTokenEnvironmentKey]) {
-            return token
-        }
-        return usableConfiguredValue(Bundle.main.object(forInfoDictionaryKey: brokerTokenEnvironmentKey) as? String)
+        usableConfiguredValue(ProcessInfo.processInfo.environment[brokerTokenEnvironmentKey])
     }
 
     private static func brokerEndpointIsAllowed(_ endpoint: URL) -> Bool {
@@ -199,6 +198,22 @@ private enum FoodWalletAppConfiguration {
         return delayMilliseconds * 1_000_000
     }
 
+}
+
+private enum FoodWalletPrivacyPreferenceStore {
+    private static let defaultsKey = "grain.food-wallet.ai-photo-consent.v1"
+
+    static func load() -> PrivacyConsentState {
+        guard let rawValue = UserDefaults.standard.string(forKey: defaultsKey),
+              let state = PrivacyConsentState(rawValue: rawValue) else {
+            return .notRequested
+        }
+        return state
+    }
+
+    static func save(_ state: PrivacyConsentState) {
+        UserDefaults.standard.set(state.rawValue, forKey: defaultsKey)
+    }
 }
 
 private enum FoodWalletUserLibraryStore {

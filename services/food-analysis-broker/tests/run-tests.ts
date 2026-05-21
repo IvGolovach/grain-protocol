@@ -5,6 +5,9 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 
 import { MockFoodAnalyzer, OpenAiFoodAnalyzer } from "../src/analyzers.js";
+import { createSignedSessionToken } from "../src/auth.js";
+import { createBrokerDependencies } from "../src/dependencies.js";
+import { handleBrokerRequest } from "../src/handler.js";
 import { FoodAnalysisCandidateResolver } from "../src/resolver.js";
 import { createBrokerServer } from "../src/server.js";
 import {
@@ -73,6 +76,8 @@ async function main(): Promise<number> {
   await testNutritionProviderFromEnvKeepsFixturesExplicit();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testBrokerAuthRejectsMissingBearerBeforeBody();
+  await testFetchHandlerAcceptsSignedSessionToken();
+  await testFetchHandlerEnforcesUsageLimiter();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
   await testNoFoodObservationReturnsNoFoodError();
@@ -1004,6 +1009,72 @@ async function testBrokerAuthRejectsMissingBearerBeforeBody(): Promise<void> {
     await once(server, "close");
   }
   pass("broker auth rejects missing bearer token before upstream work");
+}
+
+async function testFetchHandlerAcceptsSignedSessionToken(): Promise<void> {
+  const secret = "session-secret-for-tests";
+  const token = await createSignedSessionToken({
+    account_id: "acct_test",
+    device_id: "device_test",
+    tier: "pro",
+    iat_ms: Date.now() - 1_000,
+    exp_ms: Date.now() + 60_000
+  }, secret);
+  const dependencies = createBrokerDependencies({
+    FOOD_SEARCH_LIVE: "0",
+    FOOD_SEARCH_FIXTURES: "1",
+    MEALMARK_AUTH_MODE: "session",
+    MEALMARK_SESSION_HMAC_SECRET: secret
+  });
+
+  const unauthorized = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/search", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query: "banana" })
+  }), dependencies);
+  assert.equal(unauthorized.status, 401);
+
+  const authorized = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/search", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ query: "banana" })
+  }), dependencies);
+  assert.equal(authorized.status, 200);
+  const body = await authorized.json() as Record<string, unknown>;
+  assert.equal(body.ok, true);
+  assert.equal((body.results as unknown[]).length, 1);
+  pass("fetch handler accepts signed session tokens and rejects anonymous session requests");
+}
+
+async function testFetchHandlerEnforcesUsageLimiter(): Promise<void> {
+  const dependencies = createBrokerDependencies({
+    FOOD_SEARCH_LIVE: "0",
+    FOOD_SEARCH_FIXTURES: "1"
+  }, {
+    usageLimiter: {
+      async reserve() {
+        return {
+          allowed: false,
+          limit: 1,
+          used: 1,
+          resetAtMs: 1_800_000_000_000
+        };
+      }
+    }
+  });
+
+  const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/search", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query: "banana" })
+  }), dependencies);
+  assert.equal(response.status, 429);
+  const body = await response.json() as Record<string, unknown>;
+  assert.equal((body.error as Record<string, unknown>).code, "RATE_LIMITED");
+  pass("fetch handler enforces usage limits before provider work");
 }
 
 async function testPayloadCap(): Promise<void> {

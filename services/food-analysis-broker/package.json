@@ -10,6 +10,7 @@
   "scripts": {
     "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
     "build": "npm run clean --silent && tsc -p tsconfig.build.json",
+    "typecheck:worker": "tsc -p tsconfig.worker.json --noEmit",
     "test": "npm run build --silent && node dist/tests/run-tests.js && node --test test/*.test.mjs",
     "start": "npm run build --silent && node dist/src/index.js"
   },

@@ -1,0 +1,49 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mealmark-food-analysis-broker",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-05-21",
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "MEALMARK_AUTH_MODE": "session",
+    "FOOD_SEARCH_LIVE": "1",
+    "FOOD_SEARCH_TIMEOUT_MS": "2500",
+    "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)"
+  },
+  "env": {
+    "staging": {
+      "name": "mealmark-food-analysis-broker-staging",
+      "vars": {
+        "MEALMARK_AUTH_MODE": "session",
+        "FOOD_SEARCH_LIVE": "1",
+        "FOOD_SEARCH_TIMEOUT_MS": "2500",
+        "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 staging (https://github.com/IvGolovach/grain-protocol)"
+      },
+      "d1_databases": [
+        {
+          "binding": "MEALMARK_DB",
+          "database_name": "mealmark-staging",
+          "database_id": "52201489-89a2-4c24-9b09-bc4ca069c440"
+        }
+      ]
+    },
+    "production": {
+      "name": "mealmark-food-analysis-broker",
+      "vars": {
+        "MEALMARK_AUTH_MODE": "session",
+        "FOOD_SEARCH_LIVE": "1",
+        "FOOD_SEARCH_TIMEOUT_MS": "2500",
+        "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)"
+      },
+      "d1_databases": [
+        {
+          "binding": "MEALMARK_DB",
+          "database_name": "mealmark-production",
+          "database_id": "3a4a006a-ad5e-4913-b9f2-e8a56f1db805"
+        }
+      ]
+    }
+  }
+}

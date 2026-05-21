@@ -601,9 +601,11 @@ private struct CaptureView: View {
                         )
                     }
                 } else if store.analysisState == .blockedPrivacy {
-                    AnalysisBlockedCard {
-                        store.discardDraft()
-                    }
+                    AnalysisBlockedCard(
+                        privacy: store.privacy,
+                        onAllow: store.grantAIConsent,
+                        onDismiss: store.discardDraft
+                    )
                 } else if store.hasDraft {
                     DraftReviewView(onSaved: onDraftSaved)
                 } else {
@@ -3302,19 +3304,47 @@ private struct AnalysisNoFoodCard: View {
 }
 
 private struct AnalysisBlockedCard: View {
+    var privacy: PrivacyConsentState
+    var onAllow: () -> Void
     var onDismiss: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("AI photo analysis disabled", systemImage: "lock.shield")
+        VStack(alignment: .leading, spacing: 14) {
+            Label(title, systemImage: "lock.shield")
                 .font(.headline)
-            Text("MealMark did not send this photo for analysis because AI photo analysis is disabled.")
+            Text(message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Button("Dismiss", role: .cancel, action: onDismiss)
+
+            if privacy != .granted {
+                Button {
+                    onAllow()
+                } label: {
+                    Label("Allow photo analysis", systemImage: "checkmark.shield")
+                        .frame(maxWidth: .infinity, minHeight: 48)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .accessibilityIdentifier("AllowAIPhotoAnalysisButton")
+            }
+
+            Button("Not now", role: .cancel, action: onDismiss)
+                .accessibilityIdentifier("DismissAIPhotoAnalysisButton")
         }
-        .padding(.vertical, 8)
+        .padding(18)
+        .mealMarkGlassSurface(cornerRadius: 28, tint: Color.secondary.opacity(0.035), isInteractive: false)
         .accessibilityIdentifier("AnalysisPrivacyBlockedView")
+    }
+
+    private var title: String {
+        privacy == .notRequested ? "Allow AI photo analysis?" : "AI photo analysis disabled"
+    }
+
+    private var message: String {
+        if privacy == .notRequested {
+            return "MealMark can send the selected photo to the analysis broker to create a draft. Raw photos are not saved by MealMark."
+        }
+        return "MealMark did not send this photo for analysis because AI photo analysis is disabled."
     }
 }
 
@@ -4283,6 +4313,21 @@ private struct WalletView: View {
                         .accessibilityIdentifier("ConfirmedEntriesLabel")
                 }
                 LabeledContent("AI consent", value: store.privacy.label)
+                if store.privacy != .granted {
+                    Button {
+                        store.grantAIConsent()
+                    } label: {
+                        Label("Allow AI photo analysis", systemImage: "checkmark.shield")
+                    }
+                    .accessibilityIdentifier("WalletAllowAIPhotoAnalysisButton")
+                } else {
+                    Button(role: .destructive) {
+                        store.denyAIConsent()
+                    } label: {
+                        Label("Disable AI photo analysis", systemImage: "xmark.shield")
+                    }
+                    .accessibilityIdentifier("WalletDisableAIPhotoAnalysisButton")
+                }
             }
 
             Section("Privacy promises") {

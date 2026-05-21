@@ -5,6 +5,7 @@ import Foundation
 struct FoodWalletSmoke {
     static func main() async {
         let store = FoodWalletStore()
+        store.grantAIConsent()
         await store.analyze(photo: .uiTestFujiApple)
         guard store.currentCandidate?.primaryLabel == "Fuji apple" else {
             fputs("IOS_FOOD_WALLET_SMOKE_ERR_ANALYSIS\n", stderr)

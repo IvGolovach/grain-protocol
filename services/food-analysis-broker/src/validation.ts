@@ -1,17 +1,16 @@
-import { createHash, randomUUID } from "node:crypto";
-
 import { BrokerError } from "./errors.js";
+import { decodeCanonicalBase64, randomRequestId, sha256Hex16 } from "./runtime.js";
 import { MAX_IMAGE_BYTES } from "./schema.js";
 import type { FoodAnalyzePhotoRequest, FoodObservation, FoodSearchRequest, SupportedImageMediaType } from "./types.js";
 
 const MEDIA_TYPES = new Set<SupportedImageMediaType>(["image/jpeg", "image/png", "image/webp"]);
 
-export function parseAnalyzePhotoRequest(value: unknown): {
+export async function parseAnalyzePhotoRequest(value: unknown): Promise<{
   request: FoodAnalyzePhotoRequest;
   imageBytes: Uint8Array;
   photoSha25616: string;
   requestId: string;
-} {
+}> {
   if (!isRecord(value)) {
     throw new BrokerError(400, "BAD_REQUEST", "request body must be a JSON object");
   }
@@ -37,7 +36,7 @@ export function parseAnalyzePhotoRequest(value: unknown): {
     });
   }
 
-  const imageBytes = decodeBase64(photo.bytes_b64);
+  const imageBytes = decodeCanonicalBase64(photo.bytes_b64, "photo.bytes_b64");
   if (imageBytes.byteLength > MAX_IMAGE_BYTES) {
     throw new BrokerError(413, "PAYLOAD_TOO_LARGE", "decoded photo exceeds image byte cap", {
       max_image_bytes: MAX_IMAGE_BYTES
@@ -56,8 +55,8 @@ export function parseAnalyzePhotoRequest(value: unknown): {
   }
 
   const request = sanitizedAnalyzeRequest(value, mediaType as SupportedImageMediaType, photo.bytes_b64);
-  const requestId = request.request_id || randomUUID();
-  const photoSha25616 = createHash("sha256").update(imageBytes).digest("hex").slice(0, 16);
+  const requestId = request.request_id || randomRequestId();
+  const photoSha25616 = await sha256Hex16(imageBytes);
   return { request, imageBytes, photoSha25616, requestId };
 }
 
@@ -89,7 +88,7 @@ export function parseFoodSearchRequest(value: unknown): {
       ...(request.limit === undefined ? {} : { limit: request.limit }),
       ...(request.locale ? { locale: request.locale } : {})
     },
-    requestId: request.request_id || randomUUID()
+    requestId: request.request_id || randomRequestId()
   };
 }
 
@@ -204,21 +203,6 @@ function parseItems(value: unknown): FoodObservation["items"] {
       confidence: parseConfidence(entry.confidence, `items[${index}].confidence`)
     };
   });
-}
-
-function decodeBase64(value: string): Uint8Array {
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length % 4 !== 0) {
-    throw new BrokerError(400, "BAD_REQUEST", "photo.bytes_b64 must be canonical base64");
-  }
-  try {
-    const bytes = Buffer.from(value, "base64");
-    if (bytes.length === 0) {
-      throw new Error("empty decoded bytes");
-    }
-    return bytes;
-  } catch {
-    throw new BrokerError(400, "BAD_REQUEST", "photo.bytes_b64 could not be decoded");
-  }
 }
 
 function sanitizedAnalyzeRequest(

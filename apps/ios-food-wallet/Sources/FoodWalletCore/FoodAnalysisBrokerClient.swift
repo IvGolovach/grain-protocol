@@ -29,31 +29,64 @@ public enum FoodAnalysisBrokerClientError: Error, Equatable, Sendable, CustomStr
     }
 }
 
+public protocol FoodAnalysisBrokerAuthorizationProvider: Sendable {
+    func bearerToken() async -> String?
+}
+
+public struct StaticFoodAnalysisBrokerAuthorizationProvider: FoodAnalysisBrokerAuthorizationProvider {
+    private let token: String?
+
+    public init(token: String?) {
+        let trimmed = token?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        self.token = trimmed.isEmpty ? nil : trimmed
+    }
+
+    public func bearerToken() async -> String? {
+        token
+    }
+}
+
 public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClient {
     private let analysisEndpoint: URL
     private let searchEndpoint: URL
     private let session: URLSession
-    private let bearerToken: String?
+    private let authorizationProvider: (any FoodAnalysisBrokerAuthorizationProvider)?
 
-    public init(endpoint: URL, bearerToken: String? = nil, session: URLSession = .shared) {
+    public init(
+        endpoint: URL,
+        bearerToken: String? = nil,
+        authorizationProvider: (any FoodAnalysisBrokerAuthorizationProvider)? = nil,
+        session: URLSession = .shared
+    ) {
         self.analysisEndpoint = endpoint
         self.searchEndpoint = Self.derivedSearchEndpoint(from: endpoint)
         self.session = session
-        self.bearerToken = bearerToken
+        self.authorizationProvider = authorizationProvider ?? Self.provider(from: bearerToken)
     }
 
-    public init(analysisEndpoint: URL, searchEndpoint: URL, bearerToken: String? = nil, session: URLSession = .shared) {
+    public init(
+        analysisEndpoint: URL,
+        searchEndpoint: URL,
+        bearerToken: String? = nil,
+        authorizationProvider: (any FoodAnalysisBrokerAuthorizationProvider)? = nil,
+        session: URLSession = .shared
+    ) {
         self.analysisEndpoint = analysisEndpoint
         self.searchEndpoint = searchEndpoint
         self.session = session
-        self.bearerToken = bearerToken
+        self.authorizationProvider = authorizationProvider ?? Self.provider(from: bearerToken)
     }
 
-    public init(baseURL: URL, bearerToken: String? = nil, session: URLSession = .shared) {
+    public init(
+        baseURL: URL,
+        bearerToken: String? = nil,
+        authorizationProvider: (any FoodAnalysisBrokerAuthorizationProvider)? = nil,
+        session: URLSession = .shared
+    ) {
         self.analysisEndpoint = Self.analysisEndpoint(from: baseURL)
         self.searchEndpoint = Self.searchEndpoint(from: baseURL)
         self.session = session
-        self.bearerToken = bearerToken
+        self.authorizationProvider = authorizationProvider ?? Self.provider(from: bearerToken)
     }
 
     public func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
@@ -70,7 +103,7 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         var request = URLRequest(url: analysisEndpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 30
-        applyBrokerHeaders(to: &request)
+        await applyBrokerHeaders(to: &request)
         request.httpBody = try JSONEncoder().encode(Self.requestEnvelope(photoPayload: photoPayload))
 
         let (data, response): (Data, URLResponse)
@@ -97,7 +130,7 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         var urlRequest = URLRequest(url: searchEndpoint)
         urlRequest.httpMethod = "POST"
         urlRequest.timeoutInterval = 20
-        applyBrokerHeaders(to: &urlRequest)
+        await applyBrokerHeaders(to: &urlRequest)
         urlRequest.httpBody = try JSONEncoder().encode(request)
 
         let (data, response): (Data, URLResponse)
@@ -132,12 +165,17 @@ public struct FoodAnalysisBrokerClient: FoodAnalysisClient, BrokerFoodSearchClie
         }
     }
 
-    private func applyBrokerHeaders(to request: inout URLRequest) {
+    private func applyBrokerHeaders(to request: inout URLRequest) async {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        if let token = bearerToken?.trimmingCharacters(in: .whitespacesAndNewlines), !token.isEmpty {
+        if let token = await authorizationProvider?.bearerToken(), !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
+    }
+
+    private static func provider(from bearerToken: String?) -> (any FoodAnalysisBrokerAuthorizationProvider)? {
+        let provider = StaticFoodAnalysisBrokerAuthorizationProvider(token: bearerToken)
+        return bearerToken?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? provider : nil
     }
 
     private static func requestEnvelope(photoPayload: TransientMealPhotoPayload) -> BrokerRequestEnvelope {
