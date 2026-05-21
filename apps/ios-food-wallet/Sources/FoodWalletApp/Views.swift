@@ -55,6 +55,24 @@ private enum MealMarkKeyboard {
     }
 }
 
+private struct MealMarkKeyboardDoneButton: View {
+    var accessibilityIdentifier: String
+    var title: String = "Done"
+    var isEnabled: Bool = true
+    var action: () -> Void
+
+    var body: some View {
+        Button(title, action: action)
+            .font(.body.weight(.semibold))
+            .disabled(!isEnabled)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 9)
+            .padding(.bottom, 16)
+            .contentShape(Rectangle())
+            .accessibilityIdentifier(accessibilityIdentifier)
+    }
+}
+
 private enum MealMarkAmountUnit: String, CaseIterable, Identifiable {
     case grams
     case ounces
@@ -226,7 +244,7 @@ struct FoodWalletRootView: View {
                 )
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") {
+                        Button("Close") {
                             isShowingCaptureReview = false
                         }
                         .accessibilityIdentifier("CloseCaptureReviewButton")
@@ -653,6 +671,8 @@ private struct AddFoodHubView: View {
     @State private var isShowingBuildMeal = false
     @State private var selectedSavedRecipeID: String?
     @State private var selectedPersonalIngredientID: String?
+    @State private var unresolvedQuickFoodName: String?
+    @State private var isShowingQuickManualNutrition = false
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
@@ -830,10 +850,24 @@ private struct AddFoodHubView: View {
                     if shouldShowQuickCreateRow {
                         AddFoodResultRow(
                             title: "Create \"\(trimmedQuickText)\"",
-                            subtitle: "Local estimate, ready for review",
+                            subtitle: "Parsed text, ready for review",
                             symbol: "text.badge.plus",
                             accessibilityIdentifier: "CreateFoodDraft-\(Self.slug(trimmedQuickText))",
                             action: createQuickTextDraft
+                        )
+                    }
+
+                    if shouldShowUnknownFoodResolution {
+                        UnknownFoodResolutionView(
+                            foodName: unresolvedQuickFoodName ?? trimmedQuickText,
+                            searchState: store.foodSearchState,
+                            isManualEntryVisible: isShowingQuickManualNutrition,
+                            onSearchAgain: searchProviderDatabasesForUnresolvedFood,
+                            onEnterManually: enterNutritionForUnresolvedFood,
+                            onScanCode: {
+                                isShowingBarcodeLookup = true
+                            },
+                            onPhotoLabel: onTakePhoto
                         )
                     }
                 }
@@ -842,6 +876,9 @@ private struct AddFoodHubView: View {
         .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Add Food")
         .mealMarkNavigationBarTitleDisplayModeInline()
+        .onChange(of: trimmedQuickText) { _ in
+            resetUnresolvedQuickFood()
+        }
         .task(id: trimmedQuickText) {
             await refreshBrokerFoodSearchForCurrentQuery()
         }
@@ -853,12 +890,10 @@ private struct AddFoodHubView: View {
             }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                MealMarkKeyboardDoneButton(accessibilityIdentifier: "AddFoodKeyboardDoneButton") {
                     focusedField = nil
                     MealMarkKeyboard.dismiss()
                 }
-                .padding(.bottom, 6)
-                .accessibilityIdentifier("AddFoodKeyboardDoneButton")
             }
         }
         .navigationDestination(isPresented: $isShowingBuildMeal) {
@@ -881,6 +916,23 @@ private struct AddFoodHubView: View {
                 onCreateDraft: createIngredientMealDraft,
                 onSavePersonalIngredient: savePersonalIngredient
             )
+        }
+        .navigationDestination(isPresented: $isShowingQuickManualNutrition) {
+            if let personalIngredientName {
+                StandalonePersonalIngredientEntryView(
+                    ingredientName: personalIngredientName,
+                    servingGrams: $personalServingGrams,
+                    servingKcal: $personalServingKcal,
+                    proteinGrams: $personalProteinGrams,
+                    carbohydrateGrams: $personalCarbohydrateGrams,
+                    fatGrams: $personalFatGrams,
+                    fiberGrams: $personalFiberGrams,
+                    errorMessage: personalIngredientErrorMessage,
+                    onSave: saveStandalonePersonalIngredient
+                )
+            } else {
+                EmptyView()
+            }
         }
         .navigationDestination(isPresented: isShowingSavedRecipeDetail) {
             if let selectedSavedRecipeID {
@@ -998,7 +1050,7 @@ private struct AddFoodHubView: View {
     }
 
     private var shouldShowQuickCreateRow: Bool {
-        hasSearchQuery && selectedScope == .all
+        hasSearchQuery && selectedScope == .all && store.canCreateQuickTextDraft(trimmedQuickText)
     }
 
     private var shouldShowRecentResults: Bool {
@@ -1018,7 +1070,19 @@ private struct AddFoodHubView: View {
     }
 
     private var shouldShowEmptyResults: Bool {
-        !shouldShowQuickCreateRow &&
+        !shouldShowUnknownFoodResolution &&
+            !shouldShowQuickCreateRow &&
+            !shouldShowFoodSearchResults &&
+            !shouldShowRecentResults &&
+            !shouldShowTemplateResults &&
+            !shouldShowRecipeResults &&
+            !shouldShowPersonalFoodResults
+    }
+
+    private var shouldShowUnknownFoodResolution: Bool {
+        hasSearchQuery &&
+            selectedScope == .all &&
+            !store.canCreateQuickTextDraft(trimmedQuickText) &&
             !shouldShowFoodSearchResults &&
             !shouldShowRecentResults &&
             !shouldShowTemplateResults &&
@@ -1039,7 +1103,7 @@ private struct AddFoodHubView: View {
 
     private var emptyResultsMessage: String {
         if hasSearchQuery {
-            return "Try another word, or create a local draft from what you typed."
+            return "Try another word, search provider databases, or enter nutrition from a label."
         }
         return selectedScope.emptyMessage
     }
@@ -1058,9 +1122,52 @@ private struct AddFoodHubView: View {
 
     private func createQuickTextDraft(_ text: String) {
         guard store.createQuickTextDraft(text) else {
+            prepareUnresolvedQuickFood(text)
             return
         }
         onDraftReady()
+    }
+
+    private func prepareUnresolvedQuickFood(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return
+        }
+        unresolvedQuickFoodName = trimmed
+        isShowingQuickManualNutrition = false
+        personalIngredientErrorMessage = nil
+    }
+
+    private func resetUnresolvedQuickFood() {
+        unresolvedQuickFoodName = nil
+        isShowingQuickManualNutrition = false
+        personalIngredientErrorMessage = nil
+        if !isShowingBuildMeal {
+            personalIngredientName = nil
+        }
+    }
+
+    private func searchProviderDatabasesForUnresolvedFood() {
+        let query = (unresolvedQuickFoodName ?? trimmedQuickText).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            return
+        }
+        unresolvedQuickFoodName = query
+        Task {
+            await store.searchBrokerFood(query: query)
+        }
+    }
+
+    private func enterNutritionForUnresolvedFood() {
+        let name = (unresolvedQuickFoodName ?? trimmedQuickText).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            return
+        }
+        focusedField = nil
+        MealMarkKeyboard.dismiss()
+        unresolvedQuickFoodName = name
+        preparePersonalIngredientForm(for: name)
+        isShowingQuickManualNutrition = true
     }
 
     private func createFoodSearchDraft(id: String) {
@@ -1195,6 +1302,52 @@ private struct AddFoodHubView: View {
         }
     }
 
+    private func saveStandalonePersonalIngredient() {
+        guard let personalIngredientName else {
+            return
+        }
+        let servingGrams = decimalValue(personalServingGrams)
+        let result = store.savePersonalIngredient(
+            name: personalIngredientName,
+            servingGrams: servingGrams,
+            servingKcal: Int64(decimalValue(personalServingKcal).rounded()),
+            proteinGrams: decimalValue(personalProteinGrams),
+            carbohydrateGrams: decimalValue(personalCarbohydrateGrams),
+            fatGrams: decimalValue(personalFatGrams),
+            fiberGrams: personalFiberGrams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? nil
+                : decimalValue(personalFiberGrams)
+        )
+        switch result {
+        case .saved:
+            let savedName = personalIngredientName
+            let loggedGrams = max(1, Int64(servingGrams.rounded()))
+            self.personalIngredientName = nil
+            unresolvedQuickFoodName = nil
+            isShowingQuickManualNutrition = false
+            personalIngredientErrorMessage = nil
+            let creationResult = store.createIngredientMealDraft(
+                title: savedName,
+                ingredients: [
+                    FoodMealIngredientInput(name: savedName, grams: loggedGrams),
+                ]
+            )
+            if creationResult == .created {
+                onDraftReady()
+            } else {
+                personalIngredientErrorMessage = "Saved, but could not create a review draft yet."
+            }
+        case .emptyName:
+            personalIngredientErrorMessage = "Add an ingredient name."
+        case .invalidServingGrams:
+            personalIngredientErrorMessage = "Enter serving grams from the label."
+        case .invalidCalories:
+            personalIngredientErrorMessage = "Enter calories from the label."
+        case let .invalidMacro(name):
+            personalIngredientErrorMessage = "Check \(name) grams."
+        }
+    }
+
     private func decimalValue(_ text: String) -> Double {
         Double(text.replacingOccurrences(of: ",", with: ".").trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
     }
@@ -1298,11 +1451,9 @@ private struct BuildMealEditorView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                MealMarkKeyboardDoneButton(accessibilityIdentifier: "BuildMealKeyboardDoneButton") {
                     MealMarkKeyboard.dismiss()
                 }
-                .padding(.bottom, 6)
-                .accessibilityIdentifier("BuildMealKeyboardDoneButton")
             }
         }
     }
@@ -1420,16 +1571,17 @@ private struct BarcodeLookupView: View {
             }
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button(normalizedBarcode == nil ? "Done" : "Search") {
+                MealMarkKeyboardDoneButton(
+                    accessibilityIdentifier: "BarcodeKeyboardSearchButton",
+                    title: normalizedBarcode == nil ? "Done" : "Search",
+                    isEnabled: !isLookingUp
+                ) {
                     MealMarkKeyboard.dismiss()
                     isBarcodeFieldFocused = false
                     if normalizedBarcode != nil {
                         lookupManualBarcode()
                     }
                 }
-                .disabled(isLookingUp)
-                .padding(.bottom, 6)
-                .accessibilityIdentifier("BarcodeKeyboardSearchButton")
             }
         }
     }
@@ -1712,7 +1864,7 @@ private struct AddFoodSearchField: View {
 
             TextField("Search or describe food", text: $text)
                 .focused(focusedField, equals: .search)
-                .submitLabel(.done)
+                .submitLabel(.search)
                 .onSubmit(onSubmit)
                 .accessibilityLabel("FoodSearchField")
                 .accessibilityIdentifier("QuickTextField")
@@ -1722,7 +1874,7 @@ private struct AddFoodSearchField: View {
                     .font(.title3)
             }
             .disabled(trimmedText.isEmpty)
-            .accessibilityLabel("Create quick draft")
+            .accessibilityLabel("Search food")
             .accessibilityIdentifier("CreateQuickDraftButton")
         }
         .padding(.horizontal, 12)
@@ -1999,6 +2151,126 @@ private struct AddFoodResultRow: View {
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
+    }
+}
+
+private struct UnknownFoodResolutionView: View {
+    var foodName: String
+    var searchState: FoodSearchState
+    var isManualEntryVisible: Bool
+    var onSearchAgain: () -> Void
+    var onEnterManually: () -> Void
+    var onScanCode: () -> Void
+    var onPhotoLabel: () -> Void
+
+    private var isSearching: Bool {
+        searchState == .loading
+    }
+
+    private var statusText: String {
+        switch searchState {
+        case .loading:
+            return "Searching provider databases..."
+        case .empty:
+            return "No verified nutrition match yet."
+        case let .failed(message):
+            return message
+        case .idle, .ready:
+            return "MealMark will not guess calories for unknown food."
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "magnifyingglass.circle.fill")
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.blue)
+                    .frame(width: 34, height: 34)
+                    .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Find a source for \(foodName)")
+                        .font(.headline)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("UnknownFoodResolutionTitle")
+                    Text(statusText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            VStack(spacing: 10) {
+                resolutionButton(
+                    title: isSearching ? "Searching..." : "Search provider databases",
+                    symbol: isSearching ? "hourglass" : "magnifyingglass.circle.fill",
+                    tint: .blue,
+                    isEnabled: !isSearching,
+                    accessibilityIdentifier: "SearchDeeperFoodButton",
+                    action: onSearchAgain
+                )
+
+                HStack(spacing: 10) {
+                    resolutionButton(
+                        title: isManualEntryVisible ? "Manual entry open" : "Enter label",
+                        symbol: "square.and.pencil",
+                        tint: .green,
+                        isEnabled: !isManualEntryVisible,
+                        accessibilityIdentifier: "EnterManualNutritionButton",
+                        action: onEnterManually
+                    )
+                    resolutionButton(
+                        title: "Scan code",
+                        symbol: "barcode.viewfinder",
+                        tint: .purple,
+                        accessibilityIdentifier: "UnknownFoodBarcodeButton",
+                        action: onScanCode
+                    )
+                }
+
+                resolutionButton(
+                    title: "Photo label",
+                    symbol: "camera.viewfinder",
+                    tint: .orange,
+                    accessibilityIdentifier: "UnknownFoodPhotoLabelButton",
+                    action: onPhotoLabel
+                )
+            }
+        }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("UnknownFoodResolutionCard")
+    }
+
+    private func resolutionButton(
+        title: String,
+        symbol: String,
+        tint: Color,
+        isEnabled: Bool = true,
+        accessibilityIdentifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .font(.subheadline.weight(.bold))
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity, minHeight: 42)
+            .padding(.horizontal, 12)
+            .background(tint.opacity(isEnabled ? 0.14 : 0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
         .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
@@ -2445,11 +2717,9 @@ private struct SavedRecipeEditorView: View {
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    MealMarkKeyboardDoneButton(accessibilityIdentifier: "SavedRecipeKeyboardDoneButton") {
                         MealMarkKeyboard.dismiss()
                     }
-                    .padding(.bottom, 6)
-                    .accessibilityIdentifier("SavedRecipeKeyboardDoneButton")
                 }
             }
         }
@@ -2712,6 +2982,56 @@ private struct PersonalIngredientResolutionView: View {
             .accessibilityIdentifier("SavePersonalIngredientButton")
         }
         .padding(.vertical, 6)
+    }
+}
+
+private struct StandalonePersonalIngredientEntryView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let ingredientName: String
+    @Binding var servingGrams: String
+    @Binding var servingKcal: String
+    @Binding var proteinGrams: String
+    @Binding var carbohydrateGrams: String
+    @Binding var fatGrams: String
+    @Binding var fiberGrams: String
+    var errorMessage: String?
+    var onSave: () -> Void
+
+    var body: some View {
+        List {
+            Section {
+                PersonalIngredientResolutionView(
+                    ingredientName: ingredientName,
+                    servingGrams: $servingGrams,
+                    servingKcal: $servingKcal,
+                    proteinGrams: $proteinGrams,
+                    carbohydrateGrams: $carbohydrateGrams,
+                    fatGrams: $fatGrams,
+                    fiberGrams: $fiberGrams,
+                    errorMessage: errorMessage,
+                    onSave: onSave
+                )
+            }
+        }
+        .mealMarkInsetGroupedListStyle()
+        .mealMarkScrollDismissesKeyboard()
+        .navigationTitle("Enter Nutrition")
+        .mealMarkNavigationBarTitleDisplayModeInline()
+        .accessibilityIdentifier("UnknownFoodManualNutritionForm")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                MealMarkKeyboardDoneButton(accessibilityIdentifier: "UnknownFoodKeyboardDoneButton") {
+                    MealMarkKeyboard.dismiss()
+                }
+            }
+        }
     }
 }
 
@@ -3301,11 +3621,9 @@ private struct PortionControlsView: View {
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                MealMarkKeyboardDoneButton(accessibilityIdentifier: "PortionKeyboardDoneButton") {
                     commitAndDismiss()
                 }
-                .padding(.bottom, 6)
-                .accessibilityIdentifier("PortionKeyboardDoneButton")
             }
         }
         .onChange(of: isGramsFieldFocused) { isFocused in
@@ -3742,12 +4060,10 @@ private struct EditMealEntryView: View {
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    MealMarkKeyboardDoneButton(accessibilityIdentifier: "EditMealKeyboardDoneButton") {
                         focusedField = nil
                         MealMarkKeyboard.dismiss()
                     }
-                    .padding(.bottom, 6)
-                    .accessibilityIdentifier("EditMealKeyboardDoneButton")
                 }
             }
             .onAppear {

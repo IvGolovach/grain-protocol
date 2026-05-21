@@ -1325,6 +1325,20 @@ struct FoodIngredientCatalog {
             servingLabel: "1 scoop (30 g)"
         ),
         Entry(
+            id: "nuts.macadamia",
+            label: "Macadamia nuts",
+            aliases: ["macadamia", "macadamia nut", "macadamia nuts", "raw macadamia", "raw macadamia nuts"],
+            kcalPer100Grams: 718,
+            macronutrientsPer100Grams: MealMacronutrients(
+                proteinGrams: 7.9,
+                carbohydrateGrams: 13.8,
+                fatGrams: 75.8,
+                fiberGrams: 8.6
+            ),
+            defaultServingGrams: 28,
+            servingLabel: "1 oz (28 g)"
+        ),
+        Entry(
             id: "oats.rolled",
             label: "Rolled oats",
             aliases: ["oats", "oatmeal"],
@@ -1795,7 +1809,7 @@ private extension String {
 }
 
 enum QuickTextFoodParser {
-    static func candidate(for text: String) -> FoodAnalysisCandidate {
+    static func candidate(for text: String) -> FoodAnalysisCandidate? {
         let normalized = text.lowercased()
         let meal: MealEstimate
         let confidence: EstimateConfidence
@@ -1864,25 +1878,7 @@ enum QuickTextFoodParser {
                 FoodAssumption(id: "review-portion", label: "review portion before saving"),
             ]
         } else {
-            meal = MealEstimate(
-                label: text,
-                kcal: 300,
-                varianceKcal: 120,
-                amountGrams: 250,
-                servingGrams: 250,
-                servings: 1,
-                macronutrients: MealMacronutrients(
-                    proteinGrams: 12,
-                    carbohydrateGrams: 35,
-                    fatGrams: 10,
-                    fiberGrams: 5
-                )
-            )
-            confidence = .low
-            assumptions = [
-                FoodAssumption(id: "quick-text", label: "parsed from typed food"),
-                FoodAssumption(id: "generic-fallback", label: "generic estimate needs review"),
-            ]
+            return nil
         }
 
         let slug = normalized

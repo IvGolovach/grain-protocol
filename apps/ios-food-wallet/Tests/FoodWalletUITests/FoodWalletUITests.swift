@@ -75,12 +75,38 @@ final class FoodWalletUITests: XCTestCase {
         }
     }
 
+    private func dismissMealMarkKeyboardIfNeeded() {
+        let keyboardButtonIdentifiers = [
+            "UnknownFoodKeyboardDoneButton",
+            "AddFoodKeyboardDoneButton",
+            "BuildMealKeyboardDoneButton",
+            "PortionKeyboardDoneButton",
+            "SavedRecipeKeyboardDoneButton",
+            "EditMealKeyboardDoneButton",
+        ]
+        for identifier in keyboardButtonIdentifiers {
+            let doneButton = app.buttons[identifier]
+            if doneButton.exists {
+                doneButton.tap()
+                return
+            }
+        }
+        for identifier in keyboardButtonIdentifiers {
+            let doneButton = app.buttons[identifier]
+            if doneButton.waitForExistence(timeout: 0.2) {
+                doneButton.tap()
+                return
+            }
+        }
+    }
+
     private func typePersonalIngredientValue(_ identifier: String, _ value: String) {
         let field = app.textFields[identifier]
+        XCTAssertTrue(scrollToElement(field, maxSwipes: 6))
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         field.tap()
         field.typeText(value)
-        dismissBuildMealKeyboardIfNeeded()
+        dismissMealMarkKeyboardIfNeeded()
     }
 
     func testAppleEstimateCanBeSavedAndViewed() throws {
@@ -218,6 +244,49 @@ final class FoodWalletUITests: XCTestCase {
         app.tabBars.buttons["History"].tap()
         XCTAssertTrue(app.staticTexts["MealRowLabel-2 eggs and toast"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["MealRowNutrition-2 eggs and toast"].label, "150 g • 225 kcal")
+    }
+
+    func testAddFoodHubDoesNotInventNutritionForUnknownTypedFood() throws {
+        launch(arguments: [])
+
+        XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 5))
+
+        app.buttons["Add food"].tap()
+        XCTAssertTrue(app.navigationBars["Add Food"].waitForExistence(timeout: 5))
+
+        let quickText = app.textFields["QuickTextField"]
+        XCTAssertTrue(quickText.waitForExistence(timeout: 5))
+        quickText.tap()
+        quickText.typeText("JAANA")
+        app.buttons["CreateQuickDraftButton"].tap()
+
+        XCTAssertTrue(app.buttons["SearchDeeperFoodButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["UnknownFoodResolutionTitle"].exists)
+        XCTAssertFalse(app.navigationBars["Review food"].exists)
+        XCTAssertFalse(app.staticTexts["DraftPrimaryLabel"].exists)
+        XCTAssertTrue(app.buttons["SearchDeeperFoodButton"].exists)
+        XCTAssertTrue(app.buttons["EnterManualNutritionButton"].exists)
+        XCTAssertTrue(app.buttons["UnknownFoodBarcodeButton"].exists)
+        XCTAssertTrue(app.buttons["UnknownFoodPhotoLabelButton"].exists)
+
+        app.buttons["EnterManualNutritionButton"].tap()
+        XCTAssertTrue(app.navigationBars["Enter Nutrition"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["PersonalIngredientNameLabel"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["PersonalIngredientNameLabel"].label, "JAANA")
+
+        typePersonalIngredientValue("PersonalIngredientServingGramsField", "30")
+        typePersonalIngredientValue("PersonalIngredientCaloriesField", "200")
+        typePersonalIngredientValue("PersonalIngredientProteinField", "5")
+        typePersonalIngredientValue("PersonalIngredientCarbsField", "20")
+        typePersonalIngredientValue("PersonalIngredientFatField", "8")
+        typePersonalIngredientValue("PersonalIngredientFiberField", "2")
+        XCTAssertTrue(scrollToElement(app.buttons["SavePersonalIngredientButton"]))
+        app.buttons["SavePersonalIngredientButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "JAANA")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 30 g • 180-220 kcal")
     }
 
     func testAddFoodStartsWithCompactModeChooserAndNoDeadFixtureActions() throws {

@@ -341,9 +341,15 @@ public final class FoodWalletStore: ObservableObject {
         guard !trimmed.isEmpty else {
             return false
         }
-        let candidate = QuickTextFoodParser.candidate(for: trimmed)
+        guard let candidate = QuickTextFoodParser.candidate(for: trimmed) else {
+            return false
+        }
         presentDraft(candidate: candidate, sourceClass: .measured, trustStatus: .selfIssued)
         return true
+    }
+
+    public func canCreateQuickTextDraft(_ text: String) -> Bool {
+        QuickTextFoodParser.candidate(for: text.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
     }
 
     public func addFoodSearchSuggestions(for text: String) -> [AddFoodSuggestionRow] {

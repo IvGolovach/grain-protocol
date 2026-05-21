@@ -60,8 +60,14 @@ struct FoodWalletCoreTests {
         await run("quickTextDraftCreatesSelfIssuedReviewableMeal") {
             try await testQuickTextDraftCreatesSelfIssuedReviewableMeal()
         }
+        await run("quickTextDraftRejectsUnknownFoodWithoutFakeNutrition") {
+            try await testQuickTextDraftRejectsUnknownFoodWithoutFakeNutrition()
+        }
         await run("addFoodSearchSuggestionsPreferCatalogMatches") {
             try await testAddFoodSearchSuggestionsPreferCatalogMatches()
+        }
+        await run("addFoodSearchSuggestionsIncludeMacadamiaNuts") {
+            try await testAddFoodSearchSuggestionsIncludeMacadamiaNuts()
         }
         await run("portionEditorScalesDraftNutritionRange") {
             try await testPortionEditorScalesDraftNutritionRange()
@@ -507,6 +513,18 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testQuickTextDraftRejectsUnknownFoodWithoutFakeNutrition() async throws {
+        let store = FoodWalletStore()
+
+        let created = store.createQuickTextDraft("JAANA")
+
+        try expect(!created, "expected unknown typed food to be unresolved")
+        try expect(store.currentCandidate == nil, "expected no fake candidate for unknown typed food")
+        try expect(store.currentDraft == nil, "expected no fake draft for unknown typed food")
+        try expect(store.entries.isEmpty, "expected no saved entry for unknown typed food")
+    }
+
+    @MainActor
     private static func testAddFoodSearchSuggestionsPreferCatalogMatches() async throws {
         let store = FoodWalletStore()
         let rows = store.addFoodSearchSuggestions(for: "casein protein")
@@ -523,6 +541,20 @@ struct FoodWalletCoreTests {
         try expect(store.currentCandidate?.primaryLabel == "Casein protein powder", "expected matched draft label")
         try expect(store.currentDraft?.meal.kcal == 108, "expected catalog serving kcal")
         try expect(store.currentCandidate?.macronutrients.shortLabel == "P 24g • C 3g • F 0.9g", "expected serving macros")
+    }
+
+    @MainActor
+    private static func testAddFoodSearchSuggestionsIncludeMacadamiaNuts() async throws {
+        let store = FoodWalletStore()
+        let rows = store.addFoodSearchSuggestions(for: "macadamia")
+
+        guard let first = rows.first else {
+            throw FoodWalletTestFailure("expected macadamia search result")
+        }
+        try expect(first.title == "Macadamia nuts", "expected catalog-backed macadamia result")
+        try expect(first.sourceLabel == "Ingredient catalog", "expected provenance label")
+        try expect(first.subtitle == "1 oz (28 g) | 201 kcal", "expected serving kcal summary")
+        try expect(first.evidence.contains { $0.providerID == "nuts.macadamia" }, "expected macadamia evidence")
     }
 
     @MainActor
@@ -1048,7 +1080,7 @@ struct FoodWalletCoreTests {
         try expect(store.createQuickTextDraft("apple"), "expected first draft")
         store.confirmDraft()
         let deletedID = store.entries.first!.entryID
-        try expect(store.createQuickTextDraft("toast"), "expected second draft")
+        try expect(store.createQuickTextDraft("2 eggs and toast"), "expected second draft")
         store.confirmDraft()
 
         try expect(store.deleteEntry(entryID: deletedID), "expected delete")
