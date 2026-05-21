@@ -395,7 +395,7 @@ public final class FoodWalletStore: ObservableObject {
 
     public func searchBrokerFood(query: String) async {
         await searchBrokerFood(requestFactory: {
-            try BrokerFoodSearchRequest(query: query)
+            try BrokerFoodSearchRequest(query: query, limit: 20)
         })
     }
 
@@ -641,7 +641,9 @@ public final class FoodWalletStore: ObservableObject {
             createdAt: draft.createdAt,
             dateKey: draft.dateKey
         )
-        analysisState = .draftReady
+        if analysisState != .draftReady {
+            analysisState = .draftReady
+        }
         return true
     }
 

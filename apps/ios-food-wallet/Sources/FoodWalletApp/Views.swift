@@ -55,6 +55,85 @@ private enum MealMarkKeyboard {
     }
 }
 
+private enum MealMarkAmountUnit: String, CaseIterable, Identifiable {
+    case grams
+    case ounces
+    case cups
+
+    var id: String { rawValue }
+
+    var shortLabel: String {
+        switch self {
+        case .grams: return "g"
+        case .ounces: return "oz"
+        case .cups: return "cups"
+        }
+    }
+
+    var fieldLabel: String {
+        switch self {
+        case .grams: return "grams"
+        case .ounces: return "ounces"
+        case .cups: return "cups"
+        }
+    }
+
+    var placeholder: String {
+        switch self {
+        case .grams: return "g"
+        case .ounces: return "oz"
+        case .cups: return "cup"
+        }
+    }
+
+    func grams(from text: String) -> Int64? {
+        let normalized = text
+            .replacingOccurrences(of: ",", with: ".")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let value = Double(normalized), value > 0 else {
+            return nil
+        }
+        let grams: Double
+        switch self {
+        case .grams:
+            grams = value
+        case .ounces:
+            grams = value * 28.349523125
+        case .cups:
+            grams = value * 240
+        }
+        return max(1, Int64(grams.rounded()))
+    }
+
+    func displayText(fromGrams grams: Int64) -> String {
+        let value: Double
+        let fractionDigits: Int
+        switch self {
+        case .grams:
+            return "\(grams)"
+        case .ounces:
+            value = Double(grams) / 28.349523125
+            fractionDigits = 1
+        case .cups:
+            value = Double(grams) / 240
+            fractionDigits = 2
+        }
+        return Self.compactDecimal(value, fractionDigits: fractionDigits)
+    }
+
+    private static func compactDecimal(_ value: Double, fractionDigits: Int) -> String {
+        let format = "%.\(fractionDigits)f"
+        var text = String(format: format, value)
+        while text.contains(".") && text.last == "0" {
+            text.removeLast()
+        }
+        if text.last == "." {
+            text.removeLast()
+        }
+        return text
+    }
+}
+
 struct FoodWalletRootView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var selectedTab: FoodWalletTab = .today
@@ -488,12 +567,6 @@ private struct CaptureView: View {
     var body: some View {
         List {
             Section {
-                Text("Photo creates a draft. You decide what gets saved.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("Review draft") {
                 if case let .failed(failure) = store.analysisState {
                     if failure.code == .noFoodDetected {
                         AnalysisNoFoodCard(
@@ -519,24 +592,14 @@ private struct CaptureView: View {
                     EmptyStateView(
                         title: "No active draft",
                         symbol: "doc.text.magnifyingglass",
-                        message: "Take a meal photo to create a reviewable MealMark draft."
+                        message: "Use Add Food to create a reviewable MealMark draft."
                     )
                 }
             }
-
-            Section("Camera") {
-                CaptureAction(
-                    title: "Take meal photo",
-                    subtitle: "Open camera and create a nutrition draft",
-                    symbol: "camera.fill",
-                    accessibilityIdentifier: "TakeMealPhotoButton",
-                    isDisabled: !store.canStartAnalysis,
-                    action: onCapturePhoto
-                )
-            }
         }
         .mealMarkScrollDismissesKeyboard()
-        .navigationTitle("Capture")
+        .navigationTitle("Review food")
+        .mealMarkNavigationBarTitleDisplayModeInline()
     }
 }
 
@@ -544,6 +607,26 @@ private struct IngredientBuilderRow: Identifiable {
     let id = UUID()
     var name = ""
     var grams = ""
+    var unit: MealMarkAmountUnit = .grams
+
+    var resolvedGrams: Int64? {
+        unit.grams(from: grams)
+    }
+
+    mutating func setAmount(fromGrams grams: Int64) {
+        self.grams = unit.displayText(fromGrams: grams)
+    }
+
+    mutating func convert(to newUnit: MealMarkAmountUnit) {
+        guard newUnit != unit else {
+            return
+        }
+        let currentGrams = resolvedGrams
+        unit = newUnit
+        if let currentGrams {
+            grams = newUnit.displayText(fromGrams: currentGrams)
+        }
+    }
 }
 
 private struct AddFoodHubView: View {
@@ -593,17 +676,24 @@ private struct AddFoodHubView: View {
                         onSubmit: createQuickTextDraft
                     )
 
-                    AddFoodShortcutGrid(
-                        canStartPhoto: store.canStartAnalysis,
-                        onCamera: onTakePhoto,
-                        onLibrary: onChoosePhoto,
-                        onBarcode: {
-                            isShowingBarcodeLookup = true
-                        },
-                        onBuild: {
-                            isShowingBuildMeal = true
-                        }
-                    )
+                    if shouldShowShortcuts {
+                        AddFoodShortcutGrid(
+                            canStartPhoto: store.canStartAnalysis,
+                            onCamera: onTakePhoto,
+                            onLibrary: onChoosePhoto,
+                            onBarcode: {
+                                isShowingBarcodeLookup = true
+                            },
+                            onBuild: {
+                                isShowingBuildMeal = true
+                            }
+                        )
+                    } else {
+                        Text("Results update below as you type.")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("AddFoodSearchModeHint")
+                    }
                 }
                 .padding(.vertical, 4)
             }
@@ -856,7 +946,7 @@ private struct AddFoodHubView: View {
         !mealTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             ingredientRows.contains { row in
                 !row.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                    (Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) > 0
+                    (row.resolvedGrams ?? 0) > 0
             }
     }
 
@@ -886,6 +976,10 @@ private struct AddFoodHubView: View {
 
     private var shouldShowLibraryResults: Bool {
         !hasSearchQuery && (!store.savedRecipes.isEmpty || !store.personalIngredients.isEmpty)
+    }
+
+    private var shouldShowShortcuts: Bool {
+        !hasSearchQuery && focusedField != .search
     }
 
     private var shouldShowReusableResults: Bool {
@@ -1010,7 +1104,7 @@ private struct AddFoodHubView: View {
         let inputs = ingredientRows.map { row in
             FoodMealIngredientInput(
                 name: row.name,
-                grams: Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+                grams: row.resolvedGrams ?? 0
             )
         }
         let result = store.createIngredientMealDraft(title: mealTitle, ingredients: inputs)
@@ -1024,11 +1118,37 @@ private struct AddFoodHubView: View {
         case .noIngredients:
             ingredientErrorMessage = "Add at least one ingredient."
         case let .invalidGrams(name):
-            ingredientErrorMessage = "Check grams for \(name)."
+            ingredientErrorMessage = "Check amount for \(name)."
         case let .unknownIngredient(name):
+            if saveBestProviderIngredientMatch(for: name) {
+                createIngredientMealDraft()
+                return
+            }
             ingredientErrorMessage = "Add nutrition for \(name) once, then use it in meals."
             preparePersonalIngredientForm(for: name)
         }
+    }
+
+    @discardableResult
+    private func saveBestProviderIngredientMatch(for name: String) -> Bool {
+        let query = AddFoodSearchQuery(name)
+        guard let row = store.ingredientSuggestions(for: name, limit: 12).first(where: { suggestion in
+            suggestion.id.hasPrefix("food-search:") && query.matches(suggestion)
+        }),
+        let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: row.id) else {
+            return false
+        }
+
+        for index in ingredientRows.indices {
+            let normalizedRow = AddFoodSearchQuery.normalize(ingredientRows[index].name)
+            if normalizedRow == query.normalizedValue {
+                ingredientRows[index].name = ingredient.name
+                if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ingredientRows[index].setAmount(fromGrams: max(1, Int64(ingredient.sourceServingGrams.rounded())))
+                }
+            }
+        }
+        return true
     }
 
     private func preparePersonalIngredientForm(for name: String) {
@@ -1108,6 +1228,22 @@ private struct BuildMealEditorView: View {
 
     var body: some View {
         List {
+            if let personalIngredientName {
+                Section {
+                    PersonalIngredientResolutionView(
+                        ingredientName: personalIngredientName,
+                        servingGrams: $personalServingGrams,
+                        servingKcal: $personalServingKcal,
+                        proteinGrams: $personalProteinGrams,
+                        carbohydrateGrams: $personalCarbohydrateGrams,
+                        fatGrams: $personalFatGrams,
+                        fiberGrams: $personalFiberGrams,
+                        errorMessage: personalIngredientErrorMessage,
+                        onSave: onSavePersonalIngredient
+                    )
+                }
+            }
+
             Section {
                 TextField("Meal name", text: $mealTitle)
                     .accessibilityIdentifier("MealTitleField")
@@ -1116,7 +1252,7 @@ private struct BuildMealEditorView: View {
                     IngredientBuilderRowView(
                         index: index,
                         row: $ingredientRows[index],
-                        suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 8),
+                        suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 12),
                         focusedIngredientNameIndex: $focusedIngredientNameIndex,
                         onSelectSuggestion: { suggestion in
                             selectIngredientSuggestion(suggestion, at: index)
@@ -1137,22 +1273,6 @@ private struct BuildMealEditorView: View {
                 }
             } header: {
                 Text("Ingredients")
-            }
-
-            if let personalIngredientName {
-                Section {
-                    PersonalIngredientResolutionView(
-                        ingredientName: personalIngredientName,
-                        servingGrams: $personalServingGrams,
-                        servingKcal: $personalServingKcal,
-                        proteinGrams: $personalProteinGrams,
-                        carbohydrateGrams: $personalCarbohydrateGrams,
-                        fatGrams: $personalFatGrams,
-                        fiberGrams: $personalFiberGrams,
-                        errorMessage: personalIngredientErrorMessage,
-                        onSave: onSavePersonalIngredient
-                    )
-                }
             }
 
             Section {
@@ -1192,7 +1312,7 @@ private struct BuildMealEditorView: View {
            let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: suggestion.id) {
             ingredientRows[index].name = ingredient.name
             if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                ingredientRows[index].grams = "\(max(1, Int64(ingredient.sourceServingGrams.rounded())))"
+                ingredientRows[index].setAmount(fromGrams: max(1, Int64(ingredient.sourceServingGrams.rounded())))
             }
             return
         }
@@ -1200,21 +1320,17 @@ private struct BuildMealEditorView: View {
         ingredientRows[index].name = suggestion.title
         if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            let gramsMode = suggestion.portion?.gramsMode {
-            ingredientRows[index].grams = "\(gramsMode)"
+            ingredientRows[index].setAmount(fromGrams: gramsMode)
         }
     }
 
     private var ingredientSearchSeed: String {
-        ingredientRows
-            .map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .joined(separator: "|")
+        "\(focusedIngredientNameIndex.map(String.init) ?? "none")|\(activeIngredientQuery ?? "")"
     }
 
     @MainActor
     private func refreshBrokerFoodSearchForActiveIngredient() async {
-        guard let query = ingredientRows
-            .map({ $0.name.trimmingCharacters(in: .whitespacesAndNewlines) })
-            .last(where: { $0.count >= 2 }) else {
+        guard let query = activeIngredientQuery else {
             return
         }
         try? await Task.sleep(nanoseconds: 220_000_000)
@@ -1222,6 +1338,15 @@ private struct BuildMealEditorView: View {
             return
         }
         await store.searchBrokerFood(query: query)
+    }
+
+    private var activeIngredientQuery: String? {
+        guard let index = focusedIngredientNameIndex,
+              ingredientRows.indices.contains(index) else {
+            return nil
+        }
+        let query = ingredientRows[index].name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.count >= 2 ? query : nil
     }
 }
 
@@ -1892,12 +2017,37 @@ private struct IngredientBuilderRowView: View {
                     .focused(focusedIngredientNameIndex, equals: index)
                     .accessibilityIdentifier("IngredientNameField-\(index)")
 
-                TextField("g", text: $row.grams)
-                    #if os(iOS)
-                    .keyboardType(.numberPad)
-                    #endif
-                    .frame(width: 72)
-                    .accessibilityIdentifier("IngredientGramsField-\(index)")
+                HStack(spacing: 6) {
+                    TextField(row.unit.placeholder, text: $row.grams)
+                        #if os(iOS)
+                        .keyboardType(.decimalPad)
+                        #endif
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 64)
+                        .accessibilityIdentifier("IngredientGramsField-\(index)")
+
+                    Menu {
+                        ForEach(MealMarkAmountUnit.allCases) { unit in
+                            Button {
+                                row.convert(to: unit)
+                            } label: {
+                                if unit == row.unit {
+                                    Label(unit.shortLabel, systemImage: "checkmark")
+                                } else {
+                                    Text(unit.shortLabel)
+                                }
+                            }
+                        }
+                    } label: {
+                        Text(row.unit.shortLabel)
+                            .font(.caption.weight(.semibold))
+                            .frame(minWidth: 42, minHeight: 34)
+                            .foregroundStyle(.blue)
+                            .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .accessibilityLabel("Ingredient unit")
+                    .accessibilityIdentifier("IngredientUnitButton-\(index)")
+                }
             }
 
             if shouldShowSuggestions {
@@ -2026,6 +2176,7 @@ private struct SavedMealDetailView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
     @State private var isEditing = false
+    @State private var isConfirmingDelete = false
     var recipeID: String
     var onDraftReady: () -> Void
 
@@ -2055,10 +2206,7 @@ private struct SavedMealDetailView: View {
 
                     Section("Ingredients") {
                         ForEach(recipe.ingredients) { ingredient in
-                            LabeledContent(
-                                ingredient.label,
-                                value: "\(ingredient.grams) g • \(ingredient.kcal) kcal"
-                            )
+                            SavedMealIngredientRow(ingredient: ingredient)
                         }
                     }
 
@@ -2091,8 +2239,7 @@ private struct SavedMealDetailView: View {
                         .accessibilityIdentifier("EditSavedMealButton")
 
                         Button(role: .destructive) {
-                            _ = store.deleteSavedRecipe(id: recipe.id)
-                            dismiss()
+                            isConfirmingDelete = true
                         } label: {
                             Label("Delete recipe", systemImage: "trash")
                         }
@@ -2104,6 +2251,18 @@ private struct SavedMealDetailView: View {
                 .sheet(isPresented: $isEditing) {
                     SavedRecipeEditorView(recipe: recipe)
                 }
+                .alert(
+                    "Delete recipe?",
+                    isPresented: $isConfirmingDelete
+                ) {
+                    Button("Delete recipe", role: .destructive) {
+                        _ = store.deleteSavedRecipe(id: recipe.id)
+                        dismiss()
+                    }
+                    Button("Keep recipe", role: .cancel) {}
+                } message: {
+                    Text(deleteRecipeMessage(recipe))
+                }
             } else {
                 EmptyStateView(
                     title: "Saved meal not found",
@@ -2112,6 +2271,22 @@ private struct SavedMealDetailView: View {
                 )
             }
         }
+    }
+
+    private func deleteRecipeMessage(_ recipe: SavedFoodRecipe) -> String {
+        "This removes \(recipe.title) from saved meals. Logged history stays unchanged."
+    }
+}
+
+private struct SavedMealIngredientRow: View {
+    var ingredient: SavedFoodRecipeIngredient
+
+    var body: some View {
+        LabeledContent(ingredient.label, value: nutritionText)
+    }
+
+    private var nutritionText: String {
+        "\(ingredient.grams) g • \(ingredient.kcal) kcal"
     }
 }
 
@@ -2212,13 +2387,21 @@ private struct SavedRecipeEditorView: View {
                         IngredientBuilderRowView(
                             index: index,
                             row: $ingredientRows[index],
-                            suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 8),
+                            suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 12),
                             focusedIngredientNameIndex: $focusedIngredientNameIndex,
                             onSelectSuggestion: { suggestion in
+                                if suggestion.id.hasPrefix("food-search:"),
+                                   let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: suggestion.id) {
+                                    ingredientRows[index].name = ingredient.name
+                                    if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                        ingredientRows[index].setAmount(fromGrams: max(1, Int64(ingredient.sourceServingGrams.rounded())))
+                                    }
+                                    return
+                                }
                                 ingredientRows[index].name = suggestion.title
                                 if ingredientRows[index].grams.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                                    let gramsMode = suggestion.portion?.gramsMode {
-                                    ingredientRows[index].grams = "\(gramsMode)"
+                                    ingredientRows[index].setAmount(fromGrams: gramsMode)
                                 }
                             }
                         )
@@ -2243,6 +2426,9 @@ private struct SavedRecipeEditorView: View {
             }
             .mealMarkScrollDismissesKeyboard()
             .navigationTitle("Edit recipe")
+            .task(id: ingredientSearchSeed) {
+                await refreshBrokerFoodSearchForActiveIngredient()
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -2273,7 +2459,7 @@ private struct SavedRecipeEditorView: View {
         !mealTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             ingredientRows.contains { row in
                 !row.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-                    (Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) > 0
+                    (row.resolvedGrams ?? 0) > 0
             }
     }
 
@@ -2281,7 +2467,7 @@ private struct SavedRecipeEditorView: View {
         let inputs = ingredientRows.map { row in
             FoodMealIngredientInput(
                 name: row.name,
-                grams: Int64(row.grams.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+                grams: row.resolvedGrams ?? 0
             )
         }
         let result = store.updateSavedRecipe(id: recipeID, title: mealTitle, ingredients: inputs)
@@ -2297,6 +2483,31 @@ private struct SavedRecipeEditorView: View {
         case let .unknownIngredient(name):
             errorMessage = "Add nutrition for \(name) before saving this recipe."
         }
+    }
+
+    private var ingredientSearchSeed: String {
+        "\(focusedIngredientNameIndex.map(String.init) ?? "none")|\(activeIngredientQuery ?? "")"
+    }
+
+    @MainActor
+    private func refreshBrokerFoodSearchForActiveIngredient() async {
+        guard let query = activeIngredientQuery else {
+            return
+        }
+        try? await Task.sleep(nanoseconds: 220_000_000)
+        guard !Task.isCancelled else {
+            return
+        }
+        await store.searchBrokerFood(query: query)
+    }
+
+    private var activeIngredientQuery: String? {
+        guard let index = focusedIngredientNameIndex,
+              ingredientRows.indices.contains(index) else {
+            return nil
+        }
+        let query = ingredientRows[index].name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return query.count >= 2 ? query : nil
     }
 }
 
@@ -2314,6 +2525,7 @@ private struct QRCodePayloadCard: View {
 
                     #if os(iOS)
                     QRCodeImageView(payloadText: payloadText)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .accessibilityIdentifier("SavedMealQRCode")
 
                     if let imageURL = QRCodeRenderer.pngFileURL(payload: payloadText, title: title) {
@@ -2435,43 +2647,55 @@ private struct PersonalIngredientResolutionView: View {
                 .font(.subheadline.weight(.semibold))
                 .accessibilityIdentifier("PersonalIngredientNameLabel")
 
-            HStack(spacing: 10) {
-                TextField("serving g", text: $servingGrams)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                    .accessibilityIdentifier("PersonalIngredientServingGramsField")
-                TextField("kcal", text: $servingKcal)
-                    #if os(iOS)
-                    .keyboardType(.numberPad)
-                    #endif
-                    .accessibilityIdentifier("PersonalIngredientCaloriesField")
-            }
-
-            HStack(spacing: 10) {
-                TextField("protein", text: $proteinGrams)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                    .accessibilityIdentifier("PersonalIngredientProteinField")
-                TextField("carbs", text: $carbohydrateGrams)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                    .accessibilityIdentifier("PersonalIngredientCarbsField")
-            }
-
-            HStack(spacing: 10) {
-                TextField("fat", text: $fatGrams)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                    .accessibilityIdentifier("PersonalIngredientFatField")
-                TextField("fiber", text: $fiberGrams)
-                    #if os(iOS)
-                    .keyboardType(.decimalPad)
-                    #endif
-                    .accessibilityIdentifier("PersonalIngredientFiberField")
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 10),
+                    GridItem(.flexible(), spacing: 10),
+                ],
+                spacing: 10
+            ) {
+                PersonalIngredientInputField(
+                    title: "Serving",
+                    placeholder: "serving g",
+                    text: $servingGrams,
+                    keyboard: .decimal,
+                    accessibilityID: "PersonalIngredientServingGramsField"
+                )
+                PersonalIngredientInputField(
+                    title: "Calories",
+                    placeholder: "kcal",
+                    text: $servingKcal,
+                    keyboard: .number,
+                    accessibilityID: "PersonalIngredientCaloriesField"
+                )
+                PersonalIngredientInputField(
+                    title: "Protein",
+                    placeholder: "protein",
+                    text: $proteinGrams,
+                    keyboard: .decimal,
+                    accessibilityID: "PersonalIngredientProteinField"
+                )
+                PersonalIngredientInputField(
+                    title: "Carbs",
+                    placeholder: "carbs",
+                    text: $carbohydrateGrams,
+                    keyboard: .decimal,
+                    accessibilityID: "PersonalIngredientCarbsField"
+                )
+                PersonalIngredientInputField(
+                    title: "Fat",
+                    placeholder: "fat",
+                    text: $fatGrams,
+                    keyboard: .decimal,
+                    accessibilityID: "PersonalIngredientFatField"
+                )
+                PersonalIngredientInputField(
+                    title: "Fiber",
+                    placeholder: "fiber",
+                    text: $fiberGrams,
+                    keyboard: .decimal,
+                    accessibilityID: "PersonalIngredientFiberField"
+                )
             }
 
             if let errorMessage {
@@ -2488,6 +2712,43 @@ private struct PersonalIngredientResolutionView: View {
             .accessibilityIdentifier("SavePersonalIngredientButton")
         }
         .padding(.vertical, 6)
+    }
+}
+
+private struct PersonalIngredientInputField: View {
+    enum Keyboard {
+        case decimal
+        case number
+    }
+
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboard: Keyboard
+    let accessibilityID: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            TextField(placeholder, text: $text)
+                .font(.body.monospacedDigit())
+                .textFieldStyle(.plain)
+                #if os(iOS)
+                .keyboardType(keyboard == .number ? .numberPad : .decimalPad)
+                #endif
+                .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
+                )
+                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .accessibilityIdentifier(accessibilityID)
+        }
     }
 }
 
@@ -2782,10 +3043,12 @@ private struct AnalysisBlockedCard: View {
 private struct DraftReviewView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @State private var portionGramsText = ""
+    @State private var portionUnit: MealMarkAmountUnit = .grams
     var onSaved: () -> Void = {}
 
     var body: some View {
-        if let candidate = store.currentCandidate {
+        if let storedCandidate = store.currentCandidate {
+            let candidate = previewCandidate(for: storedCandidate)
             let trustStatus = store.currentDraft?.trustStatus ?? .estimated
             VStack(alignment: .leading, spacing: 16) {
                 ViewThatFits(in: .horizontal) {
@@ -2812,6 +3075,7 @@ private struct DraftReviewView: View {
                 PortionControlsView(
                     candidate: candidate,
                     gramsText: $portionGramsText,
+                    unit: $portionUnit,
                     onCommit: commitPortion
                 )
 
@@ -2828,13 +3092,13 @@ private struct DraftReviewView: View {
             .padding(18)
             .mealMarkGlassSurface(cornerRadius: 30, tint: Color.secondary.opacity(0.035), isInteractive: false)
             .onAppear {
-                resetPortionText(with: candidate)
+                resetPortionText(with: storedCandidate)
             }
-            .onChange(of: candidate.id) { _ in
-                resetPortionText(with: candidate)
+            .onChange(of: storedCandidate.id) { _ in
+                resetPortionText(with: storedCandidate)
             }
-            .onChange(of: candidate.portion.gramsMode) { gramsMode in
-                portionGramsText = "\(gramsMode)"
+            .onChange(of: storedCandidate.portion.gramsMode) { gramsMode in
+                portionGramsText = portionUnit.displayText(fromGrams: gramsMode)
             }
         }
     }
@@ -2843,19 +3107,25 @@ private struct DraftReviewView: View {
         guard let candidate = store.currentCandidate else {
             return
         }
-        let digits = Self.digitsOnly(portionGramsText)
-        guard let grams = Int64(digits), grams > 0 else {
-            portionGramsText = "\(candidate.portion.gramsMode)"
+        guard let grams = portionUnit.grams(from: portionGramsText), grams > 0 else {
+            portionGramsText = portionUnit.displayText(fromGrams: candidate.portion.gramsMode)
             return
         }
         if grams != candidate.portion.gramsMode {
             _ = store.updateCurrentDraftPortion(gramsMode: grams)
         }
-        portionGramsText = "\(grams)"
+        portionGramsText = portionUnit.displayText(fromGrams: grams)
+    }
+
+    private func previewCandidate(for candidate: FoodAnalysisCandidate) -> FoodAnalysisCandidate {
+        guard let grams = portionUnit.grams(from: portionGramsText), grams > 0, grams != candidate.portion.gramsMode else {
+            return candidate
+        }
+        return candidate.scaled(toGrams: grams)
     }
 
     private func resetPortionText(with candidate: FoodAnalysisCandidate) {
-        portionGramsText = "\(candidate.portion.gramsMode)"
+        portionGramsText = portionUnit.displayText(fromGrams: candidate.portion.gramsMode)
     }
 
     private func draftTitle(candidate: FoodAnalysisCandidate) -> some View {
@@ -2876,9 +3146,6 @@ private struct DraftReviewView: View {
         }
     }
 
-    private static func digitsOnly(_ text: String) -> String {
-        String(text.filter(\.isNumber))
-    }
 }
 
 private struct NutritionOverviewView: View {
@@ -2968,7 +3235,7 @@ private struct DraftActionBar: View {
             .accessibilityIdentifier("DiscardDraftButton")
 
             Button(action: onSave) {
-                Label("Save", systemImage: "checkmark.circle.fill")
+                Label("Add to today", systemImage: "checkmark.circle.fill")
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -2984,10 +3251,10 @@ private struct DraftActionBar: View {
 }
 
 private struct PortionControlsView: View {
-    @EnvironmentObject private var store: FoodWalletStore
     @FocusState private var isGramsFieldFocused: Bool
     var candidate: FoodAnalysisCandidate
     @Binding var gramsText: String
+    @Binding var unit: MealMarkAmountUnit
     var onCommit: () -> Void
 
     var body: some View {
@@ -2996,10 +3263,18 @@ private struct PortionControlsView: View {
                 Text("Portion")
                     .font(.headline)
                 Spacer()
-                Text("grams eaten")
+                Text("\(unit.fieldLabel) eaten")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
             }
+
+            Picker("Portion unit", selection: $unit) {
+                ForEach(MealMarkAmountUnit.allCases) { unit in
+                    Text(unit.shortLabel).tag(unit)
+                }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("PortionUnitPicker")
 
             HStack(alignment: .center, spacing: 12) {
                 portionButton(
@@ -3020,20 +3295,6 @@ private struct PortionControlsView: View {
                     update(to: candidate.portion.gramsMode + 25)
                 }
             }
-
-            Button {
-                commitAndDismiss()
-            } label: {
-                Label("Apply grams", systemImage: "checkmark")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity, minHeight: 48)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-            }
-            .buttonStyle(.bordered)
-            .tint(.green)
-            .controlSize(.large)
-            .accessibilityIdentifier("ApplyPortionGramsButton")
         }
         .padding(13)
         .mealMarkGlassSurface(cornerRadius: 22, tint: Color.secondary.opacity(0.045), isInteractive: false)
@@ -3048,11 +3309,14 @@ private struct PortionControlsView: View {
             }
         }
         .onChange(of: isGramsFieldFocused) { isFocused in
-            if isFocused && gramsText == "\(candidate.portion.gramsMode)" {
+            if isFocused && gramsText == unit.displayText(fromGrams: candidate.portion.gramsMode) {
                 gramsText = ""
             } else if !isFocused {
                 onCommit()
             }
+        }
+        .onChange(of: unit) { newUnit in
+            gramsText = newUnit.displayText(fromGrams: candidate.portion.gramsMode)
         }
     }
 
@@ -3060,17 +3324,17 @@ private struct PortionControlsView: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             TextField("0", text: gramsBinding)
                 #if os(iOS)
-                .keyboardType(.numberPad)
+                .keyboardType(.decimalPad)
                 #endif
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .multilineTextAlignment(.trailing)
                 .frame(minWidth: 80, maxWidth: 126)
                 .focused($isGramsFieldFocused)
-                .accessibilityLabel("Portion grams")
+                .accessibilityLabel("Portion \(unit.fieldLabel)")
                 .accessibilityIdentifier("PortionGramsField")
                 .onSubmit(onCommit)
 
-            Text("g")
+            Text(unit.shortLabel)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
@@ -3101,13 +3365,26 @@ private struct PortionControlsView: View {
         Binding {
             gramsText
         } set: { newValue in
-            gramsText = String(newValue.filter(\.isNumber))
+            gramsText = sanitizedAmount(newValue)
         }
     }
 
     private func update(to grams: Int64) {
-        _ = store.updateCurrentDraftPortion(gramsMode: grams)
-        gramsText = "\(grams)"
+        gramsText = unit.displayText(fromGrams: grams)
+    }
+
+    private func sanitizedAmount(_ value: String) -> String {
+        var output = ""
+        var hasDecimalSeparator = false
+        for character in value {
+            if character.isNumber {
+                output.append(character)
+            } else if (character == "." || character == ","), !hasDecimalSeparator {
+                output.append(".")
+                hasDecimalSeparator = true
+            }
+        }
+        return output
     }
 
     private func portionButton(
@@ -3120,7 +3397,7 @@ private struct PortionControlsView: View {
             Image(systemName: symbol)
                 .font(.title3.weight(.bold))
                 .frame(width: 50, height: 50)
-                .mealMarkGlassSurface(cornerRadius: 17, tint: Color.green.opacity(0.1), isInteractive: true)
+                .background(Color.green.opacity(0.12), in: RoundedRectangle(cornerRadius: 17, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

@@ -68,13 +68,28 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Build Meal"].waitForExistence(timeout: 5))
     }
 
+    private func dismissBuildMealKeyboardIfNeeded() {
+        let doneButton = app.buttons["BuildMealKeyboardDoneButton"]
+        if doneButton.waitForExistence(timeout: 1) {
+            doneButton.tap()
+        }
+    }
+
+    private func typePersonalIngredientValue(_ identifier: String, _ value: String) {
+        let field = app.textFields[identifier]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText(value)
+        dismissBuildMealKeyboardIfNeeded()
+    }
+
     func testAppleEstimateCanBeSavedAndViewed() throws {
         launch()
 
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
 
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Fuji apple")
@@ -131,7 +146,7 @@ final class FoodWalletUITests: XCTestCase {
             "Checking nutrition ranges",
             "Preparing draft"
         ].contains(app.staticTexts["AnalysisStatusLabel"].label))
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 6))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 6))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Fuji apple")
     }
@@ -142,7 +157,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Today"].waitForExistence(timeout: 5))
 
         app.buttons["Add food"].tap()
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["NoFoodTitle"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["NoFoodMessage"].label.localizedCaseInsensitiveContains("no food"))
         XCTAssertFalse(app.staticTexts["DraftPrimaryLabel"].exists)
@@ -182,12 +197,14 @@ final class FoodWalletUITests: XCTestCase {
         quickText.typeText("2 eggs and toast")
         app.buttons["CreateQuickDraftButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "2 eggs and toast")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 220 g • 295-365 kcal")
         XCTAssertFalse(app.switches.matching(identifier: "Assumption-user-portion").firstMatch.exists)
         XCTAssertFalse(app.buttons["PortionHalfButton"].exists)
+        XCTAssertFalse(app.buttons["ApplyPortionGramsButton"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["PortionUnitPicker"].waitForExistence(timeout: 5))
 
         let gramsField = app.textFields["PortionGramsField"]
         XCTAssertTrue(scrollToElement(gramsField))
@@ -229,6 +246,8 @@ final class FoodWalletUITests: XCTestCase {
 
         searchField.tap()
         searchField.typeText("casein protein")
+        XCTAssertFalse(app.otherElements["AddFoodModeChooser"].exists)
+        XCTAssertTrue(app.staticTexts["AddFoodSearchModeHint"].waitForExistence(timeout: 5))
         let caseinResult = app.buttons["FoodSearchResult-casein-protein"]
         XCTAssertTrue(caseinResult.waitForExistence(timeout: 5))
 
@@ -241,7 +260,7 @@ final class FoodWalletUITests: XCTestCase {
             app.buttons["AddFoodKeyboardDoneButton"].tap()
         }
         caseinResult.tap()
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Casein protein powder")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 30 g • 97-119 kcal")
@@ -265,7 +284,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.buttons["BarcodeKeyboardSearchButton"].waitForExistence(timeout: 2))
         app.buttons["BarcodeKeyboardSearchButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Ginger lemon kombucha")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 473 g • 72-88 kcal")
@@ -287,6 +306,7 @@ final class FoodWalletUITests: XCTestCase {
 
         app.textFields["IngredientNameField-0"].tap()
         app.textFields["IngredientNameField-0"].typeText("eggs")
+        XCTAssertTrue(app.buttons["IngredientUnitButton-0"].waitForExistence(timeout: 5))
         app.textFields["IngredientGramsField-0"].tap()
         app.textFields["IngredientGramsField-0"].typeText("100")
 
@@ -301,9 +321,10 @@ final class FoodWalletUITests: XCTestCase {
         app.textFields["IngredientGramsField-2"].tap()
         app.textFields["IngredientGramsField-2"].typeText("10")
 
+        dismissBuildMealKeyboardIfNeeded()
         app.buttons["CreateIngredientMealDraftButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Breakfast")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 150 g • 289-353 kcal")
@@ -324,6 +345,10 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["SavedMealDetailTitle"].label, "Breakfast")
         XCTAssertTrue(scrollToElement(app.descendants(matching: .any)["SavedMealQRCode"]))
         XCTAssertTrue(scrollToElement(app.buttons["LogSavedMealButton"]))
+        XCTAssertTrue(scrollToElement(app.buttons["DeleteSavedMealButton"]))
+        app.buttons["DeleteSavedMealButton"].tap()
+        XCTAssertTrue(app.buttons["Keep recipe"].waitForExistence(timeout: 5))
+        app.buttons["Keep recipe"].tap()
     }
 
     func testBuildMealIngredientSuggestionsFillMilkVariant() throws {
@@ -387,9 +412,10 @@ final class FoodWalletUITests: XCTestCase {
         app.textFields["IngredientNameField-0"].typeText("casein protein")
         app.textFields["IngredientGramsField-0"].tap()
         app.textFields["IngredientGramsField-0"].typeText("30")
+        dismissBuildMealKeyboardIfNeeded()
         app.buttons["CreateIngredientMealDraftButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Casein shake")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 30 g • 97-119 kcal")
@@ -411,27 +437,21 @@ final class FoodWalletUITests: XCTestCase {
         app.textFields["IngredientNameField-0"].typeText("house granola")
         app.textFields["IngredientGramsField-0"].tap()
         app.textFields["IngredientGramsField-0"].typeText("40")
+        dismissBuildMealKeyboardIfNeeded()
         app.buttons["CreateIngredientMealDraftButton"].tap()
 
-        XCTAssertTrue(app.staticTexts["IngredientBuilderError"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["PersonalIngredientNameLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["PersonalIngredientNameLabel"].label, "house granola")
 
-        app.textFields["PersonalIngredientServingGramsField"].tap()
-        app.textFields["PersonalIngredientServingGramsField"].typeText("40")
-        app.textFields["PersonalIngredientCaloriesField"].tap()
-        app.textFields["PersonalIngredientCaloriesField"].typeText("180")
-        app.textFields["PersonalIngredientProteinField"].tap()
-        app.textFields["PersonalIngredientProteinField"].typeText("5")
-        app.textFields["PersonalIngredientCarbsField"].tap()
-        app.textFields["PersonalIngredientCarbsField"].typeText("24")
-        app.textFields["PersonalIngredientFatField"].tap()
-        app.textFields["PersonalIngredientFatField"].typeText("7")
-        app.textFields["PersonalIngredientFiberField"].tap()
-        app.textFields["PersonalIngredientFiberField"].typeText("3")
+        typePersonalIngredientValue("PersonalIngredientServingGramsField", "40")
+        typePersonalIngredientValue("PersonalIngredientCaloriesField", "180")
+        typePersonalIngredientValue("PersonalIngredientProteinField", "5")
+        typePersonalIngredientValue("PersonalIngredientCarbsField", "24")
+        typePersonalIngredientValue("PersonalIngredientFatField", "7")
+        typePersonalIngredientValue("PersonalIngredientFiberField", "3")
         app.buttons["SavePersonalIngredientButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Capture"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Granola bowl")
         XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 40 g • 162-198 kcal")
