@@ -273,7 +273,10 @@ public struct BrokerFoodSearchResult: Decodable, Equatable, Sendable {
     }
 
     private var varianceKcal: Int64 {
-        max(1, Int64((Double(modeKcal) * 0.10).rounded()))
+        if match.type == .barcode {
+            return 0
+        }
+        return max(1, Int64((Double(modeKcal) * 0.10).rounded()))
     }
 
     private var portionEstimate: PortionEstimate {

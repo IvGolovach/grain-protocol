@@ -635,7 +635,14 @@ struct FoodWalletCoreTests {
         try expect(store.currentDraft?.trustStatus == .estimated, "expected estimated trust")
         try expect(store.currentDraft?.meal.amountGrams == 473, "expected bottle grams")
         try expect(store.currentDraft?.meal.kcal == 80, "expected serving kcal from per-100g data")
+        try expect(store.currentCandidate?.nutrition.minKcal == 80, "expected barcode nutrition to be exact")
+        try expect(store.currentCandidate?.nutrition.maxKcal == 80, "expected barcode nutrition to be exact")
+        try expect(store.currentDraft?.meal.varianceKcal == 0, "expected exact barcode calories to avoid artificial range")
         try expect(store.currentCandidate?.primarySourceLabel() == "Barcode match", "expected barcode provenance")
+
+        store.confirmDraft()
+
+        try expect(store.todayNutritionSummary.kcalRangeLabel == "80 kcal", "expected exact barcode total, got \(store.todayNutritionSummary.kcalRangeLabel)")
     }
 
     private static func testBrokerNameSearchDoesNotClaimBarcodeAssumption() throws {

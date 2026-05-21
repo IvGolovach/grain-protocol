@@ -55,7 +55,10 @@ public struct NutritionRange: Codable, Equatable, Sendable {
     }
 
     public var label: String {
-        "\(minKcal)-\(maxKcal) kcal"
+        if minKcal == maxKcal {
+            return "\(modeKcal) kcal"
+        }
+        return "\(minKcal)-\(maxKcal) kcal"
     }
 }
 
