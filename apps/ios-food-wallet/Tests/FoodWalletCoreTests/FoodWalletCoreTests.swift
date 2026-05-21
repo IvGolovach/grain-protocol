@@ -66,6 +66,9 @@ struct FoodWalletCoreTests {
         await run("storeCreatesReviewableDraftFromBrokerBarcodeSearch") {
             try await testStoreCreatesReviewableDraftFromBrokerBarcodeSearch()
         }
+        await run("todaySummaryPrimaryLabelUsesLoggedCalories") {
+            try testTodaySummaryPrimaryLabelUsesLoggedCalories()
+        }
         await run("brokerNameSearchDoesNotClaimBarcodeAssumption") {
             try testBrokerNameSearchDoesNotClaimBarcodeAssumption()
         }
@@ -652,6 +655,33 @@ struct FoodWalletCoreTests {
         try expect(!candidate.assumptions.contains { $0.id == "barcode-match" }, "expected name search not to claim barcode")
         try expect(candidate.assumptions.contains { $0.id == "provider-name-match" }, "expected provider name provenance")
         try expect(candidate.primarySourceLabel() == "USDA estimate", "expected name search to keep USDA source label")
+    }
+
+    private static func testTodaySummaryPrimaryLabelUsesLoggedCalories() throws {
+        let entry = FoodIntakeEntry(
+            entryID: "food-entry-test",
+            draftID: "food-draft-test",
+            meal: MealEstimate(
+                label: "Ranch tortilla style protein chips",
+                kcal: 140,
+                varianceKcal: 14,
+                amountGrams: 32,
+                macronutrients: MealMacronutrients(
+                    proteinGrams: 19,
+                    carbohydrateGrams: 5,
+                    fatGrams: 4.5,
+                    fiberGrams: nil
+                )
+            ),
+            sourceClass: .estimated,
+            trustStatus: .estimated,
+            confirmedAt: Date(),
+            dateKey: "2026-05-21"
+        )
+        let summary = FoodWalletDailyNutritionSummary(entries: [entry])
+
+        try expect(summary.kcalTotalLabel == "140 kcal", "expected primary total to show logged kcal")
+        try expect(summary.kcalRangeLabel == "126-154 kcal", "expected range to remain available separately")
     }
 
     @MainActor

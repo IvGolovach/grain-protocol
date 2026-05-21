@@ -487,7 +487,7 @@ private struct TodaySummaryCard: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            Text(summary.kcalRangeLabel)
+            Text(summary.kcalTotalLabel)
                 .font(.system(size: 38, weight: .bold, design: .rounded))
                 .accessibilityIdentifier("TodayCaloriesSummary")
 

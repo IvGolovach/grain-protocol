@@ -94,6 +94,13 @@ public struct FoodWalletDailyNutritionSummary: Equatable, Sendable {
         return "\(max(0, kcal - varianceKcal))-\(kcal + varianceKcal) kcal"
     }
 
+    public var kcalTotalLabel: String {
+        guard entryCount > 0 else {
+            return "0 kcal"
+        }
+        return "\(kcal) kcal"
+    }
+
     public var macroLabel: String {
         "P \(Self.format(proteinGrams))g • C \(Self.format(carbohydrateGrams))g • F \(Self.format(fatGrams))g"
     }
