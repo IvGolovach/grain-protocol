@@ -1,9 +1,10 @@
 # MealMark Food Analysis Broker
 
 This service is the server-side boundary for MealMark photo analysis and food
-lookup. It owns OpenAI and nutrition-provider credentials, enforces account or
-development auth, and returns reviewable drafts only. Raw meal photos must never
-be persisted or logged.
+lookup. It owns OpenAI and nutrition-provider credentials, enforces auth for
+photo analysis, and returns reviewable drafts only. Food search can be exposed
+as anonymous read-only traffic when `MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH=1`.
+Raw meal photos must never be persisted or logged.
 
 ## Local Node Adapter
 
@@ -49,6 +50,8 @@ wrangler deploy --env production
 Required production posture:
 
 - `MEALMARK_AUTH_MODE=session`;
+- `MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH=1` if pre-account ingredient lookup
+  should work in the app;
 - `MEALMARK_SESSION_HMAC_SECRET` set as a Cloudflare secret;
 - `OPENAI_API_KEY` set as a Cloudflare secret;
 - `FOODDATA_CENTRAL_API_KEY` set as a Cloudflare secret;

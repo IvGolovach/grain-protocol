@@ -51,6 +51,7 @@ export class D1UsageLimiter implements UsageLimiter {
     const resetAtMs = startOfNextUtcMonth();
     const limit = monthlyLimit(input.auth.tier, input.feature);
     const nowMs = Date.now();
+    await this.ensureAccount(input.auth.accountId, nowMs);
     const row = await this.database
       .prepare(`
         INSERT INTO usage_buckets (account_id, feature, bucket_start_ms, used, limit_value, updated_at_ms)
@@ -71,6 +72,20 @@ export class D1UsageLimiter implements UsageLimiter {
       used,
       resetAtMs
     };
+  }
+
+  private async ensureAccount(accountId: string, nowMs: number): Promise<void> {
+    await this.database
+      .prepare(`
+        INSERT INTO accounts (account_id, created_at_ms, updated_at_ms, status)
+        VALUES (?1, ?2, ?2, 'active')
+        ON CONFLICT(account_id)
+        DO UPDATE SET
+          updated_at_ms = excluded.updated_at_ms
+        RETURNING account_id
+      `)
+      .bind(accountId, nowMs)
+      .first<{ account_id: string }>();
   }
 }
 

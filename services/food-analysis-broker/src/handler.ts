@@ -37,7 +37,9 @@ async function routeBrokerRequest(
     throw new BrokerError(400, "BAD_REQUEST", "content-type must be application/json");
   }
 
-  const auth = await authenticateBrokerRequest(request, dependencies.auth);
+  const auth = await authenticateBrokerRequest(request, dependencies.auth, {
+    allowAnonymous: url.pathname === "/v1/food/search" && dependencies.auth.allowAnonymousFoodSearch === true
+  });
   const parsed = await readJsonBody(request, dependencies.maxBodyBytes);
 
   if (url.pathname === "/v1/food/search") {

@@ -5,6 +5,7 @@ export type BrokerAuthMode = "anonymous" | "dev_bearer" | "session";
 
 export type BrokerAuthConfig = {
   mode: BrokerAuthMode;
+  allowAnonymousFoodSearch?: boolean;
   devBearerToken?: string;
   sessionHmacSecret?: string;
 };
@@ -25,13 +26,20 @@ export type SessionTokenPayload = {
   exp_ms: number;
 };
 
-export async function authenticateBrokerRequest(request: Request, config: BrokerAuthConfig): Promise<BrokerAuthContext> {
+export async function authenticateBrokerRequest(
+  request: Request,
+  config: BrokerAuthConfig,
+  options: { allowAnonymous?: boolean } = {}
+): Promise<BrokerAuthContext> {
   if (config.mode === "anonymous") {
-    return { mode: "anonymous", accountId: "anonymous", tier: "free" };
+    return await anonymousBrokerAuthContext(request);
   }
 
   const bearerToken = bearerTokenFrom(request.headers.get("authorization"));
   if (!bearerToken) {
+    if (options.allowAnonymous) {
+      return await anonymousBrokerAuthContext(request);
+    }
     throw new BrokerError(401, "UNAUTHORIZED", "authorization bearer token is required");
   }
 
@@ -49,6 +57,19 @@ export async function authenticateBrokerRequest(request: Request, config: Broker
     ...(payload.device_id ? { deviceId: payload.device_id } : {}),
     tier: payload.tier ?? "free"
   };
+}
+
+async function anonymousBrokerAuthContext(request: Request): Promise<BrokerAuthContext> {
+  const fingerprint = anonymousFingerprint(request);
+  const digest = (await sha256Hex(fingerprint)).slice(0, 16);
+  return { mode: "anonymous", accountId: `anonymous:${digest}`, tier: "free" };
+}
+
+function anonymousFingerprint(request: Request): string {
+  const forwardedFor = request.headers.get("cf-connecting-ip") ??
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const userAgent = request.headers.get("user-agent") ?? "";
+  return `${forwardedFor || "unknown"}\n${userAgent}`;
 }
 
 export async function createSignedSessionToken(payload: SessionTokenPayload, secret: string): Promise<string> {

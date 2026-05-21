@@ -101,10 +101,13 @@ private enum FoodWalletAppConfiguration {
         else {
             return UnavailableFoodAnalysisClient()
         }
+        guard let brokerToken = configuredBrokerToken() else {
+            return UnavailableFoodAnalysisClient()
+        }
 
         return FoodAnalysisBrokerClient(
             endpoint: analysisEndpoint(from: endpoint),
-            bearerToken: configuredBrokerToken()
+            bearerToken: brokerToken
         )
     }
 

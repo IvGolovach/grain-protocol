@@ -202,6 +202,10 @@ GRAIN_FOOD_BROKER_DEV_TOKEN=<same-dev-token> \
 scripts/sdk/run_ios_food_wallet_device.sh
 ```
 
+By default, the device lane points search at the MealMark staging HTTPS broker.
+Override `GRAIN_FOOD_ANALYSIS_BROKER_URL` for a local broker or another
+environment.
+
 `GRAIN_FOOD_BROKER_DEV_TOKEN` is a local device-run environment override only.
 It is intentionally not present in `Info.plist`, so App Store/TestFlight builds
 cannot accidentally ship a development broker token.

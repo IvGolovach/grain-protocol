@@ -42,6 +42,7 @@ export function authConfigFromEnv(env: RuntimeEnv, overrides: Partial<BrokerAuth
   const mode = overrides.mode ?? authModeFromEnv(env, devBearerToken);
   return {
     mode,
+    ...(env.MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH === "1" ? { allowAnonymousFoodSearch: true } : {}),
     ...(devBearerToken ? { devBearerToken } : {}),
     ...(normalized(env.MEALMARK_SESSION_HMAC_SECRET) ? { sessionHmacSecret: normalized(env.MEALMARK_SESSION_HMAC_SECRET)! } : {}),
     ...overrides

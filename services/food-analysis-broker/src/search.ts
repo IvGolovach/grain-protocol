@@ -171,18 +171,6 @@ export class CompositeFoodSearchProvider implements FoodSearchProvider {
   }
 }
 
-export class MissingUsdaFoodDataCentralProvider implements FoodSearchProvider {
-  async search(request: FoodSearchRequest): Promise<FoodSearchResult[]> {
-    const query = cleanText(request.query);
-    if (!query || normalizeBarcode(query)) return [];
-    throw new BrokerError(
-      503,
-      "UPSTREAM_ERROR",
-      "USDA FoodData Central search is not configured; set FDC_API_KEY, USDA_API_KEY, or FOODDATA_CENTRAL_API_KEY"
-    );
-  }
-}
-
 export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
   private readonly baseUrl: string;
   private readonly userAgent: string;
@@ -219,10 +207,60 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
         "Open Food Facts response was not valid JSON"
       );
       if (body.status !== 1 || !body.product) continue;
-      const result = openFoodFactsResult(barcode, body.product);
+      const result = openFoodFactsResult({
+        providerID: cleanText(body.product.code) ?? barcode,
+        product: body.product,
+        matchType: "barcode",
+        matchScore: 1,
+        trustLabel: "barcode_provider"
+      });
       if (result) return [result];
     }
-    return [];
+
+    const query = cleanText(request.query);
+    if (!query || normalizeBarcode(query)) {
+      return [];
+    }
+
+    const url = new URL("/cgi/search.pl", this.baseUrl);
+    url.searchParams.set("search_terms", query);
+    url.searchParams.set("search_simple", "1");
+    url.searchParams.set("action", "process");
+    url.searchParams.set("json", "1");
+    url.searchParams.set("page_size", String(openFoodFactsSearchPageSize(request.limit)));
+    url.searchParams.set("sort_by", "unique_scans_n");
+    url.searchParams.set("lc", request.locale ?? "en");
+    url.searchParams.set("fields", OPEN_FOOD_FACTS_FIELDS);
+    const response = await fetchWithTimeout(this.fetchFn, url, {
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": this.userAgent
+      }
+    }, this.timeoutMs);
+    if (!response.ok) return [];
+
+    const body = await readJsonResponse<OpenFoodFactsSearchResponse>(
+      response,
+      "Open Food Facts search response was not valid JSON"
+    );
+    const products = Array.isArray(body.products) ? body.products : [];
+    return products
+      .map((product) => {
+        const providerID = cleanText(product.code);
+        if (!providerID) return null;
+        const matchScore = scoreOpenFoodFactsTextMatch(query, product);
+        if (matchScore === 0) return null;
+        return openFoodFactsResult({
+          providerID,
+          product,
+          matchType: "name",
+          matchScore,
+          trustLabel: "provider_estimate"
+        });
+      })
+      .filter((result): result is FoodSearchResult => result !== null)
+      .sort((left, right) => right.match.score - left.match.score || left.primary_label.localeCompare(right.primary_label))
+      .slice(0, clampLimit(request.limit));
   }
 }
 
@@ -374,8 +412,6 @@ export function foodSearchProviderFromEnv(env: RuntimeEnv = {}): FoodSearchProvi
         baseUrl: env.USDA_FDC_BASE_URL,
         timeoutMs
       }));
-    } else {
-      providers.push(new MissingUsdaFoodDataCentralProvider());
     }
   }
   if (fixturesEnabled) {
@@ -456,7 +492,20 @@ type OpenFoodFactsResponse = {
   };
 };
 
-function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFactsResponse["product"]>): FoodSearchResult | null {
+type OpenFoodFactsProduct = NonNullable<OpenFoodFactsResponse["product"]>;
+
+type OpenFoodFactsSearchResponse = {
+  products?: OpenFoodFactsProduct[];
+};
+
+function openFoodFactsResult(input: {
+  providerID: string;
+  product: OpenFoodFactsProduct;
+  matchType: FoodSearchMatchType;
+  matchScore: number;
+  trustLabel: FoodSearchTrustLabel;
+}): FoodSearchResult | null {
+  const { providerID, product, matchType, matchScore, trustLabel } = input;
   const productName = cleanText(product.product_name) ?? cleanText(product.generic_name);
   const nutriments = product.nutriments ?? {};
   const servingSizeG = numeric(product.serving_quantity) ?? servingGramsFromLabel(product.serving_size);
@@ -486,16 +535,16 @@ function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFacts
   })) return null;
 
   return {
-    result_id: `food-search:open-food-facts:${barcode}`,
+    result_id: `food-search:open-food-facts:${providerID}`,
     primary_label: productName,
     generic_label: cleanText(product.generic_name) ?? productName.toLowerCase(),
     brand_label: cleanText(product.brands),
     category,
     source_label: "open_food_facts",
-    trust_label: "barcode_provider",
+    trust_label: trustLabel,
     match: {
-      type: "barcode",
-      score: 1
+      type: matchType,
+      score: matchScore
     },
     serving: {
       basis: "per_100g",
@@ -508,11 +557,11 @@ function openFoodFactsResult(barcode: string, product: NonNullable<OpenFoodFacts
     provider_evidence: [
       {
         provider: "open_food_facts",
-        provider_id: product.code ?? barcode,
+        provider_id: providerID,
         matched_name: productName,
-        match_type: "barcode",
+        match_type: matchType,
         source_label: "open_food_facts_product",
-        trust_label: "barcode_provider"
+        trust_label: trustLabel
       }
     ],
     user_confirmation_required: true
@@ -665,6 +714,10 @@ function clampLimit(value: number | undefined): number {
   return Math.min(MAX_LIMIT, Math.max(1, value));
 }
 
+function openFoodFactsSearchPageSize(value: number | undefined): number {
+  return Math.max(12, clampLimit(value));
+}
+
 function normalizeBarcode(value: string | undefined): string {
   if (!value) return "";
   const normalized = value.replace(/[^\d]/gu, "");
@@ -751,6 +804,30 @@ function titleCaseFoodLabel(value: string): string {
     .map((part) => /^[a-z]/u.test(part) ? part[0].toUpperCase() + part.slice(1) : part)
     .join("")
     .replace(/\s*,\s*/gu, ", ");
+}
+
+function scoreOpenFoodFactsTextMatch(query: string, product: OpenFoodFactsProduct): number {
+  const queryTerms = tokenize(query);
+  if (queryTerms.length === 0) return 0;
+
+  let score = 0;
+  for (const label of [product.product_name, product.generic_name, product.brands]) {
+    const cleaned = cleanText(label);
+    if (!cleaned) continue;
+    const labelTerms = tokenize(cleaned);
+    if (labelTerms.length === 0) continue;
+    const matched = queryTerms.filter((term) => labelTerms.includes(term)).length;
+    if (matched === 0) continue;
+    if (queryTerms.length > 1 && matched < queryTerms.length) continue;
+    const normalizedLabel = labelTerms.join(" ");
+    const normalizedQuery = queryTerms.join(" ");
+    const exactBoost = normalizedLabel === normalizedQuery ? 0.12 : 0;
+    const prefixBoost = normalizedLabel.startsWith(normalizedQuery) ? 0.06 : 0;
+    score = Math.max(score, matched / queryTerms.length + exactBoost + prefixBoost);
+  }
+
+  if (score < 0.72) return 0;
+  return roundScore(Math.min(0.97, score));
 }
 
 function scoreUsdaGenericMatch(query: string, label: string): number {

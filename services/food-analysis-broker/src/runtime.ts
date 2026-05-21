@@ -11,6 +11,7 @@ export type RuntimeEnv = {
   FOOD_SEARCH_TIMEOUT_MS?: string;
   FOODDATA_CENTRAL_API_KEY?: string;
   MEALMARK_AUTH_MODE?: string;
+  MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH?: string;
   MEALMARK_SESSION_HMAC_SECRET?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;

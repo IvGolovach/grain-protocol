@@ -60,6 +60,7 @@ async function main(): Promise<number> {
   await testOpenFoodFactsBarcodeProviderPrefersServingNutritionWhenPer100gDisagrees();
   await testOpenFoodFactsBarcodeProviderRejectsImplausibleCreamCheeseNutrition();
   await testOpenFoodFactsBarcodeProviderAcceptsPlausibleCreamCheeseNutrition();
+  await testOpenFoodFactsTextSearchProvider();
   await testUsdaBrandedBarcodeProvider();
   await testUsdaBrandedBarcodeProviderUsesSearchResultWhenDetailsFail();
   await testUsdaBrandedBarcodeProviderMatchesCanonicalCandidates();
@@ -71,12 +72,13 @@ async function main(): Promise<number> {
   await testUsdaGenericFoodSearchProviderRanksIngredientResults();
   await testCompositeFoodSearchProviderRanksBarcodeSourceFidelity();
   await testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault();
-  await testFoodSearchProviderFromEnvRequiresUsdaForTextSearch();
+  await testFoodSearchProviderFromEnvUsesOpenFoodFactsForTextSearchWithoutUsda();
   await testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested();
   await testNutritionProviderFromEnvKeepsFixturesExplicit();
   await testCompositeFoodSearchProviderFallsBackAfterProviderFailure();
   await testBrokerAuthRejectsMissingBearerBeforeBody();
   await testFetchHandlerAcceptsSignedSessionToken();
+  await testFetchHandlerAllowsAnonymousFoodSearchWhenConfigured();
   await testFetchHandlerEnforcesUsageLimiter();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
@@ -466,6 +468,70 @@ async function testOpenFoodFactsBarcodeProviderAcceptsPlausibleCreamCheeseNutrit
   assert.equal(results[0].serving.serving_size_g, 31);
   assert.equal(results[0].nutrition.per_100g.kcal, 323);
   pass("Open Food Facts barcode provider accepts plausible cream-cheese nutrition");
+}
+
+async function testOpenFoodFactsTextSearchProvider(): Promise<void> {
+  const provider = new OpenFoodFactsSearchProvider({
+    baseUrl: "https://off.example.test",
+    userAgent: "MealMarkTests/1.0 (test@example.com)",
+    fetchFn: async (url: string | URL, init?: RequestInit) => {
+      const parsed = new URL(String(url));
+      assert.equal(parsed.pathname, "/cgi/search.pl");
+      assert.equal(parsed.searchParams.get("search_terms"), "almond butter");
+      assert.equal(parsed.searchParams.get("search_simple"), "1");
+      assert.equal(parsed.searchParams.get("action"), "process");
+      assert.equal(parsed.searchParams.get("json"), "1");
+      assert.equal(parsed.searchParams.get("page_size"), "12");
+      assert.equal(parsed.searchParams.get("sort_by"), "unique_scans_n");
+      assert.equal(parsed.searchParams.get("lc"), "en");
+      assert.equal((init?.headers as Record<string, string>)["User-Agent"], "MealMarkTests/1.0 (test@example.com)");
+      return new Response(JSON.stringify({
+        products: [
+          {
+            code: "000000000001",
+            product_name: "Almond Butter",
+            generic_name: "almond butter",
+            brands: "Example Nut Co",
+            categories_tags: ["en:plant-based-foods", "en:nut-butters"],
+            serving_quantity: "32",
+            serving_size: "2 tbsp (32 g)",
+            nutriments: {
+              "energy-kcal_100g": 614,
+              proteins_100g: 21,
+              carbohydrates_100g: 19,
+              fat_100g: 56,
+              fiber_100g: 10
+            }
+          },
+          {
+            code: "000000000002",
+            product_name: "Salted Butter",
+            generic_name: "butter",
+            brands: "Example Dairy",
+            nutriments: {
+              "energy-kcal_100g": 717,
+              proteins_100g: 1,
+              carbohydrates_100g: 1,
+              fat_100g: 81
+            }
+          }
+        ]
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+  });
+
+  const results = await provider.search({ query: "almond butter", limit: 3 });
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].primary_label, "Almond Butter");
+  assert.equal(results[0].brand_label, "Example Nut Co");
+  assert.equal(results[0].source_label, "open_food_facts");
+  assert.equal(results[0].trust_label, "provider_estimate");
+  assert.equal(results[0].match.type, "name");
+  assert.equal(results[0].provider_evidence[0].provider_id, "000000000001");
+  assert.equal(results[0].provider_evidence[0].match_type, "name");
+  assert.equal(results[0].provider_evidence[0].trust_label, "provider_estimate");
+  pass("Open Food Facts provider searches text queries without returning partial-name false positives");
 }
 
 async function testUsdaBrandedBarcodeProvider(): Promise<void> {
@@ -893,17 +959,52 @@ async function testFoodSearchProviderFromEnvUsesOpenFoodFactsByDefault(): Promis
   pass("food search env provider uses Open Food Facts by default");
 }
 
-async function testFoodSearchProviderFromEnvRequiresUsdaForTextSearch(): Promise<void> {
-  const provider = foodSearchProviderFromEnv({ FOOD_SEARCH_LIVE: "1" });
-  await assert.rejects(
-    () => provider.search({ query: "almond butter" }),
-    (error: unknown) => {
-      assert(error instanceof Error);
-      assert.equal(error.message.includes("USDA FoodData Central search is not configured"), true);
-      return true;
-    }
-  );
-  pass("food search env provider requires USDA FoodData Central for text search");
+async function testFoodSearchProviderFromEnvUsesOpenFoodFactsForTextSearchWithoutUsda(): Promise<void> {
+  const server = createServer((req, res) => {
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    assert.equal(url.pathname, "/cgi/search.pl");
+    assert.equal(url.searchParams.get("search_terms"), "almond butter");
+    assert.equal(req.headers["user-agent"], "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)");
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({
+      products: [
+        {
+          code: "000000000003",
+          product_name: "Almond Butter",
+          generic_name: "almond butter",
+          brands: "Provider Brand",
+          categories_tags: ["en:nut-butters"],
+          serving_quantity: "32",
+          serving_size: "2 tbsp (32 g)",
+          nutriments: {
+            "energy-kcal_100g": 614,
+            proteins_100g: 21,
+            carbohydrates_100g: 19,
+            fat_100g: 56
+          }
+        }
+      ]
+    }));
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert(address && typeof address === "object");
+  try {
+    const provider = foodSearchProviderFromEnv({
+      FOOD_SEARCH_LIVE: "1",
+      OPEN_FOOD_FACTS_BASE_URL: `http://127.0.0.1:${address.port}`
+    });
+    const results = await provider.search({ query: "almond butter", limit: 2 });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].primary_label, "Almond Butter");
+    assert.equal(results[0].source_label, "open_food_facts");
+    assert.equal(results[0].trust_label, "provider_estimate");
+  } finally {
+    server.close();
+    await once(server, "close");
+  }
+  pass("food search env provider can use Open Food Facts text search without USDA credentials");
 }
 
 async function testFoodSearchProviderFromEnvEnablesFixturesOnlyWhenRequested(): Promise<void> {
@@ -1047,6 +1148,34 @@ async function testFetchHandlerAcceptsSignedSessionToken(): Promise<void> {
   assert.equal(body.ok, true);
   assert.equal((body.results as unknown[]).length, 1);
   pass("fetch handler accepts signed session tokens and rejects anonymous session requests");
+}
+
+async function testFetchHandlerAllowsAnonymousFoodSearchWhenConfigured(): Promise<void> {
+  const dependencies = createBrokerDependencies({
+    FOOD_SEARCH_LIVE: "0",
+    FOOD_SEARCH_FIXTURES: "1",
+    MEALMARK_AUTH_MODE: "session",
+    MEALMARK_SESSION_HMAC_SECRET: "session-secret-for-tests",
+    MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH: "1"
+  });
+
+  const searchResponse = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/search", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query: "banana" })
+  }), dependencies);
+  assert.equal(searchResponse.status, 200);
+  const searchBody = await searchResponse.json() as Record<string, unknown>;
+  assert.equal(searchBody.ok, true);
+  assert.equal((searchBody.results as unknown[]).length, 1);
+
+  const analysisResponse = await handleBrokerRequest(new Request("https://mealmark.test/v1/food/analyze-photo", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(sampleRequest)
+  }), dependencies);
+  assert.equal(analysisResponse.status, 401);
+  pass("fetch handler can expose anonymous food search while keeping photo analysis authenticated");
 }
 
 async function testFetchHandlerEnforcesUsageLimiter(): Promise<void> {

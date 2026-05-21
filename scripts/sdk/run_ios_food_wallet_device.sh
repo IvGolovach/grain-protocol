@@ -8,7 +8,8 @@ DERIVED_DATA="${GRAIN_IOS_DERIVED_DATA:-$ROOT_DIR/artifacts/ios-food-wallet-devi
 DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 XCRUN="${XCRUN:-/usr/bin/xcrun}"
 BUNDLE_ID="${GRAIN_IOS_BUNDLE_ID:-dev.grain.foodwallet}"
-BROKER_URL="${GRAIN_FOOD_ANALYSIS_BROKER_URL:-}"
+DEFAULT_BROKER_URL="https://mealmark-food-analysis-broker-staging.ivan-f7b.workers.dev"
+BROKER_URL="${GRAIN_FOOD_ANALYSIS_BROKER_URL:-$DEFAULT_BROKER_URL}"
 BROKER_TOKEN="${GRAIN_FOOD_BROKER_DEV_TOKEN:-${FOOD_BROKER_DEV_TOKEN:-}}"
 export DEVELOPER_DIR
 

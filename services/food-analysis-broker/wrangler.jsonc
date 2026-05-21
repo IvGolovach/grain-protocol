@@ -8,6 +8,7 @@
   },
   "vars": {
     "MEALMARK_AUTH_MODE": "session",
+    "MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH": "1",
     "FOOD_SEARCH_LIVE": "1",
     "FOOD_SEARCH_TIMEOUT_MS": "2500",
     "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)"
@@ -17,6 +18,7 @@
       "name": "mealmark-food-analysis-broker-staging",
       "vars": {
         "MEALMARK_AUTH_MODE": "session",
+        "MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH": "1",
         "FOOD_SEARCH_LIVE": "1",
         "FOOD_SEARCH_TIMEOUT_MS": "2500",
         "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 staging (https://github.com/IvGolovach/grain-protocol)"
@@ -33,6 +35,7 @@
       "name": "mealmark-food-analysis-broker",
       "vars": {
         "MEALMARK_AUTH_MODE": "session",
+        "MEALMARK_ALLOW_ANONYMOUS_FOOD_SEARCH": "1",
         "FOOD_SEARCH_LIVE": "1",
         "FOOD_SEARCH_TIMEOUT_MS": "2500",
         "OPEN_FOOD_FACTS_USER_AGENT": "MealMark/0.1 (https://github.com/IvGolovach/grain-protocol)"

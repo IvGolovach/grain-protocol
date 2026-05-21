@@ -975,11 +975,11 @@ private struct AddFoodHubView: View {
 
     @MainActor
     private func refreshBrokerFoodSearchForCurrentQuery() async {
-        guard hasSearchQuery, trimmedSearchText.count >= 2 else {
+        guard hasSearchQuery, trimmedSearchText.count >= 3 else {
             store.clearBrokerFoodSearch()
             return
         }
-        try? await Task.sleep(nanoseconds: 220_000_000)
+        try? await Task.sleep(nanoseconds: 700_000_000)
         guard !Task.isCancelled else {
             return
         }
@@ -1444,7 +1444,7 @@ private struct BuildMealEditorView: View {
         guard let query = activeIngredientQuery else {
             return
         }
-        try? await Task.sleep(nanoseconds: 220_000_000)
+        try? await Task.sleep(nanoseconds: 700_000_000)
         guard !Task.isCancelled else {
             return
         }
@@ -1457,7 +1457,7 @@ private struct BuildMealEditorView: View {
             return nil
         }
         let query = ingredientRows[index].name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return query.count >= 2 ? query : nil
+        return query.count >= 3 ? query : nil
     }
 }
 
