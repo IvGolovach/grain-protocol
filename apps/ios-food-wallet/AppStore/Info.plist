@@ -22,6 +22,8 @@
   <string>$(CURRENT_PROJECT_VERSION)</string>
   <key>GRAIN_FOOD_ANALYSIS_BROKER_URL</key>
   <string>$(GRAIN_FOOD_ANALYSIS_BROKER_URL)</string>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
   <key>NSAppTransportSecurity</key>
   <dict>
     <key>NSAllowsLocalNetworking</key>

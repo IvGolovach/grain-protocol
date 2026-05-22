@@ -214,6 +214,8 @@ def main() -> int:
         info = plistlib.load(handle)
     if info.get("CFBundleDisplayName") != "MealMark":
         return fail("Info.plist CFBundleDisplayName must be MealMark")
+    if info.get("ITSAppUsesNonExemptEncryption") is not False:
+        return fail("Info.plist must declare ITSAppUsesNonExemptEncryption=false for TestFlight compliance")
     if "GRAIN_FOOD_BROKER_DEV_TOKEN" in info:
         return fail("Info.plist must not embed the local broker dev token setting")
     for key in ["NSCameraUsageDescription", "NSPhotoLibraryUsageDescription"]:

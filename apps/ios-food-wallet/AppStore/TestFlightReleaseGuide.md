@@ -7,7 +7,7 @@ signing, archive, privacy, and App Review evidence separate from core app logic.
 
 - App name: MealMark
 - Bundle ID: `dev.grain.foodwallet`
-- Version: `0.1.0`
+- Version: `1.0`
 - Build: increment `CURRENT_PROJECT_VERSION` for every App Store Connect upload.
 - Xcode project source: `project.yml`
 - Generated project: `FoodWallet.xcodeproj`
