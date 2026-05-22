@@ -99,6 +99,7 @@ async function main(): Promise<number> {
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
   await testNoFoodObservationReturnsNoFoodError();
+  await testOpenAiAnalyzerFailureUsesProviderNeutralError();
   await testOpenAiAnalyzerTimeoutReturnsGatewayTimeout();
   await testVisibleNutritionLabelOverridesDatabasePortionScaling();
   await testUpstreamSchemaValidation();
@@ -115,6 +116,10 @@ async function testPhotoAnalysisRequiresConfiguredAnalyzer(): Promise<void> {
     const body = await response.json() as Record<string, unknown>;
     assert.equal(body.ok, false);
     assert.equal((body.error as Record<string, unknown>).code, "PROVIDER_NOT_CONFIGURED");
+    assert.equal((body.error as Record<string, unknown>).message, "Photo analysis is temporarily unavailable.");
+    assert.equal(JSON.stringify(body).includes("OpenAI"), false);
+    assert.equal(JSON.stringify(body).includes("OPENAI_API_KEY"), false);
+    assert.equal(JSON.stringify(body).includes("FOOD_ANALYSIS_MOCK"), false);
     assert.equal(JSON.stringify(body).includes("\"candidate\""), false);
     assert.equal(JSON.stringify(body).includes("\"draft\""), false);
   });
@@ -1808,9 +1813,32 @@ async function testOpenAiAnalyzerTimeoutReturnsGatewayTimeout(): Promise<void> {
     assert.equal(response.status, 504);
     const body = await response.json() as Record<string, unknown>;
     assert.equal(body.ok, false);
-    assert.equal((body.error as Record<string, unknown>).code, "UPSTREAM_TIMEOUT");
+    const error = body.error as Record<string, unknown>;
+    assert.equal(error.code, "UPSTREAM_TIMEOUT");
+    assert.equal(error.message, "Food photo analysis request timed out");
+    assert.equal(JSON.stringify(body).includes("OpenAI"), false);
   });
   pass("OpenAI analyzer timeout returns explicit retryable broker error");
+}
+
+async function testOpenAiAnalyzerFailureUsesProviderNeutralError(): Promise<void> {
+  const analyzer = new OpenAiFoodAnalyzer({
+    apiKey: "test-key",
+    model: "gpt-test-vision",
+    fetchFn: async () => new Response("upstream rejected image", { status: 400 })
+  });
+
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 502);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, false);
+    const error = body.error as Record<string, unknown>;
+    assert.equal(error.code, "UPSTREAM_ERROR");
+    assert.equal(error.message, "Food photo analysis request failed");
+    assert.equal(JSON.stringify(body).includes("OpenAI"), false);
+  });
+  pass("OpenAI analyzer failures use provider-neutral public errors");
 }
 
 async function testVisibleNutritionLabelOverridesDatabasePortionScaling(): Promise<void> {

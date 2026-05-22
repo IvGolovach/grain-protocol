@@ -631,8 +631,9 @@ private struct CaptureView: View {
                         )
                     } else {
                         AnalysisFailureCard(
-                            message: failure.message,
+                            failure: failure,
                             onRetry: onCapturePhoto,
+                            onEnterManually: onEnterManually,
                             onDismiss: store.discardDraft
                         )
                     }
@@ -3677,33 +3678,84 @@ private struct AnalysisStepList: View {
 }
 
 private struct AnalysisFailureCard: View {
-    var message: String
+    var failure: FoodAnalysisFailure
     var onRetry: () -> Void
+    var onEnterManually: () -> Void
     var onDismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("Couldn’t analyze photo", systemImage: "exclamationmark.triangle.fill")
+            Label(title, systemImage: symbolName)
                 .font(.headline)
-                .foregroundStyle(.orange)
-            Text(message)
+                .foregroundStyle(tint)
+            Text(failure.message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("AnalysisErrorMessage")
-            HStack {
-                Button("Dismiss", role: .cancel, action: onDismiss)
-                    .accessibilityIdentifier("DismissAnalysisErrorButton")
-                Spacer()
-                Button(action: onRetry) {
-                    Label("Try again", systemImage: "arrow.clockwise")
+            if failure.code == .serviceUnavailable {
+                VStack(spacing: 10) {
+                    Button(action: onEnterManually) {
+                        Label("Enter manually", systemImage: "text.badge.plus")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .accessibilityIdentifier("ManualAnalysisFallbackButton")
+
+                    HStack {
+                        Button("Dismiss", role: .cancel, action: onDismiss)
+                            .accessibilityIdentifier("DismissAnalysisErrorButton")
+                        Spacer()
+                        Button(action: onRetry) {
+                            Label("Try again", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("RetryAnalysisButton")
+                    }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .accessibilityIdentifier("RetryAnalysisButton")
+            } else {
+                HStack {
+                    Button("Dismiss", role: .cancel, action: onDismiss)
+                        .accessibilityIdentifier("DismissAnalysisErrorButton")
+                    Spacer()
+                    Button(action: onRetry) {
+                        Label("Try again", systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .accessibilityIdentifier("RetryAnalysisButton")
+                }
             }
         }
         .padding(.vertical, 8)
+    }
+
+    private var title: String {
+        switch failure.code {
+        case .serviceUnavailable:
+            return "Photo analysis unavailable"
+        default:
+            return "Couldn’t analyze photo"
+        }
+    }
+
+    private var symbolName: String {
+        switch failure.code {
+        case .serviceUnavailable:
+            return "icloud.slash"
+        default:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch failure.code {
+        case .serviceUnavailable:
+            return .blue
+        default:
+            return .orange
+        }
     }
 }
 

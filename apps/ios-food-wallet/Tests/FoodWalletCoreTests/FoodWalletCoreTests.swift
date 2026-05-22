@@ -198,6 +198,9 @@ struct FoodWalletCoreTests {
         await run("storePublishesFailureStateWhenPhotoAnalysisFails") {
             try await testStorePublishesFailureStateWhenPhotoAnalysisFails()
         }
+        await run("storeSanitizesProviderConfigurationFailure") {
+            try await testStoreSanitizesProviderConfigurationFailure()
+        }
         await run("storePublishesEntitlementRequiredFailure") {
             try await testStorePublishesEntitlementRequiredFailure()
         }
@@ -1745,6 +1748,25 @@ struct FoodWalletCoreTests {
     }
 
     @MainActor
+    private static func testStoreSanitizesProviderConfigurationFailure() async throws {
+        let store = FoodWalletStore(analysisClient: ProviderNotConfiguredFoodAnalysisClient(), privacy: .granted)
+
+        await store.analyze(photo: .uiTestFujiApple)
+
+        try expect(store.analysisState.isFailed, "expected provider configuration failure state")
+        guard case let .failed(failure) = store.analysisState else {
+            throw FoodWalletTestFailure("expected failed state")
+        }
+        try expect(failure.code == .serviceUnavailable, "expected service-unavailable failure code")
+        try expect(failure.message.localizedCaseInsensitiveContains("temporarily unavailable"), "expected user-facing fallback message")
+        try expect(!failure.message.localizedCaseInsensitiveContains("OpenAI"), "expected no provider name in user-facing failure")
+        try expect(!failure.message.localizedCaseInsensitiveContains("OPENAI_API_KEY"), "expected no secret configuration hint")
+        try expect(!failure.message.localizedCaseInsensitiveContains("FOOD_ANALYSIS_MOCK"), "expected no developer mock hint")
+        try expect(store.currentDraft == nil, "expected no draft after provider configuration failure")
+        try expect(store.currentCandidate == nil, "expected no candidate after provider configuration failure")
+    }
+
+    @MainActor
     private static func testStorePublishesEntitlementRequiredFailure() async throws {
         let store = FoodWalletStore(analysisClient: EntitlementRequiredFoodAnalysisClient(), privacy: .granted)
 
@@ -2002,6 +2024,28 @@ private struct FailingFoodAnalysisClient: FoodAnalysisClient {
 
     func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
         throw FoodWalletTestFailure("analysis unavailable")
+    }
+}
+
+private struct ProviderNotConfiguredFoodAnalysisClient: FoodAnalysisClient {
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        throw providerConfigurationError()
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        throw providerConfigurationError()
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        throw providerConfigurationError()
+    }
+
+    private func providerConfigurationError() -> FoodAnalysisBrokerClientError {
+        .brokerError(
+            code: "PROVIDER_NOT_CONFIGURED",
+            message: "OpenAI food analysis is not configured; set OPENAI_API_KEY or explicitly enable FOOD_ANALYSIS_MOCK=1",
+            status: 503
+        )
     }
 }
 

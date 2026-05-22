@@ -40,6 +40,7 @@ public enum FoodAnalysisFailureCode: Equatable, Sendable {
     case httpStatus(Int)
     case noFoodDetected
     case entitlementRequired
+    case serviceUnavailable
     case timeout
     case unsafeCandidate
     case network
@@ -1377,15 +1378,27 @@ public final class FoodWalletStore: ObservableObject {
                     message: message
                 )
             }
+            if code == "PROVIDER_NOT_CONFIGURED" {
+                return FoodAnalysisFailure(
+                    code: .serviceUnavailable,
+                    message: "Photo analysis is temporarily unavailable. Add this food by barcode, search, or manual entry, or try again later."
+                )
+            }
             if code == "UPSTREAM_TIMEOUT" {
                 return FoodAnalysisFailure(
                     code: .timeout,
                     message: "Analysis took too long. Check your connection, try another photo, or enter the meal manually."
                 )
             }
+            if code == "UPSTREAM_ERROR" {
+                return FoodAnalysisFailure(
+                    code: .serviceUnavailable,
+                    message: "Photo analysis is temporarily unavailable. Try again in a moment, or enter the meal manually."
+                )
+            }
             return FoodAnalysisFailure(
                 code: .httpStatus(status),
-                message: message.isEmpty ? "The analysis service returned \(code). Try again." : message
+                message: "The analysis service could not finish this photo. Try again or enter the meal manually."
             )
         case let .entitlementRequired(usage, message, _):
             return FoodAnalysisFailure(

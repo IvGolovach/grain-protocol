@@ -47,7 +47,7 @@ export class MissingFoodAnalyzer implements FoodAnalyzer {
     throw new BrokerError(
       503,
       "PROVIDER_NOT_CONFIGURED",
-      "OpenAI food analysis is not configured; set OPENAI_API_KEY or explicitly enable FOOD_ANALYSIS_MOCK=1"
+      "Photo analysis is temporarily unavailable."
     );
   }
 }
@@ -86,15 +86,15 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
       });
     } catch (error) {
       if (isAbortError(error)) {
-        throw new BrokerError(504, "UPSTREAM_TIMEOUT", "OpenAI food observation request timed out");
+        throw new BrokerError(504, "UPSTREAM_TIMEOUT", "Food photo analysis request timed out");
       }
-      throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation request failed");
+      throw new BrokerError(502, "UPSTREAM_ERROR", "Food photo analysis request failed");
     } finally {
       clearTimeout(timeout);
     }
 
     if (!response.ok) {
-      throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation request failed", {
+      throw new BrokerError(502, "UPSTREAM_ERROR", "Food photo analysis request failed", {
         upstream_status: response.status
       });
     }
@@ -103,14 +103,14 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
     try {
       responseJson = await response.json() as unknown;
     } catch {
-      throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation response was not valid JSON");
+      throw new BrokerError(502, "UPSTREAM_ERROR", "Food photo analysis response was not valid JSON");
     }
     const outputText = extractOutputText(responseJson);
     let parsed: unknown;
     try {
       parsed = JSON.parse(outputText);
     } catch {
-      throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI food observation was not valid JSON");
+      throw new BrokerError(502, "UPSTREAM_ERROR", "Food photo observation was not valid JSON");
     }
 
     return {
@@ -200,7 +200,7 @@ function extractOutputText(value: unknown): string {
   }
 
   if (!isRecord(value) || !Array.isArray(value.output)) {
-    throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI response did not include output text");
+    throw new BrokerError(502, "UPSTREAM_ERROR", "Food photo analysis response did not include output text");
   }
 
   const chunks: string[] = [];
@@ -213,7 +213,7 @@ function extractOutputText(value: unknown): string {
     }
   }
   if (chunks.length === 0) {
-    throw new BrokerError(502, "UPSTREAM_ERROR", "OpenAI response did not include output text");
+    throw new BrokerError(502, "UPSTREAM_ERROR", "Food photo analysis response did not include output text");
   }
   return chunks.join("");
 }
