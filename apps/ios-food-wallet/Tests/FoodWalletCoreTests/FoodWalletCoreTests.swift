@@ -126,6 +126,9 @@ struct FoodWalletCoreTests {
         await run("brokerSearchResultCanBecomeReusableIngredient") {
             try await testBrokerSearchResultCanBecomeReusableIngredient()
         }
+        await run("personalIngredientDeletePublishesUserLibrary") {
+            try await testPersonalIngredientDeletePublishesUserLibrary()
+        }
         await run("buildMealSavesReusableRecipeAndQRCode") {
             try await testBuildMealSavesReusableRecipeAndQRCode()
         }
@@ -1053,6 +1056,43 @@ struct FoodWalletCoreTests {
         )
         try expect(draftResult == .created, "expected saved broker ingredient to resolve, got \(draftResult)")
         try expect(store.currentDraft?.meal.label == "Beef bowl", "expected reusable broker-backed draft")
+    }
+
+    @MainActor
+    private static func testPersonalIngredientDeletePublishesUserLibrary() async throws {
+        var publishedPersonalIngredients: [PersonalFoodIngredient]?
+        var publishedLibrary: FoodWalletUserLibraryState?
+        let store = FoodWalletStore(
+            onPersonalIngredientsChange: { ingredients in
+                publishedPersonalIngredients = ingredients
+            },
+            onUserLibraryChange: { state in
+                publishedLibrary = state
+            }
+        )
+
+        let saveResult = store.savePersonalIngredient(
+            name: "Almond butter",
+            servingGrams: 100,
+            servingKcal: 641,
+            proteinGrams: 21,
+            carbohydrateGrams: 19,
+            fatGrams: 56,
+            fiberGrams: 10
+        )
+
+        try expect(saveResult == .saved, "expected reusable personal food to save, got \(saveResult)")
+        guard let ingredient = store.personalIngredients.first else {
+            throw FoodWalletTestFailure("expected saved personal food")
+        }
+        try expect(publishedPersonalIngredients?.count == 1, "expected personal ingredient publish after save")
+        try expect(publishedLibrary?.personalIngredients.count == 1, "expected user library publish after save")
+
+        try expect(store.deletePersonalIngredient(id: ingredient.id), "expected personal food delete")
+        try expect(store.personalIngredients.isEmpty, "expected personal food library to be empty after delete")
+        try expect(publishedPersonalIngredients?.isEmpty == true, "expected empty personal ingredient publish")
+        try expect(publishedLibrary?.personalIngredients.isEmpty == true, "expected empty user library personal foods")
+        try expect(!store.deletePersonalIngredient(id: ingredient.id), "expected missing personal food delete to return false")
     }
 
     @MainActor

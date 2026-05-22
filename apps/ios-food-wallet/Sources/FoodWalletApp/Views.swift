@@ -686,6 +686,56 @@ private struct IngredientBuilderRow: Identifiable {
     }
 }
 
+private enum SavedFoodLibraryDeleteTarget: Identifiable {
+    case recipe(SavedFoodRecipe)
+    case personalFood(PersonalFoodIngredient)
+
+    var id: String {
+        switch self {
+        case let .recipe(recipe):
+            return "recipe-\(recipe.id)"
+        case let .personalFood(ingredient):
+            return "personal-\(ingredient.id)"
+        }
+    }
+
+    var alertTitle: String {
+        switch self {
+        case .recipe:
+            return "Delete recipe?"
+        case .personalFood:
+            return "Delete food?"
+        }
+    }
+
+    var confirmTitle: String {
+        switch self {
+        case .recipe:
+            return "Delete recipe"
+        case .personalFood:
+            return "Delete food"
+        }
+    }
+
+    var keepTitle: String {
+        switch self {
+        case .recipe:
+            return "Keep recipe"
+        case .personalFood:
+            return "Keep food"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case let .recipe(recipe):
+            return "This removes \(recipe.title) from saved recipes. Logged history stays unchanged."
+        case let .personalFood(ingredient):
+            return "This removes \(ingredient.name) from your saved foods. Recipes and logged history stay unchanged."
+        }
+    }
+}
+
 private struct AddFoodHubView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
@@ -712,6 +762,7 @@ private struct AddFoodHubView: View {
     @State private var selectedPersonalIngredientID: String?
     @State private var unresolvedFoodName: String?
     @State private var isShowingManualNutrition = false
+    @State private var pendingLibraryDeletion: SavedFoodLibraryDeleteTarget?
 
     var onDraftReady: () -> Void
     var onTakePhoto: () -> Void
@@ -759,29 +810,77 @@ private struct AddFoodHubView: View {
                 .padding(.vertical, 4)
             }
 
-            if shouldShowLibraryResults {
-                Section("My meals") {
-                    ForEach(Array(store.savedRecipes.prefix(6)), id: \.id) { recipe in
+            if shouldShowSavedRecipes {
+                Section {
+                    ForEach(store.savedRecipes, id: \.id) { recipe in
                         AddFoodResultRow(
                             title: recipe.title,
                             subtitle: "\(recipe.subtitle) • \(recipe.totalGrams) g • \(recipe.totalKcal) kcal",
                             symbol: "book.closed",
+                            tint: .blue,
                             accessibilityIdentifier: "SavedRecipe-\(recipe.id)"
                         ) {
                             selectedSavedRecipeID = recipe.id
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                pendingLibraryDeletion = .recipe(recipe)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .accessibilityIdentifier("DeleteSavedRecipeSwipe-\(recipe.id)")
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                pendingLibraryDeletion = .recipe(recipe)
+                            } label: {
+                                Label("Delete recipe", systemImage: "trash")
+                            }
+                        }
                     }
+                } header: {
+                    SavedFoodLibrarySectionHeader(
+                        title: "Recipes",
+                        count: store.savedRecipes.count,
+                        subtitle: "Built meals you can reuse, edit, share, or delete."
+                    )
+                }
+            }
 
-                    ForEach(Array(store.personalIngredients.prefix(4)), id: \.id) { ingredient in
+            if shouldShowSavedFoods {
+                Section {
+                    ForEach(store.personalIngredients, id: \.id) { ingredient in
                         AddFoodResultRow(
                             title: ingredient.name,
                             subtitle: "\(Int64(ingredient.sourceServingGrams.rounded())) g serving • \(ingredient.sourceServingKcal) kcal",
                             symbol: "person.crop.circle.badge.checkmark",
+                            tint: .purple,
                             accessibilityIdentifier: "SavedPersonalFood-\(ingredient.id)"
                         ) {
                             selectedPersonalIngredientID = ingredient.id
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                pendingLibraryDeletion = .personalFood(ingredient)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            .accessibilityIdentifier("DeletePersonalFoodSwipe-\(ingredient.id)")
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                pendingLibraryDeletion = .personalFood(ingredient)
+                            } label: {
+                                Label("Delete food", systemImage: "trash")
+                            }
+                        }
                     }
+                } header: {
+                    SavedFoodLibrarySectionHeader(
+                        title: "Foods",
+                        count: store.personalIngredients.count,
+                        subtitle: "Single foods saved from labels, barcodes, or provider matches."
+                    )
                 }
             }
 
@@ -821,6 +920,7 @@ private struct AddFoodHubView: View {
                                 title: row.title,
                                 subtitle: "\(row.subtitle ?? row.sourceLabel) • \(row.sourceLabel)",
                                 symbol: "checkmark.seal",
+                                tint: .blue,
                                 accessibilityIdentifier: foodSearchAccessibilityIdentifier(for: row, index: index)
                             ) {
                                 createFoodSearchDraft(id: row.id)
@@ -834,22 +934,10 @@ private struct AddFoodHubView: View {
                                 title: entry.meal.label,
                                 subtitle: "\(entry.meal.amountGrams) g • \(entry.meal.kcal) kcal • \(entry.dateKey)",
                                 symbol: "clock.arrow.circlepath",
+                                tint: .green,
                                 accessibilityIdentifier: "RecentMeal-\(entry.entryID)"
                             ) {
                                 createRecentDraft(entryID: entry.entryID)
-                            }
-                        }
-                    }
-
-                    if shouldShowTemplateResults {
-                        ForEach(Array(filteredTemplates.prefix(4)), id: \.id) { template in
-                            AddFoodResultRow(
-                                title: template.title,
-                                subtitle: "\(template.subtitle) • \(template.amountGrams) g • \(template.kcal) kcal",
-                                symbol: "fork.knife.circle",
-                                accessibilityIdentifier: "Template-\(template.id)"
-                            ) {
-                                createTemplateDraft(id: template.id)
                             }
                         }
                     }
@@ -860,9 +948,18 @@ private struct AddFoodHubView: View {
                                 title: recipe.title,
                                 subtitle: "\(recipe.subtitle) • \(recipe.totalGrams) g • \(recipe.totalKcal) kcal",
                                 symbol: "book.closed",
+                                tint: .blue,
                                 accessibilityIdentifier: "Recipe-\(recipe.id)"
                             ) {
                                 createRecipeDraft(id: recipe.id)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    pendingLibraryDeletion = .recipe(recipe)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .accessibilityIdentifier("DeleteRecipeSearchSwipe-\(recipe.id)")
                             }
                         }
                     }
@@ -873,9 +970,18 @@ private struct AddFoodHubView: View {
                                 title: ingredient.name,
                                 subtitle: "\(Int64(ingredient.sourceServingGrams.rounded())) g serving • \(ingredient.sourceServingKcal) kcal",
                                 symbol: "person.crop.circle.badge.checkmark",
+                                tint: .purple,
                                 accessibilityIdentifier: "PersonalFood-\(ingredient.id)"
                             ) {
                                 createPersonalFoodDraft(ingredient)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    pendingLibraryDeletion = .personalFood(ingredient)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                .accessibilityIdentifier("DeletePersonalFoodSearchSwipe-\(ingredient.id)")
                             }
                         }
                     }
@@ -926,6 +1032,16 @@ private struct AddFoodHubView: View {
                     MealMarkKeyboard.dismiss()
                 }
             }
+        }
+        .alert(item: $pendingLibraryDeletion) { target in
+            Alert(
+                title: Text(target.alertTitle),
+                message: Text(target.message),
+                primaryButton: .destructive(Text(target.confirmTitle)) {
+                    deleteLibraryTarget(target)
+                },
+                secondaryButton: .cancel(Text(target.keepTitle))
+            )
         }
         .navigationDestination(isPresented: $isShowingBuildMeal) {
             BuildMealEditorView(
@@ -1037,10 +1153,6 @@ private struct AddFoodHubView: View {
         store.entries.filter { matches($0.meal.label, secondary: $0.dateKey) }
     }
 
-    private var filteredTemplates: [SavedFoodTemplate] {
-        store.savedTemplates.filter { matches($0.title, secondary: $0.subtitle) }
-    }
-
     private var filteredRecipes: [SavedFoodRecipe] {
         store.savedRecipes.filter { matches($0.title, secondary: $0.subtitle) }
     }
@@ -1057,8 +1169,12 @@ private struct AddFoodHubView: View {
         []
     }
 
-    private var shouldShowLibraryResults: Bool {
-        !hasSearchQuery && (!store.savedRecipes.isEmpty || !store.personalIngredients.isEmpty)
+    private var shouldShowSavedRecipes: Bool {
+        !hasSearchQuery && !store.savedRecipes.isEmpty
+    }
+
+    private var shouldShowSavedFoods: Bool {
+        !hasSearchQuery && !store.personalIngredients.isEmpty
     }
 
     private var shouldShowShortcuts: Bool {
@@ -1108,10 +1224,6 @@ private struct AddFoodHubView: View {
         (selectedScope == .all || selectedScope == .recent) && !filteredRecentEntries.isEmpty
     }
 
-    private var shouldShowTemplateResults: Bool {
-        (selectedScope == .all || selectedScope == .myMeals) && !filteredTemplates.isEmpty
-    }
-
     private var shouldShowRecipeResults: Bool {
         (selectedScope == .all || selectedScope == .myRecipes) && !filteredRecipes.isEmpty
     }
@@ -1124,7 +1236,6 @@ private struct AddFoodHubView: View {
         !shouldShowUnknownFoodResolution &&
             !shouldShowFoodSearchResults &&
             !shouldShowRecentResults &&
-            !shouldShowTemplateResults &&
             !shouldShowRecipeResults &&
             !shouldShowPersonalFoodResults
     }
@@ -1134,7 +1245,6 @@ private struct AddFoodHubView: View {
             selectedScope == .all &&
             !shouldShowFoodSearchResults &&
             !shouldShowRecentResults &&
-            !shouldShowTemplateResults &&
             !shouldShowRecipeResults &&
             !shouldShowPersonalFoodResults
     }
@@ -1231,12 +1341,6 @@ private struct AddFoodHubView: View {
         }
     }
 
-    private func createTemplateDraft(id: String) {
-        if store.createTemplateDraft(id: id) {
-            onDraftReady()
-        }
-    }
-
     private func createRecipeDraft(id: String) {
         if store.createRecipeDraft(id: id, consumedFraction: 1) {
             onDraftReady()
@@ -1253,6 +1357,21 @@ private struct AddFoodHubView: View {
         )
         if result == .created {
             onDraftReady()
+        }
+    }
+
+    private func deleteLibraryTarget(_ target: SavedFoodLibraryDeleteTarget) {
+        switch target {
+        case let .recipe(recipe):
+            _ = store.deleteSavedRecipe(id: recipe.id)
+            if selectedSavedRecipeID == recipe.id {
+                selectedSavedRecipeID = nil
+            }
+        case let .personalFood(ingredient):
+            _ = store.deletePersonalIngredient(id: ingredient.id)
+            if selectedPersonalIngredientID == ingredient.id {
+                selectedPersonalIngredientID = nil
+            }
         }
     }
 
@@ -1462,23 +1581,25 @@ private struct BuildMealEditorView: View {
                 Text("Ingredients")
             }
 
-            Section {
-                MealMarkFilledActionButton(
-                    title: "Review meal",
-                    subtitle: "Review before saving",
-                    symbol: "fork.knife.circle.fill",
-                    tint: .green,
-                    isEnabled: canCreateIngredientDraft,
-                    action: onCreateDraft
-                )
-                .accessibilityIdentifier("CreateIngredientMealDraftButton")
-            }
-            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-            .listRowBackground(Color.clear)
         }
         .mealMarkScrollDismissesKeyboard()
         .navigationTitle("Build Meal")
         .accessibilityIdentifier("BuildMealScreen")
+        .safeAreaInset(edge: .bottom) {
+            MealMarkFilledActionButton(
+                title: "Review meal",
+                subtitle: "Review before saving",
+                symbol: "fork.knife.circle.fill",
+                tint: .green,
+                isEnabled: canCreateIngredientDraft,
+                action: onCreateDraft
+            )
+            .accessibilityIdentifier("CreateIngredientMealDraftButton")
+            .padding(.horizontal, 24)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .background(.regularMaterial)
+        }
         .task(id: ingredientSearchSeed) {
             await refreshBrokerFoodSearchForActiveIngredient()
         }
@@ -2112,7 +2233,6 @@ private enum AddFoodFocus: Hashable {
 private enum AddFoodScope: String, CaseIterable, Identifiable {
     case all
     case recent
-    case myMeals
     case myRecipes
     case myFoods
 
@@ -2122,9 +2242,8 @@ private enum AddFoodScope: String, CaseIterable, Identifiable {
         switch self {
         case .all: return "All"
         case .recent: return "Recent"
-        case .myMeals: return "My Meals"
-        case .myRecipes: return "My Recipes"
-        case .myFoods: return "My Foods"
+        case .myRecipes: return "Recipes"
+        case .myFoods: return "Foods"
         }
     }
 
@@ -2132,9 +2251,8 @@ private enum AddFoodScope: String, CaseIterable, Identifiable {
         switch self {
         case .all: return "Nothing saved yet"
         case .recent: return "No recent meals"
-        case .myMeals: return "No saved meals"
         case .myRecipes: return "No recipes"
-        case .myFoods: return "No personal foods"
+        case .myFoods: return "No foods"
         }
     }
 
@@ -2142,7 +2260,6 @@ private enum AddFoodScope: String, CaseIterable, Identifiable {
         switch self {
         case .all: return "magnifyingglass"
         case .recent: return "clock"
-        case .myMeals: return "fork.knife"
         case .myRecipes: return "book.closed"
         case .myFoods: return "person.crop.circle"
         }
@@ -2154,12 +2271,10 @@ private enum AddFoodScope: String, CaseIterable, Identifiable {
             return "Type a food, take a photo, or build a meal from ingredients."
         case .recent:
             return "Confirmed meals will appear here for one-tap repeats."
-        case .myMeals:
-            return "Saved meal templates will appear here when they are available."
         case .myRecipes:
-            return "Saved recipes will appear here when they are available."
+            return "Built meals you save will appear here."
         case .myFoods:
-            return "Custom ingredients you save from labels will appear here."
+            return "Single foods you save from labels, barcodes, or provider matches will appear here."
         }
     }
 }
@@ -2433,10 +2548,39 @@ private struct AddFoodScopeBar: View {
     }
 }
 
+private struct SavedFoodLibrarySectionHeader: View {
+    var title: String
+    var count: Int
+    var subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                Text("\(count)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12), in: Capsule())
+            }
+
+            Text(subtitle)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .textCase(nil)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
 private struct AddFoodResultRow: View {
     var title: String
     var subtitle: String
     var symbol: String
+    var tint: Color = .green
     var accessibilityIdentifier: String
     var action: () -> Void
 
@@ -2445,9 +2589,9 @@ private struct AddFoodResultRow: View {
             HStack(spacing: 12) {
                 Image(systemName: symbol)
                     .font(.headline)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(tint)
                     .frame(width: 28, height: 28)
-                    .background(Color.green.opacity(0.12))
+                    .background(tint.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -2997,6 +3141,7 @@ private struct SavedMealIngredientRow: View {
 private struct PersonalFoodDetailView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
+    @State private var isConfirmingDelete = false
     var ingredientID: String
     var onDraftReady: () -> Void
 
@@ -3049,9 +3194,30 @@ private struct PersonalFoodDetailView: View {
                         title: ingredient.name,
                         payloadText: store.qrPayloadTextForPersonalIngredient(id: ingredient.id)
                     )
+
+                    Section {
+                        Button(role: .destructive) {
+                            isConfirmingDelete = true
+                        } label: {
+                            Label("Delete food", systemImage: "trash")
+                        }
+                        .accessibilityIdentifier("DeletePersonalFoodButton")
+                    }
                 }
                 .navigationTitle("Personal Food")
                 .mealMarkNavigationBarTitleDisplayModeInline()
+                .alert(
+                    "Delete food?",
+                    isPresented: $isConfirmingDelete
+                ) {
+                    Button("Delete food", role: .destructive) {
+                        _ = store.deletePersonalIngredient(id: ingredient.id)
+                        dismiss()
+                    }
+                    Button("Keep food", role: .cancel) {}
+                } message: {
+                    Text("This removes \(ingredient.name) from your saved foods. Recipes and logged history stay unchanged.")
+                }
             } else {
                 EmptyStateView(
                     title: "Food not found",

@@ -464,12 +464,7 @@ public final class FoodWalletStore: ObservableObject {
             return nil
         }
         let ingredient = result.personalIngredient()
-        if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
-            personalIngredients[existingIndex] = ingredient
-        } else {
-            personalIngredients.append(ingredient)
-        }
-        publishUserLibraryMutation()
+        upsertPersonalIngredient(ingredient)
         return ingredient
     }
 
@@ -615,12 +610,7 @@ public final class FoodWalletStore: ObservableObject {
                 throw FoodWalletQRImportError.invalidPayload
             }
             let ingredient = PersonalFoodIngredient(exportPersonalFood: exportPersonalFood)
-            if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
-                personalIngredients[existingIndex] = ingredient
-            } else {
-                personalIngredients.append(ingredient)
-            }
-            publishUserLibraryMutation()
+            upsertPersonalIngredient(ingredient)
             guard let candidate = FoodIngredientCatalog.candidate(
                 suggestionID: "personal:\(ingredient.id)",
                 personalIngredients: personalIngredients
@@ -649,12 +639,7 @@ public final class FoodWalletStore: ObservableObject {
             return nil
         }
         let ingredient = PersonalFoodIngredient(exportPersonalFood: exportPersonalFood)
-        if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
-            personalIngredients[existingIndex] = ingredient
-        } else {
-            personalIngredients.append(ingredient)
-        }
-        publishUserLibraryMutation()
+        upsertPersonalIngredient(ingredient)
         return ingredient
     }
 
@@ -677,16 +662,20 @@ public final class FoodWalletStore: ObservableObject {
             fiberGrams: fiberGrams
         ) {
         case let .success(ingredient):
-            if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
-                personalIngredients[existingIndex] = ingredient
-            } else {
-                personalIngredients.append(ingredient)
-            }
-            publishUserLibraryMutation()
+            upsertPersonalIngredient(ingredient)
             return .saved
         case let .failure(result):
             return result
         }
+    }
+
+    public func deletePersonalIngredient(id: String) -> Bool {
+        guard let index = personalIngredients.firstIndex(where: { $0.id == id }) else {
+            return false
+        }
+        personalIngredients.remove(at: index)
+        publishUserLibraryMutation()
+        return true
     }
 
     public func updateCurrentDraftPortion(gramsMode: Int64) -> Bool {
@@ -1181,6 +1170,15 @@ public final class FoodWalletStore: ObservableObject {
             savedRecipes[existingIndex] = recipe
         } else {
             savedRecipes.append(recipe)
+        }
+        publishUserLibraryMutation()
+    }
+
+    private func upsertPersonalIngredient(_ ingredient: PersonalFoodIngredient) {
+        if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
+            personalIngredients[existingIndex] = ingredient
+        } else {
+            personalIngredients.append(ingredient)
         }
         publishUserLibraryMutation()
     }
