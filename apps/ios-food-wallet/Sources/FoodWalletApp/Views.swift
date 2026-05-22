@@ -2382,6 +2382,7 @@ private struct AddFoodShortcutGrid: View {
 
     @ViewBuilder
     private func shortcutContainer<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        #if compiler(>=6.3)
         if #available(iOS 26.0, macOS 26.0, *) {
             GlassEffectContainer(spacing: 10) {
                 content()
@@ -2389,6 +2390,9 @@ private struct AddFoodShortcutGrid: View {
         } else {
             content()
         }
+        #else
+        content()
+        #endif
     }
 }
 
@@ -2500,6 +2504,7 @@ private extension View {
         tint: Color = Color.secondary.opacity(0.08),
         isInteractive: Bool = false
     ) -> some View {
+        #if compiler(>=6.3)
         if #available(iOS 26.0, macOS 26.0, *) {
             self.glassEffect(
                 isInteractive
@@ -2514,6 +2519,13 @@ private extension View {
                         .fill(tint)
                 }
         }
+        #else
+        self.background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(tint)
+            }
+        #endif
     }
 }
 
