@@ -183,7 +183,7 @@ def readme_text() -> str:
             "TrustStatus FoodSourceClass NutritionInsight SafeFoodSummary",
             "verified self_issued estimated untrusted",
             "attested measured estimated",
-            "Safe summaries must not include raw photos, raw trust bundles, raw snapshots, private keys, or raw QR payload material.",
+            "Safe summaries must not include raw photos, raw trust bundles, raw snapshots, private keys, raw QR payload material, sync bundles, or identity bundles.",
         ]
     )
 
@@ -339,6 +339,19 @@ class FoodWalletContractTests(unittest.TestCase):
             fixture_path = root / "examples/reference-fixtures/food-wallet-safe-summary.v1.json"
             fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
             fixture["summary"]["raw_photo_b64"] = "not-allowed"
+            fixture_path.write_text(json.dumps(fixture) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(SystemExit, "FOOD_WALLET_CONTRACT_ERR_FORBIDDEN_RAW_FIELD"):
+                module.check_food_wallet_contract(root=root)
+
+    def test_safe_summary_rejects_identity_bundle_transfer_fields(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_contract_repo(root)
+            fixture_path = root / "examples/reference-fixtures/food-wallet-safe-summary.v1.json"
+            fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+            fixture["summary"]["identityBundle"] = "opaque-identity-payload"
             fixture_path.write_text(json.dumps(fixture) + "\n", encoding="utf-8")
 
             with self.assertRaisesRegex(SystemExit, "FOOD_WALLET_CONTRACT_ERR_FORBIDDEN_RAW_FIELD"):

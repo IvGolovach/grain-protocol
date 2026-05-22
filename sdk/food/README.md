@@ -46,5 +46,7 @@ python3 tools/ci/check_food_wallet_contract.py
 The checker validates schema drift, deterministic fixtures, and safe-summary
 redaction boundaries.
 
-Safe summaries must not include raw photos, raw trust bundles, raw snapshots,
-private keys, or raw QR payload material.
+Safe summaries and app exports may persist confirmed nutrition entries, totals,
+and advisory insights only. They must not include raw photos, raw trust bundles,
+raw snapshots, sync bundles, identity bundles, private keys, COSE payloads, or
+raw QR payload material.

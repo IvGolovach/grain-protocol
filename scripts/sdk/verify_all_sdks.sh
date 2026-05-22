@@ -183,7 +183,6 @@ fi
 if have_cmd swift; then
   run_check "Swift client package" scripts/sdk/check_swift_package.sh
   run_check "Swift Food Wallet smoke" scripts/sdk/check_swift_food_wallet.sh --policy-only
-  run_check "iOS Food Wallet app" scripts/sdk/check_ios_food_wallet_app.sh
 else
   skip_or_fail "SDK_VERIFY_ERR_SWIFT_MISSING" "swift command not found"
 fi

@@ -45,7 +45,6 @@ runner/typescript/.wasm-subset-last-run.json
 # IDE
 .idea/
 .vscode/
-/apps/ios-food-wallet/FoodWallet.xcodeproj/
 **/.swiftpm/xcode/xcuserdata/
 *.swp
 

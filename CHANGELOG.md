@@ -3,6 +3,9 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Repository boundary:
+  - kept Grain focused on public protocol, conformance, SDK, template, and contract surfaces by moving first-party production app and broker implementation code outside the public repository.
+  - documented the public/private product boundary and trademark posture for downstream app builders.
 - Repository-wide audit hardening:
   - added the Food Wallet app contract, SDK helpers, AI adapter boundary, Swift/Kotlin facades, starter templates, and verification gates for a local-first food-tracking app that keeps raw photos and protocol material out of safe summaries.
   - added Food Profile 1.0 constraints for reducer-visible food events, with machine-readable profile metadata, invariant static-check evidence, and CI/verify guards for source classes and integer unit scales.
