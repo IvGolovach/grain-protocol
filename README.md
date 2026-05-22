@@ -25,6 +25,7 @@ Pick one path and get a quick win first:
 - Prove external npm-style imports without publishing: `fixtures/external-consumers/npm-sdk`
 - Build an app on top of Grain: `docs/human/building-on-grain.md`
 - Use the SDK path: `docs/human/sdk/start-here.md`
+- Understand the public/private product boundary: `COMMERCIAL_BOUNDARY.md`
 - Implement Grain itself: `docs/human/implementing-grain.md`
 - Maintain the repo: `docs/human/maintainer-start-here.md`
 - Run release-grade verification: `docs/human/portability-pack.md`
@@ -32,7 +33,7 @@ Pick one path and get a quick win first:
 ## Project areas
 
 - Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`, `examples/reference-fixtures/README.md`
-- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`, `docs/human/sdk/device-abstraction.md`, `docs/human/sdk/local-publication.md`, `docs/human/sdk/certification.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `sdk/README.md`, `examples/README.md`, `fixtures/external-consumers/npm-sdk`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
+- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`, `docs/human/sdk/device-abstraction.md`, `docs/human/sdk/local-publication.md`, `docs/human/sdk/certification.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `COMMERCIAL_BOUNDARY.md`, `sdk/README.md`, `examples/README.md`, `fixtures/external-consumers/npm-sdk`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
 - Implement: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
 - Operate: `docs/human/portability-pack.md`, `docs/human/repro-checklist.md`, `docs/human/release-process.md`
 - Maintain: `docs/human/maintainer-start-here.md`, `CONTRIBUTING.md`, `docs/human/repository-settings.md`, `docs/human/maintainer-writing.md`
@@ -51,6 +52,7 @@ Pick one path and get a quick win first:
 - That the content is true
 - That one server or vendor is the source of truth
 - That Grain itself is a hosted product platform
+- That this repo contains a production app, account backend, App Store lane, or commercial product implementation
 - That anything outside strict conformance semantics will interoperate
 
 ## Status snapshot

@@ -91,6 +91,22 @@ public struct FoodIntakeDraft: Equatable, Sendable {
     public let trustStatus: FoodTrustStatus
     public let createdAt: Date
     public let dateKey: String
+
+    public init(
+        draftID: String,
+        meal: MealEstimate,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus,
+        createdAt: Date,
+        dateKey: String
+    ) {
+        self.draftID = draftID
+        self.meal = meal
+        self.sourceClass = sourceClass
+        self.trustStatus = trustStatus
+        self.createdAt = createdAt
+        self.dateKey = dateKey
+    }
 }
 
 public struct FoodIntakeEntry: Equatable, Sendable {
@@ -101,6 +117,24 @@ public struct FoodIntakeEntry: Equatable, Sendable {
     public let trustStatus: FoodTrustStatus
     public let confirmedAt: Date
     public let dateKey: String
+
+    public init(
+        entryID: String,
+        draftID: String,
+        meal: MealEstimate,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus,
+        confirmedAt: Date,
+        dateKey: String
+    ) {
+        self.entryID = entryID
+        self.draftID = draftID
+        self.meal = meal
+        self.sourceClass = sourceClass
+        self.trustStatus = trustStatus
+        self.confirmedAt = confirmedAt
+        self.dateKey = dateKey
+    }
 }
 
 public struct FoodDailyTotals: Equatable, Sendable {
@@ -152,6 +186,44 @@ public final class GrainFoodWallet {
 
     public init(clock: any FoodWalletClock = SystemFoodWalletClock()) {
         self.clock = clock
+    }
+
+    public func replaceEntries(_ entries: [FoodIntakeEntry]) {
+        self.entries = entries
+        nextEntryNumber = Self.nextSequence(after: entries.map(\.entryID), prefix: "food-entry-")
+        nextDraftNumber = Self.nextSequence(after: entries.map(\.draftID), prefix: "food-draft-")
+    }
+
+    @discardableResult
+    public func updateEntry(
+        entryID: String,
+        meal: MealEstimate,
+        sourceClass: FoodSourceClass,
+        trustStatus: FoodTrustStatus
+    ) -> FoodIntakeEntry? {
+        guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
+            return nil
+        }
+        let current = entries[index]
+        let updated = FoodIntakeEntry(
+            entryID: current.entryID,
+            draftID: current.draftID,
+            meal: meal,
+            sourceClass: sourceClass,
+            trustStatus: trustStatus,
+            confirmedAt: current.confirmedAt,
+            dateKey: current.dateKey
+        )
+        entries[index] = updated
+        return updated
+    }
+
+    @discardableResult
+    public func deleteEntry(entryID: String) -> FoodIntakeEntry? {
+        guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
+            return nil
+        }
+        return entries.remove(at: index)
     }
 
     public func makeEstimatedDraft(meal: MealEstimate) -> FoodIntakeDraft {
@@ -247,6 +319,16 @@ public final class GrainFoodWallet {
             components.month ?? 0,
             components.day ?? 0
         )
+    }
+
+    private static func nextSequence(after values: [String], prefix: String) -> Int {
+        let maxNumber = values.compactMap { value -> Int? in
+            guard value.hasPrefix(prefix) else {
+                return nil
+            }
+            return Int(value.dropFirst(prefix.count))
+        }.max() ?? 0
+        return maxNumber + 1
     }
 }
 

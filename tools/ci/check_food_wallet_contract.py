@@ -47,7 +47,7 @@ EXPECTED_FIXTURES = {
 FORBIDDEN_FIELD_RE = re.compile(
     r"(raw[_-]?(photo|image|qr|snapshot|trust)|"
     r"(photo|image)[_-]?(b64|bytes|data)|"
-    r"(trust[_-]?bundle|trust[_-]?pub|snapshot|sync[_-]?bundle|qr[_-]?(payload|string)|"
+    r"(trust[_-]?bundle|trust[_-]?pub|snapshot|sync[_-]?bundle|identity[_-]?bundle|qr[_-]?(payload|string)|"
     r"private[_-]?key|secret[_-]?key|seed|mnemonic|cose[_-]?b64))",
     re.IGNORECASE,
 )
@@ -56,6 +56,8 @@ FORBIDDEN_CONTENT_RE = re.compile(
     r"raw\s+qr\s+payload\s*:|"
     r"\bGR1[0-9A-Za-z_-]{8,}|"
     r"trust[_-]?pub[_-]?b64\s*:|"
+    r"identity[_-]?bundle\s*:|"
+    r"sync[_-]?bundle\s*:|"
     r"snapshot[_-]?b64\s*:|"
     r"raw\s+trust\s+bundle\s*:)",
     re.IGNORECASE,

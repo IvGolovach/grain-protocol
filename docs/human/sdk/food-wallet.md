@@ -24,7 +24,8 @@ bundles, or COSE payloads.
 No account, backend, or App Store claim is made by this page. The local pilot
 and SDK checks prove source-level contracts only. Production apps still choose
 their own account model, backend, platform signing, distribution channel,
-privacy policy, and support process.
+privacy policy, and support process. First-party commercial apps built on this
+contract live outside the public Grain protocol repository.
 
 ## AI Adapter
 
