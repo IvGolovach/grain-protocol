@@ -254,6 +254,22 @@ struct FoodWalletCoreTests {
         }
     }
 
+    @MainActor
+    private static func waitForAnalysisFailure(
+        _ store: FoodWalletStore,
+        code expectedCode: FoodAnalysisFailureCode,
+        attempts: Int = 100,
+        intervalNanoseconds: UInt64 = 10_000_000
+    ) async throws {
+        for _ in 0..<attempts {
+            if case let .failed(failure) = store.analysisState, failure.code == expectedCode {
+                return
+            }
+            try await Task.sleep(nanoseconds: intervalNanoseconds)
+        }
+        throw FoodWalletTestFailure("expected failed analysis state with code \(expectedCode)")
+    }
+
     private static func expectError<T>(
         _ expected: FoodAnalysisBrokerClientError,
         _ body: () async throws -> T
@@ -1861,8 +1877,9 @@ struct FoodWalletCoreTests {
 
     @MainActor
     private static func testStorePublishesTimeoutStateWithoutDraft() async throws {
+        let client = SuspendedFoodAnalysisClient()
         let store = FoodWalletStore(
-            analysisClient: SlowFoodAnalysisClient(delayNanoseconds: 200_000_000),
+            analysisClient: client,
             privacy: .granted,
             slowAnalysisThresholdNanoseconds: 20_000_000,
             analysisTimeoutNanoseconds: 60_000_000
@@ -1871,13 +1888,15 @@ struct FoodWalletCoreTests {
         let task = Task {
             await store.analyze(photo: .uiTestFujiApple)
         }
-        try await Task.sleep(nanoseconds: 90_000_000)
+        await client.waitUntilStarted()
+        try await waitForAnalysisFailure(store, code: .timeout)
 
         try expect(store.analysisState.isFailed, "expected timeout to publish failed state")
         try expect(store.analysisState.errorMessage?.localizedCaseInsensitiveContains("too long") == true, "expected timeout message")
         try expect(store.currentDraft == nil, "expected no draft after timeout")
         try expect(store.currentCandidate == nil, "expected no candidate after timeout")
 
+        client.release()
         await task.value
         try expect(store.analysisState.isFailed, "expected late result to be ignored after timeout")
     }
@@ -2074,6 +2093,76 @@ private struct SlowFoodAnalysisClient: FoodAnalysisClient {
     func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
         try await Task.sleep(nanoseconds: delayNanoseconds)
         return try await MockFoodAnalysisClient().estimate(photoPayload: photoPayload)
+    }
+}
+
+private final class SuspendedFoodAnalysisClient: FoodAnalysisClient, @unchecked Sendable {
+    private let lock = NSLock()
+    private var startedContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var hasStarted = false
+    private var isReleased = false
+
+    func estimate(example: FoodCaptureExample) async throws -> FoodAnalysisCandidate {
+        markStarted()
+        await waitForRelease()
+        return try await MockFoodAnalysisClient().estimate(example: example)
+    }
+
+    func estimate(photo: CapturedMealPhoto) async throws -> FoodAnalysisCandidate {
+        markStarted()
+        await waitForRelease()
+        return try await MockFoodAnalysisClient().estimate(photo: photo)
+    }
+
+    func estimate(photoPayload: TransientMealPhotoPayload) async throws -> FoodAnalysisCandidate {
+        markStarted()
+        await waitForRelease()
+        return try await MockFoodAnalysisClient().estimate(photoPayload: photoPayload)
+    }
+
+    func waitUntilStarted() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if hasStarted {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                startedContinuation = continuation
+                lock.unlock()
+            }
+        }
+    }
+
+    func release() {
+        lock.lock()
+        isReleased = true
+        let continuation = releaseContinuation
+        releaseContinuation = nil
+        lock.unlock()
+        continuation?.resume()
+    }
+
+    private func markStarted() {
+        lock.lock()
+        hasStarted = true
+        let continuation = startedContinuation
+        startedContinuation = nil
+        lock.unlock()
+        continuation?.resume()
+    }
+
+    private func waitForRelease() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if isReleased {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                releaseContinuation = continuation
+                lock.unlock()
+            }
+        }
     }
 }
 
