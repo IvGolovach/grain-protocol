@@ -161,7 +161,7 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
             if let normalizedValue = barcodeStabilityTracker.observe(
                 values,
                 allowsShortBarcode: allowsShortBarcode,
-                requiredObservations: allowsShortBarcode ? 1 : 2
+                requiredObservations: 1
             ) {
                 didEmit = true
                 dataScanner.stopScanning()

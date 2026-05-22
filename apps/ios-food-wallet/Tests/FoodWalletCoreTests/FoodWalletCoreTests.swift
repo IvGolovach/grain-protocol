@@ -635,9 +635,10 @@ struct FoodWalletCoreTests {
 
         var tracker = CameraBarcodeStabilityTracker()
         try expect(
-            tracker.observe(["071537001822"]) == nil,
-            "expected automatic scan to wait for a second stable observation before lookup"
+            tracker.observe(["071537001822"], requiredObservations: 1) == "071537001822",
+            "expected automatic scan to emit a full UPC/EAN on the first stable camera callback"
         )
+        tracker.reset()
         try expect(
             tracker.observe(["071537001839"]) == nil,
             "expected a different barcode observation not to inherit the first candidate's count"
