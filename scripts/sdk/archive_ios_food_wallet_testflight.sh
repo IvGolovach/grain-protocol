@@ -8,6 +8,9 @@ DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 XCODEBUILD="${XCODEBUILD:-$DEVELOPER_DIR/usr/bin/xcodebuild}"
 BUNDLE_ID="${GRAIN_IOS_BUNDLE_ID:-dev.grain.foodwallet}"
 TEAM_ID="${GRAIN_IOS_DISTRIBUTION_TEAM:-}"
+PROVISIONING_PROFILE_SPECIFIER="${GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER:-}"
+PROVISIONING_PROFILE_UUID="${GRAIN_IOS_PROVISIONING_PROFILE_UUID:-}"
+CODE_SIGN_IDENTITY="${GRAIN_IOS_CODE_SIGN_IDENTITY:-Apple Distribution}"
 DEFAULT_BROKER_URL="https://mealmark-food-analysis-broker-staging.ivan-f7b.workers.dev"
 BROKER_URL="${GRAIN_FOOD_ANALYSIS_BROKER_URL:-$DEFAULT_BROKER_URL}"
 ARCHIVE_PATH="${GRAIN_IOS_ARCHIVE_PATH:-$ROOT_DIR/artifacts/ios-food-wallet/MealMark.xcarchive}"
@@ -30,6 +33,13 @@ Required:
 Optional:
   GRAIN_FOOD_ANALYSIS_BROKER_URL  Public HTTPS MealMark broker URL
   GRAIN_IOS_BUILD_NUMBER          Override CURRENT_PROJECT_VERSION for this upload
+  GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER
+                                  Installed App Store provisioning profile name,
+                                  for example "MealMark App Store"
+  GRAIN_IOS_PROVISIONING_PROFILE_UUID
+                                  Installed App Store provisioning profile UUID
+  GRAIN_IOS_CODE_SIGN_IDENTITY    Signing identity for manual profile archives
+                                  (default: Apple Distribution)
   GRAIN_IOS_ARCHIVE_PATH          Output .xcarchive path
   GRAIN_IOS_DERIVED_DATA          DerivedData path
   GRAIN_IOS_SKIP_LOCAL_VALIDATION Set to 1 to skip the heavy app check
@@ -45,6 +55,11 @@ fi
 
 if [[ -z "$TEAM_ID" ]]; then
   echo "IOS_FOOD_WALLET_ARCHIVE_ERR_TEAM: set GRAIN_IOS_DISTRIBUTION_TEAM" >&2
+  exit 1
+fi
+
+if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" && -n "$PROVISIONING_PROFILE_UUID" ]]; then
+  echo "IOS_FOOD_WALLET_ARCHIVE_ERR_PROFILE: set only one of GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER or GRAIN_IOS_PROVISIONING_PROFILE_UUID" >&2
   exit 1
 fi
 
@@ -91,6 +106,22 @@ mkdir -p "$(dirname "$ARCHIVE_PATH")" "$DERIVED_DATA"
 echo "Generating Xcode project at $PROJECT_PATH"
 (cd "$APP_DIR" && xcodegen generate)
 
+automatic_signing_args=()
+manual_signing_args=()
+if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" || -n "$PROVISIONING_PROFILE_UUID" ]]; then
+  manual_signing_args=(
+    CODE_SIGN_STYLE=Manual
+    CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY"
+  )
+  if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" ]]; then
+    manual_signing_args+=(PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER")
+  else
+    manual_signing_args+=(PROVISIONING_PROFILE="$PROVISIONING_PROFILE_UUID")
+  fi
+else
+  automatic_signing_args=(-allowProvisioningUpdates)
+fi
+
 archive_args=(
   -project "$PROJECT_PATH"
   -scheme FoodWallet
@@ -98,11 +129,12 @@ archive_args=(
   -destination "generic/platform=iOS"
   -archivePath "$ARCHIVE_PATH"
   -derivedDataPath "$DERIVED_DATA"
-  -allowProvisioningUpdates
+  "${automatic_signing_args[@]}"
   DEVELOPMENT_TEAM="$TEAM_ID"
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID"
   GRAIN_FOOD_ANALYSIS_BROKER_URL="$BROKER_URL"
   GRAIN_FOOD_BROKER_DEV_TOKEN=""
+  "${manual_signing_args[@]}"
   archive
 )
 

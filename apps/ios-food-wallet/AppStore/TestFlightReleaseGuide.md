@@ -108,6 +108,16 @@ GRAIN_FOOD_ANALYSIS_BROKER_URL="https://mealmark-food-analysis-broker-staging.iv
 scripts/sdk/archive_ios_food_wallet_testflight.sh
 ```
 
+If command-line automatic signing selects a development profile, install an App
+Store provisioning profile for `dev.grain.foodwallet` and pin it explicitly:
+
+```sh
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER="MealMark App Store" \
+GRAIN_FOOD_ANALYSIS_BROKER_URL="https://mealmark-food-analysis-broker-staging.ivan-f7b.workers.dev" \
+scripts/sdk/archive_ios_food_wallet_testflight.sh
+```
+
 The script runs `xcodegen generate`, selected local checks, `xcodebuild archive`,
 and:
 
