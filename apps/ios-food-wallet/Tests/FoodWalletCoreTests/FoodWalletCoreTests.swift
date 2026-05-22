@@ -69,6 +69,9 @@ struct FoodWalletCoreTests {
         await run("storeBarcodeSearchRequestsSingleExactResult") {
             try await testStoreBarcodeSearchRequestsSingleExactResult()
         }
+        await run("storePublishesLoadingDuringBarcodeLookup") {
+            try await testStorePublishesLoadingDuringBarcodeLookup()
+        }
         await run("todaySummaryPrimaryLabelUsesLoggedCalories") {
             try testTodaySummaryPrimaryLabelUsesLoggedCalories()
         }
@@ -682,6 +685,26 @@ struct FoodWalletCoreTests {
         try expect(client.requests.count == 1, "expected one barcode lookup request")
         try expect(client.requests[0].barcode == "012345678905", "expected normalized barcode")
         try expect(client.requests[0].limit == 1, "expected barcode lookup to request only the exact best match")
+    }
+
+    @MainActor
+    private static func testStorePublishesLoadingDuringBarcodeLookup() async throws {
+        let result = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: brokerSearchEnvelopeJSON()).results[0]
+        let client = SuspendedFoodSearchClient(results: [result])
+        let store = FoodWalletStore(searchClient: client)
+
+        let lookupTask = Task {
+            await store.searchBrokerFood(barcode: "012345678905")
+        }
+        await client.waitUntilStarted()
+
+        try expect(store.foodSearchState == .loading, "expected visible loading state during barcode lookup")
+
+        client.release()
+        await lookupTask.value
+
+        try expect(store.foodSearchState == .ready(resultCount: 1), "expected ready state after barcode lookup")
+        try expect(store.brokerFoodSearchRows.count == 1, "expected barcode rows after lookup")
     }
 
     private static func testBrokerNameSearchDoesNotClaimBarcodeAssumption() throws {
@@ -2118,6 +2141,69 @@ private final class CapturingFoodSearchClient: BrokerFoodSearchClient, @unchecke
     func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
         requests.append(request)
         return results
+    }
+}
+
+private final class SuspendedFoodSearchClient: BrokerFoodSearchClient, @unchecked Sendable {
+    var results: [BrokerFoodSearchResult]
+    private let lock = NSLock()
+    private var startedContinuation: CheckedContinuation<Void, Never>?
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+    private var hasStarted = false
+    private var isReleased = false
+
+    init(results: [BrokerFoodSearchResult]) {
+        self.results = results
+    }
+
+    func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
+        markStarted()
+        await waitForRelease()
+        return results
+    }
+
+    func waitUntilStarted() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if hasStarted {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                startedContinuation = continuation
+                lock.unlock()
+            }
+        }
+    }
+
+    func release() {
+        lock.lock()
+        isReleased = true
+        let continuation = releaseContinuation
+        releaseContinuation = nil
+        lock.unlock()
+        continuation?.resume()
+    }
+
+    private func markStarted() {
+        lock.lock()
+        hasStarted = true
+        let continuation = startedContinuation
+        startedContinuation = nil
+        lock.unlock()
+        continuation?.resume()
+    }
+
+    private func waitForRelease() async {
+        await withCheckedContinuation { continuation in
+            lock.lock()
+            if isReleased {
+                lock.unlock()
+                continuation.resume()
+            } else {
+                releaseContinuation = continuation
+                lock.unlock()
+            }
+        }
     }
 }
 

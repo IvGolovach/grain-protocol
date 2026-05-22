@@ -33,6 +33,9 @@ export class MockFoodAnalyzer implements FoodAnalyzer {
         serving_g: 220,
         amount_g: 220,
         servings: 1,
+        portion_basis: "visual_estimate",
+        portion_confidence: 0.45,
+        portion_rationale: "deterministic fixture visual portion estimate",
         confidence: 0.74,
         rationale: "deterministic fixture observation for local development and tests"
       }
@@ -136,6 +139,10 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
         "If food might be present but you cannot identify it well enough for a user-reviewable nutrition draft, set recognition_status to uncertain and keep items empty unless a specific visible food item is identifiable.",
         "Never invent a generic item such as captured meal, meal, food, plate, or unknown just to satisfy the schema.",
         "Only set recognition_status to food_detected when a specific food, drink, or nutrition label is visible enough to review.",
+        "Photo-only visual estimates are not measured weights. Set portion_basis to visual_estimate only when you can make a rough user-reviewable portion guess from visible food; set portion_confidence to 0.45 or lower unless there is a readable serving size, package size, scale, or strong reference object.",
+        "Use portion_basis visible_label when grams or servings come from a readable nutrition/menu/package label. Use package_serving when a packaged unit or serving count is visible but full nutrition label facts are not readable. Use unknown and set amount_g, serving_g, and servings to null when the photo has no defensible portion evidence.",
+        "Define amount_g as total visible edible grams, serving_g as grams in one serving, and servings as the number of such servings. If serving_g and servings are both known, amount_g may be null; downstream code will multiply them. Never set any gram or serving field to 0.",
+        "Keep portion_rationale short and explain the visual or label cue used for the portion estimate.",
         "Return only the requested structured JSON observation.",
         "Do not produce Grain ledger records, drafts, CIDs, signatures, or persistence fields.",
         "Never echo or describe raw image bytes."
@@ -164,7 +171,7 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
       text: {
         format: {
           type: "json_schema",
-          name: "grain_food_photo_observation_v1",
+          name: "grain_food_photo_observation_v2",
           strict: true,
           schema: FOOD_OBSERVATION_SCHEMA
         }

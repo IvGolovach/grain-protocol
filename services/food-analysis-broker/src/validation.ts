@@ -104,9 +104,12 @@ export function assertObservation(value: unknown): FoodObservation {
     total_kcal: parseNonNegativeInteger(value.total_kcal, "total_kcal"),
     kcal_variance: parseNonNegativeInteger(value.kcal_variance, "kcal_variance"),
     nutrition_label: parseNutritionLabel(value.nutrition_label),
-    serving_g: parseNullableNonNegativeInteger(value.serving_g, "serving_g"),
-    amount_g: parseNullableNonNegativeInteger(value.amount_g, "amount_g"),
-    servings: parseNullableNonNegativeInteger(value.servings, "servings"),
+    serving_g: parseNullablePositiveInteger(value.serving_g, "serving_g"),
+    amount_g: parseNullablePositiveInteger(value.amount_g, "amount_g"),
+    servings: parseNullablePositiveInteger(value.servings, "servings"),
+    portion_basis: parsePortionBasis(value.portion_basis),
+    portion_confidence: parseConfidence(value.portion_confidence, "portion_confidence"),
+    portion_rationale: parseString(value.portion_rationale, "portion_rationale", 200),
     confidence: parseConfidence(value.confidence, "confidence"),
     rationale: parseString(value.rationale, "rationale", 240)
   };
@@ -138,6 +141,18 @@ function parseRecognitionStatus(value: unknown): FoodObservation["recognition_st
     return value;
   }
   throw new BrokerError(502, "UPSTREAM_ERROR", "recognition_status was not valid");
+}
+
+function parsePortionBasis(value: unknown): FoodObservation["portion_basis"] {
+  if (
+    value === "visible_label" ||
+    value === "package_serving" ||
+    value === "visual_estimate" ||
+    value === "unknown"
+  ) {
+    return value;
+  }
+  throw new BrokerError(502, "UPSTREAM_ERROR", "portion_basis was not valid");
 }
 
 function noFoodError(observation: FoodObservation, fallbackMessage: string): BrokerError {
@@ -316,6 +331,15 @@ function parseNullableString(value: unknown, field: string, maxLength: number): 
 function parseNullableNonNegativeInteger(value: unknown, field: string): number | null {
   if (value === null) return null;
   return parseNonNegativeInteger(value, field);
+}
+
+function parseNullablePositiveInteger(value: unknown, field: string): number | null {
+  if (value === null) return null;
+  const parsed = parseNonNegativeInteger(value, field);
+  if (parsed <= 0) {
+    throw new BrokerError(502, "UPSTREAM_ERROR", `${field} was not a positive safe integer`);
+  }
+  return parsed;
 }
 
 function parseNullableNonNegativeNumber(value: unknown, field: string): number | null {

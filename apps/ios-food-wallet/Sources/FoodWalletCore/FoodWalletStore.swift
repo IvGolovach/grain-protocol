@@ -1205,6 +1205,8 @@ public final class FoodWalletStore: ObservableObject {
         }
 
         foodSearchState = .loading
+        brokerFoodSearchRows = []
+        brokerFoodSearchResults = [:]
         do {
             let request = try requestFactory()
             let results = try await searchClient.searchFood(request)

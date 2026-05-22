@@ -45,10 +45,14 @@ export type FoodObservation = {
   serving_g: number | null;
   amount_g: number | null;
   servings: number | null;
+  portion_basis: PortionBasis;
+  portion_confidence: number;
+  portion_rationale: string;
   confidence: number;
   rationale: string;
 };
 
+export type PortionBasis = "visible_label" | "package_serving" | "visual_estimate" | "unknown";
 export type DishType = "single" | "mixed" | "packaged" | "unknown";
 export type EstimateConfidence = "high" | "medium" | "low";
 
@@ -114,12 +118,12 @@ export type FoodIntakeDraft = {
     estimate_id: string;
     capture_id?: string;
     confidence: number;
-    evidence: {
-      photo_sha256_16: string;
-      model_id: string;
-      observation_schema: "grain_food_photo_observation_v1";
-    };
-    food_items: Array<{
+      evidence: {
+        photo_sha256_16: string;
+        model_id: string;
+        observation_schema: "grain_food_photo_observation_v2";
+      };
+      food_items: Array<{
       label: string;
       confidence: number;
     }>;

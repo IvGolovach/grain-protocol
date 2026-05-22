@@ -1,4 +1,4 @@
-import type { MealMacronutrients, NutritionRange, PortionEstimate } from "./types.js";
+import type { MealMacronutrients, NutritionRange, PortionBasis, PortionEstimate } from "./types.js";
 
 export type Per100gNutrients = {
   kcal: number;
@@ -14,13 +14,55 @@ export type NutritionEstimate = {
   macronutrients: MealMacronutrients;
 };
 
-export function portionFromObservation(amountGrams: number | null, servingGrams: number | null): PortionEstimate {
-  const mode = positiveInteger(amountGrams ?? servingGrams ?? 300);
+export type PortionResolution = {
+  portion: PortionEstimate;
+  basis: PortionBasis;
+  confidence: number;
+  usedDefault: boolean;
+  derivedAmountGrams: number | null;
+};
+
+export function resolvePortionFromObservation(input: {
+  amountGrams: number | null;
+  servingGrams: number | null;
+  servings: number | null;
+  basis: PortionBasis;
+  confidence: number;
+}): PortionResolution {
+  const amount = positiveIntegerOrNull(input.amountGrams);
+  const serving = positiveIntegerOrNull(input.servingGrams);
+  const servingCount = positiveIntegerOrNull(input.servings);
+  const derivedAmount = amount ?? (serving === null ? null : serving * (servingCount ?? 1));
+  const usedDefault = derivedAmount === null;
+  const mode = positiveInteger(derivedAmount ?? 300);
+  const spread = portionSpread(input.basis, input.confidence, usedDefault);
   return {
-    gramsMin: Math.max(1, Math.round(mode * 0.75)),
-    gramsMode: mode,
-    gramsMax: Math.max(mode, Math.round(mode * 1.25))
+    portion: {
+      gramsMin: Math.max(1, Math.round(mode * spread.minFactor)),
+      gramsMode: mode,
+      gramsMax: Math.max(mode, Math.round(mode * spread.maxFactor))
+    },
+    basis: input.basis,
+    confidence: input.confidence,
+    usedDefault,
+    derivedAmountGrams: derivedAmount
   };
+}
+
+export function portionFromObservation(
+  amountGrams: number | null,
+  servingGrams: number | null,
+  servings: number | null,
+  basis: PortionBasis,
+  confidence: number
+): PortionEstimate {
+  return resolvePortionFromObservation({
+    amountGrams,
+    servingGrams,
+    servings,
+    basis,
+    confidence
+  }).portion;
 }
 
 export function estimateFromPer100g(per100g: Per100gNutrients, portion: PortionEstimate): NutritionEstimate {
@@ -68,10 +110,19 @@ export function fallbackEstimate(observation: {
   kcal_variance: number;
   amount_g: number | null;
   serving_g: number | null;
+  servings: number | null;
+  portion_basis: PortionBasis;
+  portion_confidence: number;
 }): NutritionEstimate {
   const modeKcal = positiveInteger(observation.total_kcal);
   const variance = Math.max(0, positiveInteger(observation.kcal_variance));
-  const portion = portionFromObservation(observation.amount_g, observation.serving_g);
+  const portion = portionFromObservation(
+    observation.amount_g,
+    observation.serving_g,
+    observation.servings,
+    observation.portion_basis,
+    observation.portion_confidence
+  );
   return {
     portion,
     nutrition: {
@@ -124,6 +175,32 @@ function positiveInteger(value: number): number {
     return 0;
   }
   return value;
+}
+
+function positiveIntegerOrNull(value: number | null): number | null {
+  if (value === null || !Number.isSafeInteger(value) || value <= 0) {
+    return null;
+  }
+  return value;
+}
+
+function portionSpread(
+  basis: PortionBasis,
+  confidence: number,
+  usedDefault: boolean
+): { minFactor: number; maxFactor: number } {
+  if (usedDefault || basis === "unknown") {
+    return { minFactor: 0.5, maxFactor: 1.5 };
+  }
+  if (basis === "visible_label" || basis === "package_serving") {
+    return confidence >= 0.75
+      ? { minFactor: 0.9, maxFactor: 1.1 }
+      : { minFactor: 0.75, maxFactor: 1.25 };
+  }
+  if (confidence <= 0.45) {
+    return { minFactor: 0.5, maxFactor: 1.75 };
+  }
+  return { minFactor: 0.65, maxFactor: 1.4 };
 }
 
 function round1(value: number): number {

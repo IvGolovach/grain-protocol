@@ -1730,6 +1730,9 @@ private struct BarcodeLookupView: View {
         }
         detectedBarcode = normalized
         barcodeText = normalized
+        detectedQRCodeText = nil
+        qrPreview = nil
+        errorMessage = nil
         Task {
             await lookupBarcode(normalized)
         }
@@ -1756,6 +1759,7 @@ private struct BarcodeLookupView: View {
         detectedBarcode = nil
         detectedQRCodeText = nil
         qrPreview = nil
+        store.clearBrokerFoodSearch()
         scannerRestartID = UUID()
     }
 
@@ -1788,11 +1792,11 @@ private struct BarcodeLookupView: View {
             return
         }
         isLookingUp = true
-        errorMessage = nil
-        await store.searchBrokerFood(barcode: barcode)
         defer {
             isLookingUp = false
         }
+        errorMessage = nil
+        await store.searchBrokerFood(barcode: barcode)
 
         switch store.foodSearchState {
         case .ready:
@@ -1817,6 +1821,7 @@ private struct BarcodeLookupView: View {
 
 private struct BarcodeLookupProgressCard: View {
     var barcode: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1824,9 +1829,7 @@ private struct BarcodeLookupProgressCard: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.blue)
 
-            ProgressView()
-                .progressViewStyle(.linear)
-                .tint(.blue)
+            BarcodeLookupIndeterminateBar(reduceMotion: reduceMotion)
                 .accessibilityIdentifier("BarcodeLookupProgressBar")
 
             Text(statusText)
@@ -1976,6 +1979,7 @@ private struct IngredientBarcodeLookupView: View {
         }
         detectedBarcode = normalized
         barcodeText = normalized
+        errorMessage = nil
         Task {
             await lookupBarcode(normalized)
         }
@@ -1999,6 +2003,7 @@ private struct IngredientBarcodeLookupView: View {
     private func scanAgain() {
         errorMessage = nil
         detectedBarcode = nil
+        store.clearBrokerFoodSearch()
         scannerRestartID = UUID()
     }
 
@@ -4263,6 +4268,52 @@ private struct PortionControlsView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
+    }
+}
+
+private struct BarcodeLookupIndeterminateBar: View {
+    var reduceMotion: Bool
+    @State private var isAnimating = false
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.blue.opacity(0.14))
+                if reduceMotion {
+                    Capsule()
+                        .fill(Color.blue.opacity(0.34))
+                        .frame(width: max(72, width * 0.38))
+                } else {
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.blue.opacity(0.1),
+                                    Color.blue.opacity(0.82),
+                                    Color.blue.opacity(0.1)
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(76, width * 0.36))
+                        .offset(x: isAnimating ? width : -max(76, width * 0.36))
+                }
+            }
+            .clipShape(Capsule())
+        }
+        .frame(height: 8)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.linear(duration: 1.05).repeatForever(autoreverses: false)) {
+                isAnimating = true
+            }
+        }
+        .onDisappear {
+            isAnimating = false
+        }
     }
 }
 

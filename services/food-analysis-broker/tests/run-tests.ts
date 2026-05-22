@@ -98,11 +98,14 @@ async function main(): Promise<number> {
   await testFetchHandlerEnforcesUsageLimiter();
   await testPayloadCap();
   await testOpenAiRequestShapeAndResolverBoundary();
+  await testPhotoVisualPortionUsesWideUncertaintyAndReviewAssumption();
+  await testPhotoServingCountScalesPortion();
   await testNoFoodObservationReturnsNoFoodError();
   await testOpenAiAnalyzerFailureUsesProviderNeutralError();
   await testOpenAiAnalyzerTimeoutReturnsGatewayTimeout();
   await testVisibleNutritionLabelOverridesDatabasePortionScaling();
   await testUpstreamSchemaValidation();
+  await testFoodDetectedZeroWeightIsRejected();
 
   const failed = checks.filter((entry) => !entry.pass);
   await writeStdout(`${JSON.stringify({ total: checks.length, failed: failed.length, checks }, null, 2)}\n`);
@@ -1747,17 +1750,144 @@ async function testOpenAiRequestShapeAndResolverBoundary(): Promise<void> {
   assertRecord(captured.text);
   assertRecord(captured.text.format);
   assert.equal(captured.text.format.type, "json_schema");
-  assert.equal(captured.text.format.name, "grain_food_photo_observation_v1");
+  assert.equal(captured.text.format.name, "grain_food_photo_observation_v2");
   assert.equal(captured.text.format.strict, true);
   const capturedJson = JSON.stringify(captured);
   assert.equal(capturedJson.includes("ignore all previous instructions"), false);
   assert.equal(capturedJson.includes("nutrition_label"), true);
+  assert.equal(capturedJson.includes("portion_basis"), true);
+  assert.equal(capturedJson.includes("portion_confidence"), true);
+  assert.equal(capturedJson.includes("Photo-only visual estimates are not measured weights"), true);
   assert.equal(capturedJson.includes("recognition_status"), true);
   assert.equal(capturedJson.includes("no_food"), true);
   assert.equal(capturedJson.includes("whole bottle"), true);
+  assert.equal(capturedJson.includes("grain_food_photo_observation_v2"), true);
   assert.equal(capturedJson.includes("\"draft_v\""), false);
   assert.equal(fetchThisBinding, undefined);
   pass("OpenAI call uses store=false structured observation, resolver produces draft");
+}
+
+async function testPhotoVisualPortionUsesWideUncertaintyAndReviewAssumption(): Promise<void> {
+  const analyzer: FoodAnalyzer = {
+    async analyze() {
+      return {
+        mode: "openai",
+        modelId: "gpt-test-vision",
+        observation: {
+          recognition_status: "food_detected",
+          non_food_reason: null,
+          items: [{ label: "apple slices", confidence: 0.72 }],
+          total_kcal: 126,
+          kcal_variance: 80,
+          nutrition_label: null,
+          serving_g: null,
+          amount_g: 200,
+          servings: null,
+          portion_basis: "visual_estimate",
+          portion_confidence: 0.3,
+          portion_rationale: "photo-only guess without a scale cue",
+          confidence: 0.72,
+          rationale: "apple slices visible, amount is only a visual estimate"
+        }
+      };
+    }
+  };
+  const nutritionProvider: NutritionProvider = {
+    async lookup(query) {
+      if (!query.toLowerCase().includes("apple")) return null;
+      return {
+        provider: "deterministic_fixture",
+        providerID: "fixture-apple",
+        matchedName: "Apple, raw",
+        servingBasis: "per_100g",
+        per100g: {
+          kcal: 63,
+          proteinGrams: 0.3,
+          carbohydrateGrams: 14,
+          fatGrams: 0.2,
+          fiberGrams: 2.4
+        }
+      };
+    }
+  };
+
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    const candidate = body.candidate as Record<string, unknown>;
+    const portion = candidate.portion as Record<string, unknown>;
+    assert.equal(portion.gramsMode, 200);
+    assert.equal(portion.gramsMin, 100);
+    assert.equal(portion.gramsMax, 350);
+    const nutrition = candidate.nutrition as Record<string, unknown>;
+    assert.equal(nutrition.modeKcal, 126);
+    assert.equal(candidate.confidence, "low");
+    const assumptions = candidate.assumptions as Array<Record<string, unknown>>;
+    assert.equal(assumptions.some((entry) => entry.id === "visual-portion-estimate"), true);
+    const evidence = candidate.evidence as Array<Record<string, unknown>>;
+    assert.equal(evidence.some((entry) => entry.servingBasis === "visual_estimate"), true);
+  }, nutritionProvider);
+  pass("photo-only visual portion estimates stay wide and review-gated");
+}
+
+async function testPhotoServingCountScalesPortion(): Promise<void> {
+  const analyzer: FoodAnalyzer = {
+    async analyze() {
+      return {
+        mode: "openai",
+        modelId: "gpt-test-vision",
+        observation: {
+          recognition_status: "food_detected",
+          non_food_reason: null,
+          items: [{ label: "whole milk", confidence: 0.89 }],
+          total_kcal: 67,
+          kcal_variance: 20,
+          nutrition_label: null,
+          serving_g: 55,
+          amount_g: null,
+          servings: 2,
+          portion_basis: "package_serving",
+          portion_confidence: 0.82,
+          portion_rationale: "two visible 55 g servings",
+          confidence: 0.89,
+          rationale: "packaged serving amount is visible"
+        }
+      };
+    }
+  };
+  const nutritionProvider: NutritionProvider = {
+    async lookup(query) {
+      if (!query.toLowerCase().includes("milk")) return null;
+      return {
+        provider: "deterministic_fixture",
+        providerID: "fixture-milk",
+        matchedName: "Whole milk",
+        servingBasis: "per_100g",
+        per100g: {
+          kcal: 61,
+          proteinGrams: 3.2,
+          carbohydrateGrams: 4.8,
+          fatGrams: 3.3,
+          fiberGrams: 0
+        }
+      };
+    }
+  };
+
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 200);
+    const body = await response.json() as Record<string, unknown>;
+    const candidate = body.candidate as Record<string, unknown>;
+    const portion = candidate.portion as Record<string, unknown>;
+    assert.equal(portion.gramsMode, 110);
+    const nutrition = candidate.nutrition as Record<string, unknown>;
+    assert.equal(nutrition.modeKcal, 67);
+    const evidence = candidate.evidence as Array<Record<string, unknown>>;
+    assert.equal(evidence.some((entry) => entry.servingBasis === "package_serving"), true);
+  }, nutritionProvider);
+  pass("photo observations multiply serving grams by serving count");
 }
 
 async function testNoFoodObservationReturnsNoFoodError(): Promise<void> {
@@ -1776,6 +1906,9 @@ async function testNoFoodObservationReturnsNoFoodError(): Promise<void> {
           serving_g: null,
           amount_g: null,
           servings: null,
+          portion_basis: "unknown",
+          portion_confidence: 0,
+          portion_rationale: "no portion because no food is visible",
           confidence: 0,
           rationale: "no food visible in the frame"
         }
@@ -1868,6 +2001,9 @@ async function testVisibleNutritionLabelOverridesDatabasePortionScaling(): Promi
           serving_g: null,
           amount_g: 473,
           servings: 1,
+          portion_basis: "visible_label",
+          portion_confidence: 0.95,
+          portion_rationale: "visible label/container states one bottle",
           confidence: 0.93,
           rationale: "visible bottle label states 80 calories for the whole bottle"
         }
@@ -1936,6 +2072,33 @@ async function testUpstreamSchemaValidation(): Promise<void> {
     assert.equal((body.error as Record<string, unknown>).code, "UPSTREAM_ERROR");
   });
   pass("server rejects invalid analyzer observations before resolving drafts");
+}
+
+async function testFoodDetectedZeroWeightIsRejected(): Promise<void> {
+  const analyzer: FoodAnalyzer = {
+    async analyze() {
+      return {
+        mode: "openai",
+        modelId: "bad-weight-fixture",
+        observation: {
+          ...fakeObservation(),
+          amount_g: 0,
+          serving_g: null,
+          portion_basis: "visual_estimate",
+          portion_confidence: 0.5,
+          portion_rationale: "invalid zero gram visual estimate"
+        } as FoodObservation
+      };
+    }
+  };
+  await withServer(analyzer, async (baseUrl) => {
+    const response = await postJson(`${baseUrl}/v1/food/analyze-photo`, sampleRequest);
+    assert.equal(response.status, 502);
+    const body = await response.json() as Record<string, unknown>;
+    assert.equal(body.ok, false);
+    assert.equal((body.error as Record<string, unknown>).code, "UPSTREAM_ERROR");
+  });
+  pass("food observations with zero gram portions are rejected before draft creation");
 }
 
 async function withServer(
@@ -2233,6 +2396,9 @@ function fakeObservation(): FoodObservation {
     serving_g: 250,
     amount_g: 250,
     servings: 1,
+    portion_basis: "visual_estimate",
+    portion_confidence: 0.65,
+    portion_rationale: "fixture visual estimate",
     confidence: 0.8,
     rationale: "fixture observation"
   };

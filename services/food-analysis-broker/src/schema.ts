@@ -37,6 +37,9 @@ export const FOOD_OBSERVATION_SCHEMA = {
     "serving_g",
     "amount_g",
     "servings",
+    "portion_basis",
+    "portion_confidence",
+    "portion_rationale",
     "confidence",
     "rationale"
   ],
@@ -64,9 +67,15 @@ export const FOOD_OBSERVATION_SCHEMA = {
     total_kcal: { type: "integer", minimum: 0, maximum: 10000 },
     kcal_variance: { type: "integer", minimum: 0, maximum: 1000000 },
     nutrition_label: { anyOf: [NUTRITION_LABEL_SCHEMA, { type: "null" }] },
-    serving_g: { anyOf: [{ type: "integer", minimum: 0, maximum: 10000 }, { type: "null" }] },
-    amount_g: { anyOf: [{ type: "integer", minimum: 0, maximum: 10000 }, { type: "null" }] },
-    servings: { anyOf: [{ type: "integer", minimum: 0, maximum: 100 }, { type: "null" }] },
+    serving_g: { anyOf: [{ type: "integer", minimum: 1, maximum: 10000 }, { type: "null" }] },
+    amount_g: { anyOf: [{ type: "integer", minimum: 1, maximum: 10000 }, { type: "null" }] },
+    servings: { anyOf: [{ type: "integer", minimum: 1, maximum: 100 }, { type: "null" }] },
+    portion_basis: {
+      type: "string",
+      enum: ["visible_label", "package_serving", "visual_estimate", "unknown"]
+    },
+    portion_confidence: { type: "number", minimum: 0, maximum: 1 },
+    portion_rationale: { type: "string", maxLength: 200 },
     confidence: { type: "number", minimum: 0, maximum: 1 },
     rationale: { type: "string", maxLength: 240 }
   }

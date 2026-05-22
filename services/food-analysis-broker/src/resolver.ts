@@ -1,7 +1,7 @@
-import { estimateFromExplicitCalories, estimateFromPer100g, fallbackEstimate, portionFromObservation } from "./nutrition.js";
+import { estimateFromExplicitCalories, estimateFromPer100g, fallbackEstimate, resolvePortionFromObservation } from "./nutrition.js";
 import { stableDigest } from "./runtime.js";
 import { nutritionProviderFromEnv, type NutritionProvider } from "./usda.js";
-import type { CandidateResolver, DishType, EstimateConfidence, FoodAnalysisCandidate, FoodIntakeDraft, FoodObservation, ObservationResolver } from "./types.js";
+import type { CandidateResolver, DishType, EstimateConfidence, FoodAnalysisCandidate, FoodIntakeDraft, FoodObservation, ObservationResolver, PortionBasis } from "./types.js";
 
 export class GrainDraftResolver implements ObservationResolver {
   async resolve(input: Parameters<ObservationResolver["resolve"]>[0]): Promise<FoodIntakeDraft> {
@@ -11,6 +11,7 @@ export class GrainDraftResolver implements ObservationResolver {
     const explicitLabelCalories = caloriesFromNutritionLabel(input.observation);
     const meanKcal = explicitLabelCalories?.kcal ?? input.observation.total_kcal;
     const varianceKcal = explicitLabelCalories ? 0 : input.observation.kcal_variance;
+    const resolvedPortion = resolveObservationPortion(input.observation);
     const estimateId = `photo-estimate:${await stableDigest([
       input.photoSha25616,
       input.modelId,
@@ -26,7 +27,7 @@ export class GrainDraftResolver implements ObservationResolver {
       source_class: "estimated",
       mean: { kcal: meanKcal },
       var: { kcal: varianceKcal },
-      ...(input.observation.amount_g === null ? {} : { amount_g: input.observation.amount_g }),
+      ...(resolvedPortion.derivedAmountGrams === null ? {} : { amount_g: resolvedPortion.derivedAmountGrams }),
       ...(input.observation.serving_g === null ? {} : { serving_g: input.observation.serving_g }),
       ...(input.observation.servings === null ? {} : { servings: input.observation.servings }),
       ...(input.request.draft?.ts_ms === undefined ? {} : { ts_ms: input.request.draft.ts_ms }),
@@ -37,7 +38,7 @@ export class GrainDraftResolver implements ObservationResolver {
         evidence: {
           photo_sha256_16: input.photoSha25616,
           model_id: input.modelId,
-          observation_schema: "grain_food_photo_observation_v1"
+          observation_schema: "grain_food_photo_observation_v2"
         },
         food_items: input.observation.items.map((item) => ({ ...item }))
       },
@@ -62,14 +63,16 @@ export class FoodAnalysisCandidateResolver implements CandidateResolver {
     const genericLabel = genericFoodLabel(label);
     const explicitLabelCalories = caloriesFromNutritionLabel(input.observation);
     const dishType = explicitLabelCalories ? "packaged" : inferDishType(label);
-    const portion = portionFromObservation(input.observation.amount_g, input.observation.serving_g);
-    const match = explicitLabelCalories ? null : await this.safeNutritionLookup(label, genericLabel);
+    const resolvedPortion = resolveObservationPortion(input.observation);
+    const match = explicitLabelCalories ? null : await this.lookupBestNutritionMatch(label, genericLabel);
     const estimate = explicitLabelCalories
-      ? estimateFromExplicitCalories(explicitLabelCalories.kcal, portion)
+      ? estimateFromExplicitCalories(explicitLabelCalories.kcal, resolvedPortion.portion)
       : match
-      ? estimateFromPer100g(match.per100g, portion)
+      ? estimateFromPer100g(match.per100g, resolvedPortion.portion)
       : fallbackEstimate(input.observation);
-    const confidence = explicitLabelCalories ? "high" : confidenceFrom(input.observation.confidence, Boolean(match), dishType);
+    const confidence = explicitLabelCalories
+      ? "high"
+      : confidenceFrom(input.observation.confidence, Boolean(match), dishType, resolvedPortion);
 
     return {
       id: `broker-${await stableDigest([input.photoSha25616, input.modelId, label])}`,
@@ -84,14 +87,17 @@ export class FoodAnalysisCandidateResolver implements CandidateResolver {
         dishType,
         matched: Boolean(match),
         explicitNutritionLabel: Boolean(explicitLabelCalories),
-        observationConfidence: input.observation.confidence
+        observationConfidence: input.observation.confidence,
+        portionBasis: resolvedPortion.basis,
+        portionConfidence: resolvedPortion.confidence,
+        usedDefaultPortion: resolvedPortion.usedDefault
       }),
       evidence: [
         {
           provider: input.modelId.startsWith("gpt-") ? "openai_responses" : "deterministic_fixture",
           providerID: input.modelId,
-          matchedName: "food photo observation",
-          servingBasis: "image_observation"
+          matchedName: input.observation.portion_rationale || "food photo observation",
+          servingBasis: resolvedPortion.basis
         },
         ...(explicitLabelCalories ? [{
           provider: "visible_nutrition_label",
@@ -110,12 +116,27 @@ export class FoodAnalysisCandidateResolver implements CandidateResolver {
     };
   }
 
-  private async safeNutritionLookup(label: string, genericLabel: string) {
+  private async safeNutritionLookup(label: string, fallbackLabel?: string) {
     try {
-      return await this.nutritionProvider.lookup(label) ?? await this.nutritionProvider.lookup(genericLabel);
+      const match = await this.nutritionProvider.lookup(label);
+      if (match || !fallbackLabel || fallbackLabel === label) {
+        return match;
+      }
+      return await this.nutritionProvider.lookup(fallbackLabel);
     } catch {
       return null;
     }
+  }
+
+  private async lookupBestNutritionMatch(label: string, genericLabel: string) {
+    if (label === genericLabel) {
+      return this.safeNutritionLookup(label);
+    }
+    const [labelMatch, genericMatch] = await Promise.all([
+      this.safeNutritionLookup(label, label),
+      this.safeNutritionLookup(genericLabel, genericLabel)
+    ]);
+    return labelMatch ?? genericMatch;
   }
 }
 
@@ -145,7 +166,19 @@ function inferDishType(label: string): DishType {
   return "single";
 }
 
-function confidenceFrom(value: number, hasNutritionMatch: boolean, dishType: DishType): EstimateConfidence {
+function confidenceFrom(
+  value: number,
+  hasNutritionMatch: boolean,
+  dishType: DishType,
+  portion: ReturnType<typeof resolveObservationPortion>
+): EstimateConfidence {
+  if (
+    portion.usedDefault ||
+    portion.basis === "unknown" ||
+    (portion.basis === "visual_estimate" && portion.confidence < 0.55)
+  ) {
+    return "low";
+  }
   if (hasNutritionMatch && value >= 0.8 && dishType !== "mixed") return "high";
   if (hasNutritionMatch && value >= 0.55) return "medium";
   return "low";
@@ -156,6 +189,9 @@ function assumptionsFor(input: {
   matched: boolean;
   explicitNutritionLabel: boolean;
   observationConfidence: number;
+  portionBasis: PortionBasis;
+  portionConfidence: number;
+  usedDefaultPortion: boolean;
 }) {
   const assumptions = [
     { id: "photo-estimate", label: "estimate from selected meal photo", isEnabled: true },
@@ -174,7 +210,26 @@ function assumptionsFor(input: {
   if (input.observationConfidence < 0.7 && !input.explicitNutritionLabel) {
     assumptions.push({ id: "portion-uncertain", label: "portion size needs review", isEnabled: true });
   }
+  if (input.portionBasis === "visual_estimate" && !input.explicitNutritionLabel) {
+    assumptions.push({ id: "visual-portion-estimate", label: "photo-only portion estimate; adjust grams before saving", isEnabled: true });
+  }
+  if (input.usedDefaultPortion || input.portionBasis === "unknown") {
+    assumptions.push({ id: "portion-not-measured", label: "portion was not measured by the photo", isEnabled: true });
+  }
+  if (input.portionConfidence < 0.55 && !input.explicitNutritionLabel) {
+    assumptions.push({ id: "portion-low-confidence", label: "portion confidence is low", isEnabled: true });
+  }
   return assumptions;
+}
+
+function resolveObservationPortion(observation: FoodObservation) {
+  return resolvePortionFromObservation({
+    amountGrams: observation.amount_g,
+    servingGrams: observation.serving_g,
+    servings: observation.servings,
+    basis: observation.portion_basis,
+    confidence: observation.portion_confidence
+  });
 }
 
 function caloriesFromNutritionLabel(observation: FoodObservation): {
@@ -223,7 +278,7 @@ function caloriesFromNutritionLabel(observation: FoodObservation): {
 }
 
 function isSafePositiveKcal(value: number | null): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value > 0 && value <= 10000;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 10000;
 }
 
 function titleCase(value: string): string {
