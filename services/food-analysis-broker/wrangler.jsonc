@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "mealmark-food-analysis-broker",
+  "name": "mealmark-food-analysis-broker-dev",
   "main": "src/worker.ts",
   "compatibility_date": "2026-05-21",
   "observability": {

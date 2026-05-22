@@ -154,18 +154,19 @@ Do not paywall ownership of user data or basic export.
 
 ## App Store Notes
 
-Before TestFlight/App Store submission, add:
+Before TestFlight/App Store submission, complete the external App Store Connect
+items:
 
-- Xcode project or workspace release lane;
-- signing, bundle id, entitlements, and privacy strings;
-- StoreKit products and sandbox verification;
+- Apple Distribution signing identity for the selected team;
+- App Store Connect app record and StoreKit products;
+- sandbox/TestFlight purchase verification through the staging broker;
 - privacy policy URL and App Privacy details;
 - review notes for real user flows and diagnostics-only fixture behavior;
 - explicit AI/photo consent copy;
 - no medical claims.
 
-This package is the working app surface that future App Store packaging should
-wrap, not the final signed release artifact.
+The repository now owns the local preflight and archive lane; it still cannot
+create App Store Connect records, policy URLs, or Apple signing identities.
 
 Draft App Store artifacts live in `AppStore/`:
 
@@ -183,6 +184,17 @@ It covers App Store Connect setup, local StoreKit testing, pre-archive checks,
 archive commands, review notes, and release blockers. Keep that guide aligned
 with `project.yml` and the exact submitted binary before claiming TestFlight or
 App Store readiness.
+
+Release preflight from the repository root:
+
+```sh
+scripts/sdk/check_food_analysis_broker_staging.sh --require-cloudflare
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+GRAIN_IOS_BUILD_NUMBER="$NEXT_APP_STORE_CONNECT_BUILD" \
+scripts/sdk/archive_ios_food_wallet_testflight.sh
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+scripts/sdk/export_ios_food_wallet_testflight.sh
+```
 
 ## Real iPhone Run
 

@@ -24,6 +24,10 @@ secrets in the iOS bundle.
 The production target is a Cloudflare Worker using the same `fetch` handler as
 the local Node adapter.
 
+Use `--env staging` or `--env production` for every remote command. The
+top-level Wrangler worker name is intentionally a non-production dev target so a
+bare `wrangler deploy` cannot overwrite production.
+
 One-time Cloudflare setup:
 
 ```sh
@@ -47,12 +51,14 @@ wrangler secret put APP_STORE_CONNECT_PRIVATE_KEY_P8 --env staging
 wrangler secret put APP_STORE_CONNECT_PRIVATE_KEY_P8 --env production
 ```
 
-Then replace the placeholder D1 IDs in `wrangler.jsonc` and deploy:
+After the D1 IDs in `wrangler.jsonc` point at the intended account databases,
+deploy staging through the repo-owned script:
 
 ```sh
 npm --prefix services/food-analysis-broker run typecheck:worker
-wrangler deploy --env staging
-wrangler deploy --env production
+scripts/sdk/deploy_food_analysis_broker_staging.sh
+npm --prefix services/food-analysis-broker run cf:migrate:production
+npm --prefix services/food-analysis-broker run cf:deploy:production
 ```
 
 Required production posture:
@@ -82,4 +88,5 @@ Required production posture:
 npm --prefix services/food-analysis-broker test
 npm --prefix services/food-analysis-broker run typecheck:worker
 scripts/sdk/check_food_analysis_broker.sh
+scripts/sdk/check_food_analysis_broker_staging.sh --require-cloudflare
 ```

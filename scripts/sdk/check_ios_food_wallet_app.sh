@@ -14,6 +14,7 @@ if [[ ! -d "$APP_DIR" ]]; then
 fi
 
 python3 tools/ci/check_ios_food_wallet_app_store.py
+python3 tools/ci/check_ios_food_wallet_app_intents.py
 
 BEFORE_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 

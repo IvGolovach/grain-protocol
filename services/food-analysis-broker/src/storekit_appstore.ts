@@ -65,6 +65,7 @@ export class AppStoreServerApiTransactionVerifier implements StoreKitTransaction
       environment: normalizeEnvironment(requiredPayloadString(payload.environment, "environment")),
       purchaseDateMs: requiredPayloadInteger(payload.purchaseDate, "purchaseDate"),
       ...(payload.expiresDate === undefined ? {} : { expiresDateMs: requiredPayloadInteger(payload.expiresDate, "expiresDate") }),
+      ...(payload.revocationDate === undefined ? {} : { revocationDateMs: requiredPayloadInteger(payload.revocationDate, "revocationDate") }),
       ...(optionalPayloadString(payload.appAccountToken) ? { appAccountToken: optionalPayloadString(payload.appAccountToken)! } : {})
     };
   }

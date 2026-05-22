@@ -178,22 +178,86 @@ final class FoodWalletAppAccountManager: ObservableObject {
 
 struct FoodWalletAppAccountTokenStore: Sendable {
     private let defaultsKey: String
+    private let keychainService: String
+    private let keychainAccount: String
 
-    init(defaultsKey: String = "grain.food-wallet.app-account-token.v1") {
+    init(
+        defaultsKey: String = "grain.food-wallet.app-account-token.v1",
+        keychainService: String = "dev.grain.foodwallet.storekit",
+        keychainAccount: String = "mealmark-app-account-token"
+    ) {
         self.defaultsKey = defaultsKey
+        self.keychainService = keychainService
+        self.keychainAccount = keychainAccount
     }
 
     func loadOrCreate() -> UUID {
+        if let uuid = loadFromKeychain() {
+            return uuid
+        }
         if let rawValue = UserDefaults.standard.string(forKey: defaultsKey),
            let uuid = UUID(uuidString: rawValue) {
+            saveToKeychain(uuid)
             return uuid
         }
         let uuid = UUID()
+        saveToKeychain(uuid)
         UserDefaults.standard.set(uuid.uuidString, forKey: defaultsKey)
         return uuid
     }
 
     func reset() {
+        deleteFromKeychain()
         UserDefaults.standard.removeObject(forKey: defaultsKey)
     }
+
+    private func loadFromKeychain() -> UUID? {
+        #if canImport(Security)
+        var query = baseKeychainQuery()
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let rawValue = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        return UUID(uuidString: rawValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        #else
+        return nil
+        #endif
+    }
+
+    private func saveToKeychain(_ uuid: UUID) {
+        #if canImport(Security)
+        let value = uuid.uuidString.lowercased()
+        let data = Data(value.utf8)
+        let update: [String: Any] = [kSecValueData as String: data]
+        let status = SecItemUpdate(baseKeychainQuery() as CFDictionary, update as CFDictionary)
+        if status == errSecItemNotFound {
+            var item = baseKeychainQuery()
+            item[kSecValueData as String] = data
+            item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            SecItemAdd(item as CFDictionary, nil)
+        }
+        #endif
+    }
+
+    private func deleteFromKeychain() {
+        #if canImport(Security)
+        SecItemDelete(baseKeychainQuery() as CFDictionary)
+        #endif
+    }
+
+    #if canImport(Security)
+    private func baseKeychainQuery() -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: keychainAccount
+        ]
+    }
+    #endif
 }

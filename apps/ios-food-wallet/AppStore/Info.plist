@@ -29,8 +29,8 @@
   </dict>
   <key>NSCameraUsageDescription</key>
   <string>MealMark uses the camera to scan verified food codes and, when you choose, capture a meal photo for an estimate.</string>
-  <key>NSLocalNetworkUsageDescription</key>
-  <string>MealMark can connect to your local development broker to analyze meal photos during testing.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>MealMark can connect to a configured MealMark food analysis broker when photo or barcode analysis is enabled.</string>
   <key>NSPhotoLibraryUsageDescription</key>
   <string>MealMark lets you choose a meal photo for an estimate. Selected photos create a draft and are not stored by MealMark.</string>
   <key>UILaunchScreen</key>

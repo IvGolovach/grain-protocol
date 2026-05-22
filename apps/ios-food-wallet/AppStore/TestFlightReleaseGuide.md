@@ -75,6 +75,7 @@ Run from the repository root:
 ```sh
 python3 tools/ci/check_ios_food_wallet_app_store.py
 scripts/sdk/check_ios_food_wallet_app.sh
+scripts/sdk/check_food_analysis_broker_staging.sh --require-cloudflare
 git diff --check
 ```
 
@@ -96,26 +97,45 @@ Open `FoodWallet.xcodeproj` and confirm:
 
 ## Archive
 
-Use Xcode Organizer for the first upload so signing, capabilities, export
-compliance, and App Store Connect processing are visible to the release owner.
-
-Command-line archive skeleton:
+Use the repository-owned archive script before any Organizer upload. It fails
+early if the build is missing a public HTTPS broker URL, has a broker dev token,
+or is not signed by an App Store distribution identity.
 
 ```sh
-cd apps/ios-food-wallet
-xcodegen generate
-xcodebuild archive \
-  -project FoodWallet.xcodeproj \
-  -scheme FoodWallet \
-  -configuration Release \
-  -destination "generic/platform=iOS" \
-  -archivePath ../../artifacts/ios-food-wallet/MealMark.xcarchive \
-  DEVELOPMENT_TEAM="$GRAIN_IOS_DISTRIBUTION_TEAM" \
-  PRODUCT_BUNDLE_IDENTIFIER=dev.grain.foodwallet
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+GRAIN_IOS_BUILD_NUMBER="$NEXT_APP_STORE_CONNECT_BUILD" \
+GRAIN_FOOD_ANALYSIS_BROKER_URL="https://mealmark-food-analysis-broker-staging.ivan-f7b.workers.dev" \
+scripts/sdk/archive_ios_food_wallet_testflight.sh
+```
+
+The script runs `xcodegen generate`, selected local checks, `xcodebuild archive`,
+and:
+
+```sh
+python3 tools/ci/check_ios_food_wallet_testflight_archive.py artifacts/ios-food-wallet/MealMark.xcarchive
 ```
 
 Do not pass `GRAIN_FOOD_BROKER_DEV_TOKEN` or a local `http://` broker URL into an
 archive meant for TestFlight or App Store review.
+
+For a local `.ipa` export after a checked archive:
+
+```sh
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+scripts/sdk/export_ios_food_wallet_testflight.sh
+```
+
+For command-line App Store Connect upload, also set the App Store Connect API key
+environment variables documented by the script and use:
+
+```sh
+GRAIN_IOS_EXPORT_DESTINATION=upload \
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+scripts/sdk/export_ios_food_wallet_testflight.sh
+```
+
+Use Xcode Organizer for the first upload so signing, capabilities, export
+compliance, and App Store Connect processing are visible to the release owner.
 
 ## TestFlight Review
 
@@ -125,6 +145,8 @@ Before external TestFlight:
 - attach the notes from `AppReviewNotes.md`;
 - verify the app opens without an account;
 - verify manual Add Food, history, wallet export, and Plus restore/manage UI;
+- open Shortcuts, confirm MealMark exposes only truthful release shortcuts, and
+  run each shortcut once;
 - verify a sandbox StoreKit purchase syncs to the broker and survives app
   restart through `/v1/account/me`;
 - verify account deletion revokes the current broker session;

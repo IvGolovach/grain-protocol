@@ -90,7 +90,9 @@ async function main(): Promise<number> {
   await testAuthBootstrapRefreshLogoutAndAccountMeUseOpaqueSessions();
   await testD1AccountBootstrapUpgradesExistingDeviceAccountWithAppAccountToken();
   await testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitlement();
+  await testStoreKitTransactionIngestionRequiresBoundAppAccountToken();
   await testStoreKitTransactionIngestionRejectsMismatchedAppAccountToken();
+  await testStoreKitTransactionIngestionReturnsFreeForExpiredOrRevokedEntitlement();
   await testStoreKitTransactionIngestionRejectsUnknownProduct();
   await testAppStoreServerApiVerifierFetchesAppleTransaction();
   await testD1UsageLimiterTreatsRepeatedRequestIdAsOneReservation();
@@ -1443,6 +1445,7 @@ async function testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitle
   let verifierCallCount = 0;
   const purchaseDateMs = Date.now() - 60_000;
   const expiresDateMs = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  const appAccountToken = "a0000000-0000-4000-8000-000000000123";
   const verifier: StoreKitTransactionVerifier = {
     async verifySignedTransaction(input) {
       verifierCallCount += 1;
@@ -1453,7 +1456,8 @@ async function testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitle
         productId: "dev.grain.foodwallet.plus.monthly",
         environment: "Sandbox",
         purchaseDateMs,
-        expiresDateMs
+        expiresDateMs,
+        appAccountToken: appAccountToken.toUpperCase()
       };
     }
   };
@@ -1463,7 +1467,7 @@ async function testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitle
     ...stores,
     storeKitVerifier: verifier
   });
-  const token = await bootstrapSessionToken(dependencies);
+  const token = await bootstrapSessionToken(dependencies, appAccountToken);
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
@@ -1490,6 +1494,44 @@ async function testStoreKitTransactionIngestionRequiresVerifierAndUpdatesEntitle
   assert.equal((accountMeBody.entitlement as Record<string, unknown>).tier, "pro");
   assert.equal((accountMeBody.entitlement as Record<string, unknown>).source, "storekit");
   pass("StoreKit transaction ingestion requires a verifier and updates entitlement idempotently");
+}
+
+async function testStoreKitTransactionIngestionRequiresBoundAppAccountToken(): Promise<void> {
+  const stores = createMemoryAccountStores();
+  const verifier: StoreKitTransactionVerifier = {
+    async verifySignedTransaction() {
+      return {
+        transactionId: "txn_storekit_unbound_001",
+        originalTransactionId: "orig_storekit_unbound_001",
+        productId: "dev.grain.foodwallet.plus.monthly",
+        environment: "Sandbox",
+        purchaseDateMs: Date.now() - 60_000
+      };
+    }
+  };
+  const dependencies = createBrokerDependencies({
+    MEALMARK_AUTH_MODE: "session"
+  }, {
+    ...stores,
+    storeKitVerifier: verifier
+  });
+  const token = await bootstrapSessionToken(
+    dependencies,
+    "00000000-0000-4000-8000-000000000123"
+  );
+
+  const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ signed_transaction_info: "signed-pro-transaction" })
+  }), dependencies);
+  assert.equal(response.status, 403);
+  const body = await response.json() as Record<string, unknown>;
+  assert.equal((body.error as Record<string, unknown>).code, "FORBIDDEN");
+  pass("StoreKit transaction ingestion requires a bound appAccountToken");
 }
 
 async function testStoreKitTransactionIngestionRejectsMismatchedAppAccountToken(): Promise<void> {
@@ -1529,6 +1571,49 @@ async function testStoreKitTransactionIngestionRejectsMismatchedAppAccountToken(
   const body = await response.json() as Record<string, unknown>;
   assert.equal((body.error as Record<string, unknown>).code, "FORBIDDEN");
   pass("StoreKit transaction ingestion rejects appAccountToken mismatches");
+}
+
+async function testStoreKitTransactionIngestionReturnsFreeForExpiredOrRevokedEntitlement(): Promise<void> {
+  const stores = createMemoryAccountStores();
+  const nowMs = Date.now();
+  const verifier: StoreKitTransactionVerifier = {
+    async verifySignedTransaction() {
+      return {
+        transactionId: "txn_storekit_expired_001",
+        originalTransactionId: "orig_storekit_expired_001",
+        productId: "dev.grain.foodwallet.plus.monthly",
+        environment: "Sandbox",
+        purchaseDateMs: nowMs - 40 * 24 * 60 * 60 * 1000,
+        expiresDateMs: nowMs - 24 * 60 * 60 * 1000,
+        revocationDateMs: nowMs - 2 * 24 * 60 * 60 * 1000,
+        appAccountToken: "00000000-0000-4000-8000-000000000123"
+      };
+    }
+  };
+  const dependencies = createBrokerDependencies({
+    MEALMARK_AUTH_MODE: "session"
+  }, {
+    ...stores,
+    storeKitVerifier: verifier
+  });
+  const token = await bootstrapSessionToken(
+    dependencies,
+    "00000000-0000-4000-8000-000000000123"
+  );
+
+  const response = await handleBrokerRequest(new Request("https://mealmark.test/v1/storekit/transactions", {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${token}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({ signed_transaction_info: "signed-expired-transaction" })
+  }), dependencies);
+  assert.equal(response.status, 200);
+  const body = await response.json() as Record<string, unknown>;
+  assert.equal((body.entitlement as Record<string, unknown>).tier, "free");
+  assert.equal((body.transaction as Record<string, unknown>).expires_at_ms, nowMs - 2 * 24 * 60 * 60 * 1000);
+  pass("StoreKit transaction ingestion returns the active free entitlement for expired or revoked transactions");
 }
 
 async function testStoreKitTransactionIngestionRejectsUnknownProduct(): Promise<void> {

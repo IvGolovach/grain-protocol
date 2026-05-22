@@ -12,10 +12,17 @@
     "build": "npm run clean --silent && tsc -p tsconfig.build.json",
     "typecheck:worker": "tsc -p tsconfig.worker.json --noEmit",
     "test": "npm run build --silent && node dist/tests/run-tests.js && node --test test/*.test.mjs",
-    "start": "npm run build --silent && node dist/src/index.js"
+    "start": "npm run build --silent && node dist/src/index.js",
+    "cf:dry-run:staging": "wrangler deploy --env staging --dry-run",
+    "cf:migrate:staging": "wrangler d1 migrations apply MEALMARK_DB --env staging --remote",
+    "cf:deploy:staging": "wrangler deploy --env staging",
+    "cf:dry-run:production": "wrangler deploy --env production --dry-run",
+    "cf:migrate:production": "wrangler d1 migrations apply MEALMARK_DB --env production --remote",
+    "cf:deploy:production": "wrangler deploy --env production"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "wrangler": "4.93.1"
   }
 }

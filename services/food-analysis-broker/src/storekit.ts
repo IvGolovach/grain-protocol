@@ -16,6 +16,7 @@ export type VerifiedStoreKitTransaction = {
   environment: StoreKitEnvironment;
   purchaseDateMs: number;
   expiresDateMs?: number;
+  revocationDateMs?: number;
   appAccountToken?: string;
 };
 
@@ -130,13 +131,15 @@ export async function ingestStoreKitTransaction(input: {
   if (!MEALMARK_PLUS_PRODUCT_IDS.has(verified.productId)) {
     throw new BrokerError(400, "BAD_REQUEST", "StoreKit transaction product is not a MealMark Plus product");
   }
-  const expectedAppAccountToken = normalizedOptionalString(input.expectedAppAccountToken);
-  if (expectedAppAccountToken && verified.appAccountToken !== expectedAppAccountToken) {
-    throw new BrokerError(403, "FORBIDDEN", "StoreKit transaction is not bound to this MealMark account");
-  }
-  if (!expectedAppAccountToken && verified.appAccountToken) {
+  const expectedAppAccountToken = normalizedOptionalUuidString(input.expectedAppAccountToken, "expected appAccountToken");
+  const verifiedAppAccountToken = normalizedOptionalUuidString(verified.appAccountToken, "appAccountToken");
+  if (!expectedAppAccountToken || !verifiedAppAccountToken) {
     throw new BrokerError(403, "FORBIDDEN", "StoreKit transaction requires a bound MealMark account");
   }
+  if (verifiedAppAccountToken !== expectedAppAccountToken) {
+    throw new BrokerError(403, "FORBIDDEN", "StoreKit transaction is not bound to this MealMark account");
+  }
+  const expiresAtMs = effectiveExpiresDateMs(verified);
   const transaction = await input.transactionStore.upsertTransaction({
     transactionId: verified.transactionId,
     accountId: input.accountId,
@@ -145,16 +148,17 @@ export async function ingestStoreKitTransaction(input: {
     environment: verified.environment,
     signedTransactionInfo,
     verifiedAtMs: input.nowMs,
-    ...(verified.expiresDateMs === undefined ? {} : { expiresAtMs: verified.expiresDateMs })
+    ...(expiresAtMs === undefined ? {} : { expiresAtMs })
   });
-  const entitlement = await input.entitlementStore.upsertStoreKitEntitlement({
+  await input.entitlementStore.upsertStoreKitEntitlement({
     accountId: input.accountId,
     productId: verified.productId,
     originalTransactionId: verified.originalTransactionId,
     effectiveAtMs: verified.purchaseDateMs,
-    ...(verified.expiresDateMs === undefined ? {} : { expiresAtMs: verified.expiresDateMs }),
+    ...(expiresAtMs === undefined ? {} : { expiresAtMs }),
     updatedAtMs: input.nowMs
   });
+  const entitlement = await input.entitlementStore.getActiveEntitlement(input.accountId, input.nowMs);
   return { transaction, entitlement };
 }
 
@@ -173,6 +177,7 @@ function assertVerifiedStoreKitTransaction(value: unknown): VerifiedStoreKitTran
   if (!isRecord(value)) {
     throw new BrokerError(502, "UPSTREAM_ERROR", "verified StoreKit transaction is invalid");
   }
+  const appAccountToken = normalizedOptionalUuidString(value.appAccountToken, "appAccountToken");
   return {
     transactionId: normalizedString(value.transactionId, "transactionId"),
     originalTransactionId: normalizedString(value.originalTransactionId, "originalTransactionId"),
@@ -180,9 +185,8 @@ function assertVerifiedStoreKitTransaction(value: unknown): VerifiedStoreKitTran
     environment: assertEnvironment(value.environment),
     purchaseDateMs: safeInteger(value.purchaseDateMs, "purchaseDateMs"),
     ...(value.expiresDateMs === undefined ? {} : { expiresDateMs: safeInteger(value.expiresDateMs, "expiresDateMs") }),
-    ...(typeof value.appAccountToken === "string" && value.appAccountToken.trim()
-      ? { appAccountToken: value.appAccountToken.trim() }
-      : {})
+    ...(value.revocationDateMs === undefined ? {} : { revocationDateMs: safeInteger(value.revocationDateMs, "revocationDateMs") }),
+    ...(appAccountToken ? { appAccountToken } : {})
   };
 }
 
@@ -224,9 +228,25 @@ function normalizedRequestString(value: string, fieldName: string): string {
   return trimmed;
 }
 
-function normalizedOptionalString(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
+function normalizedOptionalUuidString(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") {
+    throw new BrokerError(502, "UPSTREAM_ERROR", `verified StoreKit ${fieldName} is invalid`);
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const lowercased = trimmed.toLowerCase();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(lowercased)) {
+    throw new BrokerError(502, "UPSTREAM_ERROR", `verified StoreKit ${fieldName} is invalid`);
+  }
+  return lowercased;
+}
+
+function effectiveExpiresDateMs(verified: VerifiedStoreKitTransaction): number | undefined {
+  const candidates = [verified.expiresDateMs, verified.revocationDateMs]
+    .filter((value): value is number => value !== undefined);
+  if (candidates.length === 0) return undefined;
+  return Math.min(...candidates);
 }
 
 function safeInteger(value: unknown, fieldName: string): number {

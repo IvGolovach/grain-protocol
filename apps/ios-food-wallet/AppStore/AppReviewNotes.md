@@ -43,7 +43,7 @@ the backend broker and AI provider.
 MealMark does not retain raw meal photos by default. It stores only derived
 food estimate fields and user-confirmed MealMark records.
 
-If the review build is not configured with an HTTPS broker and bearer token,
+If the review build is not configured with an HTTPS broker and session auth,
 photo and barcode remote analysis is intentionally unavailable. The rest of the
 food logging flow remains testable through manual entry and deterministic local
 review states.
