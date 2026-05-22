@@ -1,5 +1,5 @@
 import { BrokerError } from "./errors.js";
-import type { RuntimeEnv } from "./runtime.js";
+import { runtimeFetch, type RuntimeEnv, type RuntimeFetch } from "./runtime.js";
 import { FOOD_OBSERVATION_SCHEMA } from "./schema.js";
 import { assertObservation } from "./validation.js";
 import type { FoodAnalyzePhotoRequest, FoodAnalyzer, FoodObservation } from "./types.js";
@@ -7,8 +7,6 @@ import type { FoodAnalyzePhotoRequest, FoodAnalyzer, FoodObservation } from "./t
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-5.5";
 const DEFAULT_TIMEOUT_MS = 30_000;
-
-type FetchFn = typeof fetch;
 
 export class MockFoodAnalyzer implements FoodAnalyzer {
   async analyze(input: {
@@ -55,13 +53,13 @@ export class MissingFoodAnalyzer implements FoodAnalyzer {
 export class OpenAiFoodAnalyzer implements FoodAnalyzer {
   private readonly apiKey: string;
   private readonly model: string;
-  private readonly fetchFn: FetchFn;
+  private readonly fetchFn: RuntimeFetch;
   private readonly timeoutMs: number;
 
-  constructor(options: { apiKey: string; model?: string; fetchFn?: FetchFn; timeoutMs?: number }) {
+  constructor(options: { apiKey: string; model?: string; fetchFn?: RuntimeFetch; timeoutMs?: number }) {
     this.apiKey = options.apiKey;
     this.model = options.model ?? DEFAULT_MODEL;
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? runtimeFetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
@@ -73,9 +71,10 @@ export class OpenAiFoodAnalyzer implements FoodAnalyzer {
     const body = this.buildResponsesRequest(input.request);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const fetchFn = this.fetchFn;
     let response: Response;
     try {
-      response = await this.fetchFn(OPENAI_RESPONSES_URL, {
+      response = await fetchFn(OPENAI_RESPONSES_URL, {
         method: "POST",
         headers: {
           "authorization": `Bearer ${this.apiKey}`,

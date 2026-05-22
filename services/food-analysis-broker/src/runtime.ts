@@ -29,6 +29,10 @@ export type RuntimeEnv = {
   [key: string]: unknown;
 };
 
+export type RuntimeFetch = typeof fetch;
+
+export const runtimeFetch: RuntimeFetch = (input, init) => fetch(input, init);
+
 export function randomRequestId(): string {
   return globalThis.crypto?.randomUUID?.() ?? fallbackRandomId();
 }

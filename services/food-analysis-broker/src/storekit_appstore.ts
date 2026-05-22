@@ -1,8 +1,6 @@
 import { BrokerError } from "./errors.js";
-import type { RuntimeEnv } from "./runtime.js";
+import { runtimeFetch, type RuntimeEnv, type RuntimeFetch } from "./runtime.js";
 import type { StoreKitEnvironment, StoreKitTransactionVerifier, VerifiedStoreKitTransaction } from "./storekit.js";
-
-type FetchFn = typeof fetch;
 
 type AppStoreServerApiVerifierOptions = {
   bundleId: string;
@@ -11,7 +9,7 @@ type AppStoreServerApiVerifierOptions = {
   keyId: string;
   privateKeyPem: string;
   baseUrl?: string;
-  fetchFn?: FetchFn;
+  fetchFn?: RuntimeFetch;
   nowSeconds?: () => number;
 };
 
@@ -19,12 +17,12 @@ const APP_STORE_PRODUCTION_BASE_URL = "https://api.storekit.apple.com";
 const APP_STORE_SANDBOX_BASE_URL = "https://api.storekit-sandbox.apple.com";
 
 export class AppStoreServerApiTransactionVerifier implements StoreKitTransactionVerifier {
-  private readonly fetchFn: FetchFn;
+  private readonly fetchFn: RuntimeFetch;
   private readonly nowSeconds: () => number;
   private signingKeyPromise?: Promise<CryptoKey>;
 
   constructor(private readonly options: AppStoreServerApiVerifierOptions) {
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? runtimeFetch;
     this.nowSeconds = options.nowSeconds ?? (() => Math.floor(Date.now() / 1000));
   }
 
@@ -32,7 +30,8 @@ export class AppStoreServerApiTransactionVerifier implements StoreKitTransaction
     const requested = decodeJwsPayload(input.signedTransaction);
     const requestedTransactionId = requiredPayloadString(requested.transactionId, "transactionId");
     const token = await this.createBearerToken();
-    const response = await this.fetchFn(`${this.baseUrl()}/inApps/v1/transactions/${encodeURIComponent(requestedTransactionId)}`, {
+    const fetchFn = this.fetchFn;
+    const response = await fetchFn(`${this.baseUrl()}/inApps/v1/transactions/${encodeURIComponent(requestedTransactionId)}`, {
       method: "GET",
       headers: {
         "accept": "application/json",

@@ -7,7 +7,7 @@ import type {
   FoodSearchTrustLabel
 } from "./types.js";
 import { BrokerError } from "./errors.js";
-import type { RuntimeEnv } from "./runtime.js";
+import { runtimeFetch, type RuntimeEnv } from "./runtime.js";
 
 type FixtureFood = {
   fixtureId: string;
@@ -190,7 +190,7 @@ export class OpenFoodFactsSearchProvider implements FoodSearchProvider {
   }) {
     this.baseUrl = options.baseUrl ?? DEFAULT_OPEN_FOOD_FACTS_BASE_URL;
     this.userAgent = options.userAgent;
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? runtimeFetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
@@ -293,7 +293,7 @@ export class UsdaBrandedFoodSearchProvider implements FoodSearchProvider {
   }) {
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl ?? "https://api.nal.usda.gov/fdc/v1";
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? runtimeFetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
@@ -363,7 +363,7 @@ export class UsdaGenericFoodSearchProvider implements FoodSearchProvider {
   }) {
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl ?? "https://api.nal.usda.gov/fdc/v1";
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? runtimeFetch;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 

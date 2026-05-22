@@ -3684,51 +3684,78 @@ private struct AnalysisFailureCard: View {
     var onDismiss: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label(title, systemImage: symbolName)
-                .font(.headline)
-                .foregroundStyle(tint)
-            Text(failure.message)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("AnalysisErrorMessage")
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: symbolName)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 46, height: 46)
+                    .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(failure.message)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("AnalysisErrorMessage")
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             if failure.code == .serviceUnavailable {
                 VStack(spacing: 10) {
+                    MealMarkFilledActionButton(
+                        title: "Try again",
+                        subtitle: "Run photo analysis again",
+                        symbol: "arrow.clockwise",
+                        tint: .blue,
+                        minHeight: 58,
+                        action: onRetry
+                    )
+                    .accessibilityIdentifier("RetryAnalysisButton")
+
                     Button(action: onEnterManually) {
                         Label("Enter manually", systemImage: "text.badge.plus")
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.bordered)
                     .tint(.blue)
                     .accessibilityIdentifier("ManualAnalysisFallbackButton")
 
-                    HStack {
-                        Button("Dismiss", role: .cancel, action: onDismiss)
-                            .accessibilityIdentifier("DismissAnalysisErrorButton")
-                        Spacer()
-                        Button(action: onRetry) {
-                            Label("Try again", systemImage: "arrow.clockwise")
-                        }
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("RetryAnalysisButton")
-                    }
+                    Button("Dismiss", role: .cancel, action: onDismiss)
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("DismissAnalysisErrorButton")
                 }
             } else {
-                HStack {
-                    Button("Dismiss", role: .cancel, action: onDismiss)
-                        .accessibilityIdentifier("DismissAnalysisErrorButton")
-                    Spacer()
+                VStack(spacing: 10) {
                     Button(action: onRetry) {
                         Label("Try again", systemImage: "arrow.clockwise")
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
                     .accessibilityIdentifier("RetryAnalysisButton")
+
+                    Button("Dismiss", role: .cancel, action: onDismiss)
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("DismissAnalysisErrorButton")
                 }
             }
         }
-        .padding(.vertical, 8)
+        .padding(18)
+        .mealMarkGlassSurface(cornerRadius: 28, tint: tint.opacity(0.035), isInteractive: false)
     }
 
     private var title: String {

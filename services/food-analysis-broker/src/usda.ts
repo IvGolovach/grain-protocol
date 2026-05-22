@@ -1,6 +1,6 @@
 import { BrokerError } from "./errors.js";
 import type { Per100gNutrients } from "./nutrition.js";
-import type { RuntimeEnv } from "./runtime.js";
+import { runtimeFetch, type RuntimeEnv, type RuntimeFetch } from "./runtime.js";
 
 export type NutritionMatch = {
   provider: "deterministic_fixture" | "usda_fdc";
@@ -52,12 +52,12 @@ export class MissingNutritionProvider implements NutritionProvider {
 
 export class LiveUsdaFoodDataCentralProvider implements NutritionProvider {
   private readonly apiKey: string;
-  private readonly fetchFn: typeof fetch;
+  private readonly fetchFn: RuntimeFetch;
   private readonly baseUrl: string;
 
-  constructor(options: { apiKey: string; fetchFn?: typeof fetch; baseUrl?: string }) {
+  constructor(options: { apiKey: string; fetchFn?: RuntimeFetch; baseUrl?: string }) {
     this.apiKey = options.apiKey;
-    this.fetchFn = options.fetchFn ?? fetch;
+    this.fetchFn = options.fetchFn ?? runtimeFetch;
     this.baseUrl = options.baseUrl ?? "https://api.nal.usda.gov/fdc/v1";
   }
 
@@ -66,7 +66,8 @@ export class LiveUsdaFoodDataCentralProvider implements NutritionProvider {
     if (!trimmed) return null;
 
     const url = `${this.baseUrl}/foods/search?api_key=${encodeURIComponent(this.apiKey)}`;
-    const response = await this.fetchFn(url, {
+    const fetchFn = this.fetchFn;
+    const response = await fetchFn(url, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

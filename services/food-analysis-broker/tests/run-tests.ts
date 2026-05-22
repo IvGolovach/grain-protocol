@@ -1710,10 +1710,12 @@ async function testPayloadCap(): Promise<void> {
 
 async function testOpenAiRequestShapeAndResolverBoundary(): Promise<void> {
   let captured: unknown;
+  let fetchThisBinding: unknown = "not-called";
   const analyzer = new OpenAiFoodAnalyzer({
     apiKey: "test-key",
     model: "gpt-test-vision",
-    fetchFn: async (_url, init) => {
+    fetchFn: async function (this: unknown, _url, init) {
+      fetchThisBinding = this;
       captured = JSON.parse(String(init?.body));
       return new Response(JSON.stringify({
         output_text: JSON.stringify(fakeObservation())
@@ -1754,6 +1756,7 @@ async function testOpenAiRequestShapeAndResolverBoundary(): Promise<void> {
   assert.equal(capturedJson.includes("no_food"), true);
   assert.equal(capturedJson.includes("whole bottle"), true);
   assert.equal(capturedJson.includes("\"draft_v\""), false);
+  assert.equal(fetchThisBinding, undefined);
   pass("OpenAI call uses store=false structured observation, resolver produces draft");
 }
 
