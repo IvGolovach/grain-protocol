@@ -8,6 +8,10 @@ ARCHIVE_PATH="${GRAIN_IOS_ARCHIVE_PATH:-$ROOT_DIR/artifacts/ios-food-wallet/Meal
 EXPORT_PATH="${GRAIN_IOS_EXPORT_PATH:-$ROOT_DIR/artifacts/ios-food-wallet/testflight-export}"
 TEAM_ID="${GRAIN_IOS_DISTRIBUTION_TEAM:-}"
 DESTINATION="${GRAIN_IOS_EXPORT_DESTINATION:-export}"
+PROVISIONING_PROFILE_SPECIFIER="${GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER:-}"
+PROVISIONING_PROFILE_UUID="${GRAIN_IOS_PROVISIONING_PROFILE_UUID:-}"
+CODE_SIGN_IDENTITY="${GRAIN_IOS_CODE_SIGN_IDENTITY:-Apple Distribution}"
+BUNDLE_ID="${GRAIN_IOS_BUNDLE_ID:-dev.grain.foodwallet}"
 export DEVELOPER_DIR
 
 usage() {
@@ -25,6 +29,14 @@ Optional:
   GRAIN_IOS_ARCHIVE_PATH
   GRAIN_IOS_EXPORT_PATH
   GRAIN_IOS_EXPORT_DESTINATION=export|upload
+  GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER
+                                  Installed App Store provisioning profile name,
+                                  for example "MealMark App Store"
+  GRAIN_IOS_PROVISIONING_PROFILE_UUID
+                                  Installed App Store provisioning profile UUID
+  GRAIN_IOS_CODE_SIGN_IDENTITY    Signing identity for manual profile exports
+                                  (default: Apple Distribution)
+  GRAIN_IOS_BUNDLE_ID             App bundle identifier
   APP_STORE_CONNECT_KEY_PATH
   APP_STORE_CONNECT_KEY_ID
   APP_STORE_CONNECT_ISSUER_ID
@@ -38,6 +50,11 @@ fi
 
 if [[ -z "$TEAM_ID" ]]; then
   echo "IOS_FOOD_WALLET_EXPORT_ERR_TEAM: set GRAIN_IOS_DISTRIBUTION_TEAM" >&2
+  exit 1
+fi
+
+if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" && -n "$PROVISIONING_PROFILE_UUID" ]]; then
+  echo "IOS_FOOD_WALLET_EXPORT_ERR_PROFILE: set only one of GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER or GRAIN_IOS_PROVISIONING_PROFILE_UUID" >&2
   exit 1
 fi
 
@@ -62,7 +79,43 @@ mkdir -p "$EXPORT_PATH"
 OPTIONS_PLIST="$(mktemp "${TMPDIR:-/tmp}/mealmark-export-options.XXXXXX.plist")"
 trap 'rm -f "$OPTIONS_PLIST"' EXIT
 
-cat > "$OPTIONS_PLIST" <<EOF
+if [[ -n "$PROVISIONING_PROFILE_SPECIFIER" || -n "$PROVISIONING_PROFILE_UUID" ]]; then
+  profile_value="$PROVISIONING_PROFILE_SPECIFIER"
+  if [[ -z "$profile_value" ]]; then
+    profile_value="$PROVISIONING_PROFILE_UUID"
+  fi
+
+  cat > "$OPTIONS_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>destination</key>
+  <string>$DESTINATION</string>
+  <key>manageAppVersionAndBuildNumber</key>
+  <false/>
+  <key>method</key>
+  <string>app-store-connect</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>$BUNDLE_ID</key>
+    <string>$profile_value</string>
+  </dict>
+  <key>signingCertificate</key>
+  <string>$CODE_SIGN_IDENTITY</string>
+  <key>signingStyle</key>
+  <string>manual</string>
+  <key>stripSwiftSymbols</key>
+  <true/>
+  <key>teamID</key>
+  <string>$TEAM_ID</string>
+  <key>uploadSymbols</key>
+  <true/>
+</dict>
+</plist>
+EOF
+else
+  cat > "$OPTIONS_PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -84,6 +137,7 @@ cat > "$OPTIONS_PLIST" <<EOF
 </dict>
 </plist>
 EOF
+fi
 
 auth_args=()
 if [[ -n "${APP_STORE_CONNECT_KEY_PATH:-}" || -n "${APP_STORE_CONNECT_KEY_ID:-}" || -n "${APP_STORE_CONNECT_ISSUER_ID:-}" ]]; then

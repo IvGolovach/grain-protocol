@@ -135,12 +135,22 @@ GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
 scripts/sdk/export_ios_food_wallet_testflight.sh
 ```
 
+If the archive was pinned to a manual App Store profile, export with the same
+profile selector:
+
+```sh
+GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER="MealMark App Store" \
+scripts/sdk/export_ios_food_wallet_testflight.sh
+```
+
 For command-line App Store Connect upload, also set the App Store Connect API key
 environment variables documented by the script and use:
 
 ```sh
 GRAIN_IOS_EXPORT_DESTINATION=upload \
 GRAIN_IOS_DISTRIBUTION_TEAM="$APPLE_TEAM_ID" \
+GRAIN_IOS_PROVISIONING_PROFILE_SPECIFIER="MealMark App Store" \
 scripts/sdk/export_ios_food_wallet_testflight.sh
 ```
 
