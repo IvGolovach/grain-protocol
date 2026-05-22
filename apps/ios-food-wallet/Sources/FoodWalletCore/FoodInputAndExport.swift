@@ -138,6 +138,34 @@ public struct FoodWalletQRIssuer: Codable, Equatable, Sendable {
     }
 }
 
+public struct FoodWalletQRIssuerProfile: Equatable, Sendable {
+    public static let selfIssued = FoodWalletQRIssuerProfile(label: "MealMark self-issued")
+
+    public var label: String
+    public var trustAnchorID: String?
+
+    public init(label: String, trustAnchorID: String? = nil) {
+        self.label = label
+        self.trustAnchorID = trustAnchorID
+    }
+
+    public var displayLabel: String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return Self.selfIssued.label
+        }
+        return String(trimmed.prefix(80))
+    }
+
+    public var normalizedTrustAnchorID: String? {
+        guard let trustAnchorID else {
+            return nil
+        }
+        let trimmed = trustAnchorID.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : String(trimmed.prefix(128))
+    }
+}
+
 public struct FoodWalletQRPayload: Codable, Equatable, Sendable {
     public var schema: String
     public var version: Int
@@ -2139,7 +2167,10 @@ public enum FoodWalletExportFactory {
 }
 
 public enum FoodWalletQRFactory {
-    public static func payload(recipe: SavedFoodRecipe) throws -> FoodWalletQRPayload {
+    public static func payload(
+        recipe: SavedFoodRecipe,
+        issuerProfile: FoodWalletQRIssuerProfile = .selfIssued
+    ) throws -> FoodWalletQRPayload {
         let payload = FoodWalletQRPayload(
             schema: "grain.food-wallet.qr.v1",
             version: 1,
@@ -2151,10 +2182,13 @@ public enum FoodWalletQRFactory {
             recipe: FoodWalletExportRecipe(recipe: recipe),
             personalFood: nil
         )
-        return try signedPayload(payload)
+        return try signedPayload(payload, issuerProfile: issuerProfile)
     }
 
-    public static func payload(personalFood: PersonalFoodIngredient) throws -> FoodWalletQRPayload {
+    public static func payload(
+        personalFood: PersonalFoodIngredient,
+        issuerProfile: FoodWalletQRIssuerProfile = .selfIssued
+    ) throws -> FoodWalletQRPayload {
         let payload = FoodWalletQRPayload(
             schema: "grain.food-wallet.qr.v1",
             version: 1,
@@ -2166,7 +2200,7 @@ public enum FoodWalletQRFactory {
             recipe: nil,
             personalFood: FoodWalletExportPersonalFood(ingredient: personalFood)
         )
-        return try signedPayload(payload)
+        return try signedPayload(payload, issuerProfile: issuerProfile)
     }
 
     public static func payloadText(_ payload: FoodWalletQRPayload) throws -> String {
@@ -2221,20 +2255,23 @@ public enum FoodWalletQRFactory {
         }
     }
 
-    private static func signedPayload(_ payload: FoodWalletQRPayload) throws -> FoodWalletQRPayload {
+    private static func signedPayload(
+        _ payload: FoodWalletQRPayload,
+        issuerProfile: FoodWalletQRIssuerProfile
+    ) throws -> FoodWalletQRPayload {
         let privateKey = P256.Signing.PrivateKey()
         var signed = payload
         signed.signature = nil
         signed.contentSha256 = ""
         let publicKey = privateKey.publicKey.x963Representation
         let keyID = "p256:\(sha256Hex(publicKey).prefix(16))"
-        signed.issuer = FoodWalletQRIssuer(label: "MealMark self-issued", keyID: keyID)
+        signed.issuer = FoodWalletQRIssuer(label: issuerProfile.displayLabel, keyID: keyID)
         let contentData = try contentData(for: signed)
         signed.contentSha256 = sha256Hex(contentData)
         let signature = try privateKey.signature(for: contentData)
         signed.signature = FoodWalletExportSignature(
             algorithm: "p256-sha256",
-            signer: signed.issuer?.label ?? "MealMark self-issued",
+            signer: signed.issuer?.label ?? FoodWalletQRIssuerProfile.selfIssued.displayLabel,
             publicKeyX963Base64: publicKey.base64EncodedString(),
             signatureDerBase64: signature.derRepresentation.base64EncodedString()
         )

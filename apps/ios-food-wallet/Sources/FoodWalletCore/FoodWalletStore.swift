@@ -136,6 +136,7 @@ public final class FoodWalletStore: ObservableObject {
     @Published public private(set) var personalIngredients: [PersonalFoodIngredient]
     @Published public private(set) var foodSearchState: FoodSearchState
     @Published public private(set) var brokerFoodSearchRows: [AddFoodSuggestionRow]
+    @Published public private(set) var qrIssuerProfile: FoodWalletQRIssuerProfile
     @Published public var selectedExample: FoodCaptureExample
     @Published public var subscription: SubscriptionState
     @Published public var privacy: PrivacyConsentState
@@ -162,6 +163,7 @@ public final class FoodWalletStore: ObservableObject {
         entries: [FoodIntakeEntry] = [],
         subscription: SubscriptionState = .free,
         privacy: PrivacyConsentState = .notRequested,
+        qrIssuerProfile: FoodWalletQRIssuerProfile = .selfIssued,
         savedTemplates: [SavedFoodTemplate] = SavedFoodTemplate.defaultTemplates,
         savedRecipes: [SavedFoodRecipe] = SavedFoodRecipe.defaultRecipes,
         personalIngredients: [PersonalFoodIngredient] = [],
@@ -192,6 +194,7 @@ public final class FoodWalletStore: ObservableObject {
         self.personalIngredients = personalIngredients
         self.foodSearchState = .idle
         self.brokerFoodSearchRows = []
+        self.qrIssuerProfile = qrIssuerProfile
         self.selectedExample = .fujiApple
         self.subscription = subscription
         self.privacy = privacy
@@ -526,14 +529,21 @@ public final class FoodWalletStore: ObservableObject {
         guard let recipe = savedRecipe(id: id) else {
             return nil
         }
-        return try? FoodWalletProtocolQRCodeFactory.qrText(recipe: recipe)
+        return try? FoodWalletProtocolQRCodeFactory.qrText(recipe: recipe, issuerProfile: qrIssuerProfile)
     }
 
     public func qrPayloadTextForPersonalIngredient(id: String) -> String? {
         guard let ingredient = personalIngredient(id: id) else {
             return nil
         }
-        return try? FoodWalletProtocolQRCodeFactory.qrText(personalFood: ingredient)
+        return try? FoodWalletProtocolQRCodeFactory.qrText(personalFood: ingredient, issuerProfile: qrIssuerProfile)
+    }
+
+    public func updateQRIssuerLabel(_ label: String) {
+        qrIssuerProfile = FoodWalletQRIssuerProfile(
+            label: label,
+            trustAnchorID: qrIssuerProfile.normalizedTrustAnchorID
+        )
     }
 
     public func previewQRCodePayload(_ text: String) throws -> FoodWalletQRImportPreview {
@@ -629,6 +639,22 @@ public final class FoodWalletStore: ObservableObject {
             presentDraft(candidate: qrCandidate, sourceClass: .measured, trustStatus: .selfIssued)
             return true
         }
+    }
+
+    public func saveQRCodePersonalIngredient(payloadText: String) throws -> PersonalFoodIngredient? {
+        let payload = try FoodWalletQRFactory.payload(from: payloadText)
+        guard payload.kind == .personalFood,
+              let exportPersonalFood = payload.personalFood else {
+            return nil
+        }
+        let ingredient = PersonalFoodIngredient(exportPersonalFood: exportPersonalFood)
+        if let existingIndex = personalIngredients.firstIndex(where: { $0.id == ingredient.id }) {
+            personalIngredients[existingIndex] = ingredient
+        } else {
+            personalIngredients.append(ingredient)
+        }
+        publishUserLibraryMutation()
+        return ingredient
     }
 
     public func savePersonalIngredient(

@@ -5,6 +5,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 #if os(iOS)
+import AVFoundation
 import CoreImage.CIFilterBuiltins
 import PhotosUI
 import UIKit
@@ -222,7 +223,7 @@ struct FoodWalletRootView: View {
                         isShowingAddFoodHub = false
                         #if os(iOS)
                         DispatchQueue.main.async {
-                            isShowingPhotoLibrary = true
+                            startPhotoLibraryFlow()
                         }
                         #else
                         captureErrorMessage = "Photo library import is available in the iOS app target."
@@ -263,6 +264,10 @@ struct FoodWalletRootView: View {
                 },
                 onCancel: {
                     isShowingCamera = false
+                },
+                onUnavailable: { message in
+                    isShowingCamera = false
+                    captureErrorMessage = message
                 }
             )
         }
@@ -276,7 +281,7 @@ struct FoodWalletRootView: View {
         }
         #endif
         .alert(
-            "Camera unavailable",
+            "Photo unavailable",
             isPresented: Binding(
                 get: { captureErrorMessage != nil },
                 set: { isPresented in
@@ -357,11 +362,42 @@ struct FoodWalletRootView: View {
     #if os(iOS)
     private func startCameraCaptureFlow() {
         isShowingCaptureReview = false
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            isShowingCamera = true
-        } else {
-            captureErrorMessage = "This device does not expose a camera to MealMark. Use a real iPhone for camera capture."
+        if let message = photoAnalysisUnavailableMessage() {
+            captureErrorMessage = message
+            return
         }
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .denied:
+            captureErrorMessage = "Camera access is off for MealMark. Enable camera access in Settings, or add the food by barcode, library, or manual entry."
+        case .restricted:
+            captureErrorMessage = "Camera capture is restricted on this device. You can still add food by typing, barcode, or photo library."
+        case .authorized, .notDetermined:
+            guard AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) != nil else {
+                captureErrorMessage = "MealMark could not find a usable rear camera. Try barcode entry, photo library, or manual ingredients."
+                return
+            }
+            isShowingCamera = true
+        @unknown default:
+            captureErrorMessage = "MealMark could not start the camera on this device. Try again or use another add-food method."
+        }
+    }
+
+    private func startPhotoLibraryFlow() {
+        if let message = photoAnalysisUnavailableMessage() {
+            captureErrorMessage = message
+            return
+        }
+        isShowingPhotoLibrary = true
+    }
+
+    private func photoAnalysisUnavailableMessage() -> String? {
+        if store.analysisState.isAnalyzing {
+            return "MealMark is still analyzing the previous photo. Wait for it to finish or cancel the current analysis."
+        }
+        if store.privacy == .denied {
+            return "AI photo analysis is off. Enable it from Wallet, or add food with barcode, QR, or manual ingredients."
+        }
+        return nil
     }
 
     private func loadSelectedMealPhoto(_ item: PhotosPickerItem?) {
@@ -700,7 +736,9 @@ private struct AddFoodHubView: View {
 
                     if shouldShowShortcuts {
                         AddFoodShortcutGrid(
-                            canStartPhoto: store.canStartAnalysis,
+                            canStartPhoto: canStartPhotoShortcut,
+                            cameraSubtitle: cameraShortcutSubtitle,
+                            librarySubtitle: libraryShortcutSubtitle,
                             onCamera: onTakePhoto,
                             onLibrary: onChoosePhoto,
                             onBarcode: {
@@ -1026,6 +1064,30 @@ private struct AddFoodHubView: View {
         !hasSearchQuery && focusedField != .search
     }
 
+    private var canStartPhotoShortcut: Bool {
+        !store.analysisState.isAnalyzing
+    }
+
+    private var cameraShortcutSubtitle: String {
+        if store.analysisState.isAnalyzing {
+            return "Analysis running"
+        }
+        if store.privacy == .denied {
+            return "Analysis off"
+        }
+        return "Take photo"
+    }
+
+    private var libraryShortcutSubtitle: String {
+        if store.analysisState.isAnalyzing {
+            return "Analysis running"
+        }
+        if store.privacy == .denied {
+            return "Analysis off"
+        }
+        return "Choose photo"
+    }
+
     private var shouldShowReusableResults: Bool {
         !hasSearchQuery && (!reusableRecentEntries.isEmpty || !reusablePersonalIngredients.isEmpty)
     }
@@ -1323,6 +1385,8 @@ private struct AddFoodHubView: View {
 private struct BuildMealEditorView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @FocusState private var focusedIngredientNameIndex: Int?
+    @State private var activeIngredientSearchQuery: String?
+    @State private var isShowingIngredientScanner = false
     @Binding var mealTitle: String
     @Binding var ingredientRows: [IngredientBuilderRow]
     var ingredientErrorMessage: String?
@@ -1366,6 +1430,8 @@ private struct BuildMealEditorView: View {
                         index: index,
                         row: $ingredientRows[index],
                         suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 12),
+                        searchState: ingredientSearchState(for: index),
+                        isSearchInFlight: isIngredientSearchInFlight(index),
                         focusedIngredientNameIndex: $focusedIngredientNameIndex,
                         onSelectSuggestion: { suggestion in
                             selectIngredientSuggestion(suggestion, at: index)
@@ -1377,6 +1443,13 @@ private struct BuildMealEditorView: View {
                     Label("Add ingredient", systemImage: "plus.circle")
                 }
                 .accessibilityIdentifier("AddIngredientRowButton")
+
+                Button {
+                    isShowingIngredientScanner = true
+                } label: {
+                    Label("Scan ingredient", systemImage: "barcode.viewfinder")
+                }
+                .accessibilityIdentifier("ScanIngredientButton")
 
                 if let ingredientErrorMessage {
                     Text(ingredientErrorMessage)
@@ -1408,6 +1481,16 @@ private struct BuildMealEditorView: View {
         .task(id: ingredientSearchSeed) {
             await refreshBrokerFoodSearchForActiveIngredient()
         }
+        .sheet(isPresented: $isShowingIngredientScanner) {
+            NavigationStack {
+                IngredientBarcodeLookupView { ingredient in
+                    applyScannedIngredient(ingredient)
+                    isShowingIngredientScanner = false
+                }
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
@@ -1416,6 +1499,18 @@ private struct BuildMealEditorView: View {
                 }
             }
         }
+    }
+
+    private func ingredientSearchState(for index: Int) -> FoodSearchState {
+        focusedIngredientNameIndex == index ? store.foodSearchState : .idle
+    }
+
+    private func isIngredientSearchInFlight(_ index: Int) -> Bool {
+        guard focusedIngredientNameIndex == index,
+              let activeIngredientSearchQuery else {
+            return false
+        }
+        return activeIngredientSearchQuery == activeIngredientQuery
     }
 
     private func selectIngredientSuggestion(_ suggestion: AddFoodSuggestionRow, at index: Int) {
@@ -1442,13 +1537,32 @@ private struct BuildMealEditorView: View {
     @MainActor
     private func refreshBrokerFoodSearchForActiveIngredient() async {
         guard let query = activeIngredientQuery else {
+            activeIngredientSearchQuery = nil
             return
+        }
+        activeIngredientSearchQuery = query
+        defer {
+            if activeIngredientSearchQuery == query {
+                activeIngredientSearchQuery = nil
+            }
         }
         try? await Task.sleep(nanoseconds: 700_000_000)
         guard !Task.isCancelled else {
             return
         }
         await store.searchBrokerFood(query: query)
+    }
+
+    private func applyScannedIngredient(_ ingredient: PersonalFoodIngredient) {
+        let targetIndex = focusedIngredientNameIndex ??
+            ingredientRows.firstIndex { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ??
+            ingredientRows.endIndex
+        if targetIndex == ingredientRows.endIndex {
+            ingredientRows.append(IngredientBuilderRow())
+        }
+        ingredientRows[targetIndex].name = ingredient.name
+        ingredientRows[targetIndex].setAmount(fromGrams: max(1, Int64(ingredient.sourceServingGrams.rounded())))
+        focusedIngredientNameIndex = targetIndex
     }
 
     private var activeIngredientQuery: String? {
@@ -1734,6 +1848,200 @@ private struct BarcodeLookupProgressCard: View {
     }
 }
 
+private struct IngredientBarcodeLookupView: View {
+    @EnvironmentObject private var store: FoodWalletStore
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isBarcodeFieldFocused: Bool
+    @State private var barcodeText = ""
+    @State private var errorMessage: String?
+    @State private var isLookingUp = false
+    @State private var detectedBarcode: String?
+    @State private var scannerRestartID = UUID()
+
+    var onIngredientResolved: (PersonalFoodIngredient) -> Void
+
+    private var normalizedBarcode: String? {
+        BrokerFoodSearchRequest.normalizeBarcode(barcodeText)
+    }
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 14) {
+                    BarcodeScannerView(
+                        onBarcode: handleDetectedBarcode,
+                        onQRCode: handleDetectedQRCode,
+                        onScannerError: { message in
+                            errorMessage = message
+                        }
+                    )
+                    .id(scannerRestartID)
+                    .frame(minHeight: 260)
+
+                    if let detectedBarcode {
+                        Label("Detected \(detectedBarcode)", systemImage: "barcode")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("IngredientBarcodeDetectedValueLabel")
+                    }
+
+                    if isLookingUp {
+                        BarcodeLookupProgressCard(barcode: detectedBarcode ?? normalizedBarcode ?? "")
+                    } else {
+                        manualControls
+                    }
+                }
+                .padding(.vertical, 4)
+            } footer: {
+                Text("MealMark can fill one ingredient from a packaged barcode or a signed personal-food QR. Full meal QR codes are imported from Scan Code.")
+            }
+        }
+        .mealMarkScrollDismissesKeyboard()
+        .navigationTitle("Scan Ingredient")
+        .mealMarkNavigationBarTitleDisplayModeInline()
+        .accessibilityIdentifier("IngredientBarcodeScannerSheet")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    dismiss()
+                }
+                .accessibilityIdentifier("IngredientBarcodeCancelButton")
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                MealMarkKeyboardDoneButton(
+                    accessibilityIdentifier: "IngredientBarcodeKeyboardSearchButton",
+                    title: normalizedBarcode == nil ? "Done" : "Search",
+                    isEnabled: !isLookingUp
+                ) {
+                    MealMarkKeyboard.dismiss()
+                    isBarcodeFieldFocused = false
+                    if normalizedBarcode != nil {
+                        lookupManualBarcode()
+                    }
+                }
+            }
+        }
+    }
+
+    private var manualControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            TextField("Enter UPC or EAN", text: $barcodeText)
+                .textContentType(.oneTimeCode)
+                #if os(iOS)
+                .keyboardType(.numberPad)
+                #endif
+                .focused($isBarcodeFieldFocused)
+                .accessibilityIdentifier("IngredientBarcodeManualEntryField")
+
+            MealMarkFilledActionButton(
+                title: detectedBarcode == nil ? "Search barcode" : "Search again",
+                subtitle: nil,
+                symbol: "arrow.right.circle.fill",
+                tint: .blue,
+                isEnabled: normalizedBarcode != nil,
+                action: lookupManualBarcode
+            )
+            .accessibilityIdentifier("IngredientBarcodeManualLookupButton")
+
+            if let errorMessage {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .accessibilityIdentifier("IngredientBarcodeLookupErrorLabel")
+
+                    Button {
+                        scanAgain()
+                    } label: {
+                        Label("Scan again", systemImage: "barcode.viewfinder")
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("IngredientBarcodeScanAgainButton")
+                }
+            } else {
+                Text("Point the camera at a UPC, EAN, or MealMark personal-food QR. MealMark fills the focused ingredient row after reviewable lookup.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("IngredientBarcodeLookupStatusLabel")
+            }
+        }
+    }
+
+    private func handleDetectedBarcode(_ value: String) {
+        guard let normalized = BrokerFoodSearchRequest.normalizeBarcode(value) else {
+            errorMessage = "Center the UPC or EAN digits and try again."
+            return
+        }
+        detectedBarcode = normalized
+        barcodeText = normalized
+        Task {
+            await lookupBarcode(normalized)
+        }
+    }
+
+    private func handleDetectedQRCode(_ text: String) {
+        do {
+            guard let ingredient = try store.saveQRCodePersonalIngredient(payloadText: text) else {
+                errorMessage = "This signed QR contains a saved meal. Use Scan Code from Add Food to import the full meal."
+                return
+            }
+            onIngredientResolved(ingredient)
+            dismiss()
+        } catch FoodWalletQRImportError.protocolServingOfferRequiresTrust {
+            errorMessage = "This Grain GR1 serving offer needs issuer trust material before MealMark can use it as an ingredient."
+        } catch {
+            errorMessage = "This QR is not a signed MealMark personal-food QR. Try a packaged barcode or enter nutrition manually."
+        }
+    }
+
+    private func scanAgain() {
+        errorMessage = nil
+        detectedBarcode = nil
+        scannerRestartID = UUID()
+    }
+
+    private func lookupManualBarcode() {
+        guard let normalizedBarcode else {
+            errorMessage = "Enter 8 to 14 barcode digits."
+            return
+        }
+        Task {
+            await lookupBarcode(normalizedBarcode)
+        }
+    }
+
+    @MainActor
+    private func lookupBarcode(_ barcode: String) async {
+        guard !isLookingUp else {
+            return
+        }
+        isLookingUp = true
+        errorMessage = nil
+        defer {
+            isLookingUp = false
+        }
+
+        await store.searchBrokerFood(barcode: barcode)
+        switch store.foodSearchState {
+        case .ready:
+            guard let firstResult = store.brokerFoodSearchRows.first,
+                  let ingredient = store.saveBrokerFoodSearchResultAsPersonalIngredient(id: firstResult.id) else {
+                errorMessage = "No ingredient-ready barcode match yet. Try a photo label or enter nutrition manually."
+                return
+            }
+            onIngredientResolved(ingredient)
+            dismiss()
+        case .empty:
+            errorMessage = "No product match for this barcode yet. Try photo label or enter the ingredient manually."
+        case let .failed(message):
+            errorMessage = message
+        case .idle, .loading:
+            errorMessage = "Food lookup did not finish. Try again."
+        }
+    }
+}
+
 private struct QRCodeImportPreviewCard: View {
     var preview: FoodWalletQRImportPreview
     var onAdd: () -> Void
@@ -1887,6 +2195,8 @@ private struct AddFoodSearchField: View {
 
 private struct AddFoodShortcutGrid: View {
     var canStartPhoto: Bool
+    var cameraSubtitle: String
+    var librarySubtitle: String
     var onCamera: () -> Void
     var onLibrary: () -> Void
     var onBarcode: () -> Void
@@ -1903,7 +2213,7 @@ private struct AddFoodShortcutGrid: View {
                 LazyVGrid(columns: columns, spacing: 10) {
                     AddFoodShortcutButton(
                         title: "Camera",
-                        subtitle: canStartPhoto ? "Take photo" : "Unavailable",
+                        subtitle: cameraSubtitle,
                         symbol: "camera.fill",
                         accessibilityIdentifier: "AddFoodPhotoCameraButton",
                         isEnabled: canStartPhoto,
@@ -1913,7 +2223,7 @@ private struct AddFoodShortcutGrid: View {
 
                     AddFoodShortcutButton(
                         title: "Library",
-                        subtitle: "Choose photo",
+                        subtitle: librarySubtitle,
                         symbol: "photo.on.rectangle",
                         accessibilityIdentifier: "AddFoodPhotoLibraryButton",
                         isEnabled: canStartPhoto,
@@ -2281,6 +2591,8 @@ private struct IngredientBuilderRowView: View {
     var index: Int
     @Binding var row: IngredientBuilderRow
     var suggestions: [AddFoodSuggestionRow] = []
+    var searchState: FoodSearchState = .idle
+    var isSearchInFlight = false
     var focusedIngredientNameIndex: FocusState<Int?>.Binding
     var onSelectSuggestion: (AddFoodSuggestionRow) -> Void = { _ in }
 
@@ -2365,6 +2677,15 @@ private struct IngredientBuilderRowView: View {
                     }
                 }
             }
+
+            if shouldShowSearchStatus {
+                IngredientSearchStatusRow(
+                    index: index,
+                    state: searchState,
+                    isSearchInFlight: isSearchInFlight,
+                    hasSuggestions: !suggestions.isEmpty
+                )
+            }
         }
     }
 
@@ -2374,6 +2695,24 @@ private struct IngredientBuilderRowView: View {
             return false
         }
         return focusedIngredientNameIndex.wrappedValue == index && !suggestions.isEmpty
+    }
+
+    private var shouldShowSearchStatus: Bool {
+        let trimmed = row.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard focusedIngredientNameIndex.wrappedValue == index, trimmed.count >= 3 else {
+            return false
+        }
+        if isSearchInFlight {
+            return true
+        }
+        switch searchState {
+        case .loading:
+            return true
+        case .empty, .failed:
+            return suggestions.isEmpty
+        case .idle, .ready:
+            return false
+        }
     }
 
     private static func slug(_ value: String) -> String {
@@ -2391,6 +2730,89 @@ private struct IngredientBuilderRowView: View {
             return "checkmark.seal"
         default:
             return "magnifyingglass"
+        }
+    }
+}
+
+private struct IngredientSearchStatusRow: View {
+    var index: Int
+    var state: FoodSearchState
+    var isSearchInFlight: Bool
+    var hasSuggestions: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 8) {
+                if isSearching {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityIdentifier("IngredientSearchProgress-\(index)")
+                } else {
+                    Image(systemName: statusSymbol)
+                        .font(.caption.weight(.semibold))
+                }
+
+                Text(statusText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(statusTint)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if isSearching {
+                ProgressView()
+                    .progressViewStyle(.linear)
+                    .tint(.blue)
+                    .accessibilityIdentifier("IngredientSearchProgressBar-\(index)")
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(statusTint.opacity(0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("IngredientSearchStatus-\(index)")
+    }
+
+    private var isSearching: Bool {
+        if isSearchInFlight {
+            return true
+        }
+        if case .loading = state {
+            return true
+        }
+        return false
+    }
+
+    private var statusText: String {
+        if isSearching {
+            return "Searching food databases..."
+        }
+        switch state {
+        case .empty:
+            return hasSuggestions ? "" : "No provider match yet."
+        case let .failed(message):
+            return message
+        case .idle, .loading, .ready:
+            return "Searching food databases..."
+        }
+    }
+
+    private var statusSymbol: String {
+        switch state {
+        case .failed:
+            return "exclamationmark.circle"
+        default:
+            return "magnifyingglass"
+        }
+    }
+
+    private var statusTint: Color {
+        switch state {
+        case .failed:
+            return .red
+        default:
+            return .blue
         }
     }
 }
@@ -2639,6 +3061,7 @@ private struct SavedRecipeEditorView: View {
     @EnvironmentObject private var store: FoodWalletStore
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedIngredientNameIndex: Int?
+    @State private var activeIngredientSearchQuery: String?
     @State private var mealTitle: String
     @State private var ingredientRows: [IngredientBuilderRow]
     @State private var errorMessage: String?
@@ -2664,6 +3087,8 @@ private struct SavedRecipeEditorView: View {
                             index: index,
                             row: $ingredientRows[index],
                             suggestions: store.ingredientSuggestions(for: ingredientRows[index].name, limit: 12),
+                            searchState: focusedIngredientNameIndex == index ? store.foodSearchState : .idle,
+                            isSearchInFlight: focusedIngredientNameIndex == index && activeIngredientSearchQuery == activeIngredientQuery,
                             focusedIngredientNameIndex: $focusedIngredientNameIndex,
                             onSelectSuggestion: { suggestion in
                                 if suggestion.id.hasPrefix("food-search:"),
@@ -2766,7 +3191,14 @@ private struct SavedRecipeEditorView: View {
     @MainActor
     private func refreshBrokerFoodSearchForActiveIngredient() async {
         guard let query = activeIngredientQuery else {
+            activeIngredientSearchQuery = nil
             return
+        }
+        activeIngredientSearchQuery = query
+        defer {
+            if activeIngredientSearchQuery == query {
+                activeIngredientSearchQuery = nil
+            }
         }
         try? await Task.sleep(nanoseconds: 220_000_000)
         guard !Task.isCancelled else {
@@ -4343,6 +4775,7 @@ private struct MealDetailEvidenceRow: View {
 
 private struct WalletView: View {
     @EnvironmentObject private var store: FoodWalletStore
+    @AppStorage("grain.food-wallet.qr-issuer-label.v1") private var qrIssuerLabel = FoodWalletQRIssuerProfile.selfIssued.label
     @State private var isShowingBackupImporter = false
     @State private var restoreDraft: RestoreDraft?
     @State private var restoreStatusMessage: String?
@@ -4376,6 +4809,15 @@ private struct WalletView: View {
                     .tint(.red)
                     .accessibilityIdentifier("WalletDisableAIPhotoAnalysisButton")
                 }
+            }
+
+            Section("Food QR signer") {
+                TextField("Signer name", text: qrIssuerLabelBinding)
+                    .accessibilityIdentifier("QRIssuerLabelField")
+
+                Text("This label is embedded inside signed Grain food QR codes, so another MealMark-compatible app can show who issued the meal.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Privacy promises") {
@@ -4477,6 +4919,9 @@ private struct WalletView: View {
             allowsMultipleSelection: false,
             onCompletion: handleBackupImport
         )
+        .onAppear {
+            store.updateQRIssuerLabel(qrIssuerLabel)
+        }
     }
 
     private var portableJSONText: String {
@@ -4547,6 +4992,17 @@ private struct WalletView: View {
         } catch {
             restoreStatusMessage = nil
             restoreErrorMessage = "That Grain bundle could not be imported."
+        }
+    }
+
+    private var qrIssuerLabelBinding: Binding<String> {
+        Binding {
+            qrIssuerLabel
+        } set: { value in
+            let label = FoodWalletQRIssuerProfile(label: value).displayLabel
+            qrIssuerLabel = label
+            FoodWalletQRIssuerPreferenceStore.save(label: label)
+            store.updateQRIssuerLabel(label)
         }
     }
 }

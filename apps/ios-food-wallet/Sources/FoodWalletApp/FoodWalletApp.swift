@@ -79,6 +79,7 @@ private enum FoodWalletAppConfiguration {
             searchClient: makeFoodSearchClient(),
             entries: FoodWalletLocalLedgerStore.loadEntries(),
             privacy: FoodWalletPrivacyPreferenceStore.load(),
+            qrIssuerProfile: FoodWalletQRIssuerPreferenceStore.load(),
             savedTemplates: userLibrary.templates,
             savedRecipes: userLibrary.recipes,
             personalIngredients: userLibrary.personalIngredients,
@@ -251,6 +252,19 @@ private enum FoodWalletAppConfiguration {
         return delayMilliseconds * 1_000_000
     }
 
+}
+
+struct FoodWalletQRIssuerPreferenceStore: Sendable {
+    private static let labelKey = "grain.food-wallet.qr-issuer-label.v1"
+
+    static func load() -> FoodWalletQRIssuerProfile {
+        let label = UserDefaults.standard.string(forKey: labelKey) ?? FoodWalletQRIssuerProfile.selfIssued.label
+        return FoodWalletQRIssuerProfile(label: label)
+    }
+
+    static func save(label: String) {
+        UserDefaults.standard.set(FoodWalletQRIssuerProfile(label: label).displayLabel, forKey: labelKey)
+    }
 }
 
 private enum FoodWalletPrivacyPreferenceStore {

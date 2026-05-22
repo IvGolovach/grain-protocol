@@ -8,8 +8,11 @@ public enum FoodWalletProtocolQRCodeFactory {
     private static let maxCoseBytes = 16 * 1024
     private static let base45Alphabet = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:".utf8)
 
-    public static func qrText(recipe: SavedFoodRecipe) throws -> String {
-        let payload = try FoodWalletQRFactory.payload(recipe: recipe)
+    public static func qrText(
+        recipe: SavedFoodRecipe,
+        issuerProfile: FoodWalletQRIssuerProfile = .selfIssued
+    ) throws -> String {
+        let payload = try FoodWalletQRFactory.payload(recipe: recipe, issuerProfile: issuerProfile)
         let payloadText = try FoodWalletQRFactory.payloadText(payload)
         return try issueGR1(
             title: recipe.title,
@@ -17,12 +20,16 @@ public enum FoodWalletProtocolQRCodeFactory {
             kcal: recipe.totalKcal,
             varianceKcal: max(1, Int64((Double(recipe.totalKcal) * 0.08).rounded())),
             macronutrients: recipe.macronutrients,
-            payloadText: payloadText
+            payloadText: payloadText,
+            issuerProfile: issuerProfile
         )
     }
 
-    public static func qrText(personalFood: PersonalFoodIngredient) throws -> String {
-        let payload = try FoodWalletQRFactory.payload(personalFood: personalFood)
+    public static func qrText(
+        personalFood: PersonalFoodIngredient,
+        issuerProfile: FoodWalletQRIssuerProfile = .selfIssued
+    ) throws -> String {
+        let payload = try FoodWalletQRFactory.payload(personalFood: personalFood, issuerProfile: issuerProfile)
         let payloadText = try FoodWalletQRFactory.payloadText(payload)
         let servingGrams = max(1, Int64(personalFood.sourceServingGrams.rounded()))
         let scale = Double(servingGrams) / 100
@@ -32,7 +39,8 @@ public enum FoodWalletProtocolQRCodeFactory {
             kcal: personalFood.sourceServingKcal,
             varianceKcal: max(1, Int64((Double(personalFood.sourceServingKcal) * 0.08).rounded())),
             macronutrients: personalFood.macronutrientsPer100Grams.scaled(by: scale),
-            payloadText: payloadText
+            payloadText: payloadText,
+            issuerProfile: issuerProfile
         )
     }
 
@@ -47,7 +55,8 @@ public enum FoodWalletProtocolQRCodeFactory {
         kcal: Int64,
         varianceKcal: Int64,
         macronutrients: MealMacronutrients,
-        payloadText: String
+        payloadText: String,
+        issuerProfile: FoodWalletQRIssuerProfile
     ) throws -> String {
         let signingKey = Curve25519.Signing.PrivateKey()
         let publicKey = signingKey.publicKey.rawRepresentation
@@ -66,7 +75,8 @@ public enum FoodWalletProtocolQRCodeFactory {
             varianceKcal: varianceKcal,
             macronutrients: macronutrients,
             payloadText: payloadText,
-            trustPubB64: trustPubB64
+            trustPubB64: trustPubB64,
+            issuerProfile: issuerProfile
         )
         let payloadBytes = payload.encoded()
         let sigStructure = Cbor.array([
@@ -94,9 +104,22 @@ public enum FoodWalletProtocolQRCodeFactory {
         varianceKcal: Int64,
         macronutrients: MealMacronutrients,
         payloadText: String,
-        trustPubB64: String
+        trustPubB64: String,
+        issuerProfile: FoodWalletQRIssuerProfile
     ) -> Cbor {
-        .map([
+        var mealmarkExtensionEntries: [(Cbor, Cbor)] = [
+            (.text("schema"), .text("grain.food-wallet.qr.v1")),
+            (.text("issuer_label"), .text(issuerProfile.displayLabel)),
+            (.text("public_key_alg"), .text("ed25519")),
+            (.text("trust_pub_b64"), .text(trustPubB64)),
+            (.text("title"), .text(title)),
+            (.text("payload_json"), .text(payloadText)),
+        ]
+        if let trustAnchorID = issuerProfile.normalizedTrustAnchorID {
+            mealmarkExtensionEntries.append((.text("trust_anchor_id"), .text(trustAnchorID)))
+        }
+
+        return .map([
             (.text("v"), .unsigned(1)),
             (.text("t"), .text("ServingOffer")),
             (.text("issuer_kid"), .bytes(issuerKid)),
@@ -114,14 +137,7 @@ public enum FoodWalletProtocolQRCodeFactory {
                 protein: max(0, macronutrients.proteinGrams * 0.1)
             )),
             (.text("ext"), .map([
-                (.text("mealmark"), .map([
-                    (.text("schema"), .text("grain.food-wallet.qr.v1")),
-                    (.text("issuer_label"), .text("MealMark self-issued")),
-                    (.text("public_key_alg"), .text("ed25519")),
-                    (.text("trust_pub_b64"), .text(trustPubB64)),
-                    (.text("title"), .text(title)),
-                    (.text("payload_json"), .text(payloadText)),
-                ])),
+                (.text("mealmark"), .map(mealmarkExtensionEntries)),
             ])),
         ])
     }

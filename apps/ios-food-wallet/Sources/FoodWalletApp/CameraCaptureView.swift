@@ -8,9 +8,14 @@ import UIKit
 struct CameraCaptureView: UIViewControllerRepresentable {
     var onPhotoCaptured: (TransientMealPhotoPayload) -> Void
     var onCancel: () -> Void
+    var onUnavailable: (String) -> Void = { _ in }
 
     func makeUIViewController(context: Context) -> MealMarkCameraViewController {
-        MealMarkCameraViewController(onPhotoCaptured: onPhotoCaptured, onCancel: onCancel)
+        MealMarkCameraViewController(
+            onPhotoCaptured: onPhotoCaptured,
+            onCancel: onCancel,
+            onUnavailable: onUnavailable
+        )
     }
 
     func updateUIViewController(_ uiViewController: MealMarkCameraViewController, context: Context) {}
@@ -19,6 +24,7 @@ struct CameraCaptureView: UIViewControllerRepresentable {
 final class MealMarkCameraViewController: UIViewController {
     private let onPhotoCaptured: (TransientMealPhotoPayload) -> Void
     private let onCancel: () -> Void
+    private let onUnavailable: (String) -> Void
     private nonisolated(unsafe) let session = AVCaptureSession()
     private nonisolated(unsafe) let photoOutput = AVCapturePhotoOutput()
     private let sessionQueue = DispatchQueue(label: "dev.grain.mealmark.camera-session")
@@ -33,10 +39,12 @@ final class MealMarkCameraViewController: UIViewController {
 
     init(
         onPhotoCaptured: @escaping (TransientMealPhotoPayload) -> Void,
-        onCancel: @escaping () -> Void
+        onCancel: @escaping () -> Void,
+        onUnavailable: @escaping (String) -> Void
     ) {
         self.onPhotoCaptured = onPhotoCaptured
         self.onCancel = onCancel
+        self.onUnavailable = onUnavailable
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .fullScreen
     }
@@ -174,14 +182,16 @@ final class MealMarkCameraViewController: UIViewController {
                     }
                 } else {
                     DispatchQueue.main.async {
-                        self?.onCancel()
+                        self?.onUnavailable("Camera access is off for MealMark. Enable camera access in Settings, or add the ingredient from a typed entry or barcode.")
                     }
                 }
             }
-        case .denied, .restricted:
-            onCancel()
+        case .denied:
+            onUnavailable("Camera access is off for MealMark. Enable camera access in Settings, or add the ingredient from a typed entry or barcode.")
+        case .restricted:
+            onUnavailable("Camera capture is restricted on this device. You can still add food by typing, barcode, or photo library.")
         @unknown default:
-            onCancel()
+            onUnavailable("MealMark could not start the camera on this device. Try again or use another add-food method.")
         }
     }
 
@@ -201,7 +211,7 @@ final class MealMarkCameraViewController: UIViewController {
             else {
                 self.session.commitConfiguration()
                 DispatchQueue.main.async {
-                    self.onCancel()
+                    self.onUnavailable("MealMark could not find a usable rear camera. Try barcode entry, photo library, or manual ingredients.")
                 }
                 return
             }
@@ -232,7 +242,7 @@ final class MealMarkCameraViewController: UIViewController {
                     let image,
                     let payload = TransientMealPhotoPayload.transientCapture(from: image)
                 else {
-                    self.onCancel()
+                    self.onUnavailable("MealMark could not read this camera photo. Try taking the photo again.")
                     return
                 }
                 self.onPhotoCaptured(payload)

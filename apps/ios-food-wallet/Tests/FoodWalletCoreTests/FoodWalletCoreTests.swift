@@ -129,6 +129,9 @@ struct FoodWalletCoreTests {
         await run("qrPayloadImportCreatesReviewableDraft") {
             try await testQRCodePayloadImportCreatesReviewableDraft()
         }
+        await run("customQRCodeIssuerLabelIsSignedInsideGR1") {
+            try await testCustomQRCodeIssuerLabelIsSignedInsideGR1()
+        }
         await run("caseinProteinResolvesAsCuratedPowder") {
             try await testCaseinProteinResolvesAsCuratedPowder()
         }
@@ -1143,6 +1146,44 @@ struct FoodWalletCoreTests {
             // Expected.
         } catch FoodWalletQRImportError.invalidPayload {
             // Older protocol vectors may use fields MealMark does not import, but they still must not enter the app-local QR path.
+        }
+    }
+
+    @MainActor
+    private static func testCustomQRCodeIssuerLabelIsSignedInsideGR1() async throws {
+        let store = FoodWalletStore()
+        let createResult = store.createIngredientMealDraft(
+            title: "Coach breakfast",
+            ingredients: [
+                FoodMealIngredientInput(name: "eggs", grams: 100),
+                FoodMealIngredientInput(name: "toast", grams: 40),
+            ]
+        )
+        try expect(createResult == .created, "expected source recipe creation")
+        guard let recipe = store.savedRecipes.first else {
+            throw FoodWalletTestFailure("expected recipe")
+        }
+
+        let issuerProfile = FoodWalletQRIssuerProfile(
+            label: "Coach Petya",
+            trustAnchorID: "coach:petya"
+        )
+        let qrText = try FoodWalletProtocolQRCodeFactory.qrText(recipe: recipe, issuerProfile: issuerProfile)
+        let decoded = try FoodWalletProtocolQRCodeFactory.payload(fromGR1: qrText)
+
+        try expect(FoodWalletQRFactory.verify(decoded), "expected custom issuer QR payload to verify")
+        try expect(decoded.issuer?.label == "Coach Petya", "expected custom QR issuer label")
+        try expect(decoded.signature?.signer == "Coach Petya", "expected signature signer to use custom label")
+
+        let preview = try store.previewQRCodePayload(qrText)
+        try expect(preview.signedByLabel.hasPrefix("Coach Petya • p256:"), "expected custom signer in preview")
+
+        let tampered = qrText.replacingOccurrences(of: "GR1:", with: "GR1:A")
+        do {
+            _ = try store.previewQRCodePayload(tampered)
+            throw FoodWalletTestFailure("expected tampered custom QR to fail")
+        } catch is FoodWalletQRImportError {
+            // Expected.
         }
     }
 
