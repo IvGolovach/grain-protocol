@@ -66,6 +66,9 @@ struct FoodWalletCoreTests {
         await run("storeCreatesReviewableDraftFromBrokerBarcodeSearch") {
             try await testStoreCreatesReviewableDraftFromBrokerBarcodeSearch()
         }
+        await run("storeBarcodeSearchRequestsSingleExactResult") {
+            try await testStoreBarcodeSearchRequestsSingleExactResult()
+        }
         await run("todaySummaryPrimaryLabelUsesLoggedCalories") {
             try testTodaySummaryPrimaryLabelUsesLoggedCalories()
         }
@@ -660,6 +663,19 @@ struct FoodWalletCoreTests {
         store.confirmDraft()
 
         try expect(store.todayNutritionSummary.kcalRangeLabel == "80 kcal", "expected exact barcode total, got \(store.todayNutritionSummary.kcalRangeLabel)")
+    }
+
+    @MainActor
+    private static func testStoreBarcodeSearchRequestsSingleExactResult() async throws {
+        let result = try JSONDecoder().decode(BrokerFoodSearchEnvelope.self, from: brokerSearchEnvelopeJSON()).results[0]
+        let client = CapturingFoodSearchClient(results: [result])
+        let store = FoodWalletStore(searchClient: client)
+
+        await store.searchBrokerFood(barcode: "0 12345-67890 5")
+
+        try expect(client.requests.count == 1, "expected one barcode lookup request")
+        try expect(client.requests[0].barcode == "012345678905", "expected normalized barcode")
+        try expect(client.requests[0].limit == 1, "expected barcode lookup to request only the exact best match")
     }
 
     private static func testBrokerNameSearchDoesNotClaimBarcodeAssumption() throws {
@@ -2003,6 +2019,20 @@ private struct StaticFoodSearchClient: BrokerFoodSearchClient {
 
     func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
         results
+    }
+}
+
+private final class CapturingFoodSearchClient: BrokerFoodSearchClient, @unchecked Sendable {
+    var results: [BrokerFoodSearchResult]
+    private(set) var requests: [BrokerFoodSearchRequest] = []
+
+    init(results: [BrokerFoodSearchResult]) {
+        self.results = results
+    }
+
+    func searchFood(_ request: BrokerFoodSearchRequest) async throws -> [BrokerFoodSearchResult] {
+        requests.append(request)
+        return results
     }
 }
 

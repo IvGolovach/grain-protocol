@@ -76,9 +76,9 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
             recognizedDataTypes: [
                 .barcode(symbologies: [.ean13, .ean8, .upce, .qr]),
             ],
-            qualityLevel: .balanced,
+            qualityLevel: .fast,
             recognizesMultipleItems: true,
-            isHighFrameRateTrackingEnabled: false,
+            isHighFrameRateTrackingEnabled: true,
             isGuidanceEnabled: true,
             isHighlightingEnabled: true
         )
@@ -120,7 +120,7 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
             didAdd addedItems: [RecognizedItem],
             allItems: [RecognizedItem]
         ) {
-            emitPreferredBarcode(from: allItems, allowsShortBarcode: false, dataScanner: dataScanner)
+            emitPreferredBarcode(from: addedItems + allItems, allowsShortBarcode: false, dataScanner: dataScanner)
         }
 
         func dataScanner(
@@ -128,7 +128,7 @@ private struct VisionKitBarcodeScannerView: UIViewControllerRepresentable {
             didUpdate updatedItems: [RecognizedItem],
             allItems: [RecognizedItem]
         ) {
-            emitPreferredBarcode(from: allItems, allowsShortBarcode: false, dataScanner: dataScanner)
+            emitPreferredBarcode(from: updatedItems + allItems, allowsShortBarcode: false, dataScanner: dataScanner)
         }
 
         func dataScanner(

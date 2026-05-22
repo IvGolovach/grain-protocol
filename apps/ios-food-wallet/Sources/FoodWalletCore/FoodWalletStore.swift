@@ -436,7 +436,7 @@ public final class FoodWalletStore: ObservableObject {
 
     public func searchBrokerFood(barcode: String) async {
         await searchBrokerFood(requestFactory: {
-            try BrokerFoodSearchRequest(barcode: barcode)
+            try BrokerFoodSearchRequest(barcode: barcode, limit: 1)
         })
     }
 

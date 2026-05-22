@@ -182,6 +182,7 @@ struct MealMarkPlusView: View {
             } label: {
                 Label("Delete cloud account", systemImage: "trash")
             }
+            .tint(.red)
             .disabled(accountManager.accountState.status == .localOnly || !accountManager.isConfigured)
             .accessibilityIdentifier("MealMarkDeleteCloudAccountButton")
         }

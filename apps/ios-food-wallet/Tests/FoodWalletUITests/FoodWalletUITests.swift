@@ -356,7 +356,7 @@ final class FoodWalletUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["DraftPrimaryLabel"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["DraftPrimaryLabel"].label, "Ginger lemon kombucha")
-        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 473 g • 72-88 kcal")
+        XCTAssertEqual(app.staticTexts["DraftNutritionLabel"].label, "about 473 g • 80 kcal")
         XCTAssertEqual(app.staticTexts["DraftMacronutrientsLabel"].label, "P 0g • C 19.9g • F 0g")
         XCTAssertFalse(app.switches.matching(identifier: "Assumption-barcode-match").firstMatch.exists)
     }

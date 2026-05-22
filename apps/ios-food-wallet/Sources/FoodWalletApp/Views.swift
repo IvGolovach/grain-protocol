@@ -200,7 +200,7 @@ struct FoodWalletRootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: store.analysisState.isAnalyzing)
-        .tint(.green)
+        .tint(.blue)
         .sheet(isPresented: $isShowingAddFoodHub) {
             NavigationStack {
                 AddFoodHubView(
@@ -1507,7 +1507,11 @@ private struct BarcodeLookupView: View {
                             .foregroundStyle(.secondary)
                             .accessibilityIdentifier("BarcodeDetectedValueLabel")
 
-                        barcodeManualControls
+                        if isLookingUp {
+                            BarcodeLookupProgressCard(barcode: detectedBarcode)
+                        } else {
+                            barcodeManualControls
+                        }
                     } else {
                         barcodeManualControls
                     }
@@ -1557,10 +1561,10 @@ private struct BarcodeLookupView: View {
                 .accessibilityIdentifier("BarcodeManualEntryField")
 
             MealMarkFilledActionButton(
-                title: isLookingUp ? "Looking up" : "Look up barcode",
+                title: manualLookupButtonTitle,
                 subtitle: isLookingUp ? "Checking product databases" : nil,
                 symbol: isLookingUp ? "hourglass" : "arrow.right.circle.fill",
-                tint: .green,
+                tint: .blue,
                 isEnabled: normalizedBarcode != nil && !isLookingUp,
                 action: lookupManualBarcode
             )
@@ -1573,10 +1577,7 @@ private struct BarcodeLookupView: View {
     @ViewBuilder
     private var statusLabel: some View {
         if isLookingUp {
-            Text("Checking food databases")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .accessibilityIdentifier("BarcodeLookupStatusLabel")
+            BarcodeLookupProgressCard(barcode: normalizedBarcode ?? detectedBarcode ?? "")
         } else if let errorMessage {
             VStack(alignment: .leading, spacing: 10) {
                 Text(errorMessage)
@@ -1593,11 +1594,18 @@ private struct BarcodeLookupView: View {
                 .accessibilityIdentifier("BarcodeScanAgainButton")
             }
         } else {
-            Text("Use the camera or type the digits printed under the barcode.")
+            Text("Point the camera at a UPC or EAN. MealMark starts lookup automatically, or you can type the digits.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("BarcodeLookupStatusLabel")
         }
+    }
+
+    private var manualLookupButtonTitle: String {
+        if isLookingUp {
+            return "Checking barcode"
+        }
+        return detectedBarcode == nil ? "Search typed code" : "Search again"
     }
 
     private func handleDetectedBarcode(_ value: String) {
@@ -1689,6 +1697,40 @@ private struct BarcodeLookupView: View {
             return
         }
         onDraftReady()
+    }
+}
+
+private struct BarcodeLookupProgressCard: View {
+    var barcode: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Checking product databases", systemImage: "barcode.viewfinder")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.blue)
+
+            ProgressView()
+                .progressViewStyle(.linear)
+                .tint(.blue)
+                .accessibilityIdentifier("BarcodeLookupProgressBar")
+
+            Text(statusText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("BarcodeLookupStatusLabel")
+        }
+        .padding(14)
+        .mealMarkGlassSurface(cornerRadius: 18, tint: Color.blue.opacity(0.035), isInteractive: false)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var statusText: String {
+        let trimmed = barcode.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "MealMark is checking the typed code now."
+        }
+        return "Detected \(trimmed). Lookup starts automatically."
     }
 }
 
@@ -2468,6 +2510,7 @@ private struct SavedMealDetailView: View {
                         } label: {
                             Label("Edit recipe", systemImage: "pencil")
                         }
+                        .tint(.blue)
                         .accessibilityIdentifier("EditSavedMealButton")
 
                         Button(role: .destructive) {
@@ -2475,6 +2518,7 @@ private struct SavedMealDetailView: View {
                         } label: {
                             Label("Delete recipe", systemImage: "trash")
                         }
+                        .tint(.red)
                         .accessibilityIdentifier("DeleteSavedMealButton")
                     }
                 }
@@ -4044,6 +4088,7 @@ private struct EditMealEntryView: View {
                         save()
                     }
                     .disabled(trimmedLabel.isEmpty || (gramsValue ?? 0) <= 0)
+                    .tint(.blue)
                     .accessibilityIdentifier("SaveEditedMealButton")
                 }
                 ToolbarItemGroup(placement: .keyboard) {
@@ -4104,6 +4149,7 @@ private struct MealEntrySwipeActions: ViewModifier {
                 } label: {
                     Label("Delete", systemImage: "trash")
                 }
+                .tint(.red)
                 .accessibilityIdentifier("DeleteMealButton-\(entry.entryID)")
 
                 Button {
@@ -4202,6 +4248,7 @@ private struct MealDetailView: View {
                         Button("Edit") {
                             editingEntry = EditableMealEntry(entry: entry)
                         }
+                        .tint(.blue)
                         .accessibilityIdentifier("MealDetailEditButton")
                     }
                 }
@@ -4326,6 +4373,7 @@ private struct WalletView: View {
                     } label: {
                         Label("Disable AI photo analysis", systemImage: "xmark.shield")
                     }
+                    .tint(.red)
                     .accessibilityIdentifier("WalletDisableAIPhotoAnalysisButton")
                 }
             }
@@ -4419,6 +4467,7 @@ private struct WalletView: View {
                 } label: {
                     Label("Reset local data", systemImage: "trash")
                 }
+                .tint(.red)
             }
         }
         .navigationTitle("Wallet")
@@ -4677,7 +4726,7 @@ private extension FoodTrustStatus {
         case .selfIssued:
             return .blue
         case .estimated:
-            return .orange
+            return .gray
         case .untrusted:
             return .red
         }
