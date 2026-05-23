@@ -190,8 +190,8 @@ public final class GrainFoodWallet {
 
     public func replaceEntries(_ entries: [FoodIntakeEntry]) {
         self.entries = entries
-        nextEntryNumber = Self.nextSequence(after: entries.map(\.entryID), prefix: "food-entry-")
-        nextDraftNumber = Self.nextSequence(after: entries.map(\.draftID), prefix: "food-draft-")
+        nextEntryNumber = max(nextEntryNumber, Self.nextSequence(after: entries.map(\.entryID), prefix: "food-entry-"))
+        nextDraftNumber = max(nextDraftNumber, Self.nextSequence(after: entries.map(\.draftID), prefix: "food-draft-"))
     }
 
     @discardableResult
