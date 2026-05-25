@@ -6,7 +6,8 @@ import PackageDescription
 let packageDirectory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
 let repoRoot = packageDirectory.deletingLastPathComponent().deletingLastPathComponent().path
 let rustDebugLibraryPath = "\(repoRoot)/core/rust/target/debug"
-let rustIOSDebugStaticLibraryPath = "\(repoRoot)/core/rust/target/aarch64-apple-ios/debug/libgrain_client_core.a"
+let rustIOSDebugStaticLibraryPath = ProcessInfo.processInfo.environment["GRAIN_CLIENT_CORE_IOS_STATIC_LIBRARY_PATH"]
+    ?? "\(repoRoot)/core/rust/target/aarch64-apple-ios/debug/libgrain_client_core.a"
 
 let package = Package(
     name: "GrainClient",
