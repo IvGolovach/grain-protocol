@@ -1,0 +1,57 @@
+{
+  "artifact_id": "mealmark-food-graph-v0.1",
+  "created_by": "tools/food_graph/build_mealmark_food_graph.py",
+  "files": {
+    "aliases.json": {
+      "bytes": 1207,
+      "sha256": "574b3643ef9016b9a01697ddd7e46f811c68ffc63e7d4cf904d35054d9829ab2"
+    },
+    "neighbors-chem.json": {
+      "bytes": 1914004,
+      "sha256": "2040e1ac7054b2c05f73db77158738606b9d718ec4fa91bf6b1328bf93169770"
+    },
+    "neighbors-cooc.json": {
+      "bytes": 1913479,
+      "sha256": "9677839b2ce8fd1d3cb5b9d38250da356ba39f0ae6ae6988477355524027dc10"
+    },
+    "neighbors-core.json": {
+      "bytes": 1920054,
+      "sha256": "28bc64b2f8ea662f0bff10a670403b13bf102cb448a53a17143eb80c0779fb55"
+    },
+    "vocabulary.json": {
+      "bytes": 29055,
+      "sha256": "0227ca880d9c7f09d67482f583324bea7fcd4689832cc3c1c00c54a0fecbf67e"
+    }
+  },
+  "neighbor_limit": 16,
+  "runtime_policy": {
+    "advisory_only": true,
+    "may_change_kcal": false,
+    "may_change_nutrition_confidence": false,
+    "may_change_record_trust": false,
+    "no_network_required": true,
+    "raw_photo_persistence": "forbidden",
+    "raw_vector_persistence": "forbidden"
+  },
+  "schema": "mealmark.food_graph.artifact.v1",
+  "source": {
+    "license": "CC BY 4.0",
+    "models": {
+      "chem": {
+        "repo": "Kaikaku/epicure-chem",
+        "revision": "2461ef3fbafab36d2b1111187a3df98721146861"
+      },
+      "cooc": {
+        "repo": "Kaikaku/epicure-cooc",
+        "revision": "03edd311adde6e39a2eb6f9f3fa78f7396be6b53"
+      },
+      "core": {
+        "repo": "Kaikaku/epicure-core",
+        "revision": "d31ebb5af8e92bbaf5cb67381d5006d4ea8368b7"
+      }
+    },
+    "name": "Epicure ingredient embeddings",
+    "paper": "https://arxiv.org/abs/2605.22391"
+  },
+  "vocabulary_count": 1790
+}
