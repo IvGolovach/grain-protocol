@@ -1,23 +1,30 @@
 import Foundation
 
-public enum FoodTrustStatus: String, Equatable, Sendable {
-    case verified
+public enum FoodRecordTrust: String, Equatable, Sendable {
+    case verifiedSource = "verified_source"
     case selfIssued = "self_issued"
-    case estimated
     case untrusted
 
     public var label: String {
         switch self {
-        case .verified:
-            return "Verified"
+        case .verifiedSource:
+            return "Verified source"
         case .selfIssued:
             return "Self-issued"
-        case .estimated:
-            return "Estimated"
         case .untrusted:
             return "Untrusted"
         }
     }
+}
+
+@available(*, deprecated, renamed: "FoodRecordTrust")
+public typealias FoodTrustStatus = FoodRecordTrust
+
+public enum FoodNutritionConfidence: String, Equatable, Sendable {
+    case confirmed
+    case estimated
+    case incomplete
+    case unknown
 }
 
 public enum FoodSourceClass: String, Equatable, Sendable {
@@ -88,7 +95,8 @@ public struct FoodIntakeDraft: Equatable, Sendable {
     public let draftID: String
     public let meal: MealEstimate
     public let sourceClass: FoodSourceClass
-    public let trustStatus: FoodTrustStatus
+    public let recordTrust: FoodRecordTrust
+    public let nutritionConfidence: FoodNutritionConfidence
     public let createdAt: Date
     public let dateKey: String
 
@@ -96,14 +104,16 @@ public struct FoodIntakeDraft: Equatable, Sendable {
         draftID: String,
         meal: MealEstimate,
         sourceClass: FoodSourceClass,
-        trustStatus: FoodTrustStatus,
+        recordTrust: FoodRecordTrust,
+        nutritionConfidence: FoodNutritionConfidence,
         createdAt: Date,
         dateKey: String
     ) {
         self.draftID = draftID
         self.meal = meal
         self.sourceClass = sourceClass
-        self.trustStatus = trustStatus
+        self.recordTrust = recordTrust
+        self.nutritionConfidence = nutritionConfidence
         self.createdAt = createdAt
         self.dateKey = dateKey
     }
@@ -114,7 +124,8 @@ public struct FoodIntakeEntry: Equatable, Sendable {
     public let draftID: String
     public let meal: MealEstimate
     public let sourceClass: FoodSourceClass
-    public let trustStatus: FoodTrustStatus
+    public let recordTrust: FoodRecordTrust
+    public let nutritionConfidence: FoodNutritionConfidence
     public let confirmedAt: Date
     public let dateKey: String
 
@@ -123,7 +134,8 @@ public struct FoodIntakeEntry: Equatable, Sendable {
         draftID: String,
         meal: MealEstimate,
         sourceClass: FoodSourceClass,
-        trustStatus: FoodTrustStatus,
+        recordTrust: FoodRecordTrust,
+        nutritionConfidence: FoodNutritionConfidence,
         confirmedAt: Date,
         dateKey: String
     ) {
@@ -131,7 +143,8 @@ public struct FoodIntakeEntry: Equatable, Sendable {
         self.draftID = draftID
         self.meal = meal
         self.sourceClass = sourceClass
-        self.trustStatus = trustStatus
+        self.recordTrust = recordTrust
+        self.nutritionConfidence = nutritionConfidence
         self.confirmedAt = confirmedAt
         self.dateKey = dateKey
     }
@@ -152,7 +165,8 @@ public struct SafeFoodSummary: Equatable, Sendable {
         public let amountGrams: Int64
         public let macronutrients: MealMacronutrients?
         public let sourceClass: FoodSourceClass
-        public let trustLabel: String
+        public let recordTrustLabel: String
+        public let nutritionConfidence: FoodNutritionConfidence
         public let dateKey: String
     }
 
@@ -199,7 +213,8 @@ public final class GrainFoodWallet {
         entryID: String,
         meal: MealEstimate,
         sourceClass: FoodSourceClass,
-        trustStatus: FoodTrustStatus
+        recordTrust: FoodRecordTrust,
+        nutritionConfidence: FoodNutritionConfidence
     ) -> FoodIntakeEntry? {
         guard let index = entries.firstIndex(where: { $0.entryID == entryID }) else {
             return nil
@@ -210,7 +225,8 @@ public final class GrainFoodWallet {
             draftID: current.draftID,
             meal: meal,
             sourceClass: sourceClass,
-            trustStatus: trustStatus,
+            recordTrust: recordTrust,
+            nutritionConfidence: nutritionConfidence,
             confirmedAt: current.confirmedAt,
             dateKey: current.dateKey
         )
@@ -227,15 +243,15 @@ public final class GrainFoodWallet {
     }
 
     public func makeEstimatedDraft(meal: MealEstimate) -> FoodIntakeDraft {
-        makeDraft(meal: meal, sourceClass: .estimated, trustStatus: .estimated)
+        makeDraft(meal: meal, sourceClass: .estimated, recordTrust: .untrusted, nutritionConfidence: .estimated)
     }
 
     public func makeVerifiedDraft(meal: MealEstimate) -> FoodIntakeDraft {
-        makeDraft(meal: meal, sourceClass: .attested, trustStatus: .verified)
+        makeDraft(meal: meal, sourceClass: .attested, recordTrust: .verifiedSource, nutritionConfidence: .confirmed)
     }
 
     public func makeSelfIssuedDraft(meal: MealEstimate) -> FoodIntakeDraft {
-        makeDraft(meal: meal, sourceClass: .measured, trustStatus: .selfIssued)
+        makeDraft(meal: meal, sourceClass: .measured, recordTrust: .selfIssued, nutritionConfidence: .confirmed)
     }
 
     public func confirmDraft(_ draft: FoodIntakeDraft) -> FoodIntakeEntry {
@@ -245,7 +261,8 @@ public final class GrainFoodWallet {
             draftID: draft.draftID,
             meal: draft.meal,
             sourceClass: draft.sourceClass,
-            trustStatus: draft.trustStatus,
+            recordTrust: draft.recordTrust,
+            nutritionConfidence: draft.nutritionConfidence,
             confirmedAt: confirmedAt,
             dateKey: Self.dateKey(for: confirmedAt)
         )
@@ -277,7 +294,8 @@ public final class GrainFoodWallet {
                     amountGrams: entry.meal.amountGrams,
                     macronutrients: entry.meal.macronutrients,
                     sourceClass: entry.sourceClass,
-                    trustLabel: entry.trustStatus.label,
+                    recordTrustLabel: entry.recordTrust.label,
+                    nutritionConfidence: entry.nutritionConfidence,
                     dateKey: entry.dateKey
                 )
             }
@@ -287,14 +305,16 @@ public final class GrainFoodWallet {
     private func makeDraft(
         meal: MealEstimate,
         sourceClass: FoodSourceClass,
-        trustStatus: FoodTrustStatus
+        recordTrust: FoodRecordTrust,
+        nutritionConfidence: FoodNutritionConfidence
     ) -> FoodIntakeDraft {
         let createdAt = clock.now()
         let draft = FoodIntakeDraft(
             draftID: "food-draft-\(nextDraftNumber)",
             meal: meal,
             sourceClass: sourceClass,
-            trustStatus: trustStatus,
+            recordTrust: recordTrust,
+            nutritionConfidence: nutritionConfidence,
             createdAt: createdAt,
             dateKey: Self.dateKey(for: createdAt)
         )
@@ -332,8 +352,13 @@ public final class GrainFoodWallet {
     }
 }
 
-extension FoodTrustStatus: CustomStringConvertible, CustomDebugStringConvertible {
+extension FoodRecordTrust: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String { label }
+    public var debugDescription: String { description }
+}
+
+extension FoodNutritionConfidence: CustomStringConvertible, CustomDebugStringConvertible {
+    public var description: String { rawValue }
     public var debugDescription: String { description }
 }
 
@@ -364,7 +389,7 @@ extension MealMacronutrients: CustomStringConvertible, CustomDebugStringConverti
 extension FoodIntakeDraft: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         "FoodIntakeDraft(id: \(draftID), meal: \(meal), sourceClass: \(sourceClass), " +
-            "status: \(trustStatus), dateKey: \(dateKey))"
+            "recordTrust: \(recordTrust), nutritionConfidence: \(nutritionConfidence), dateKey: \(dateKey))"
     }
 
     public var debugDescription: String { description }
@@ -373,7 +398,7 @@ extension FoodIntakeDraft: CustomStringConvertible, CustomDebugStringConvertible
 extension FoodIntakeEntry: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         "FoodIntakeEntry(id: \(entryID), meal: \(meal), sourceClass: \(sourceClass), " +
-            "status: \(trustStatus), dateKey: \(dateKey))"
+            "recordTrust: \(recordTrust), nutritionConfidence: \(nutritionConfidence), dateKey: \(dateKey))"
     }
 
     public var debugDescription: String { description }
@@ -399,7 +424,7 @@ extension SafeFoodSummary: CustomStringConvertible, CustomDebugStringConvertible
 extension SafeFoodSummary.Entry: CustomStringConvertible, CustomDebugStringConvertible {
     public var description: String {
         "Entry(label: \(label), kcal: \(kcal), varianceKcal: \(varianceKcal), amountGrams: \(amountGrams), " +
-            "sourceClass: \(sourceClass), trustLabel: \(trustLabel), dateKey: \(dateKey))"
+            "sourceClass: \(sourceClass), recordTrustLabel: \(recordTrustLabel), nutritionConfidence: \(nutritionConfidence), dateKey: \(dateKey))"
     }
 
     public var debugDescription: String { description }

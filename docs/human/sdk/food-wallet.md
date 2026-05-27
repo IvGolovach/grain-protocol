@@ -64,11 +64,12 @@ backend, app-store package, or model-client wrapper.
 ## Integration Shape
 
 1. The app captures or receives food evidence.
-2. Optional app-owned adapters produce a serving estimate.
+2. Optional app-owned adapters produce a serving estimate with explicit
+   nutrition confidence.
 3. The user confirms or edits the serving details in app UI.
 4. The app writes a Food Profile event through Grain.
 5. Grain validates, reduces, confirms scanner inputs, and exports safe status or
-   proof summaries.
+   proof summaries with record trust separate from nutrition confidence.
 6. The app owns storage, backup, account, sharing, and distribution decisions.
 
 Start with `scripts/sdk/run_food_wallet_pilot.sh` before wiring a real camera or

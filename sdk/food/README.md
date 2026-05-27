@@ -13,7 +13,8 @@ The named contract concepts are:
   provider.
 - `VerifiedServingOffer`: a serving offer that has passed trust validation.
 - `FoodIntakeDraft`: the required user-confirmation boundary before append.
-- `TrustStatus`: `verified`, `self_issued`, `estimated`, or `untrusted`.
+- `RecordTrust`: `verified_source`, `self_issued`, or `untrusted`.
+- `NutritionConfidence`: `confirmed`, `estimated`, `incomplete`, or `unknown`.
 - `FoodSourceClass`: `attested`, `measured`, or `estimated`.
 - `NutritionInsight`: advisory nutrition text derived from confirmed data.
 - `SafeFoodSummary`: exportable app summary without raw protocol material.
@@ -28,14 +29,22 @@ The first product shape is local-first food tracking:
   contract.
 - AI advice is advisory. It may produce structured estimates or nutrition
   guidance, but it does not directly append ledger events.
+- Grain signatures and trust checks attest the source path. They do not claim
+  calories or macros are objectively true.
 
-Trust status is deliberately explicit:
+Record trust and nutrition confidence are deliberately separate. Record trust
+answers whether the source/signature path can be trusted. Nutrition confidence
+answers how reliable the nutrition values are after review. A record can be
+self-issued and unchanged while still carrying estimated calories.
 
-- `verified`: the data came from a trusted issuer.
-- `self_issued`: the local user created and signed the offer.
-- `estimated`: a user-confirmed estimate, often from an AI/photo provider.
+- `verified_source`: the data came from a trusted issuer.
+- `self_issued`: the local user created and signed the record.
 - `untrusted`: the app can show a preview, but must not treat it as trusted
   food data without user action.
+- `confirmed`: the user explicitly reviewed and accepted the nutrition values.
+- `estimated`: values came from rough input, barcode, AI, or approximation.
+- `incomplete`: important nutrition fields are missing.
+- `unknown`: confidence cannot be determined.
 
 Run:
 

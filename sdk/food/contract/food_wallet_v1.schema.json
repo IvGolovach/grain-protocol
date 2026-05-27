@@ -25,7 +25,8 @@
         "MealEstimateCandidate",
         "VerifiedServingOffer",
         "FoodIntakeDraft",
-        "TrustStatus",
+        "RecordTrust",
+        "NutritionConfidence",
         "FoodSourceClass",
         "NutritionInsight",
         "SafeFoodSummary"
@@ -43,8 +44,11 @@
         "FoodIntakeDraft": {
           "$ref": "#/$defs/FoodIntakeDraft"
         },
-        "TrustStatus": {
-          "$ref": "#/$defs/TrustStatus"
+        "RecordTrust": {
+          "$ref": "#/$defs/RecordTrust"
+        },
+        "NutritionConfidence": {
+          "$ref": "#/$defs/NutritionConfidence"
         },
         "FoodSourceClass": {
           "$ref": "#/$defs/FoodSourceClass"
@@ -95,12 +99,19 @@
     }
   },
   "$defs": {
-    "TrustStatus": {
+    "RecordTrust": {
       "enum": [
-        "verified",
+        "verified_source",
         "self_issued",
-        "estimated",
         "untrusted"
+      ]
+    },
+    "NutritionConfidence": {
+      "enum": [
+        "confirmed",
+        "estimated",
+        "incomplete",
+        "unknown"
       ]
     },
     "FoodSourceClass": {
@@ -136,7 +147,8 @@
       "required": [
         "candidate_id",
         "source_class",
-        "trust_status",
+        "record_trust",
+        "nutrition_confidence",
         "label",
         "mean",
         "var"
@@ -148,8 +160,11 @@
         "source_class": {
           "$ref": "#/$defs/FoodSourceClass"
         },
-        "trust_status": {
-          "$ref": "#/$defs/TrustStatus"
+        "record_trust": {
+          "$ref": "#/$defs/RecordTrust"
+        },
+        "nutrition_confidence": {
+          "$ref": "#/$defs/NutritionConfidence"
         },
         "label": {
           "type": "string"
@@ -169,7 +184,8 @@
         "offer_id",
         "issuer",
         "source_class",
-        "trust_status",
+        "record_trust",
+        "nutrition_confidence",
         "serving_g",
         "mean",
         "var"
@@ -184,8 +200,11 @@
         "source_class": {
           "const": "attested"
         },
-        "trust_status": {
-          "const": "verified"
+        "record_trust": {
+          "const": "verified_source"
+        },
+        "nutrition_confidence": {
+          "const": "confirmed"
         },
         "serving_g": {
           "type": "integer",
@@ -204,7 +223,8 @@
       "additionalProperties": false,
       "required": [
         "draft_id",
-        "trust_status",
+        "record_trust",
+        "nutrition_confidence",
         "source_class",
         "entry"
       ],
@@ -212,8 +232,11 @@
         "draft_id": {
           "type": "string"
         },
-        "trust_status": {
-          "$ref": "#/$defs/TrustStatus"
+        "record_trust": {
+          "$ref": "#/$defs/RecordTrust"
+        },
+        "nutrition_confidence": {
+          "$ref": "#/$defs/NutritionConfidence"
         },
         "source_class": {
           "$ref": "#/$defs/FoodSourceClass"
@@ -229,7 +252,8 @@
       "required": [
         "entry_id",
         "source_class",
-        "trust_status",
+        "record_trust",
+        "nutrition_confidence",
         "mean",
         "var",
         "amount_g",
@@ -243,8 +267,11 @@
         "source_class": {
           "$ref": "#/$defs/FoodSourceClass"
         },
-        "trust_status": {
-          "$ref": "#/$defs/TrustStatus"
+        "record_trust": {
+          "$ref": "#/$defs/RecordTrust"
+        },
+        "nutrition_confidence": {
+          "$ref": "#/$defs/NutritionConfidence"
         },
         "mean": {
           "type": "object"

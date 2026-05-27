@@ -50,7 +50,7 @@ async function run(): Promise<number> {
     mean: { kcal: 430 },
     var: { kcal: 36 },
     serving_g: 210,
-    confidence: 0.82,
+    nutrition_confidence: "estimated",
     evidence: {
       photo_sha256_16: "0011223344556677"
     }
@@ -63,6 +63,8 @@ async function run(): Promise<number> {
   if (
     photoDraft.source !== "photo_estimate"
     || photoDraft.source_class !== "estimated"
+    || photoDraft.record_trust !== "untrusted"
+    || photoDraft.nutrition_confidence !== "estimated"
     || photoDraft.mean.kcal !== 430
     || photoDraft.var.kcal !== 36
     || photoDraft.serving_g !== 210
@@ -85,7 +87,13 @@ async function run(): Promise<number> {
     payload_cid: "serving-offer:verified-offer-001"
   });
 
-  if (offerDraft.source !== "serving_offer" || offerDraft.source_class !== "attested" || offerDraft.serving_g !== 250) {
+  if (
+    offerDraft.source !== "serving_offer"
+    || offerDraft.source_class !== "attested"
+    || offerDraft.record_trust !== "verified_source"
+    || offerDraft.nutrition_confidence !== "confirmed"
+    || offerDraft.serving_g !== 250
+  ) {
     fail("SDK-FOOD-002 verified ServingOffer drafts intake", "verified serving offer did not map into an attested draft");
   } else {
     ok("SDK-FOOD-002 verified ServingOffer drafts intake");
@@ -110,6 +118,8 @@ async function run(): Promise<number> {
     confirmed.t !== "IntakeEvent"
     || confirmed.payload_cid !== "self-issued:meal-001"
     || confirmed.body.source_class !== "measured"
+    || confirmed.body.ext?.food_wallet?.record_trust !== "self_issued"
+    || confirmed.body.ext?.food_wallet?.nutrition_confidence !== "confirmed"
     || confirmed.body.mean.kcal !== 700
     || confirmed.body.var.kcal !== 0
     || confirmed.body.amount_g !== 300

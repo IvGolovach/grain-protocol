@@ -5,7 +5,8 @@
   "candidate": {
     "candidate_id": "candidate-fake-photo-001",
     "source_class": "estimated",
-    "trust_status": "estimated",
+    "record_trust": "untrusted",
+    "nutrition_confidence": "estimated",
     "label": "breakfast bowl estimate",
     "mean": {
       "kcal": 420

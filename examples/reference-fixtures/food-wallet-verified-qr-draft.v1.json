@@ -6,7 +6,8 @@
     "offer_id": "offer-cafe-yogurt-001",
     "issuer": "demo-cafe",
     "source_class": "attested",
-    "trust_status": "verified",
+    "record_trust": "verified_source",
+    "nutrition_confidence": "confirmed",
     "serving_g": 180,
     "mean": {
       "kcal": 260
@@ -17,12 +18,14 @@
   },
   "draft": {
     "draft_id": "draft-cafe-yogurt-001",
-    "trust_status": "verified",
+    "record_trust": "verified_source",
+    "nutrition_confidence": "confirmed",
     "source_class": "attested",
     "entry": {
       "entry_id": "entry-cafe-yogurt-001",
       "source_class": "attested",
-      "trust_status": "verified",
+      "record_trust": "verified_source",
+      "nutrition_confidence": "confirmed",
       "mean": {
         "kcal": 260
       },

@@ -21,12 +21,14 @@ CONCEPT_NAMES = [
     "MealEstimateCandidate",
     "VerifiedServingOffer",
     "FoodIntakeDraft",
-    "TrustStatus",
+    "RecordTrust",
+    "NutritionConfidence",
     "FoodSourceClass",
     "NutritionInsight",
     "SafeFoodSummary",
 ]
-TRUST_STATUS_VALUES = ["verified", "self_issued", "estimated", "untrusted"]
+RECORD_TRUST_VALUES = ["verified_source", "self_issued", "untrusted"]
+NUTRITION_CONFIDENCE_VALUES = ["confirmed", "estimated", "incomplete", "unknown"]
 SOURCE_CLASS_VALUES = ["attested", "measured", "estimated"]
 FORBIDDEN_RAW_MATERIAL = [
     "raw_photo",
@@ -172,13 +174,24 @@ def validate_schema(schema: dict[str, Any]) -> None:
         require(concept in concept_required, "FOOD_WALLET_CONTRACT_ERR_CONCEPT_MISSING", concept)
         require(concept in concept_properties, "FOOD_WALLET_CONTRACT_ERR_CONCEPT_MISSING", concept)
 
-    trust_status = as_dict(defs["TrustStatus"], "FOOD_WALLET_CONTRACT_ERR_TRUST_STATUS", "TrustStatus")
+    record_trust = as_dict(defs["RecordTrust"], "FOOD_WALLET_CONTRACT_ERR_RECORD_TRUST", "RecordTrust")
+    nutrition_confidence = as_dict(
+        defs["NutritionConfidence"],
+        "FOOD_WALLET_CONTRACT_ERR_NUTRITION_CONFIDENCE",
+        "NutritionConfidence",
+    )
     source_class = as_dict(defs["FoodSourceClass"], "FOOD_WALLET_CONTRACT_ERR_SOURCE_CLASS", "FoodSourceClass")
     require_equal(
-        trust_status.get("enum"),
-        TRUST_STATUS_VALUES,
-        "FOOD_WALLET_CONTRACT_ERR_TRUST_STATUS",
-        "TrustStatus.enum",
+        record_trust.get("enum"),
+        RECORD_TRUST_VALUES,
+        "FOOD_WALLET_CONTRACT_ERR_RECORD_TRUST",
+        "RecordTrust.enum",
+    )
+    require_equal(
+        nutrition_confidence.get("enum"),
+        NUTRITION_CONFIDENCE_VALUES,
+        "FOOD_WALLET_CONTRACT_ERR_NUTRITION_CONFIDENCE",
+        "NutritionConfidence.enum",
     )
     require_equal(
         source_class.get("enum"),
@@ -235,33 +248,59 @@ def validate_readme(path: Path) -> None:
     lower = text.lower()
     for concept in CONCEPT_NAMES:
         require(concept in text, "FOOD_WALLET_CONTRACT_ERR_README_CONCEPT_MISSING", concept)
-    for value in TRUST_STATUS_VALUES + SOURCE_CLASS_VALUES:
+    for value in RECORD_TRUST_VALUES + NUTRITION_CONFIDENCE_VALUES + SOURCE_CLASS_VALUES:
         require(value in text, "FOOD_WALLET_CONTRACT_ERR_README_VALUE_MISSING", value)
     for phrase in ("raw photos", "raw trust bundles", "raw snapshots", "private keys", "raw QR payload"):
         require(phrase.lower() in lower, "FOOD_WALLET_CONTRACT_ERR_README_PRIVACY_MISSING", phrase)
 
 
-def validate_entry(value: Any, code: str, detail: str) -> tuple[str, str]:
+def validate_entry(value: Any, code: str, detail: str) -> tuple[str, str, str]:
     entry = as_dict(value, code, detail)
     require_str(entry.get("entry_id"), code, f"{detail}.entry_id")
     source_class = require_enum(entry.get("source_class"), SOURCE_CLASS_VALUES, code, f"{detail}.source_class")
-    trust_status = require_enum(entry.get("trust_status"), TRUST_STATUS_VALUES, code, f"{detail}.trust_status")
+    record_trust = require_enum(entry.get("record_trust"), RECORD_TRUST_VALUES, code, f"{detail}.record_trust")
+    nutrition_confidence = require_enum(
+        entry.get("nutrition_confidence"),
+        NUTRITION_CONFIDENCE_VALUES,
+        code,
+        f"{detail}.nutrition_confidence",
+    )
     require_kcal_map(entry.get("mean"), code, f"{detail}.mean")
     require_kcal_map(entry.get("var"), code, f"{detail}.var", non_negative=True)
     for quantity in ("amount_g", "serving_g", "servings"):
         require_int(entry.get(quantity), code, f"{detail}.{quantity}", minimum=0)
-    return source_class, trust_status
+    return source_class, record_trust, nutrition_confidence
 
 
-def validate_draft(value: Any, code: str, detail: str, *, expected_trust: str) -> None:
+def validate_draft(
+    value: Any,
+    code: str,
+    detail: str,
+    *,
+    expected_record_trust: str,
+    expected_nutrition_confidence: str,
+) -> None:
     draft = as_dict(value, code, detail)
     require_str(draft.get("draft_id"), code, f"{detail}.draft_id")
     source_class = require_enum(draft.get("source_class"), SOURCE_CLASS_VALUES, code, f"{detail}.source_class")
-    trust_status = require_enum(draft.get("trust_status"), TRUST_STATUS_VALUES, code, f"{detail}.trust_status")
-    require_equal(trust_status, expected_trust, code, f"{detail}.trust_status")
-    entry_source, entry_trust = validate_entry(draft.get("entry"), code, f"{detail}.entry")
+    record_trust = require_enum(draft.get("record_trust"), RECORD_TRUST_VALUES, code, f"{detail}.record_trust")
+    nutrition_confidence = require_enum(
+        draft.get("nutrition_confidence"),
+        NUTRITION_CONFIDENCE_VALUES,
+        code,
+        f"{detail}.nutrition_confidence",
+    )
+    require_equal(record_trust, expected_record_trust, code, f"{detail}.record_trust")
+    require_equal(
+        nutrition_confidence,
+        expected_nutrition_confidence,
+        code,
+        f"{detail}.nutrition_confidence",
+    )
+    entry_source, entry_trust, entry_confidence = validate_entry(draft.get("entry"), code, f"{detail}.entry")
     require_equal(entry_source, source_class, code, f"{detail}.entry.source_class")
-    require_equal(entry_trust, trust_status, code, f"{detail}.entry.trust_status")
+    require_equal(entry_trust, record_trust, code, f"{detail}.entry.record_trust")
+    require_equal(entry_confidence, nutrition_confidence, code, f"{detail}.entry.nutrition_confidence")
 
 
 def validate_candidate(value: Any, detail: str) -> None:
@@ -269,7 +308,8 @@ def validate_candidate(value: Any, detail: str) -> None:
     require_str(candidate.get("candidate_id"), "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.candidate_id")
     require_str(candidate.get("label"), "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.label")
     require_equal(candidate.get("source_class"), "estimated", "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.source_class")
-    require_equal(candidate.get("trust_status"), "estimated", "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.trust_status")
+    require_equal(candidate.get("record_trust"), "untrusted", "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.record_trust")
+    require_equal(candidate.get("nutrition_confidence"), "estimated", "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.nutrition_confidence")
     require_kcal_map(candidate.get("mean"), "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.mean")
     require_kcal_map(candidate.get("var"), "FOOD_WALLET_CONTRACT_ERR_FAKE_PHOTO_ESTIMATE", f"{detail}.var", non_negative=True)
 
@@ -279,7 +319,8 @@ def validate_offer(value: Any, detail: str) -> None:
     require_str(offer.get("offer_id"), "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.offer_id")
     require_str(offer.get("issuer"), "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.issuer")
     require_equal(offer.get("source_class"), "attested", "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.source_class")
-    require_equal(offer.get("trust_status"), "verified", "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.trust_status")
+    require_equal(offer.get("record_trust"), "verified_source", "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.record_trust")
+    require_equal(offer.get("nutrition_confidence"), "confirmed", "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.nutrition_confidence")
     require_int(offer.get("serving_g"), "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.serving_g", minimum=0)
     require_kcal_map(offer.get("mean"), "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.mean")
     require_kcal_map(offer.get("var"), "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT", f"{detail}.var", non_negative=True)
@@ -329,14 +370,16 @@ def validate_fixture(path: Path, expected_kind: str) -> None:
             fixture.get("draft"),
             "FOOD_WALLET_CONTRACT_ERR_VERIFIED_QR_DRAFT",
             f"{path.name}.draft",
-            expected_trust="verified",
+            expected_record_trust="verified_source",
+            expected_nutrition_confidence="confirmed",
         )
     elif expected_kind == "self_issued_draft":
         validate_draft(
             fixture.get("draft"),
             "FOOD_WALLET_CONTRACT_ERR_SELF_ISSUED_DRAFT",
             f"{path.name}.draft",
-            expected_trust="self_issued",
+            expected_record_trust="self_issued",
+            expected_nutrition_confidence="confirmed",
         )
     elif expected_kind == "safe_summary_export":
         validate_safe_summary(fixture.get("summary"), f"{path.name}.summary")

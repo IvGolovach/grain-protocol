@@ -1,17 +1,20 @@
 package dev.grain.food
 
 fun main() {
-    trustStatusesMatchContract()
+    statusAxesMatchContract()
     fakeEstimateCanDraftConfirmAndSummarizeSafely()
     foodWalletTypesDoNotExposeRawCustodyOrPhotoFields()
     println("Kotlin Food Wallet smoke: PASS")
 }
 
-private fun trustStatusesMatchContract() {
-    requireSmoke(FoodTrustStatus.Verified.rawValue == "verified", "verified raw value mismatch")
-    requireSmoke(FoodTrustStatus.SelfIssued.rawValue == "self_issued", "self-issued raw value mismatch")
-    requireSmoke(FoodTrustStatus.Estimated.rawValue == "estimated", "estimated raw value mismatch")
-    requireSmoke(FoodTrustStatus.Untrusted.rawValue == "untrusted", "untrusted raw value mismatch")
+private fun statusAxesMatchContract() {
+    requireSmoke(FoodRecordTrust.VerifiedSource.rawValue == "verified_source", "verified source raw value mismatch")
+    requireSmoke(FoodRecordTrust.SelfIssued.rawValue == "self_issued", "self-issued raw value mismatch")
+    requireSmoke(FoodRecordTrust.Untrusted.rawValue == "untrusted", "untrusted raw value mismatch")
+    requireSmoke(FoodNutritionConfidence.Confirmed.rawValue == "confirmed", "confirmed raw value mismatch")
+    requireSmoke(FoodNutritionConfidence.Estimated.rawValue == "estimated", "estimated raw value mismatch")
+    requireSmoke(FoodNutritionConfidence.Incomplete.rawValue == "incomplete", "incomplete raw value mismatch")
+    requireSmoke(FoodNutritionConfidence.Unknown.rawValue == "unknown", "unknown raw value mismatch")
 }
 
 private fun fakeEstimateCanDraftConfirmAndSummarizeSafely() {
@@ -24,7 +27,8 @@ private fun fakeEstimateCanDraftConfirmAndSummarizeSafely() {
         servingGrams = 250,
         servings = 1,
         sourceClass = FoodSourceClass.Estimated,
-        trustStatus = FoodTrustStatus.Estimated,
+        recordTrust = FoodRecordTrust.Untrusted,
+        nutritionConfidence = FoodNutritionConfidence.Estimated,
     )
 
     val draft = wallet.createDraft(
@@ -34,7 +38,8 @@ private fun fakeEstimateCanDraftConfirmAndSummarizeSafely() {
     )
     requireSmoke(draft.status == FoodDraftStatus.Ready, "draft was not ready")
     requireSmoke(draft.sourceClass == FoodSourceClass.Estimated, "draft source class mismatch")
-    requireSmoke(draft.trustStatus == FoodTrustStatus.Estimated, "draft trust status mismatch")
+    requireSmoke(draft.recordTrust == FoodRecordTrust.Untrusted, "draft record trust mismatch")
+    requireSmoke(draft.nutritionConfidence == FoodNutritionConfidence.Estimated, "draft confidence mismatch")
 
     val entry = wallet.confirm(
         draft = draft,
@@ -43,6 +48,8 @@ private fun fakeEstimateCanDraftConfirmAndSummarizeSafely() {
     requireSmoke(entry.entryId == "food-entry-2026-05-17-0001", "entry id was not deterministic")
     requireSmoke(entry.meanKcal == 620L, "entry mean kcal mismatch")
     requireSmoke(entry.varianceKcal == 9L, "entry variance kcal mismatch")
+    requireSmoke(entry.recordTrust == FoodRecordTrust.Untrusted, "entry record trust mismatch")
+    requireSmoke(entry.nutritionConfidence == FoodNutritionConfidence.Estimated, "entry confidence mismatch")
 
     val totals = wallet.dailyTotals("2026-05-17")
     requireSmoke(
@@ -60,7 +67,11 @@ private fun fakeEstimateCanDraftConfirmAndSummarizeSafely() {
     requireSmoke(summary.entryCount == 1, "summary entry count mismatch")
     requireSmoke(summary.sumMeanKcal == 620L, "summary mean mismatch")
     requireSmoke(summary.sumVarianceKcal == 9L, "summary variance mismatch")
-    requireSmoke(summary.trustStatuses == setOf(FoodTrustStatus.Estimated), "summary trust mismatch")
+    requireSmoke(summary.recordTrusts == setOf(FoodRecordTrust.Untrusted), "summary trust mismatch")
+    requireSmoke(
+        summary.nutritionConfidences == setOf(FoodNutritionConfidence.Estimated),
+        "summary confidence mismatch",
+    )
     requireSmoke(summary.sourceClasses == setOf(FoodSourceClass.Estimated), "summary source mismatch")
 
     assertNoUnsafeWords(summary.toString())
@@ -68,7 +79,8 @@ private fun fakeEstimateCanDraftConfirmAndSummarizeSafely() {
 
 private fun foodWalletTypesDoNotExposeRawCustodyOrPhotoFields() {
     val publicTypes = listOf(
-        FoodTrustStatus::class.java,
+        FoodRecordTrust::class.java,
+        FoodNutritionConfidence::class.java,
         FoodSourceClass::class.java,
         FoodEstimate::class.java,
         FoodDraft::class.java,
