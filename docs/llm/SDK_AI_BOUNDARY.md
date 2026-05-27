@@ -20,6 +20,7 @@ If any step is bypassed, treat it as a bug.
 - `core/ts/grain-sdk-ai/src/ai/diagnostics.ts`
 - `core/ts/grain-sdk-ai/src/ai/contract_export.ts`
 - `core/ts/grain-sdk-ai/src/ai/food.ts`
+- `core/ts/grain-sdk-ai/src/food-graph/*`
 
 ## Invariants to enforce
 
@@ -32,6 +33,7 @@ If any step is bypassed, treat it as a bug.
 - `SDK-AI-006`: set-array sort normalize allowed, duplicates reject
 - `SDK-AI-007`: unknown critical => quarantine, no apply
 - `SDK-AI-008`: food photo/advice adapters stay read-only, provider-replaceable, and transient for raw image bytes
+- `SDK-AI-009`: Food Graph stays local, bundled, advisory-only, and never changes kcal, confidence, source, state, or proof claims
 
 ## Important boundary language
 
@@ -41,3 +43,8 @@ If any step is bypassed, treat it as a bug.
 - Candidate v1 is object-only until an `event_append` apply path exists.
 - Food photo adapters may produce estimates or advice, but they must not append
   ledger events directly or persist raw photos.
+- Food Graph suggestions are recipe/navigation hints, not nutrition evidence,
+  provenance proof, medical advice, or a reason to mutate a saved record.
+- Food Graph runtime code must not depend on Hugging Face, model downloads,
+  vectors, safetensors, raw photos, or network access. Artifact refresh belongs
+  in `tools/food_graph/`, not app runtime.

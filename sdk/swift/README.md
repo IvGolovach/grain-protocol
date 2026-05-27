@@ -18,6 +18,26 @@ scripts/sdk/sync_swift_bindings.sh
 scripts/sdk/check_swift_package.sh
 ```
 
+## MealMark Food Graph
+
+Apps that need ingredient-aware search, pairings, or similar-meal review can
+import the optional local graph target:
+
+```swift
+import GrainFoodGraph
+
+let graph = try LocalFoodGraph.loadBundledMealMarkGraph()
+let matches = graph.resolveIngredients(["Greek yogurt", "walnuts", "honey"])
+let pairings = graph.suggestPairings(
+    ingredients: ["ramen noodle", "pork", "egg", "scallion", "miso", "garlic"]
+)
+```
+
+`GrainFoodGraph` is bundled as local SwiftPM resources. It does not call
+Hugging Face, open sockets, use camera APIs, or persist raw photos. Its output
+is advisory only and must not change kcal, variance, record trust, nutrition
+confidence, or the Food Wallet confirmation boundary.
+
 ## Example
 
 ```swift

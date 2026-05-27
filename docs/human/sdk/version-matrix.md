@@ -14,15 +14,17 @@ and Rust crates that were not reviewed together.
 | Rust client-core source release | `grain-rust-client-core-<sha>.tar.gz` | repo-SHA versioned | Source handoffs include the trimmed Rust workspace needed to build the native client library from release assets without cloning the monorepo. |
 | Client workflow contract | `sdk/workflows/contract/client_workflow_v1.md` | v1 | Platform SDKs are conformant only after their public APIs pass the v1 workflow fixtures. |
 | Food Wallet app contract | `sdk/food/contract/food_wallet_v1.schema.json`, `docs/human/sdk/food-wallet.md`, `examples/reference-fixtures/food-wallet-*.v1.json` | v1 | App teams use the same-SHA Food Wallet contract for estimate, draft, confirmation, record-trust, nutrition-confidence, safe-summary, and no-raw-photo boundaries before building iOS or Android UI. |
+| MealMark Food Graph artifact | `core/ts/grain-sdk-ai/food-graph-artifacts/mealmark-food-graph-v0.1`, `tools/food_graph/build_mealmark_food_graph.py`, `docs/human/sdk/food-graph.md` | v0.1 | App teams may use the same-SHA bundled artifact for ingredient matching, pairing hints, and similar-meal navigation. It is advisory-only, local-only, and must not change kcal, record trust, nutrition confidence, or protocol reducer behavior. |
 | UniFFI binding generator | `core/rust/uniffi-bindgen`, workspace `uniffi` | `0.31.1` | Regenerate Swift/Kotlin bindings with repo scripts; do not patch generated files by hand. |
 | Swift client package | `sdk/swift` | repo-SHA versioned | Use with the matching `grain-client-core` native library and checked-in generated Swift sources. |
 | Swift iOS adapter pack | `sdk/swift/Sources/GrainClientIOSAdapters`, `examples/ios-scanner`, `examples/ios-reference-app` | repo-SHA versioned | Use with the same commit's `GrainClient`; scanner and reference-app smokes prove local trust-bundle loading, Keychain-ready snapshot persistence, accepted-scan listing, sync export status, explicit trust-anchor wiring, and a thin SwiftUI app entrypoint, not App Store packaging. |
+| Swift MealMark Food Graph package | `sdk/swift/Sources/GrainFoodGraph`, `sdk/swift/Sources/GrainFoodGraphSmoke` | repo-SHA versioned | Use with the same commit's bundled `MealMarkFoodGraph` resources. The package has no network, camera, model-download, or medical-advice surface; smoke tests prove alias resolution, ambiguous-input handling, advisory pairings, and source-ref guardrails. |
 | Kotlin client package | `sdk/kotlin` | `0.1.0` | Use with the matching `grain-client-core` native library and checked-in generated Kotlin source. |
 | Kotlin Android adapter pack | `sdk/kotlin/src/main/kotlin/dev/grain/android`, `examples/android-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves local trust-bundle loading, opaque snapshot persistence, AES-GCM/Keystore-ready encryption boundaries, accepted-scan listing, sync export status, and explicit trust-anchor wiring, not Play Store packaging. |
 | WASM client crate | `core/rust/grain-client-wasm` | `0.1.0` | Builds against `grain-client-core` with default features disabled for `wasm32-wasip1`. |
 | WASM/mobile-web package | `sdk/wasm` | `0.1.0` | Use with the matching `grain-client-wasm.wasm` artifact and JavaScript wrapper. |
 | WASM/mobile-web adapter pack | `sdk/wasm/src/browser-storage.mjs`, `examples/wasm-scanner` | repo-SHA versioned | Use with the same commit's `GrainClient`; adapter smoke proves opaque snapshot persistence, IndexedDB/browser storage boundaries, explicit trust-anchor wiring, and browser camera handoff, not production PWA packaging. |
-| TypeScript SDK source package | `core/ts/grain-ts-core`, `core/ts/grain-sdk`, `core/ts/grain-sdk-ai`, `fixtures/external-consumers/npm-sdk` | `0.1.0` / `0.2.0` | Use from the matching `grain-typescript-sdk-<sha>.tar.gz`; release smoke builds the source packages, runs npm pack dry-runs, and typechecks/runs the external npm consumer fixture from the extracted release layout. |
+| TypeScript SDK source package | `core/ts/grain-ts-core`, `core/ts/grain-sdk`, `core/ts/grain-sdk-ai`, `fixtures/external-consumers/npm-sdk` | `0.1.0` / `0.2.0` / `0.3.0` | Use from the matching `grain-typescript-sdk-<sha>.tar.gz`; release smoke builds the source packages, runs npm pack dry-runs, and typechecks/runs the external npm consumer fixture from the extracted release layout. |
 | Public SDK API snapshot | `sdk/api/public-sdk-v0.1.json` | v0.1 | Stable app-facing methods, statuses, workflows, and compatibility matrix must stay present unless a future API snapshot intentionally replaces them. |
 | Starter templates | `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `templates/ios-food-wallet-starter`, `templates/android-food-wallet-starter` | repo-SHA versioned | Use with the same commit's source SDK packet; templates prove thin app shells and Food Wallet boundaries, not store, account, backend, raw-photo storage, or PWA publication. |
 
@@ -72,6 +74,9 @@ That command proves:
   replaceable AI-provider boundaries source-level and free of raw photos,
   snapshots, trust bundles, QR payloads, private keys, accounts, and backend
   assumptions
+- Food Graph checks keep the bundled ingredient graph local, advisory-only,
+  checksum/policy-validated, free of runtime Hugging Face/model dependencies,
+  and unable to mutate kcal, trust, nutrition confidence, or proof claims
 - the public SDK API snapshot and compatibility matrix match the packaged
   source artifacts
 - registry dry-runs record no credentials and no publication

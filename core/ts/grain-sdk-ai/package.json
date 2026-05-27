@@ -1,6 +1,6 @@
 {
   "name": "grain-sdk-ai-ts",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Optional Grain SDK AI sidecar (TOR-SDK-A03)",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "files": [
     "dist",
+    "food-graph-artifacts",
     "README.md"
   ],
   "exports": {
@@ -23,7 +24,8 @@
     "clean": "rm -rf dist tsconfig.build.tsbuildinfo",
     "build": "npm --prefix ../grain-ts-core run build --silent && npm --prefix ../grain-sdk run build --silent && npm run clean --silent && tsc -p tsconfig.build.json",
     "test:boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-boundary.js",
-    "test:food-boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-food-boundary.js"
+    "test:food-boundary": "npm run build --silent && node dist/scripts/test-sdk-ai-food-boundary.js",
+    "test:food-graph": "npm run build --silent && node dist/scripts/test-sdk-ai-food-graph.js"
   },
   "dependencies": {
     "grain-sdk-ts": "file:../grain-sdk",

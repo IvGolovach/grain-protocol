@@ -6,6 +6,8 @@ type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
 export type FoodSourceClass = "attested" | "measured" | "estimated";
 export type FoodDraftSource = "photo_estimate" | "serving_offer" | "self_issued";
+export type FoodRecordTrust = "verified_source" | "self_issued" | "untrusted";
+export type FoodNutritionConfidence = "confirmed" | "estimated" | "incomplete" | "unknown";
 
 export type FoodNutrientKcal = {
   kcal: number;
@@ -20,6 +22,7 @@ export type FoodPhotoEstimate = {
   amount_g?: number;
   servings?: number;
   confidence?: number;
+  nutrition_confidence?: FoodNutritionConfidence;
   evidence?: {
     photo_sha256_16?: string;
     model_id?: string;
@@ -38,6 +41,8 @@ export type FoodIntakeDraft = {
   payload_cid: string;
   source: FoodDraftSource;
   source_class: FoodSourceClass;
+  record_trust: FoodRecordTrust;
+  nutrition_confidence: FoodNutritionConfidence;
   mean: FoodNutrientKcal;
   var: FoodNutrientKcal;
   amount_g?: number;
@@ -177,6 +182,8 @@ function draftFoodIntakeFromPhotoEstimate(
     ...options,
     source: "photo_estimate",
     source_class: "estimated",
+    record_trust: "untrusted",
+    nutrition_confidence: estimate.nutrition_confidence ?? "estimated",
     mean: estimate.mean,
     var: estimate.var,
     amount_g: estimate.amount_g,
@@ -186,6 +193,7 @@ function draftFoodIntakeFromPhotoEstimate(
       estimate_id: estimate.estimate_id,
       capture_id: estimate.capture_id,
       confidence: estimate.confidence,
+      nutrition_confidence: estimate.nutrition_confidence,
       evidence: estimate.evidence
     })
   });
@@ -196,6 +204,8 @@ function buildDraft(input: {
   payload_cid: string;
   source: FoodDraftSource;
   source_class: FoodSourceClass;
+  record_trust: FoodRecordTrust;
+  nutrition_confidence: FoodNutritionConfidence;
   mean: FoodNutrientKcal;
   var: FoodNutrientKcal;
   amount_g?: number;
@@ -210,6 +220,8 @@ function buildDraft(input: {
     payload_cid: requireNonEmpty("payload_cid", input.payload_cid),
     source: input.source,
     source_class: input.source_class,
+    record_trust: input.record_trust,
+    nutrition_confidence: input.nutrition_confidence,
     mean: copyNutrients(input.mean),
     var: copyNutrients(input.var),
     privacy: {

@@ -30,6 +30,12 @@ For reducer-visible food events:
 - `kcal` is integer kilocalories with `scale_exp10 = 0`
 - `amount_g`, `yield_g`, `serving_g`, and `servings` are non-negative int64 values with `scale_exp10 = 0`
 
+MealMark Food Graph is not a reducer-visible food event path. It is an app and
+SDK read-model sidecar for ingredient matching, pairing hints, and similar-meal
+navigation. It may reference Grain food records by opaque IDs, but it must not
+derive kcal, rewrite `source_class`, create proof claims, or change conflict,
+revoke, quarantine, or trust semantics.
+
 Opaque profile examples live in:
 - `spec/profiles/inventory-profile.md`
 - `spec/profiles/audit-artifact-profile.md`

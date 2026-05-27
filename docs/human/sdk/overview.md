@@ -47,6 +47,9 @@ This page is the capability map after that first run.
   - structured_v1 uses explicit field profiles/maps (no implicit numeric guessing)
   - candidate v1 is object-only until an event append apply path exists
   - byte payload fields use canonical base64 standard encoding
+  - MealMark Food Graph is a local, advisory ingredient graph for search,
+    pairings, and similar-meal review; it has no network runtime and cannot
+    change kcal, trust, nutrition confidence, or draft confirmation state
 
 ## What SDK does not do
 
@@ -86,6 +89,7 @@ This page is the capability map after that first run.
 - AI ingestion contract: `docs/human/sdk/ai-ingestion.md`
 - AI explain contract: `docs/human/sdk/ai-error-explain.md`
 - AI privacy boundary: `docs/human/sdk/ai-privacy.md`
+- MealMark Food Graph: `docs/human/sdk/food-graph.md`
 - iOS reference app quickstart: `docs/human/sdk/quickstart-ios-reference-app.md`
 - Android reference app quickstart: `docs/human/sdk/quickstart-android-reference-app.md`
 - device abstraction: `docs/human/sdk/device-abstraction.md`
@@ -111,4 +115,5 @@ Optional AI sidecar:
 ```bash
 npm ci --prefix core/ts/grain-sdk-ai
 npm --prefix core/ts/grain-sdk-ai run test:boundary
+npm --prefix core/ts/grain-sdk-ai run test:food-graph
 ```

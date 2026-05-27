@@ -1,0 +1,52 @@
+{
+  "aliases": {
+    "arborio rice": "rice",
+    "basmati": "basmati_rice",
+    "bell pepper": "bell_pepper",
+    "black bean": "black_bean",
+    "blue cheese": "blue_cheese",
+    "cheddar cheese": "cheddar_cheese",
+    "dumpling wrapper": "dumpling_wrapper",
+    "greek yogurt": "yogurt",
+    "hojiblanca olive": "olive",
+    "mozzarella cheese": "mozzarella_cheese",
+    "oatmeal": "oat",
+    "olive oil": "olive_oil",
+    "parmesan cheese": "parmesan_cheese",
+    "pita bread": "pita_bread",
+    "pizza dough": "dough",
+    "ramen": "ramen_noodle",
+    "ramen noodle": "ramen_noodle",
+    "romaine lettuce": "lettuce",
+    "sesame seed": "sesame_seed",
+    "soft egg": "egg",
+    "sourdough": "bread",
+    "sourdough bread": "bread",
+    "soy sauce": "soy_sauce"
+  },
+  "ambiguous_aliases": {
+    "broth": [
+      "chicken_broth",
+      "beef_broth",
+      "vegetable_stock"
+    ],
+    "cheese": [
+      "cheese",
+      "cheddar_cheese",
+      "mozzarella_cheese",
+      "parmesan_cheese"
+    ],
+    "oil": [
+      "oil",
+      "olive_oil",
+      "sesame_oil",
+      "vegetable_oil"
+    ],
+    "stock": [
+      "vegetable_stock",
+      "chicken_broth",
+      "beef_broth",
+      "fish_stock"
+    ]
+  }
+}

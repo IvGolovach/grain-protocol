@@ -37,6 +37,29 @@ The adapter output should be treated as untrusted app input until the app
 confirms it and writes a Food Profile event through Grain. Provider prompts,
 model choices, network calls, and retry policy live outside Grain SDK core.
 
+## Food Graph Boundary
+
+Food Graph is an advisory ingredient-intelligence layer. It may suggest related
+ingredients, substitutions, category labels, similar meals, and review prompts
+from app input or confirmed Food Wallet data, but it must not change
+reducer-visible nutrition values, record trust, nutrition confidence, source
+class, or confirmation state.
+
+Food Graph output is not Grain protocol truth. It is computed guidance over
+existing records. A Food Graph result cannot append ledger events, cannot
+promote an untrusted record to trusted, cannot turn estimated nutrition into
+confirmed nutrition, and cannot alter `mean.kcal` or `var.kcal`.
+
+Food Graph must not persist raw vectors, embeddings, raw photos, model weights,
+provider prompts, provider tokens, or hosted-model runtime artifacts in Food
+Wallet records, safe summaries, SDK snapshots, or Grain exports. If an app uses
+external or local ML infrastructure, that infrastructure is an app-owned
+adapter outside Grain SDK core.
+
+Food Graph has no required network runtime dependency. The SDK and AI sidecar
+must remain usable without Hugging Face, model downloads, hosted inference,
+OpenAI, or any other provider-specific runtime.
+
 ## Local Developer Gates
 
 Use these commands from the repo root:

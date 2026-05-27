@@ -25,18 +25,21 @@ If you are building an app on Grain, start here. Keep the first version small an
 10. On a fresh checkout, install `core/ts/grain-ts-core`
    and `core/ts/grain-sdk` before the first SDK build.
 11. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
-12. If you are building a camera-first iOS, Android, glasses, or robot client,
+12. If you want local ingredient-aware search or similar-meal suggestions, read
+   [MealMark Food Graph](./food-graph.md). It is advisory-only and does not
+   change Food Wallet confidence or trust.
+13. If you are building a camera-first iOS, Android, glasses, or robot client,
    read [Portable client SDK](./portable-client-sdk.md).
-13. For scanner-shell reference code, start with `examples/ios-scanner`,
+14. For scanner-shell reference code, start with `examples/ios-scanner`,
    `examples/ios-reference-app`, `examples/android-scanner`, or
    `examples/wasm-scanner`.
-14. To create a real signed scanner input for local app development, run
+15. To create a real signed scanner input for local app development, run
    `cargo run --manifest-path core/rust/Cargo.toml -p grain-issuer-kit -- --pretty`
    and wrap the emitted `trust_pub_b64` in a local `sdk/trust` bundle.
-15. For app-owned trust material, load that bundle into the platform static
+16. For app-owned trust material, load that bundle into the platform static
    trust provider and pass a stable trust anchor ID (`trustAnchorID` in Swift,
    `trustAnchorId` in Kotlin and WASM).
-16. If you build manually, use the SDK build. It will build the shared
+17. If you build manually, use the SDK build. It will build the shared
    TypeScript core first.
 
 ```bash
@@ -121,4 +124,5 @@ publish, or Maven Central publish is part of that path.
 - `docs/human/sdk/cross-lang-bridge.md`
 - `docs/human/sdk/ai-boundary.md`
 - `docs/human/sdk/ai-ingestion.md`
+- `docs/human/sdk/food-graph.md`
 - `examples/README.md`

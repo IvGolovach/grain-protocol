@@ -17,9 +17,11 @@ let package = Package(
         .library(name: "GrainClient", targets: ["GrainClient"]),
         .library(name: "GrainClientIOSAdapters", targets: ["GrainClientIOSAdapters"]),
         .library(name: "GrainFoodWallet", targets: ["GrainFoodWallet"]),
+        .library(name: "GrainFoodGraph", targets: ["GrainFoodGraph"]),
         .executable(name: "GrainClientFixtureRunner", targets: ["GrainClientFixtureRunner"]),
         .executable(name: "GrainClientIOSAdaptersSmoke", targets: ["GrainClientIOSAdaptersSmoke"]),
         .executable(name: "GrainFoodWalletSmoke", targets: ["GrainFoodWalletSmoke"]),
+        .executable(name: "GrainFoodGraphSmoke", targets: ["GrainFoodGraphSmoke"]),
     ],
     targets: [
         .target(
@@ -58,6 +60,14 @@ let package = Package(
             dependencies: [],
             path: "Sources/GrainFoodWallet"
         ),
+        .target(
+            name: "GrainFoodGraph",
+            dependencies: [],
+            path: "Sources/GrainFoodGraph",
+            resources: [
+                .process("Resources")
+            ]
+        ),
         .executableTarget(
             name: "GrainClientFixtureRunner",
             dependencies: ["GrainClient"],
@@ -72,6 +82,11 @@ let package = Package(
             name: "GrainFoodWalletSmoke",
             dependencies: ["GrainFoodWallet"],
             path: "Sources/GrainFoodWalletSmoke"
+        ),
+        .executableTarget(
+            name: "GrainFoodGraphSmoke",
+            dependencies: ["GrainFoodGraph"],
+            path: "Sources/GrainFoodGraphSmoke"
         ),
     ]
 )
