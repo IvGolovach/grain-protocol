@@ -4,6 +4,8 @@ import type { Json } from "./utils.js";
 
 export type FoodSourceClass = "attested" | "measured" | "estimated";
 export type FoodDraftSource = "photo_estimate" | "serving_offer" | "self_issued";
+export type FoodRecordTrust = "verified_source" | "self_issued" | "untrusted";
+export type FoodNutritionConfidence = "confirmed" | "estimated" | "incomplete" | "unknown";
 
 export type FoodNutrientKcal = {
   kcal: number;
@@ -22,7 +24,7 @@ export type FoodPhotoEstimate = {
   serving_g?: number;
   amount_g?: number;
   servings?: number;
-  confidence?: number;
+  nutrition_confidence?: FoodNutritionConfidence;
   evidence?: {
     photo_sha256_16?: string;
     model_id?: string;
@@ -58,6 +60,8 @@ export type FoodIntakeDraft = {
   payload_cid: string;
   source: FoodDraftSource;
   source_class: FoodSourceClass;
+  record_trust: FoodRecordTrust;
+  nutrition_confidence: FoodNutritionConfidence;
   mean: FoodNutrientKcal;
   var: FoodNutrientKcal;
   amount_g?: number;
@@ -84,6 +88,8 @@ export type FoodIntakeEventBody = Record<string, Json> & {
     food_wallet: {
       draft_id: string;
       source: FoodDraftSource;
+      record_trust: FoodRecordTrust;
+      nutrition_confidence: FoodNutritionConfidence;
       confirmed_at_ms?: number;
     };
   };
@@ -116,6 +122,8 @@ export function draftFoodIntakeFromPhotoEstimate(
     ...options,
     source: "photo_estimate",
     source_class: "estimated",
+    record_trust: "untrusted",
+    nutrition_confidence: estimate.nutrition_confidence ?? "estimated",
     mean: estimate.mean,
     var: estimate.var,
     amount_g: estimate.amount_g,
@@ -124,7 +132,7 @@ export function draftFoodIntakeFromPhotoEstimate(
     source_ref: compactJsonRecord({
       estimate_id: estimate.estimate_id,
       capture_id: estimate.capture_id,
-      confidence: estimate.confidence,
+      nutrition_confidence: estimate.nutrition_confidence,
       evidence: estimate.evidence
     })
   });
@@ -139,6 +147,8 @@ export function draftFoodIntakeFromServingOffer(
     ...options,
     source: "serving_offer",
     source_class: "attested",
+    record_trust: "verified_source",
+    nutrition_confidence: "confirmed",
     mean: offer.mean,
     var: offer.var,
     serving_g: offer.serving_g,
@@ -153,7 +163,9 @@ export function draftSelfIssuedFoodIntake(input: SelfIssuedFoodIntakeDraftInput)
   assertNoRawPhotoPersistenceFields(input);
   return buildDraft({
     ...input,
-    source: "self_issued"
+    source: "self_issued",
+    record_trust: "self_issued",
+    nutrition_confidence: "confirmed"
   });
 }
 
@@ -171,6 +183,8 @@ export function confirmFoodIntakeDraft(
       food_wallet: compactJsonRecord({
         draft_id: draft.draft_id,
         source: draft.source,
+        record_trust: draft.record_trust,
+        nutrition_confidence: draft.nutrition_confidence,
         confirmed_at_ms: confirmation.confirmed_at_ms
       }) as FoodIntakeEventBody["ext"]["food_wallet"]
     }
@@ -203,6 +217,8 @@ function buildDraft(input: {
   payload_cid: string;
   source: FoodDraftSource;
   source_class: FoodSourceClass;
+  record_trust: FoodRecordTrust;
+  nutrition_confidence: FoodNutritionConfidence;
   mean: FoodNutrientKcal;
   var: FoodNutrientKcal;
   amount_g?: number;
@@ -217,6 +233,8 @@ function buildDraft(input: {
     payload_cid: requireNonEmpty("payload_cid", input.payload_cid),
     source: input.source,
     source_class: input.source_class,
+    record_trust: input.record_trust,
+    nutrition_confidence: input.nutrition_confidence,
     mean: copyNutrients(input.mean),
     var: copyNutrients(input.var),
     privacy: {

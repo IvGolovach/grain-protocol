@@ -4,12 +4,14 @@
   "kind": "self_issued_draft",
   "draft": {
     "draft_id": "draft-home-soup-001",
-    "trust_status": "self_issued",
+    "record_trust": "self_issued",
+    "nutrition_confidence": "confirmed",
     "source_class": "measured",
     "entry": {
       "entry_id": "entry-home-soup-001",
       "source_class": "measured",
-      "trust_status": "self_issued",
+      "record_trust": "self_issued",
+      "nutrition_confidence": "confirmed",
       "mean": {
         "kcal": 310
       },

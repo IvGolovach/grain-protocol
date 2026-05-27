@@ -1,10 +1,16 @@
 package dev.grain.food
 
-enum class FoodTrustStatus(val rawValue: String) {
-    Verified("verified"),
+enum class FoodRecordTrust(val rawValue: String) {
+    VerifiedSource("verified_source"),
     SelfIssued("self_issued"),
-    Estimated("estimated"),
     Untrusted("untrusted"),
+}
+
+enum class FoodNutritionConfidence(val rawValue: String) {
+    Confirmed("confirmed"),
+    Estimated("estimated"),
+    Incomplete("incomplete"),
+    Unknown("unknown"),
 }
 
 enum class FoodSourceClass(val rawValue: String) {
@@ -26,7 +32,8 @@ data class FoodEstimate(
     val servingGrams: Long,
     val servings: Long,
     val sourceClass: FoodSourceClass = FoodSourceClass.Estimated,
-    val trustStatus: FoodTrustStatus = FoodTrustStatus.Estimated,
+    val recordTrust: FoodRecordTrust = FoodRecordTrust.Untrusted,
+    val nutritionConfidence: FoodNutritionConfidence = FoodNutritionConfidence.Estimated,
 ) {
     init {
         require(label.isNotBlank()) { "Food estimate label must not be blank" }
@@ -47,7 +54,8 @@ data class FoodDraft(
     val servingGrams: Long,
     val servings: Long,
     val sourceClass: FoodSourceClass,
-    val trustStatus: FoodTrustStatus,
+    val recordTrust: FoodRecordTrust,
+    val nutritionConfidence: FoodNutritionConfidence,
     val dayKey: String,
     val createdAtMillis: Long,
     val status: FoodDraftStatus = FoodDraftStatus.Ready,
@@ -62,7 +70,8 @@ data class FoodEntry(
     val servingGrams: Long,
     val servings: Long,
     val sourceClass: FoodSourceClass,
-    val trustStatus: FoodTrustStatus,
+    val recordTrust: FoodRecordTrust,
+    val nutritionConfidence: FoodNutritionConfidence,
     val dayKey: String,
     val confirmedAtMillis: Long,
 )
@@ -80,7 +89,8 @@ data class FoodSafeSummary(
     val sumMeanKcal: Long,
     val sumVarianceKcal: Long,
     val sourceClasses: Set<FoodSourceClass>,
-    val trustStatuses: Set<FoodTrustStatus>,
+    val recordTrusts: Set<FoodRecordTrust>,
+    val nutritionConfidences: Set<FoodNutritionConfidence>,
 )
 
 class FoodWallet {
@@ -104,7 +114,8 @@ class FoodWallet {
             servingGrams = estimate.servingGrams,
             servings = estimate.servings,
             sourceClass = estimate.sourceClass,
-            trustStatus = estimate.trustStatus,
+            recordTrust = estimate.recordTrust,
+            nutritionConfidence = estimate.nutritionConfidence,
             dayKey = dayKey,
             createdAtMillis = createdAtMillis,
         )
@@ -126,7 +137,8 @@ class FoodWallet {
             servingGrams = draft.servingGrams,
             servings = draft.servings,
             sourceClass = draft.sourceClass,
-            trustStatus = draft.trustStatus,
+            recordTrust = draft.recordTrust,
+            nutritionConfidence = draft.nutritionConfidence,
             dayKey = draft.dayKey,
             confirmedAtMillis = confirmedAtMillis,
         )
@@ -153,7 +165,8 @@ class FoodWallet {
             sumMeanKcal = totals.sumMeanKcal,
             sumVarianceKcal = totals.sumVarianceKcal,
             sourceClasses = dayEntries.mapTo(linkedSetOf()) { it.sourceClass },
-            trustStatuses = dayEntries.mapTo(linkedSetOf()) { it.trustStatus },
+            recordTrusts = dayEntries.mapTo(linkedSetOf()) { it.recordTrust },
+            nutritionConfidences = dayEntries.mapTo(linkedSetOf()) { it.nutritionConfidence },
         )
     }
 

@@ -1,7 +1,8 @@
 package dev.grain.templates.androidfoodwallet
 
+import dev.grain.food.FoodNutritionConfidence
+import dev.grain.food.FoodRecordTrust
 import dev.grain.food.FoodSourceClass
-import dev.grain.food.FoodTrustStatus
 
 fun main() {
     val starter = AndroidFoodWalletStarter()
@@ -13,7 +14,8 @@ fun main() {
         servingGrams = 250,
         servings = 1,
         sourceClass = FoodSourceClass.Estimated,
-        trustStatus = FoodTrustStatus.Estimated,
+        recordTrust = FoodRecordTrust.Untrusted,
+        nutritionConfidence = FoodNutritionConfidence.Estimated,
     )
 
     val draft = starter.draft(
@@ -31,7 +33,11 @@ fun main() {
     requireStarter(summary.entryCount == 1, "summary count mismatch")
     requireStarter(summary.sumMeanKcal == 620L, "summary mean mismatch")
     requireStarter(summary.sourceClasses == setOf(FoodSourceClass.Estimated), "summary source mismatch")
-    requireStarter(summary.trustStatuses == setOf(FoodTrustStatus.Estimated), "summary trust mismatch")
+    requireStarter(summary.recordTrusts == setOf(FoodRecordTrust.Untrusted), "summary trust mismatch")
+    requireStarter(
+        summary.nutritionConfidences == setOf(FoodNutritionConfidence.Estimated),
+        "summary confidence mismatch",
+    )
     requireStarter(!summary.toString().contains("photo", ignoreCase = true), "summary exposed photo wording")
     requireStarter(!summary.toString().contains("snapshot", ignoreCase = true), "summary exposed snapshot wording")
 

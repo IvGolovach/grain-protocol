@@ -15,8 +15,9 @@ Use the Kotlin package:
 
 ```kotlin
 import dev.grain.food.FoodEstimate
+import dev.grain.food.FoodNutritionConfidence
+import dev.grain.food.FoodRecordTrust
 import dev.grain.food.FoodSourceClass
-import dev.grain.food.FoodTrustStatus
 import dev.grain.food.FoodWallet
 ```
 
@@ -32,7 +33,8 @@ val estimate = FoodEstimate(
     servingGrams = 250,
     servings = 1,
     sourceClass = FoodSourceClass.Estimated,
-    trustStatus = FoodTrustStatus.Estimated,
+    recordTrust = FoodRecordTrust.Untrusted,
+    nutritionConfidence = FoodNutritionConfidence.Estimated,
 )
 val draft = wallet.createDraft(estimate, dayKey = "2026-05-17", createdAtMillis = nowMillis)
 wallet.confirm(draft, confirmedAtMillis = nowMillis)

@@ -44,7 +44,8 @@ def valid_schema() -> dict[str, object]:
                     "MealEstimateCandidate",
                     "VerifiedServingOffer",
                     "FoodIntakeDraft",
-                    "TrustStatus",
+                    "RecordTrust",
+                    "NutritionConfidence",
                     "FoodSourceClass",
                     "NutritionInsight",
                     "SafeFoodSummary",
@@ -54,7 +55,8 @@ def valid_schema() -> dict[str, object]:
                     "MealEstimateCandidate": {"$ref": "#/$defs/MealEstimateCandidate"},
                     "VerifiedServingOffer": {"$ref": "#/$defs/VerifiedServingOffer"},
                     "FoodIntakeDraft": {"$ref": "#/$defs/FoodIntakeDraft"},
-                    "TrustStatus": {"$ref": "#/$defs/TrustStatus"},
+                    "RecordTrust": {"$ref": "#/$defs/RecordTrust"},
+                    "NutritionConfidence": {"$ref": "#/$defs/NutritionConfidence"},
                     "FoodSourceClass": {"$ref": "#/$defs/FoodSourceClass"},
                     "NutritionInsight": {"$ref": "#/$defs/NutritionInsight"},
                     "SafeFoodSummary": {"$ref": "#/$defs/SafeFoodSummary"},
@@ -88,7 +90,8 @@ def valid_schema() -> dict[str, object]:
             },
         },
         "$defs": {
-            "TrustStatus": {"enum": ["verified", "self_issued", "estimated", "untrusted"]},
+            "RecordTrust": {"enum": ["verified_source", "self_issued", "untrusted"]},
+            "NutritionConfidence": {"enum": ["confirmed", "estimated", "incomplete", "unknown"]},
             "FoodSourceClass": {"enum": ["attested", "measured", "estimated"]},
             "NutritionInsight": {
                 "type": "object",
@@ -99,11 +102,12 @@ def valid_schema() -> dict[str, object]:
             "MealEstimateCandidate": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["candidate_id", "source_class", "trust_status", "label", "mean", "var"],
+                "required": ["candidate_id", "source_class", "record_trust", "nutrition_confidence", "label", "mean", "var"],
                 "properties": {
                     "candidate_id": {"type": "string"},
                     "source_class": {"$ref": "#/$defs/FoodSourceClass"},
-                    "trust_status": {"$ref": "#/$defs/TrustStatus"},
+                    "record_trust": {"$ref": "#/$defs/RecordTrust"},
+                    "nutrition_confidence": {"$ref": "#/$defs/NutritionConfidence"},
                     "label": {"type": "string"},
                     "mean": {"type": "object"},
                     "var": {"type": "object"},
@@ -112,12 +116,13 @@ def valid_schema() -> dict[str, object]:
             "VerifiedServingOffer": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["offer_id", "issuer", "source_class", "trust_status", "serving_g", "mean", "var"],
+                "required": ["offer_id", "issuer", "source_class", "record_trust", "nutrition_confidence", "serving_g", "mean", "var"],
                 "properties": {
                     "offer_id": {"type": "string"},
                     "issuer": {"type": "string"},
                     "source_class": {"const": "attested"},
-                    "trust_status": {"const": "verified"},
+                    "record_trust": {"const": "verified_source"},
+                    "nutrition_confidence": {"const": "confirmed"},
                     "serving_g": {"type": "integer", "minimum": 0},
                     "mean": {"type": "object"},
                     "var": {"type": "object"},
@@ -126,10 +131,11 @@ def valid_schema() -> dict[str, object]:
             "FoodIntakeDraft": {
                 "type": "object",
                 "additionalProperties": False,
-                "required": ["draft_id", "trust_status", "source_class", "entry"],
+                "required": ["draft_id", "record_trust", "nutrition_confidence", "source_class", "entry"],
                 "properties": {
                     "draft_id": {"type": "string"},
-                    "trust_status": {"$ref": "#/$defs/TrustStatus"},
+                    "record_trust": {"$ref": "#/$defs/RecordTrust"},
+                    "nutrition_confidence": {"$ref": "#/$defs/NutritionConfidence"},
                     "source_class": {"$ref": "#/$defs/FoodSourceClass"},
                     "entry": {"$ref": "#/$defs/FoodIntakeEntry"},
                 },
@@ -140,7 +146,8 @@ def valid_schema() -> dict[str, object]:
                 "required": [
                     "entry_id",
                     "source_class",
-                    "trust_status",
+                    "record_trust",
+                    "nutrition_confidence",
                     "mean",
                     "var",
                     "amount_g",
@@ -150,7 +157,8 @@ def valid_schema() -> dict[str, object]:
                 "properties": {
                     "entry_id": {"type": "string"},
                     "source_class": {"$ref": "#/$defs/FoodSourceClass"},
-                    "trust_status": {"$ref": "#/$defs/TrustStatus"},
+                    "record_trust": {"$ref": "#/$defs/RecordTrust"},
+                    "nutrition_confidence": {"$ref": "#/$defs/NutritionConfidence"},
                     "mean": {"type": "object"},
                     "var": {"type": "object"},
                     "amount_g": {"type": "integer", "minimum": 0},
@@ -180,8 +188,9 @@ def readme_text() -> str:
         [
             "# Food Wallet Contract",
             "FoodIntakeEntry MealEstimateCandidate VerifiedServingOffer FoodIntakeDraft",
-            "TrustStatus FoodSourceClass NutritionInsight SafeFoodSummary",
-            "verified self_issued estimated untrusted",
+            "RecordTrust NutritionConfidence FoodSourceClass NutritionInsight SafeFoodSummary",
+            "verified_source self_issued untrusted",
+            "confirmed estimated incomplete unknown",
             "attested measured estimated",
             "Safe summaries must not include raw photos, raw trust bundles, raw snapshots, private keys, raw QR payload material, sync bundles, or identity bundles.",
         ]
@@ -192,7 +201,8 @@ def valid_entry(
     *,
     entry_id: str = "entry-breakfast-001",
     source_class: str = "estimated",
-    trust_status: str = "estimated",
+    record_trust: str = "untrusted",
+    nutrition_confidence: str = "estimated",
     kcal: int = 420,
     var: int = 36,
     amount_g: int = 280,
@@ -202,7 +212,8 @@ def valid_entry(
     return {
         "entry_id": entry_id,
         "source_class": source_class,
-        "trust_status": trust_status,
+        "record_trust": record_trust,
+        "nutrition_confidence": nutrition_confidence,
         "mean": {"kcal": kcal},
         "var": {"kcal": var},
         "amount_g": amount_g,
@@ -220,7 +231,8 @@ def fixtures() -> dict[str, dict[str, object]]:
             "candidate": {
                 "candidate_id": "candidate-fake-photo-001",
                 "source_class": "estimated",
-                "trust_status": "estimated",
+                "record_trust": "untrusted",
+                "nutrition_confidence": "estimated",
                 "label": "breakfast bowl estimate",
                 "mean": {"kcal": 420},
                 "var": {"kcal": 36},
@@ -235,19 +247,22 @@ def fixtures() -> dict[str, dict[str, object]]:
                 "offer_id": "offer-cafe-yogurt-001",
                 "issuer": "demo-cafe",
                 "source_class": "attested",
-                "trust_status": "verified",
+                "record_trust": "verified_source",
+                "nutrition_confidence": "confirmed",
                 "serving_g": 180,
                 "mean": {"kcal": 260},
                 "var": {"kcal": 4},
             },
             "draft": {
                 "draft_id": "draft-cafe-yogurt-001",
-                "trust_status": "verified",
+                "record_trust": "verified_source",
+                "nutrition_confidence": "confirmed",
                 "source_class": "attested",
                 "entry": valid_entry(
                     entry_id="entry-cafe-yogurt-001",
                     source_class="attested",
-                    trust_status="verified",
+                    record_trust="verified_source",
+                    nutrition_confidence="confirmed",
                     kcal=260,
                     var=4,
                     amount_g=180,
@@ -261,12 +276,14 @@ def fixtures() -> dict[str, dict[str, object]]:
             "kind": "self_issued_draft",
             "draft": {
                 "draft_id": "draft-home-soup-001",
-                "trust_status": "self_issued",
+                "record_trust": "self_issued",
+                "nutrition_confidence": "confirmed",
                 "source_class": "measured",
                 "entry": valid_entry(
                     entry_id="entry-home-soup-001",
                     source_class="measured",
-                    trust_status="self_issued",
+                    record_trust="self_issued",
+                    nutrition_confidence="confirmed",
                     kcal=310,
                     var=9,
                     amount_g=350,
@@ -315,20 +332,33 @@ class FoodWalletContractTests(unittest.TestCase):
             result = module.check_food_wallet_contract(root=root)
 
             self.assertEqual(result.schema, "grain.food-wallet.v1")
-            self.assertEqual(result.checked_concepts, 8)
+            self.assertEqual(result.checked_concepts, 9)
             self.assertEqual(result.checked_fixtures, 4)
 
-    def test_contract_requires_all_trust_statuses(self) -> None:
+    def test_contract_requires_all_record_trust_states(self) -> None:
         module = load_module()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             write_contract_repo(root)
             schema_path = root / "sdk/food/contract/food_wallet_v1.schema.json"
             schema = valid_schema()
-            schema["$defs"]["TrustStatus"]["enum"] = ["verified", "estimated"]
+            schema["$defs"]["RecordTrust"]["enum"] = ["verified_source", "untrusted"]
             schema_path.write_text(json.dumps(schema) + "\n", encoding="utf-8")
 
-            with self.assertRaisesRegex(SystemExit, "FOOD_WALLET_CONTRACT_ERR_TRUST_STATUS"):
+            with self.assertRaisesRegex(SystemExit, "FOOD_WALLET_CONTRACT_ERR_RECORD_TRUST"):
+                module.check_food_wallet_contract(root=root)
+
+    def test_contract_requires_all_nutrition_confidence_states(self) -> None:
+        module = load_module()
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_contract_repo(root)
+            schema_path = root / "sdk/food/contract/food_wallet_v1.schema.json"
+            schema = valid_schema()
+            schema["$defs"]["NutritionConfidence"]["enum"] = ["confirmed", "estimated"]
+            schema_path.write_text(json.dumps(schema) + "\n", encoding="utf-8")
+
+            with self.assertRaisesRegex(SystemExit, "FOOD_WALLET_CONTRACT_ERR_NUTRITION_CONFIDENCE"):
                 module.check_food_wallet_contract(root=root)
 
     def test_safe_summary_rejects_raw_photo_or_snapshot_fields(self) -> None:

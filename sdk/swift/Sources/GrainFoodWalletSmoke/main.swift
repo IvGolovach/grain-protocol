@@ -4,29 +4,41 @@ import GrainFoodWallet
 @main
 struct GrainFoodWalletSmoke {
     static func main() throws {
-        try trustStatusesMatchContract()
+        try statusAxesMatchContract()
         try estimatedDraftConfirmsIntoSafeSummary()
         try verifiedAndSelfIssuedDraftsExposeSafeTrustLabels()
         print("swift food wallet smoke: PASS")
     }
 }
 
-private func trustStatusesMatchContract() throws {
+private func statusAxesMatchContract() throws {
     try require(
-        FoodTrustStatus.verified.rawValue == "verified",
-        "verified raw value mismatch"
+        FoodRecordTrust.verifiedSource.rawValue == "verified_source",
+        "verified source raw value mismatch"
     )
     try require(
-        FoodTrustStatus.selfIssued.rawValue == "self_issued",
+        FoodRecordTrust.selfIssued.rawValue == "self_issued",
         "self-issued raw value mismatch"
     )
     try require(
-        FoodTrustStatus.estimated.rawValue == "estimated",
+        FoodRecordTrust.untrusted.rawValue == "untrusted",
+        "untrusted raw value mismatch"
+    )
+    try require(
+        FoodNutritionConfidence.confirmed.rawValue == "confirmed",
+        "confirmed raw value mismatch"
+    )
+    try require(
+        FoodNutritionConfidence.estimated.rawValue == "estimated",
         "estimated raw value mismatch"
     )
     try require(
-        FoodTrustStatus.untrusted.rawValue == "untrusted",
-        "untrusted raw value mismatch"
+        FoodNutritionConfidence.incomplete.rawValue == "incomplete",
+        "incomplete raw value mismatch"
+    )
+    try require(
+        FoodNutritionConfidence.unknown.rawValue == "unknown",
+        "unknown raw value mismatch"
     )
 }
 
@@ -48,10 +60,13 @@ private func estimatedDraftConfirmsIntoSafeSummary() throws {
         )
     )
     try require(draft.sourceClass == .estimated, "estimated draft source mismatch")
-    try require(draft.trustStatus == .estimated, "estimated draft trust mismatch")
+    try require(draft.recordTrust == .untrusted, "estimated draft record trust mismatch")
+    try require(draft.nutritionConfidence == .estimated, "estimated draft nutrition confidence mismatch")
 
     let entry = wallet.confirmDraft(draft)
     try require(entry.entryID == "food-entry-1", "entry id should be deterministic")
+    try require(entry.recordTrust == .untrusted, "entry record trust mismatch")
+    try require(entry.nutritionConfidence == .estimated, "entry nutrition confidence mismatch")
 
     let totals = wallet.dailyTotals(on: "2024-06-01")
     try require(totals.sumMeanKcal == 420, "daily sum_mean mismatch")
@@ -60,7 +75,8 @@ private func estimatedDraftConfirmsIntoSafeSummary() throws {
 
     let summary = wallet.exportSafeSummary(on: "2024-06-01")
     try require(summary.dateKey == "2024-06-01", "summary date mismatch")
-    try require(summary.entries.map(\.trustLabel) == ["Estimated"], "summary trust label mismatch")
+    try require(summary.entries.map(\.recordTrustLabel) == ["Untrusted"], "summary trust label mismatch")
+    try require(summary.entries.map(\.nutritionConfidence) == [.estimated], "summary nutrition confidence mismatch")
     try requireSafeDescription(String(describing: summary), "summary description")
     try requireSafeDescription(String(reflecting: summary), "summary debug description")
 }
@@ -79,7 +95,8 @@ private func verifiedAndSelfIssuedDraftsExposeSafeTrustLabels() throws {
     _ = wallet.confirmDraft(selfIssued)
 
     let summary = wallet.exportSafeSummary()
-    try require(summary.entries.map(\.trustLabel) == ["Verified", "Self-issued"], "trust labels mismatch")
+    try require(summary.entries.map(\.recordTrustLabel) == ["Verified source", "Self-issued"], "trust labels mismatch")
+    try require(summary.entries.map(\.nutritionConfidence) == [.confirmed, .confirmed], "nutrition confidence mismatch")
     try require(summary.entries.map(\.sourceClass) == [.attested, .measured], "source class mismatch")
 }
 

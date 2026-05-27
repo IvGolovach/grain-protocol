@@ -9,7 +9,8 @@
       {
         "entry_id": "entry-breakfast-001",
         "source_class": "estimated",
-        "trust_status": "estimated",
+        "record_trust": "self_issued",
+        "nutrition_confidence": "estimated",
         "mean": {
           "kcal": 420
         },
