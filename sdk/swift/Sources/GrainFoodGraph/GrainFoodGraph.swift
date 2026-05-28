@@ -65,6 +65,40 @@ public struct FoodGraphSimilarMeal: Equatable, Sendable {
     public let advisoryOnly = true
 }
 
+public struct FoodGraphDishIngredientDraft: Codable, Equatable, Sendable {
+    public let canonicalName: String
+    public let displayName: String
+    public let role: String
+    public let required: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case canonicalName = "canonical_name"
+        case displayName = "display_name"
+        case role
+        case required
+    }
+}
+
+public struct FoodGraphDishTemplateDraft: Codable, Equatable, Sendable {
+    public let dishID: String
+    public let input: String
+    public let matchedName: String
+    public let confidence: Double
+    public let ingredients: [FoodGraphDishIngredientDraft]
+    public let warnings: [String]
+    public let advisoryOnly = true
+
+    enum CodingKeys: String, CodingKey {
+        case dishID = "dish_id"
+        case input
+        case matchedName = "matched_name"
+        case confidence
+        case ingredients
+        case warnings
+        case advisoryOnly = "advisory_only"
+    }
+}
+
 public struct FoodGraphSourceRef: Codable, Equatable, Sendable {
     public struct Payload: Codable, Equatable, Sendable {
         public struct Resolved: Codable, Equatable, Sendable {
@@ -134,6 +168,7 @@ public final class LocalFoodGraph: @unchecked Sendable {
     private let aliases: [String: String]
     private let ambiguousAliases: [String: [String]]
     private let neighbors: [FoodGraphModelKey: [String: [FoodGraphNeighbor]]]
+    private let dishTemplates: [DishTemplateResource]
 
     public var artifactID: String { manifest.artifactID }
 
@@ -145,6 +180,7 @@ public final class LocalFoodGraph: @unchecked Sendable {
         manifest = try Self.decodeBundled(Manifest.self, name: "manifest", bundle: bundle, directory: resourceDirectory)
         let vocabularyArray = try Self.decodeBundled([String].self, name: "vocabulary", bundle: bundle, directory: resourceDirectory)
         let aliasesFile = try Self.decodeBundled(AliasFile.self, name: "aliases", bundle: bundle, directory: resourceDirectory)
+        let dishTemplateFile = try Self.decodeBundled(DishTemplatesFile.self, name: "dish-templates", bundle: bundle, directory: resourceDirectory)
         var loadedNeighbors: [FoodGraphModelKey: [String: [FoodGraphNeighbor]]] = [:]
         for key in FoodGraphModelKey.allCases {
             loadedNeighbors[key] = try Self.decodeBundled(
@@ -158,6 +194,7 @@ public final class LocalFoodGraph: @unchecked Sendable {
         aliases = aliasesFile.aliases
         ambiguousAliases = aliasesFile.ambiguousAliases
         neighbors = loadedNeighbors
+        dishTemplates = dishTemplateFile.templates
         try assertArtifactPolicy()
     }
 
@@ -265,6 +302,58 @@ public final class LocalFoodGraph: @unchecked Sendable {
         .map { $0 }
     }
 
+    public func dishTemplateDrafts(
+        forDishName input: String,
+        limit: Int = 3
+    ) -> [FoodGraphDishTemplateDraft] {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = Self.normalize(trimmed)
+        guard normalized.count >= 3 else {
+            return []
+        }
+
+        let queryTokens = Set(normalized.split(separator: " ").map(String.init))
+        let matches = dishTemplates.compactMap { template -> (template: DishTemplateResource, matchedName: String, score: Double)? in
+            var best: (matchedName: String, score: Double)?
+            for name in template.names {
+                let normalizedName = Self.normalize(name)
+                let nameTokens = Set(normalizedName.split(separator: " ").map(String.init))
+                let score: Double?
+                if normalizedName == normalized {
+                    score = 1
+                } else if queryTokens.count >= 2 && queryTokens.isSubset(of: nameTokens) {
+                    score = 0.9
+                } else if nameTokens.count >= 2 && nameTokens.isSubset(of: queryTokens) {
+                    score = 0.86
+                } else if normalized.count >= 5 && normalizedName.contains(normalized) {
+                    score = 0.76
+                } else if normalizedName.count >= 5 && normalized.contains(normalizedName) {
+                    score = 0.72
+                } else {
+                    score = nil
+                }
+                guard let score else { continue }
+                if best == nil || score > best!.score {
+                    best = (matchedName: name, score: score)
+                }
+            }
+            guard let best else {
+                return nil
+            }
+            return (template, best.matchedName, best.score)
+        }
+
+        return matches
+            .sorted { lhs, rhs in
+                if lhs.score == rhs.score { return lhs.template.id < rhs.template.id }
+                return lhs.score > rhs.score
+            }
+            .prefix(Self.boundedLimit(limit, max: 10))
+            .map { item in
+                dishTemplateDraft(from: item.template, input: trimmed, matchedName: item.matchedName, confidence: item.score)
+            }
+    }
+
     public func sourceRef(for resolutions: [FoodGraphResolvedIngredient]) -> FoodGraphSourceRef {
         FoodGraphSourceRef(
             foodGraph: FoodGraphSourceRef.Payload(
@@ -290,6 +379,33 @@ public final class LocalFoodGraph: @unchecked Sendable {
                     item.status == .unmapped ? item.input : nil
                 }
             )
+        )
+    }
+
+    private func dishTemplateDraft(
+        from template: DishTemplateResource,
+        input: String,
+        matchedName: String,
+        confidence: Double
+    ) -> FoodGraphDishTemplateDraft {
+        let ingredients = template.ingredients.map { ingredient in
+            FoodGraphDishIngredientDraft(
+                canonicalName: ingredient.canonicalName,
+                displayName: ingredient.displayName ?? Self.displayName(forCanonicalName: ingredient.canonicalName),
+                role: ingredient.role,
+                required: ingredient.required
+            )
+        }
+        let warnings = template.ingredients.compactMap { ingredient -> String? in
+            vocabulary.contains(ingredient.canonicalName) ? nil : "Unknown graph ingredient: \(ingredient.canonicalName)"
+        }
+        return FoodGraphDishTemplateDraft(
+            dishID: template.id,
+            input: input,
+            matchedName: matchedName,
+            confidence: Self.roundScore(confidence),
+            ingredients: ingredients,
+            warnings: warnings
         )
     }
 
@@ -397,6 +513,16 @@ public final class LocalFoodGraph: @unchecked Sendable {
     private static func roundScore(_ value: Double) -> Double {
         (value * 1_000_000).rounded() / 1_000_000
     }
+
+    private static func displayName(forCanonicalName canonicalName: String) -> String {
+        canonicalName
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { word in
+                word.prefix(1).uppercased() + word.dropFirst()
+            }
+            .joined(separator: " ")
+    }
 }
 
 private struct AliasFile: Decodable {
@@ -406,6 +532,30 @@ private struct AliasFile: Decodable {
     enum CodingKeys: String, CodingKey {
         case aliases
         case ambiguousAliases = "ambiguous_aliases"
+    }
+}
+
+private struct DishTemplatesFile: Decodable {
+    let templates: [DishTemplateResource]
+}
+
+private struct DishTemplateResource: Decodable {
+    let id: String
+    let names: [String]
+    let ingredients: [DishTemplateIngredientResource]
+}
+
+private struct DishTemplateIngredientResource: Decodable {
+    let canonicalName: String
+    let displayName: String?
+    let role: String
+    let required: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case canonicalName = "canonical_name"
+        case displayName = "display_name"
+        case role
+        case required
     }
 }
 

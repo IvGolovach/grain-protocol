@@ -1,10 +1,14 @@
 {
-  "artifact_id": "mealmark-food-graph-v0.1",
+  "artifact_id": "mealmark-food-graph-v0.2",
   "created_by": "tools/food_graph/build_mealmark_food_graph.py",
   "files": {
     "aliases.json": {
       "bytes": 1207,
       "sha256": "574b3643ef9016b9a01697ddd7e46f811c68ffc63e7d4cf904d35054d9829ab2"
+    },
+    "dish-templates.json": {
+      "bytes": 3687,
+      "sha256": "fcfaa8041ccea56c3be187be8b021f7f1ac899e84899b814fccc78fb0febb61f"
     },
     "neighbors-chem.json": {
       "bytes": 1914004,

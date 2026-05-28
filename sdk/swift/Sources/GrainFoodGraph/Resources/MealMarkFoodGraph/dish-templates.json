@@ -1,0 +1,152 @@
+{
+  "schema": "mealmark.food_graph.dish_templates.v1",
+  "templates": [
+    {
+      "id": "dish.herring_under_fur_coat",
+      "names": [
+        "селедка под шубой",
+        "сельдь под шубой",
+        "под шубой",
+        "herring under a fur coat",
+        "shuba salad",
+        "dressed herring"
+      ],
+      "ingredients": [
+        {
+          "canonical_name": "herring",
+          "display_name": "Herring",
+          "role": "main",
+          "required": true
+        },
+        {
+          "canonical_name": "potato",
+          "display_name": "Potato",
+          "role": "starch",
+          "required": true
+        },
+        {
+          "canonical_name": "beet",
+          "display_name": "Beet",
+          "role": "vegetable",
+          "required": true
+        },
+        {
+          "canonical_name": "carrot",
+          "display_name": "Carrot",
+          "role": "vegetable",
+          "required": true
+        },
+        {
+          "canonical_name": "egg",
+          "display_name": "Egg",
+          "role": "main",
+          "required": true
+        },
+        {
+          "canonical_name": "mayonnaise",
+          "display_name": "Mayonnaise",
+          "role": "sauce",
+          "required": true
+        },
+        {
+          "canonical_name": "onion",
+          "display_name": "Onion",
+          "role": "aromatic",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "dish.mushroom_risotto",
+      "names": [
+        "mushroom risotto",
+        "risotto with mushrooms",
+        "ризотто с грибами",
+        "грибное ризотто"
+      ],
+      "ingredients": [
+        {
+          "canonical_name": "rice",
+          "display_name": "Rice",
+          "role": "base",
+          "required": true
+        },
+        {
+          "canonical_name": "mushroom",
+          "display_name": "Mushroom",
+          "role": "vegetable",
+          "required": true
+        },
+        {
+          "canonical_name": "butter",
+          "display_name": "Butter",
+          "role": "richness",
+          "required": true
+        },
+        {
+          "canonical_name": "parmesan_cheese",
+          "display_name": "Parmesan cheese",
+          "role": "cheese",
+          "required": true
+        },
+        {
+          "canonical_name": "onion",
+          "display_name": "Onion",
+          "role": "aromatic",
+          "required": false
+        },
+        {
+          "canonical_name": "vegetable_stock",
+          "display_name": "Vegetable stock",
+          "role": "liquid",
+          "required": false
+        },
+        {
+          "canonical_name": "wine",
+          "display_name": "Wine",
+          "role": "liquid",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "dish.tiramisu",
+      "names": [
+        "tiramisu",
+        "тирамису"
+      ],
+      "ingredients": [
+        {
+          "canonical_name": "ladyfinger",
+          "display_name": "Ladyfinger",
+          "role": "base",
+          "required": true
+        },
+        {
+          "canonical_name": "cream",
+          "display_name": "Cream",
+          "role": "cream",
+          "required": true
+        },
+        {
+          "canonical_name": "cocoa_powder",
+          "display_name": "Cocoa powder",
+          "role": "flavor",
+          "required": true
+        },
+        {
+          "canonical_name": "sugar",
+          "display_name": "Sugar",
+          "role": "sweetener",
+          "required": true
+        },
+        {
+          "canonical_name": "egg",
+          "display_name": "Egg",
+          "role": "binder",
+          "required": false
+        }
+      ]
+    }
+  ]
+}
