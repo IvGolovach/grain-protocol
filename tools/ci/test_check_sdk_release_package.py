@@ -105,6 +105,20 @@ class SdkReleasePackageArchivePolicyTests(unittest.TestCase):
                 {"consumer_paths": ["/tmp/grain"]},
             )
 
+    def test_strict_upstream_verification_source_is_allowlisted(self) -> None:
+        module = load_module()
+
+        module.validate_verification(
+            {"mode": "strict-upstream", "source": "sdk-platform"},
+            require_strict=True,
+        )
+
+        with self.assertRaisesRegex(SystemExit, "SDK_RELEASE_CHECK_ERR_VERIFICATION_SOURCE_UNTRUSTED"):
+            module.validate_verification(
+                {"mode": "strict-upstream", "source": "self-attested-local-run"},
+                require_strict=True,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

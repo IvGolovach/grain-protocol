@@ -147,6 +147,10 @@ FORBIDDEN_POLICY_CLAIM_RE = re.compile(
 )
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+ALLOWED_STRICT_UPSTREAM_SOURCES = {
+    "sdk-platform",
+    "release-evidence-sdk-platform",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -335,6 +339,18 @@ def validate_sbom(out_dir: Path, manifest: dict[str, object]) -> None:
         )
 
 
+def validate_verification(verification: object, require_strict: bool) -> None:
+    require(isinstance(verification, dict), "SDK_RELEASE_CHECK_ERR_VERIFICATION")
+    mode = verification.get("mode")
+    source = verification.get("source")
+    require(mode in {"strict", "strict-upstream", "skipped"}, "SDK_RELEASE_CHECK_ERR_VERIFICATION_MODE")
+    require(isinstance(source, str) and source, "SDK_RELEASE_CHECK_ERR_VERIFICATION_SOURCE")
+    if mode == "strict-upstream":
+        require(source in ALLOWED_STRICT_UPSTREAM_SOURCES, "SDK_RELEASE_CHECK_ERR_VERIFICATION_SOURCE_UNTRUSTED")
+    if require_strict:
+        require(mode in {"strict", "strict-upstream"}, "SDK_RELEASE_CHECK_ERR_VERIFICATION_NOT_STRICT")
+
+
 def validate_manifest(out_dir: Path, args: argparse.Namespace) -> dict[str, object]:
     manifest_path = out_dir / "manifest.json"
     require(manifest_path.is_file(), "SDK_RELEASE_CHECK_ERR_MANIFEST_MISSING")
@@ -350,13 +366,7 @@ def validate_manifest(out_dir: Path, args: argparse.Namespace) -> dict[str, obje
     if args.require_clean:
         require(manifest["dirty"] is False, "SDK_RELEASE_CHECK_ERR_DIRTY_RELEASE")
 
-    verification = manifest.get("verification")
-    require(isinstance(verification, dict), "SDK_RELEASE_CHECK_ERR_VERIFICATION")
-    mode = verification.get("mode")
-    require(mode in {"strict", "strict-upstream", "skipped"}, "SDK_RELEASE_CHECK_ERR_VERIFICATION_MODE")
-    require(isinstance(verification.get("source"), str) and verification["source"], "SDK_RELEASE_CHECK_ERR_VERIFICATION_SOURCE")
-    if args.require_strict:
-        require(mode in {"strict", "strict-upstream"}, "SDK_RELEASE_CHECK_ERR_VERIFICATION_NOT_STRICT")
+    validate_verification(manifest.get("verification"), args.require_strict)
 
     require(manifest.get("workflow_contract") == "client_workflow_v1", "SDK_RELEASE_CHECK_ERR_WORKFLOW_CONTRACT")
     validate_artifact_policy(manifest.get("artifact_policy"))

@@ -11,6 +11,10 @@ RUN_VERIFY=1
 ALLOW_DIRTY=0
 DIRTY_STATUS=""
 VERIFIED_BY=""
+ALLOWED_UPSTREAM_VERIFIERS=(
+  "sdk-platform"
+  "release-evidence-sdk-platform"
+)
 
 usage() {
   cat <<'EOF'
@@ -67,6 +71,24 @@ done
 if [[ -n "$VERIFIED_BY" && "$RUN_VERIFY" -eq 1 ]]; then
   echo "SDK_PACKAGE_ERR_VERIFIED_BY_WITHOUT_SKIP: --verified-by requires --skip-verify" >&2
   exit 2
+fi
+
+if [[ -n "$VERIFIED_BY" ]]; then
+  allowed_verified_by=0
+  for allowed in "${ALLOWED_UPSTREAM_VERIFIERS[@]}"; do
+    if [[ "$VERIFIED_BY" == "$allowed" ]]; then
+      allowed_verified_by=1
+      break
+    fi
+  done
+  if [[ "$allowed_verified_by" -ne 1 ]]; then
+    echo "SDK_PACKAGE_ERR_VERIFIED_BY_UNKNOWN: --verified-by must name an allowed upstream SDK gate" >&2
+    exit 2
+  fi
+  if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+    echo "SDK_PACKAGE_ERR_VERIFIED_BY_LOCAL: --verified-by is only accepted inside GitHub Actions" >&2
+    exit 2
+  fi
 fi
 
 resolve_out_dir() {
