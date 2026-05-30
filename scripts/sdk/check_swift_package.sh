@@ -26,6 +26,7 @@ swift build --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH"
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainClientIOSAdaptersSmoke
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainClientFixtureRunner
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainFoodWalletSmoke
+swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainFoodGraphSmoke
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then
