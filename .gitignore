@@ -55,6 +55,13 @@ Thumbs.db
 # local audit workspace (never commit)
 .local-architect-reports/
 
+# local private MealMark app workspaces/artifacts (never commit to public Grain)
+apps/ios-food-wallet/
+apps/web/
+services/food-analysis-broker/
+.wrangler/
+tmp/pdfs/
+
 # local mise overrides
 mise.local.toml
 .mise.local.toml
