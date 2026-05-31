@@ -64,8 +64,13 @@ services/food-analysis-broker/
 *.p8
 *.mobileprovision
 *.provisionprofile
+*.provisioningprofile
 *.xcarchive/
 *.ipa
+*.xcresult/
+*.dSYM/
+DerivedData/
+ExportOptions.plist
 .wrangler/
 tmp/pdfs/
 
