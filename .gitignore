@@ -59,6 +59,13 @@ Thumbs.db
 apps/ios-food-wallet/
 apps/web/
 services/food-analysis-broker/
+.dev.vars
+.dev.vars.*
+*.p8
+*.mobileprovision
+*.provisionprofile
+*.xcarchive/
+*.ipa
 .wrangler/
 tmp/pdfs/
 
