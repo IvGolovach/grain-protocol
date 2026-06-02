@@ -42,8 +42,8 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`, `SDK-INV-0010 transport verify requires explicit trust`, `SDK-NEG-0029 verifyGR1 rejects ServingOffer issuer_kid mismatch`)
   Modules: `core/ts/grain-sdk/src/transport.ts`
 
-- SDK-INV-0011: raw ledger CBOR-seq export MUST be deterministic and parseable as canonical CBOR sequence.
-  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0011 raw CBOR-seq export determinism`)
+- SDK-INV-0011: raw ledger CBOR-seq export MUST be deterministic and parseable as canonical CBOR sequence. JSON-number inputs MUST reject non-finite, fractional, or unsafe integer values before export.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0011 raw CBOR-seq export determinism`, `SDK-NEG-0007 raw CBOR-seq export rejects fractional numbers`)
   Modules: `core/ts/grain-sdk/src/events.ts`
 
 - SDK-INV-0012: public device lifecycle APIs MUST keep bundle authorization state synchronized with persisted grant/revoke ledger events.
@@ -54,8 +54,8 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0013 identity import rollback`, `SDK-INV-0013 correct rollback`)
   Modules: `core/ts/grain-sdk/src/store.ts`, `core/ts/grain-sdk/src/memory-store.ts`, `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/events.ts`, `core/ts/grain-sdk/src/manifest.ts`
 
-- SDK-INV-0014: public import surfaces MUST reject non-standard base64 on binary fields before mutation or verification.
-  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-NEG-0005 identity bundle base64 validation`, `SDK-NEG-0007 transport bundle base64 validation`, `SDK-NEG-0009 verifyGR1 rejects malformed trust bytes`)
+- SDK-INV-0014: public import surfaces MUST reject non-standard base64 and structurally inconsistent imported identity or transport fields before mutation or verification. Identity bundles MUST derive `root_kid` and device `ak` values from their public keys, keep device keys unique, authorize `active_ak`, preserve an existing root, and keep sequence-state values within unsigned 64-bit decimal bounds.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-NEG-0005 identity bundle base64 validation`, `SDK-NEG-0005 identity bundle base64 validation (root_pub_b64 does not derive root_kid)`, `SDK-NEG-0005 identity bundle base64 validation (device ak does not derive from pub_b64)`, `SDK-NEG-0005 identity bundle base64 validation (duplicate device key ak)`, `SDK-NEG-0005 identity bundle base64 validation (active key is not authorized)`, `SDK-NEG-0005 identity bundle base64 validation (seq_state is not a u64 decimal)`, `SDK-NEG-0006 identity import rejects replacement root`, `SDK-NEG-0007 transport bundle base64 validation`, `SDK-NEG-0009 verifyGR1 rejects malformed trust bytes`)
   Modules: `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/transport.ts`, `core/ts/grain-sdk/src/utils.ts`
 
 - SDK-INV-0015: portable client scan preview MUST preserve explicit trust boundaries across generated platform SDKs.

@@ -135,41 +135,12 @@ export class IdentityManager {
   }
 
   async importBundle(bundle: IdentityBundleV1): Promise<void> {
-    if (bundle.bundle_v !== 1) {
-      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_VERSION", "Unsupported identity bundle version");
-    }
-
-    if (!bundle.root_kid || !bundle.root_pub_b64 || !bundle.sync_secret_b64) {
-      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle missing required fields");
-    }
-
-    assertIdentityBundle(Array.isArray(bundle.device_keys), "Identity bundle device_keys must be an array");
-    if (!bundle.device_keys.some((device) => isDeviceKey(device) && device.ak === bundle.root_kid)) {
-      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle missing root key in device_keys");
-    }
-
-    // Validate imported binary payloads before any mutation so import stays fail-closed.
-    decodeB64Strict(
-      bundle.root_pub_b64,
-      "SDK_ERR_IDENTITY_BUNDLE_INVALID",
-      "Identity bundle root_pub_b64 must be standard base64"
-    );
-    decodeB64Strict(
-      bundle.sync_secret_b64,
-      "SDK_ERR_IDENTITY_BUNDLE_INVALID",
-      "Identity bundle sync_secret_b64 must be standard base64"
-    );
-    for (const [index, device] of bundle.device_keys.entries()) {
-      assertIdentityBundle(isDeviceKey(device), `Identity bundle device_keys[${index}] is malformed`);
-      decodeB64Strict(
-        device.pub_b64,
-        "SDK_ERR_IDENTITY_BUNDLE_INVALID",
-        `Identity bundle device_keys[${index}].pub_b64 must be standard base64`
-      );
-    }
+    validateIdentityBundle(bundle);
 
     const nextBundle = cloneIdentityBundle(bundle);
     await this.store.atomic(async () => {
+      const existing = await this.store.identity.load();
+      assertIdentityRootCompatible(nextBundle, existing?.root_kid);
       await this.store.sequence.importSnapshot(nextBundle.seq_state);
       await this.store.identity.save(nextBundle);
     });
@@ -229,6 +200,91 @@ function isAuthorized(bundle: IdentityBundleV1, ak: string): boolean {
     return false;
   }
   return bundle.device_keys.some((k) => k.ak === ak);
+}
+
+function validateIdentityBundle(bundle: IdentityBundleV1): void {
+  if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+    throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle must be an object");
+  }
+  if (bundle.bundle_v !== 1) {
+    throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_VERSION", "Unsupported identity bundle version");
+  }
+  if (
+    !bundle.root_kid
+    || !bundle.root_pub_b64
+    || !bundle.active_ak
+    || !bundle.sync_secret_b64
+    || !Array.isArray(bundle.device_keys)
+    || bundle.device_keys.length === 0
+    || !Array.isArray(bundle.revoked_aks)
+    || !isStringRecord(bundle.seq_state)
+  ) {
+    throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle missing required fields");
+  }
+  const rootPub = decodeIdentityBytes(bundle.root_pub_b64, "Identity bundle root_pub_b64 must be standard base64");
+  const syncSecret = decodeIdentityBytes(bundle.sync_secret_b64, "Identity bundle sync_secret_b64 must be standard base64");
+  if (rootPub.length !== 32 || syncSecret.length !== 32 || deriveKid(rootPub) !== bundle.root_kid) {
+    throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle key material is invalid");
+  }
+
+  const seenDeviceAks = new Set<string>();
+  let rootDeviceSeen = false;
+  for (const [index, device] of bundle.device_keys.entries()) {
+    assertIdentityBundle(isDeviceKey(device), `Identity bundle device_keys[${index}] is malformed`);
+    if (seenDeviceAks.has(device.ak)) {
+      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle contains duplicate device keys");
+    }
+    seenDeviceAks.add(device.ak);
+    const pub = decodeIdentityBytes(
+      device.pub_b64,
+      `Identity bundle device_keys[${index}].pub_b64 must be standard base64`
+    );
+    if (pub.length !== 32 || deriveKid(pub) !== device.ak) {
+      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle device key id does not match public key");
+    }
+    if (device.ak === bundle.root_kid) {
+      if (!bytesEqual(pub, rootPub)) {
+        throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle root device key does not match root public key");
+      }
+      rootDeviceSeen = true;
+    }
+  }
+  if (!rootDeviceSeen || !isAuthorized(bundle, bundle.active_ak)) {
+    throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle active/root key is invalid");
+  }
+
+  const seenRevoked = new Set<string>();
+  for (const revokedAk of bundle.revoked_aks) {
+    if (typeof revokedAk !== "string" || !revokedAk || revokedAk === bundle.root_kid || seenRevoked.has(revokedAk)) {
+      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle revoked_aks is invalid");
+    }
+    seenRevoked.add(revokedAk);
+  }
+  for (const seq of Object.values(bundle.seq_state)) {
+    if (!/^(0|[1-9]\d*)$/.test(seq) || BigInt(seq) > 18_446_744_073_709_551_615n) {
+      throw new SdkError("SDK_ERR_IDENTITY_BUNDLE_INVALID", "Identity bundle seq_state is invalid");
+    }
+  }
+}
+
+function assertIdentityRootCompatible(bundle: IdentityBundleV1, existingRootKid?: string): void {
+  if (existingRootKid && existingRootKid !== bundle.root_kid) {
+    throw new SdkError("SDK_ERR_IDENTITY_CONFLICT", "Imported identity root does not match existing root");
+  }
+}
+
+function decodeIdentityBytes(value: string, message: string): Uint8Array {
+  return decodeB64Strict(value, "SDK_ERR_IDENTITY_BUNDLE_INVALID", message);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.values(value as Record<string, unknown>).every((entry) => typeof entry === "string");
+}
+
+function bytesEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((byte, index) => byte === right[index]);
 }
 
 function cloneIdentityBundle(bundle: IdentityBundleV1): IdentityBundleV1 {
