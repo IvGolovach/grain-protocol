@@ -7,6 +7,7 @@ struct GrainFoodWalletSmoke {
         try trustStatusesMatchContract()
         try estimatedDraftConfirmsIntoSafeSummary()
         try verifiedAndSelfIssuedDraftsExposeSafeTrustLabels()
+        try replaceEntriesDoesNotRewindGeneratedIDs()
         print("swift food wallet smoke: PASS")
     }
 }
@@ -81,6 +82,34 @@ private func verifiedAndSelfIssuedDraftsExposeSafeTrustLabels() throws {
     let summary = wallet.exportSafeSummary()
     try require(summary.entries.map(\.trustLabel) == ["Verified", "Self-issued"], "trust labels mismatch")
     try require(summary.entries.map(\.sourceClass) == [.attested, .measured], "source class mismatch")
+}
+
+private func replaceEntriesDoesNotRewindGeneratedIDs() throws {
+    let wallet = GrainFoodWallet(clock: StaticClock())
+
+    let first = wallet.confirmDraft(
+        wallet.makeEstimatedDraft(
+            meal: MealEstimate(label: "first entry", kcal: 100, varianceKcal: 10, amountGrams: 100)
+        )
+    )
+    let second = wallet.confirmDraft(
+        wallet.makeEstimatedDraft(
+            meal: MealEstimate(label: "second entry", kcal: 200, varianceKcal: 20, amountGrams: 200)
+        )
+    )
+
+    try require(first.entryID == "food-entry-1", "first entry id mismatch")
+    try require(second.entryID == "food-entry-2", "second entry id mismatch")
+
+    wallet.replaceEntries([first])
+
+    let restoredDraft = wallet.makeEstimatedDraft(
+        meal: MealEstimate(label: "after replace", kcal: 300, varianceKcal: 30, amountGrams: 300)
+    )
+    let restoredEntry = wallet.confirmDraft(restoredDraft)
+
+    try require(restoredDraft.draftID == "food-draft-3", "replaceEntries rewound draft sequence")
+    try require(restoredEntry.entryID == "food-entry-3", "replaceEntries rewound entry sequence")
 }
 
 private struct StaticClock: FoodWalletClock {
