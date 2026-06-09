@@ -6,9 +6,9 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0002: cap_id overwrite under same key with different ciphertext/chash -> `SDK_ERR_CAP_OVERWRITE_OR_CORRUPTION`
 - SDK-NEG-0003: missing CSPRNG during cap generation -> `SDK_ERR_CSPRNG_UNAVAILABLE`
 - SDK-NEG-0004: non-canonical bytes into codec strict validate -> core reject diagnostic (`GRAIN_ERR_NONCANONICAL` or equivalent)
-- SDK-NEG-0005: invalid identity bundle format/version/base64 on imported binary fields -> `SDK_ERR_IDENTITY_BUNDLE_INVALID` / `SDK_ERR_IDENTITY_BUNDLE_VERSION`
+- SDK-NEG-0005: invalid identity bundle format/version/base64 on imported binary fields, non-derived `root_kid`, non-derived device `ak`, duplicate device keys, unauthorized `active_ak`, or non-u64 sequence state -> `SDK_ERR_IDENTITY_BUNDLE_INVALID` / `SDK_ERR_IDENTITY_BUNDLE_VERSION`
 - SDK-NEG-0006: duplicate entries through set-array builder -> `GRAIN_ERR_SET_ARRAY_DUP`
-- SDK-NEG-0007: malformed bundle import payload/root schema or invalid base64 on imported bundle fields -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
+- SDK-NEG-0007: malformed bundle import payload/root schema, invalid base64 on imported bundle fields, or raw CBOR-seq JSON export containing non-finite/fractional/unsafe numeric values -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA` / `SDK_ERR_CBORSEQ_UNSUPPORTED_NUMBER`
 - SDK-NEG-0008: invalid bundle JSON bytes -> `SDK_ERR_TRANSPORT_BUNDLE_DECODE`
 - SDK-NEG-0009: `verifyGR1()` without explicit trust material or with malformed `trust.pub_b64` -> `SDK_ERR_TRANSPORT_VERIFY_TRUST_REQUIRED` / `SDK_ERR_TRANSPORT_VERIFY_TRUST_INVALID`
 - SDK-NEG-0010: portable `scan_preview()` malformed scan/trust/signature -> `Rejected` with deterministic core or `SDK_ERR_*` diagnostic; valid scan without trust -> `Untrusted`, not `Verified`
@@ -21,7 +21,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0016a: Android adapter missing exported snapshot, malformed persisted UTF-8, tampered AES-GCM sealed snapshot, hidden trust lookup, secret snapshot/trust logging, accepted-record write before verified accept, rejected trust-anchor snapshot write, or missing accepted-list/export state after accept -> Kotlin/Android adapter or scanner smoke failure
 - SDK-NEG-0017: WASM/mobile-web client package stale glue, failed WASM build/load, unsupported workflow fixture refs, browser/Node fixture behavior drift, raw protocol API exposure, or generated-output dirtiness -> `scripts/sdk/check_wasm_package.sh` failure
 - SDK-NEG-0017a: WASM/mobile-web adapter missing exported snapshot, unavailable IndexedDB persistence, hidden trust lookup, secret snapshot/trust logging, accepted-record write before verified accept, or rejected trust-anchor snapshot write -> WASM browser adapter or scanner smoke failure
-- SDK-NEG-0018: portable identity lifecycle duplicate root creation, malformed bundle import, unsupported bundle version, missing identity, CSPRNG failure, unauthorized active device, unknown device revoke, or root revoke -> explicit `SDK_ERR_*` rejection without partial mutation
+- SDK-NEG-0018: portable identity lifecycle duplicate root creation, replacement-root identity import, malformed bundle import, unsupported bundle version, missing identity, CSPRNG failure, unauthorized active device, unknown device revoke, or root revoke -> explicit `SDK_ERR_*` rejection without partial mutation
 - SDK-NEG-0019: portable pairing malformed envelope, invalid envelope version/transfer/id, malformed embedded identity bundle, replay into the same identity, or conflicting existing identity -> `Rejected` or `AlreadyPaired` with atomic store semantics
 - SDK-NEG-0020: portable sync bundle malformed payload/version, malformed embedded identity, malformed accepted scan/event rows, forged lifecycle event ID/type/payload/sequence, identity root conflict, or repeated import -> `Rejected` or `AlreadyImported` with atomic store semantics
 - SDK-NEG-0021: expanded generated SDK surface missing identity/device/pairing/sync/snapshot symbols or exposing lifecycle workflows only in one platform wrapper -> generated binding or platform package check failure

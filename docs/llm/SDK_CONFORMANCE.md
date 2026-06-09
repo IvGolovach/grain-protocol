@@ -28,6 +28,8 @@ Expected contract:
 - pass when all SDK-INV checks succeed
 - deterministic JSON summary with `total`, `failed`, and per-check status
 - SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0032` and `SDK-AI-000` through `SDK-AI-008`
+- identity import rejects non-derived key IDs, duplicate device keys, unauthorized active keys, replacement roots, and invalid sequence-state values before mutation
+- raw CBOR-seq JSON export rejects non-finite, fractional, and unsafe numeric values before bytes are emitted
 
 ## Portable client core
 

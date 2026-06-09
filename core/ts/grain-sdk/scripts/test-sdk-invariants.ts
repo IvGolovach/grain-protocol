@@ -389,6 +389,42 @@ async function run(): Promise<number> {
         mutate(bundle: IdentityBundleV1): void {
           bundle.root_pub_b64 = "YQ=";
         }
+      },
+      {
+        label: "root_pub_b64 does not derive root_kid",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.root_pub_b64 = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
+        }
+      },
+      {
+        label: "device ak does not derive from pub_b64",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.device_keys[0].ak = "0".repeat(32);
+        }
+      },
+      {
+        label: "duplicate device key ak",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.device_keys.push(cloneJson(bundle.device_keys[0]));
+        }
+      },
+      {
+        label: "active key is not authorized",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.active_ak = "f".repeat(32);
+        }
+      },
+      {
+        label: "seq_state is not a u64 decimal",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.seq_state[bundle.root_kid] = "1.5";
+        }
+      },
+      {
+        label: "seq_state has non-canonical leading zeros",
+        mutate(bundle: IdentityBundleV1): void {
+          bundle.seq_state[bundle.root_kid] = "007";
+        }
       }
     ]) {
       const invalidBundle = cloneJson(validIdentityBundle);
@@ -493,6 +529,59 @@ async function run(): Promise<number> {
     await replacementSeed.identity.createRoot("replacement-root");
     const replacementBundle = await replacementSeed.identity.exportBundle();
 
+    const conflictStore = new InMemorySdkStore();
+    await conflictStore.identity.save(originalBundle);
+    await conflictStore.sequence.importSnapshot(originalBundle.seq_state);
+    const conflictSdk = new GrainSdk(conflictStore);
+    try {
+      await conflictSdk.identity.importBundle(replacementBundle);
+      fail("SDK-NEG-0006 identity import rejects replacement root", "importBundle accepted a different root over an existing identity");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      const conflictBundle = await conflictStore.identity.load();
+      if (code !== "SDK_ERR_IDENTITY_CONFLICT" || stableJson(conflictBundle) !== stableJson(originalBundle)) {
+        fail("SDK-NEG-0006 identity import rejects replacement root", `unexpected code or state mutation: ${code}`);
+      } else {
+        ok("SDK-NEG-0006 identity import rejects replacement root");
+      }
+    }
+
+    const toctouBase = new InMemorySdkStore();
+    await toctouBase.identity.save(originalBundle);
+    await toctouBase.sequence.importSnapshot(originalBundle.seq_state);
+    let insideAtomicImport = false;
+    let toctouSavedReplacement = false;
+    const toctouStore = withStoreOverrides(toctouBase, {
+      atomic: async (mutation) => {
+        insideAtomicImport = true;
+        try {
+          return await toctouBase.atomic(mutation);
+        } finally {
+          insideAtomicImport = false;
+        }
+      },
+      identity: {
+        load: async () => (insideAtomicImport ? originalBundle : null),
+        save: async (bundle: IdentityBundleV1) => {
+          toctouSavedReplacement = true;
+          await toctouBase.identity.save(bundle);
+        }
+      }
+    });
+    const toctouSdk = new GrainSdk(toctouStore);
+    try {
+      await toctouSdk.identity.importBundle(replacementBundle);
+      fail("SDK-NEG-0006 identity import checks existing root inside atomic", "importBundle accepted stale pre-atomic root state");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      const toctouBundle = await toctouBase.identity.load();
+      if (code !== "SDK_ERR_IDENTITY_CONFLICT" || toctouSavedReplacement || stableJson(toctouBundle) !== stableJson(originalBundle)) {
+        fail("SDK-NEG-0006 identity import checks existing root inside atomic", `unexpected code or state mutation: ${code}`);
+      } else {
+        ok("SDK-NEG-0006 identity import checks existing root inside atomic");
+      }
+    }
+
     const emptyLabelSeed = new GrainSdk();
     await emptyLabelSeed.identity.createRoot("");
     await emptyLabelSeed.identity.addDeviceKey("");
@@ -515,6 +604,8 @@ async function run(): Promise<number> {
     const importRollbackBase = new InMemorySdkStore();
     await importRollbackBase.identity.save(originalBundle);
     await importRollbackBase.sequence.importSnapshot(originalBundle.seq_state);
+    await lifecycleSdk.identity.addDeviceKey("rollback-device");
+    const sameRootReplacementBundle = await lifecycleSdk.identity.exportBundle();
 
     const importRollbackStore = withStoreOverrides(importRollbackBase, {
       sequence: {
@@ -528,7 +619,7 @@ async function run(): Promise<number> {
     const importRollbackSdk = new GrainSdk(importRollbackStore);
 
     try {
-      await importRollbackSdk.identity.importBundle(replacementBundle);
+      await importRollbackSdk.identity.importBundle(sameRootReplacementBundle);
       fail("SDK-INV-0013 identity import rollback", "importBundle accepted a store that fails mid-import");
     } catch {
       const restoredBundle = await importRollbackBase.identity.load();
@@ -541,6 +632,26 @@ async function run(): Promise<number> {
         fail("SDK-INV-0013 identity import rollback", "importBundle left partially imported identity or sequence state");
       } else {
         ok("SDK-INV-0013 identity import rollback");
+      }
+    }
+
+    try {
+      await sdk.events.exportDeterministicCborSeq([
+        {
+          t: "IntakeEvent",
+          ak: "alpha",
+          seq: 3n,
+          payload_cid: "cid:intake:fractional",
+          body: { confidence_score: 0.5 }
+        }
+      ]);
+      fail("SDK-NEG-0007 raw CBOR-seq export rejects fractional numbers", "exportDeterministicCborSeq accepted a fractional JSON number");
+    } catch (err) {
+      const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
+      if (code === "SDK_ERR_CBORSEQ_UNSUPPORTED_NUMBER") {
+        ok("SDK-NEG-0007 raw CBOR-seq export rejects fractional numbers");
+      } else {
+        fail("SDK-NEG-0007 raw CBOR-seq export rejects fractional numbers", `unexpected code: ${code}`);
       }
     }
 

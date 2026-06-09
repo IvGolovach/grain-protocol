@@ -25,8 +25,10 @@ This checklist documents what public SDK APIs reject by construction.
 7. Invalid imported transport binary fields
    - non-standard base64 in `objects[*]`, `manifest[*].cap_id_b64`, or `manifest[*].chash_b64`
    - code: `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA`
-8. Invalid imported identity-bundle binary fields
+8. Invalid imported identity-bundle fields
    - non-standard base64 in `root_pub_b64`, `sync_secret_b64`, or `device_keys[*].pub_b64`
+   - `root_kid` or device `ak` values that do not derive from their public keys
+   - duplicate device keys, unauthorized `active_ak`, replacement-root imports, or invalid sequence-state values
    - code: `SDK_ERR_IDENTITY_BUNDLE_INVALID`
 9. Verify call without explicit trust material
    - rejected by `transport.verifyGR1(...)`
@@ -52,6 +54,9 @@ This checklist documents what public SDK APIs reject by construction.
 16. Unknown critical AI candidate extensions
    - quarantined deterministically
    - code: `SDK_ERR_AI_QUARANTINED_UNKNOWN_CRITICAL`
+17. Raw CBOR-seq JSON export with unsupported numeric values
+   - non-finite, fractional, or unsafe JavaScript numbers are rejected before export
+   - code: `SDK_ERR_CBORSEQ_UNSUPPORTED_NUMBER`
 
 ## Consistency guarantees
 

@@ -149,19 +149,17 @@ function encodeJsonValue(value: Json, out: number[]): void {
   }
 
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) {
-      throw new SdkError("SDK_ERR_INTERNAL", "exportDeterministicCborSeq cannot encode non-finite numbers");
+    if (!Number.isFinite(value) || !Number.isSafeInteger(value)) {
+      throw new SdkError(
+        "SDK_ERR_CBORSEQ_UNSUPPORTED_NUMBER",
+        "exportDeterministicCborSeq only supports finite safe integers"
+      );
     }
-    if (Number.isSafeInteger(value)) {
-      if (value >= 0) {
-        encodeUnsigned(BigInt(value), out);
-      } else {
-        encodeNegative(BigInt(value), out);
-      }
-      return;
+    if (value >= 0) {
+      encodeUnsigned(BigInt(value), out);
+    } else {
+      encodeNegative(BigInt(value), out);
     }
-
-    pushFloat64(value, out);
     return;
   }
 
@@ -219,13 +217,6 @@ function encodeUnsigned(value: bigint, out: number[]): void {
 
 function encodeNegative(value: bigint, out: number[]): void {
   writeTypeArg(1, -1n - value, out);
-}
-
-function pushFloat64(value: number, out: number[]): void {
-  out.push(0xfb);
-  const buf = Buffer.allocUnsafe(8);
-  buf.writeDoubleBE(value, 0);
-  pushBytes(out, buf);
 }
 
 function writeTypeArg(major: number, value: bigint, out: number[]): void {

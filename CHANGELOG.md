@@ -12,6 +12,7 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
   - added a repo-local no-device Food pilot proof pack that appends the Food Profile fixture through the TypeScript SDK, checks reducer output, generates a reference issuer QR, and validates a safe local report.
   - aligned TypeScript COSE/GR1 verification with the strict issuer profile: protected `kid` must match `first16(SHA-256(pubkey))`, and `verifyGR1()` now rejects signed payloads that are not strict matching `ServingOffer` records.
   - made TypeScript base64 decoding strict so malformed standard-base64 fields reject with `GRAIN_ERR_SCHEMA` instead of being silently decoded by Node.
+  - hardened TypeScript SDK import/export boundaries so identity bundle imports reject non-derived root/device key IDs, duplicate device keys, unauthorized active keys, replacement roots, and invalid sequence state before mutation, while raw CBOR-seq JSON export rejects non-finite, fractional, or unsafe numeric values.
   - aligned Rust and TypeScript E2E decrypt precedence so nonce profile mismatches are reported before AEAD authentication, and added a separate AEAD tamper vector.
   - added regression scripts for base64 and E2E diagnostic contracts to developer verify, CI, and release-evidence paths.
   - hardened starter/reference app smoke coverage for safe export summaries, snapshot restore, default trust anchors, and Android/iOS/Web starter flows.
