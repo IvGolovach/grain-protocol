@@ -13,6 +13,8 @@ Any ambiguity becomes a forced-major risk.
 
 ## Decision
 Grain v0.1 uses COSE_Sign1 untagged, Ed25519 (-19) only.
+`-19` is the fully specified COSE Ed25519 algorithm identifier registered by RFC 9864 and the IANA COSE Algorithms registry.
+The deprecated polymorphic EdDSA (-8) identifier is not an alias for this profile.
 Protected headers MUST be exactly {1:-19, 4:kid}.
 external_aad MUST be empty, unprotected MUST be {}.
 COSE bytes MUST be deterministic; tag18 is forbidden.
@@ -27,3 +29,10 @@ See `docs/human/rationale/design-choices.md` and project discussion history.
 ## Consequences
 - Positive: reproducible behavior across Rust/TS/Swift/Kotlin.
 - Negative: no algorithm negotiation in v0.1; extensions must use new profiles/majors.
+
+## References
+- RFC 9864, Sections 2.2 and 4.2.1: fully specified Ed25519 COSE algorithm identifier `-19`.
+  https://www.rfc-editor.org/rfc/rfc9864.html#section-2.2
+  https://www.rfc-editor.org/rfc/rfc9864.html#section-4.2.1
+- IANA COSE Algorithms registry: `Ed25519` value `-19` is Recommended; polymorphic `EdDSA` value `-8` is Deprecated.
+  https://www.iana.org/assignments/cose/cose.xhtml#algorithms

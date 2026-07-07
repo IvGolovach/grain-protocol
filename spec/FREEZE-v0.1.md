@@ -24,6 +24,7 @@ This statement is human-oriented. The normative rules live in `spec/NES-v0.1.md`
 ### Signatures (COSE)
 - COSE_Sign1 narrow profile.
 - Ed25519 (-19) only.
+  This is the fully specified COSE Ed25519 algorithm identifier, not the deprecated polymorphic EdDSA (-8) identifier.
 - Deterministic COSE bytes.
 - external_aad empty; unprotected header = {}.
 - Protected headers exact: {1:-19, 4:kid}.
