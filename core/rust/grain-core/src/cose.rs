@@ -203,8 +203,9 @@ pub fn verify_cose_sign1_payload(
 }
 
 fn validate_strict_ed25519_inputs(pub_key: &[u8], sig_bytes: &[u8]) -> GrainResult<()> {
-    debug_assert_eq!(pub_key.len(), 32);
-    debug_assert_eq!(sig_bytes.len(), 64);
+    if pub_key.len() != 32 || sig_bytes.len() != 64 {
+        return Err(GrainError::from_diag(Diag::CoseProfile));
+    }
 
     let r_bytes = &sig_bytes[..32];
     let s_bytes = &sig_bytes[32..];
@@ -330,5 +331,14 @@ mod tests {
         let err = verify_cose_sign1_payload(&cose, &pub_key, &[]).unwrap_err();
 
         assert_eq!(err.diag(), Diag::CoseProfile);
+    }
+
+    #[test]
+    fn strict_ed25519_input_validator_rejects_bad_lengths() {
+        let bad_pub_key = validate_strict_ed25519_inputs(&[0u8; 31], &[0u8; 64]).unwrap_err();
+        let bad_sig = validate_strict_ed25519_inputs(&[0u8; 32], &[0u8; 63]).unwrap_err();
+
+        assert_eq!(bad_pub_key.diag(), Diag::CoseProfile);
+        assert_eq!(bad_sig.diag(), Diag::CoseProfile);
     }
 }
