@@ -121,6 +121,8 @@ Signatures MUST use **COSE_Sign1** (untagged; tag 18 MUST NOT be used).
 
 ### 5.2 Algorithms (MUST)
 - alg MUST be Ed25519 (-19).
+  `-19` is the fully specified COSE Ed25519 algorithm identifier registered by RFC 9864 and the IANA COSE Algorithms registry.
+  The deprecated polymorphic EdDSA (-8) identifier is not an alias for this v0.1 profile.
 
 ### 5.3 Deterministic COSE bytes (MUST)
 COSE structures MUST be deterministic-encoded CBOR.

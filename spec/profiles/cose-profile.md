@@ -12,6 +12,8 @@ Grain uses COSE as a signature container. COSE structures are **not** DAG-CBOR p
 ## 2. Algorithm
 
 - alg MUST be Ed25519 (-19).
+- `-19` is the fully specified COSE Ed25519 algorithm identifier registered by RFC 9864 and the IANA COSE Algorithms registry.
+- The deprecated polymorphic EdDSA (-8) identifier is not an alias for this v0.1 profile.
 
 ## 3. Deterministic COSE bytes
 
@@ -33,4 +35,3 @@ Any additional protected or unprotected header fields MUST be rejected in v0.1 c
 - kid MUST be first16bytes(SHA-256(raw_pubkey)).
 
 If a pubkey/kid pairing is inconsistent, the corresponding grant MUST be rejected.
-
