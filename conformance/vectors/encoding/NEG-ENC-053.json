@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_NONCANONICAL"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "oWFh+BQ="
+  },
+  "meta": {
+    "desc": "Strict DAG-CBOR protocol objects must reject non-well-formed two-byte simple values below 32."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-ENC-053"
+}

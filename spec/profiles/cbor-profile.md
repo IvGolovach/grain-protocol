@@ -9,6 +9,7 @@ This document is normative for Grain Protocol v0.1.
 - Decoders MUST reject duplicate map keys at any nesting level.
 - Definite length items only (no indefinite length).
 - Floats MUST NOT appear.
+- Simple values other than `false`, `true`, and `null` MUST NOT appear in protocol objects.
 
 ## 2. Tags
 
