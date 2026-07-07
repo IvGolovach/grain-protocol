@@ -82,6 +82,19 @@
         {"kind": "path", "path": "tools/ci/test_check_dependabot_policy.py"},
         {"kind": "path", "path": ".github/workflows/dependabot-automerge.yml"}
       ]
+    },
+    {
+      "id": "GRAIN-SEC-10",
+      "title": "COSE Ed25519 verification rejects weak public keys before accepting signatures",
+      "evidence": [
+        {"kind": "vector", "id": "NEG-COSE-030", "path": "conformance/vectors/cose/NEG-COSE-030.json"},
+        {"kind": "vector", "id": "NEG-COSE-031", "path": "conformance/vectors/cose/NEG-COSE-031.json"},
+        {"kind": "vector", "id": "NEG-COSE-032", "path": "conformance/vectors/cose/NEG-COSE-032.json"},
+        {"kind": "vector", "id": "NEG-COSE-033", "path": "conformance/vectors/cose/NEG-COSE-033.json"},
+        {"kind": "vector", "id": "NEG-COSE-034", "path": "conformance/vectors/cose/NEG-COSE-034.json"},
+        {"kind": "path", "path": "core/rust/grain-core/src/cose.rs"},
+        {"kind": "path", "path": "core/ts/grain-ts-core/src/ops/cose.ts"}
+      ]
     }
   ]
 }

@@ -20,7 +20,10 @@ You only need:
 4. Keep integer semantics deterministic (`BigInt` in JS/TS; no float fallbacks).
 5. Preserve exact HKDF label bytes (`0x00` separators are real bytes, not escaped text).
 6. Bind E2E AAD to raw `cap_id` bytes.
-7. Keep deterministic diagnostics by error codes; free-text is non-normative.
+7. Enforce strict Ed25519 COSE inputs before host verification: reject weak
+   public keys, small-order `R`, non-canonical compressed point encodings, and
+   non-canonical signature scalars.
+8. Keep deterministic diagnostics by error codes; free-text is non-normative.
 
 ## Minimal boot path
 

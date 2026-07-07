@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUL1hdKfBbhrwcnKWapwHHIqgV25vbmNhbm9uaWNhbC1wdWJsaWMta2V5WEAB5lWcmqMBMKwheDxse9pf74paqjpDCvULdUp6pcFc9AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "external_aad_b64": "",
+    "pub_b64": "7f///////////////////////////////////////38="
+  },
+  "meta": {
+    "desc": "Raw public key MUST be a canonical compressed Edwards-y encoding; y == p must reject."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-034"
+}

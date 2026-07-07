@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUIJaoWZaNMq8xsQ/jP3RvsagWBhub25jYW5vbmljYWwtc2lnbmF0dXJlLXNYQAHmVZyaowEwrCF4PGx72l/vilqqOkMK9Qt1SnqlwVz07dP1XBpjEljWnPei3vneFAAAAAAAAAAAAAAAAAAAABA=",
+    "external_aad_b64": "",
+    "pub_b64": "YHqypLfKbLygpiN7hlth/fzXA25wsf2wOp3LCN5uhas="
+  },
+  "meta": {
+    "desc": "Signature S MUST be a canonical Ed25519 scalar; S == L must reject."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-033"
+}

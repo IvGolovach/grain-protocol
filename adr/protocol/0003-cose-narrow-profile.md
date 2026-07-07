@@ -18,10 +18,15 @@ The deprecated polymorphic EdDSA (-8) identifier is not an alias for this profil
 Protected headers MUST be exactly {1:-19, 4:kid}.
 external_aad MUST be empty, unprotected MUST be {}.
 COSE bytes MUST be deterministic; tag18 is forbidden.
+Ed25519 verification inputs MUST be strict: public keys and signature R values
+must use canonical compressed Edwards-y encodings and must not encode
+small-order points; signature S must be a canonical scalar in the Ed25519
+basepoint-order range.
 
 ## Rationale
 COSE provides standardized signature framing. Narrowing the profile reduces interop complexity and eliminates header-policy ambiguity.
 Deterministic encoding prevents signature malleability and enables reproducible attestation IDs if needed.
+Strict Ed25519 input checks prevent library-dependent weak-key and point-encoding acceptance from becoming part of the protocol.
 
 ## Alternatives considered
 See `docs/human/rationale/design-choices.md` and project discussion history.

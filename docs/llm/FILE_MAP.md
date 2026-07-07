@@ -13,7 +13,7 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
 3. `conformance/vectors/`
    - Executable release gate and interop criterion in strict mode.
 4. `spec/profiles/`
-   - Normative CBOR / COSE / E2E / QR profile details.
+   - Normative CBOR / COSE / E2E / QR profile details, including strict Ed25519 COSE verification inputs.
 5. `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
    - Freeze boundary, scope boundary, interop claim boundary, and RC governance.
 6. `docs/llm/*`, including `DOC_SYNC.md`, `SDK_FILE_MAP.md`, `SDK_INVARIANTS.md`, `SDK_EDGE_CASES.md`, `SDK_CONFORMANCE.md`, `PORTING.md`, `DOMAIN_ADAPTERS.md`, `PROHIBITION_ZONE.md`

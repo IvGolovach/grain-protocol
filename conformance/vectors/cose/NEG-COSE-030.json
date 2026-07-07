@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUP/h6gjzr0Q7Wi1kl8m3xaegUHdlYWsta2V5LWZvcmdlcnlYQAA3iSl84C3vovS8djXR186ZuW1265HTH5BRAWdN2rcgBQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "external_aad_b64": "",
+    "pub_b64": "7P///////////////////////////////////////38="
+  },
+  "meta": {
+    "desc": "Weak Ed25519 public keys MUST reject even when ordinary Ed25519 verification accepts the forged signature; v0.1 requires strict, non-weak Ed25519 verification."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-030"
+}
