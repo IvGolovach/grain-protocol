@@ -300,9 +300,17 @@ impl<'a> Parser<'a> {
                 20 => Ok(CborValue::Bool(false)),
                 21 => Ok(CborValue::Bool(true)),
                 22 => Ok(CborValue::Null),
-                23 => Ok(CborValue::Undefined),
+                23 => {
+                    if self.opts.dag_cbor_strict {
+                        return Err(ParseFail::Diag(Diag::NonCanonical));
+                    }
+                    Ok(CborValue::Undefined)
+                }
                 24 => {
                     let v = self.read_u8()?;
+                    if v < 32 || self.opts.dag_cbor_strict {
+                        return Err(ParseFail::Diag(Diag::NonCanonical));
+                    }
                     Ok(CborValue::Simple(v))
                 }
                 25 | 26 | 27 => {
@@ -318,8 +326,14 @@ impl<'a> Parser<'a> {
                     let _ = self.read_exact(n)?;
                     Err(ParseFail::Diag(Diag::NonCanonical))
                 }
+                28..=30 => Err(ParseFail::Diag(Diag::NonCanonical)),
                 31 => Err(ParseFail::Diag(Diag::NonCanonical)),
-                v => Ok(CborValue::Simple(v)),
+                v => {
+                    if self.opts.dag_cbor_strict {
+                        return Err(ParseFail::Diag(Diag::NonCanonical));
+                    }
+                    Ok(CborValue::Simple(v))
+                }
             },
             _ => Err(ParseFail::InvalidInitial),
         }

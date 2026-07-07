@@ -11,6 +11,11 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-ENC-020: forbidden tag (not 42) in protocol object -> REJECT
 - NEG-ENC-030: set-array order drift -> REJECT
 - NEG-ENC-040: unknown top-level key -> REJECT
+- NEG-ENC-050: `undefined` simple value in protocol object -> REJECT
+- NEG-ENC-051: unassigned simple value in protocol object -> REJECT
+- NEG-ENC-052: extended simple value in protocol object -> REJECT
+- NEG-ENC-053: non-well-formed two-byte simple value below 32 -> REJECT
+- NEG-ENC-054: reserved simple-value additional information -> REJECT
 
 ## UTF-8 traps
 - NEG-UTF8-WA-0001: NFC/NFD ordering trap in set-array -> REJECT (raw UTF-8 ordering enforced)

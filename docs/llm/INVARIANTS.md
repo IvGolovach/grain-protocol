@@ -14,7 +14,7 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
 
 - INV-ENC-001: Protocol objects MUST be strict DAG-CBOR; reject non-canonical.  
   Ref: NES §3.2; spec/profiles/cbor-profile.md  
-  Vectors: NEG-ENC-001, NEG-ENC-002
+  Vectors: NEG-ENC-001, NEG-ENC-002, NEG-ENC-050, NEG-ENC-051, NEG-ENC-052, NEG-ENC-053, NEG-ENC-054
 
 - INV-ENC-002: Decoders MUST reject duplicate map keys at any nesting level.  
   Ref: NES §3.3  

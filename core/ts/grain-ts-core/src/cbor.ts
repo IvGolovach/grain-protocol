@@ -272,9 +272,17 @@ function parseItem(st: ParserState, depth: number): CborNode {
     if (ai === 20) return { kind: "bool", value: false };
     if (ai === 21) return { kind: "bool", value: true };
     if (ai === 22) return { kind: "null" };
-    if (ai === 23) return { kind: "undef" };
+    if (ai === 23) {
+      if (st.options.dagCborStrict) {
+        throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+      }
+      return { kind: "undef" };
+    }
     if (ai === 24) {
       const v = readU8(st, "GRAIN_ERR_NONCANONICAL");
+      if (v < 32 || st.options.dagCborStrict) {
+        throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+      }
       return { kind: "simple", value: v };
     }
     if (ai === 25) {
@@ -296,6 +304,12 @@ function parseItem(st: ParserState, depth: number): CborNode {
       return { kind: "f", value: decodeFloat64(readExact(st, 8, "GRAIN_ERR_NONCANONICAL")) };
     }
     if (ai === 31) {
+      throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+    }
+    if (ai >= 28 && ai <= 30) {
+      throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
+    }
+    if (st.options.dagCborStrict) {
       throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
     }
     return { kind: "simple", value: ai };
