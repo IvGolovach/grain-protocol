@@ -188,9 +188,25 @@ function isCanonicalEdwardsY(bytes: Uint8Array): boolean {
   if (bytes.length !== 32) {
     return false;
   }
+  const signBitSet = (bytes[31] & 0x80) !== 0;
   const y = Uint8Array.from(bytes);
   y[31] &= 0x7f;
-  return leBytesLessThan(y, ED25519_FIELD_P_LE);
+  if (!leBytesLessThan(y, ED25519_FIELD_P_LE)) {
+    return false;
+  }
+
+  // RFC 8032 point decoding rejects x=0 with the x-sign bit set. On
+  // Edwards25519, x=0 only when y is 1 or -1.
+  return !(signBitSet && edwardsYHasZeroX(y));
+}
+
+function edwardsYHasZeroX(y: Uint8Array): boolean {
+  const isIdentity = y[0] === 1 && y.subarray(1).every((byte) => byte === 0);
+  const isNegativeIdentity =
+    y[0] === 0xec &&
+    y.subarray(1, 31).every((byte) => byte === 0xff) &&
+    y[31] === 0x7f;
+  return isIdentity || isNegativeIdentity;
 }
 
 function isSmallOrderEdwardsEncoding(bytes: Uint8Array): boolean {

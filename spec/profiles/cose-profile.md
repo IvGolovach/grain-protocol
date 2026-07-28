@@ -42,6 +42,8 @@ Implementations MUST reject Ed25519 inputs that are validly shaped COSE but not
 strict Ed25519 verification inputs:
 
 - raw_pubkey MUST be a canonical compressed Edwards-y encoding.
+- For both raw_pubkey and signature R, a compressed Edwards-y encoding with
+  x = 0 MUST have its x-sign bit clear.
 - raw_pubkey MUST NOT encode a small-order point.
 - signature R (the first 32 bytes of the 64-byte Ed25519 signature) MUST be a
   canonical compressed Edwards-y encoding.

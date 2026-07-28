@@ -92,6 +92,7 @@
         {"kind": "vector", "id": "NEG-COSE-032", "path": "conformance/vectors/cose/NEG-COSE-032.json"},
         {"kind": "vector", "id": "NEG-COSE-033", "path": "conformance/vectors/cose/NEG-COSE-033.json"},
         {"kind": "vector", "id": "NEG-COSE-034", "path": "conformance/vectors/cose/NEG-COSE-034.json"},
+        {"kind": "vector", "id": "NEG-COSE-035", "path": "conformance/vectors/cose/NEG-COSE-035.json"},
         {"kind": "path", "path": "core/rust/grain-core/src/cose.rs"},
         {"kind": "path", "path": "core/ts/grain-ts-core/src/ops/cose.ts"}
       ]

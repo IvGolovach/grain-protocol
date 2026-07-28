@@ -22,7 +22,8 @@ Treat the conformance vectors as the final behavior check. Implementations shoul
 - COSE verification must enforce narrow profile and deterministic-bytes checks.
 - COSE Ed25519 verification must reject weak keys, small-order signature `R`,
   non-canonical compressed point encodings, and non-canonical signature scalars
-  before relying on host crypto-library acceptance.
+  before relying on host crypto-library acceptance. Point decoding must also
+  reject x=0 when the encoded x-sign bit is set.
 
 ## High-risk implementation traps
 

@@ -225,10 +225,24 @@ fn is_canonical_edwards_y(bytes: &[u8]) -> bool {
     if bytes.len() != 32 {
         return false;
     }
+    let sign_bit_set = bytes[31] & 0x80 != 0;
     let mut y = [0u8; 32];
     y.copy_from_slice(bytes);
     y[31] &= 0x7f;
-    le_bytes_less_than(&y, &ED25519_FIELD_P_LE)
+    if !le_bytes_less_than(&y, &ED25519_FIELD_P_LE) {
+        return false;
+    }
+
+    // RFC 8032 point decoding rejects x=0 with the x-sign bit set. On
+    // Edwards25519, x=0 only when y is 1 or -1.
+    !(sign_bit_set && edwards_y_has_zero_x(&y))
+}
+
+fn edwards_y_has_zero_x(y: &[u8; 32]) -> bool {
+    let is_identity = y[0] == 1 && y[1..].iter().all(|byte| *byte == 0);
+    let is_negative_identity =
+        y[0] == 0xec && y[1..31].iter().all(|byte| *byte == 0xff) && y[31] == 0x7f;
+    is_identity || is_negative_identity
 }
 
 fn is_small_order_edwards_encoding(bytes: &[u8]) -> bool {
@@ -340,5 +354,16 @@ mod tests {
 
         assert_eq!(bad_pub_key.diag(), Diag::CoseProfile);
         assert_eq!(bad_sig.diag(), Diag::CoseProfile);
+    }
+
+    #[test]
+    fn canonical_edwards_y_rejects_negative_zero_aliases() {
+        let mut identity_alias = ED25519_SMALL_ORDER_ENCODINGS[0];
+        identity_alias[31] |= 0x80;
+        let mut negative_identity_alias = ED25519_SMALL_ORDER_ENCODINGS[4];
+        negative_identity_alias[31] |= 0x80;
+
+        assert!(!is_canonical_edwards_y(&identity_alias));
+        assert!(!is_canonical_edwards_y(&negative_identity_alias));
     }
 }

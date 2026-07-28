@@ -66,7 +66,7 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
 
 - INV-COSE-005: Ed25519 verification inputs MUST be strict; weak public keys, small-order signature R values, non-canonical compressed point encodings, and non-canonical signature scalars reject.
   Ref: spec/profiles/cose-profile.md §6
-  Vectors: NEG-COSE-030, NEG-COSE-031, NEG-COSE-032, NEG-COSE-033, NEG-COSE-034
+  Vectors: NEG-COSE-030, NEG-COSE-031, NEG-COSE-032, NEG-COSE-033, NEG-COSE-034, NEG-COSE-035
 
 ## Ledger semantics
 

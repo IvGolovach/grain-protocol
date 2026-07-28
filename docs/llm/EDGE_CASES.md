@@ -36,6 +36,7 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-COSE-032: non-canonical Ed25519 signature R -> REJECT
 - NEG-COSE-033: non-canonical Ed25519 signature S -> REJECT
 - NEG-COSE-034: non-canonical Ed25519 public key -> REJECT
+- NEG-COSE-035: Ed25519 public key with x=0 and x-sign bit set -> REJECT
 - NEG-COSE-WA-0002: protected `kid` not derived from verification pubkey -> REJECT
 
 ## Ledger semantics

@@ -22,7 +22,7 @@ You only need:
 6. Bind E2E AAD to raw `cap_id` bytes.
 7. Enforce strict Ed25519 COSE inputs before host verification: reject weak
    public keys, small-order `R`, non-canonical compressed point encodings, and
-   non-canonical signature scalars.
+   non-canonical signature scalars, including x=0 with the x-sign bit set.
 8. Keep deterministic diagnostics by error codes; free-text is non-normative.
 
 ## Minimal boot path
