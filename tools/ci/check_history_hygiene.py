@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 CYRILLIC_RE = re.compile(r"[\u0400-\u04FF]")
+PRIVATE_REPO_SLUG_BOUNDARY = r"(?![A-Za-z0-9_.-])"
 
 
 PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -24,13 +25,16 @@ PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "private-repo-slug",
         re.compile(
-            "|".join(
+            "(?:"
+            + "|".join(
                 (
-                    r"\b[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?\b",
-                    r"\bgit@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?\b",
-                    r"\bhttps://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?\b",
+                    r"\b[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?",
+                    r"\bgit@github\.com:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?",
+                    r"\bhttps://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+-private(?:\.git)?",
                 )
-            ),
+            )
+            + ")"
+            + PRIVATE_REPO_SLUG_BOUNDARY,
             re.IGNORECASE,
         ),
     ),

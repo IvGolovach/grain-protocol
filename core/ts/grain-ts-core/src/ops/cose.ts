@@ -11,6 +11,24 @@ import {
 import { bytesEq, decodeB64, sha256 } from "../utils.js";
 
 const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
+const ED25519_FIELD_P_LE = Buffer.from(
+  "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+  "hex"
+);
+const ED25519_SCALAR_L_LE = Buffer.from(
+  "edd3f55c1a631258d69cf7a2def9de1400000000000000000000000000000010",
+  "hex"
+);
+const ED25519_SMALL_ORDER_ENCODINGS = [
+  "0100000000000000000000000000000000000000000000000000000000000000",
+  "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+  "0000000000000000000000000000000000000000000000000000000000000080",
+  "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+  "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+  "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+  "0000000000000000000000000000000000000000000000000000000000000000",
+  "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa"
+].map((hex) => Buffer.from(hex, "hex"));
 
 export function opCoseVerify(input: Record<string, Json>): OperationActual {
   const coseBytes = decodeB64(input.cose_b64);
@@ -71,6 +89,8 @@ export function verifyCoseSign1Payload(
   if (pubKey.length !== 32) {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
+  validateStrictEd25519Inputs(pubKey, sigBytes);
+
   const expectedKid = sha256(pubKey).slice(0, 16);
   if (!bytesEq(protectedKid, expectedKid)) {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
@@ -148,6 +168,64 @@ function validateProtectedHeaders(node: CborNode): Uint8Array {
     throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
   }
   return protectedKid;
+}
+
+function validateStrictEd25519Inputs(pubKey: Uint8Array, sigBytes: Uint8Array): void {
+  const rBytes = sigBytes.subarray(0, 32);
+  const sBytes = sigBytes.subarray(32, 64);
+  if (
+    !isCanonicalEdwardsY(pubKey) ||
+    !isCanonicalEdwardsY(rBytes) ||
+    isSmallOrderEdwardsEncoding(pubKey) ||
+    isSmallOrderEdwardsEncoding(rBytes) ||
+    !leBytesLessThan(sBytes, ED25519_SCALAR_L_LE)
+  ) {
+    throw new GrainDiagError("GRAIN_ERR_COSE_PROFILE");
+  }
+}
+
+function isCanonicalEdwardsY(bytes: Uint8Array): boolean {
+  if (bytes.length !== 32) {
+    return false;
+  }
+  const signBitSet = (bytes[31] & 0x80) !== 0;
+  const y = Uint8Array.from(bytes);
+  y[31] &= 0x7f;
+  if (!leBytesLessThan(y, ED25519_FIELD_P_LE)) {
+    return false;
+  }
+
+  // RFC 8032 point decoding rejects x=0 with the x-sign bit set. On
+  // Edwards25519, x=0 only when y is 1 or -1.
+  return !(signBitSet && edwardsYHasZeroX(y));
+}
+
+function edwardsYHasZeroX(y: Uint8Array): boolean {
+  const isIdentity = y[0] === 1 && y.subarray(1).every((byte) => byte === 0);
+  const isNegativeIdentity =
+    y[0] === 0xec &&
+    y.subarray(1, 31).every((byte) => byte === 0xff) &&
+    y[31] === 0x7f;
+  return isIdentity || isNegativeIdentity;
+}
+
+function isSmallOrderEdwardsEncoding(bytes: Uint8Array): boolean {
+  return ED25519_SMALL_ORDER_ENCODINGS.some((candidate) => bytesEq(bytes, candidate));
+}
+
+function leBytesLessThan(value: Uint8Array, limit: Uint8Array): boolean {
+  if (value.length !== 32 || limit.length !== 32) {
+    return false;
+  }
+  for (let i = 31; i >= 0; i -= 1) {
+    if (value[i] < limit[i]) {
+      return true;
+    }
+    if (value[i] > limit[i]) {
+      return false;
+    }
+  }
+  return false;
 }
 
 function isTopLevelTag18(bytes: Uint8Array): boolean {

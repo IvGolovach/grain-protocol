@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUAXjOnol3DmrJY2s/qWpVdCgWBhuZWdhdGl2ZS16ZXJvLXB1YmxpYy1rZXlYQFhmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    "external_aad_b64": "",
+    "pub_b64": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA="
+  },
+  "meta": {
+    "desc": "Ed25519 public keys with x=0 and the x-sign bit set MUST reject as non-canonical point encodings."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-035"
+}

@@ -39,6 +39,9 @@ The runner MUST provide a mode where:
 - baseline limits are enforced exactly (CBL)
 - limit exceed returns deterministic `GRAIN_ERR_LIMIT`
 - non-canonical inputs are rejected (not canonicalized implicitly)
+- COSE Ed25519 verification rejects weak public keys, small-order `R`,
+  non-canonical compressed point encodings, and non-canonical signature scalars
+  (`NEG-COSE-030` through `NEG-COSE-035`)
 - vectors are concrete test cases (no placeholder/illustrative vectors)
 
 ## Invariant mapping

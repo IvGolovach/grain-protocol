@@ -27,7 +27,7 @@ class RepoNativeDeveloperPlatformTests(unittest.TestCase):
         module = load_module()
         module.check_all()
 
-    def test_security_pack_requires_all_nine_findings(self) -> None:
+    def test_security_pack_requires_all_ten_findings(self) -> None:
         module = load_module()
         original = module.load_json
         try:

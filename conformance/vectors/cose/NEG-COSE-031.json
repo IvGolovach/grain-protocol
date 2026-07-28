@@ -1,0 +1,19 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_COSE_PROFILE"
+    ],
+    "pass": false
+  },
+  "input": {
+    "cose_b64": "hFWiATIEUIJaoWZaNMq8xsQ/jP3RvsagV3NtYWxsLW9yZGVyLXNpZ25hdHVyZS1yWEABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "external_aad_b64": "",
+    "pub_b64": "YHqypLfKbLygpiN7hlth/fzXA25wsf2wOp3LCN5uhas="
+  },
+  "meta": {
+    "desc": "Signature R MUST NOT encode a small-order Ed25519 point."
+  },
+  "op": "cose_verify",
+  "strict": true,
+  "vector_id": "NEG-COSE-031"
+}

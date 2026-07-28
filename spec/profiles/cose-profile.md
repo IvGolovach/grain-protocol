@@ -35,3 +35,21 @@ Any additional protected or unprotected header fields MUST be rejected in v0.1 c
 - kid MUST be first16bytes(SHA-256(raw_pubkey)).
 
 If a pubkey/kid pairing is inconsistent, the corresponding grant MUST be rejected.
+
+## 6. Ed25519 verification strictness
+
+Implementations MUST reject Ed25519 inputs that are validly shaped COSE but not
+strict Ed25519 verification inputs:
+
+- raw_pubkey MUST be a canonical compressed Edwards-y encoding.
+- For both raw_pubkey and signature R, a compressed Edwards-y encoding with
+  x = 0 MUST have its x-sign bit clear.
+- raw_pubkey MUST NOT encode a small-order point.
+- signature R (the first 32 bytes of the 64-byte Ed25519 signature) MUST be a
+  canonical compressed Edwards-y encoding.
+- signature R MUST NOT encode a small-order point.
+- signature S (the final 32 bytes of the signature) MUST be a canonical scalar
+  with 0 <= S < L, where L is the Ed25519 basepoint order.
+
+Violations are COSE profile violations and MUST reject with
+`GRAIN_ERR_COSE_PROFILE`.

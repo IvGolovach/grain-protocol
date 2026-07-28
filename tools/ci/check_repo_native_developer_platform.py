@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-REQUIRED_SECURITY_IDS = {f"GRAIN-SEC-{idx:02d}" for idx in range(1, 10)}
+REQUIRED_SECURITY_IDS = {f"GRAIN-SEC-{idx:02d}" for idx in range(1, 11)}
 REQUIRED_PROFILE_IDS = {"food-v0.1", "inventory-v0.1", "audit-artifact-v0.1"}
 REQUIRED_INTEROP_LANES = {"rust-strict-full", "typescript-strict-full", "wasm-read-verify-subset"}
 

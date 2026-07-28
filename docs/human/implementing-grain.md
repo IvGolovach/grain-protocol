@@ -20,6 +20,10 @@ Treat the conformance vectors as the final behavior check. Implementations shoul
 - Raw-byte UTF-8 ordering only (no locale/normalization).
 - Strict CBOR scanner must reject duplicate map keys and non-canonical forms.
 - COSE verification must enforce narrow profile and deterministic-bytes checks.
+- COSE Ed25519 verification must reject weak keys, small-order signature `R`,
+  non-canonical compressed point encodings, and non-canonical signature scalars
+  before relying on host crypto-library acceptance. Point decoding must also
+  reject x=0 when the encoded x-sign bit is set.
 
 ## High-risk implementation traps
 
@@ -27,6 +31,8 @@ Treat the conformance vectors as the final behavior check. Implementations shoul
 - String ordering by locale/UTF-16 instead of raw UTF-8 bytes.
 - Numeric domains implemented with JS `number` instead of `BigInt`-safe handling.
 - COSE accepted but not deterministic-bytes checked.
+- COSE delegated entirely to host crypto, accepting weak-key or non-canonical
+  Ed25519 inputs differently across runtimes.
 - HKDF labels with incorrect `0x00` separators.
 - `parse_cborseq_stream_v1` treated as partial-success instead of XOR accept/reject framing verdict.
 - Silent dependency on host toolchain/runtime instead of containerized verify path.
