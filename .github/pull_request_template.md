@@ -45,3 +45,4 @@ If this PR touches any of: encoding / CID / COSE / ledger / E2E / manifest / lim
 - [ ] NES and CDDL are consistent (no drift)
 - [ ] docs/llm updated as needed, including `DOC_SYNC` for contract changes
 - [ ] Rationale documented (ADR or spec rationale)
+- [ ] If the workflow requested full verification, a maintainer approved the protected `full-ci` environment after the final commit

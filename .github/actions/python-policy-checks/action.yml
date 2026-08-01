@@ -5,7 +5,7 @@ inputs:
     description: Run the main ruleset drift check for main.
     required: false
     default: "false"
-  gh_token:
+  ruleset_token:
     description: Token used by the main ruleset drift check.
     required: false
     default: ""
@@ -16,7 +16,7 @@ inputs:
   main_ruleset_contexts:
     description: Comma-separated required status contexts.
     required: false
-    default: python-tooling,rust-core,evidence-bundle,capid-csprng-audit
+    default: CI gate
 runs:
   using: composite
   steps:
@@ -57,9 +57,13 @@ runs:
       shell: bash
       run: python3 tools/ci/check_codeowners_coverage.py
 
-    - name: Check Dependabot automerge policy consistency
+    - name: Check Dependabot update policy consistency
       shell: bash
       run: python3 tools/ci/check_dependabot_policy.py
+
+    - name: Check public CI economy policy
+      shell: bash
+      run: python3 tools/ci/check_ci_economy_policy.py
 
     - name: Check golden image publication policy
       shell: bash
@@ -153,11 +157,18 @@ runs:
       shell: bash
       run: python3 tools/ci/check_sdk_ai_boundary.py
 
+    - name: Require main ruleset drift token (main)
+      if: inputs.run_main_ruleset_drift == 'true' && inputs.ruleset_token == ''
+      shell: bash
+      run: |
+        echo "RULESET_DRIFT_ERR_TOKEN_MISSING: ruleset drift is mandatory on main." >&2
+        exit 1
+
     - name: Check main ruleset drift (main)
-      if: inputs.run_main_ruleset_drift == 'true' && inputs.gh_token != ''
+      if: inputs.run_main_ruleset_drift == 'true' && inputs.ruleset_token != ''
       shell: bash
       env:
-        GH_TOKEN: ${{ inputs.gh_token }}
+        GH_TOKEN: ${{ inputs.ruleset_token }}
       run: |
         set -euo pipefail
         python3 tools/ci/check_branch_protection_drift.py \
@@ -172,6 +183,18 @@ runs:
           --expected-do-not-enforce-on-create false \
           --expected-ruleset-name "main protection" \
           --expected-merge-methods "merge,squash,rebase"
+
+    - name: Check full CI environment drift (main)
+      if: inputs.run_main_ruleset_drift == 'true' && inputs.ruleset_token != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.ruleset_token }}
+      run: |
+        set -euo pipefail
+        python3 tools/ci/check_full_ci_environment.py \
+          --repo "${GITHUB_REPOSITORY}" \
+          --environment full-ci \
+          --expected-reviewer "${GITHUB_REPOSITORY_OWNER}"
 
     - name: Ensure no macOS metadata files
       shell: bash

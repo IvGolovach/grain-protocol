@@ -153,6 +153,7 @@ python3 tools/ci/check_history_hygiene.py
 python3 tools/ci/check_crlf_tracked.py
 python3 tools/ci/check_codeowners_coverage.py
 python3 tools/ci/check_dependabot_policy.py
+python3 tools/ci/check_ci_economy_policy.py
 python3 tools/ci/check_node_runtime_pin.py
 python3 tools/ci/check_toolchain_bootstrap.py
 python3 tools/ci/check_workflow_action_pinning.py

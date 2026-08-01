@@ -1,6 +1,6 @@
 # ADR 0004: Dependabot Automerge Strict Fail-Closed Lane
 
-- Status: Accepted
+- Status: Superseded by `adr/conformance/0006-ci-economy-and-trusted-runners.md`
 - Date: 2026-02-24
 - Related TOR: `TOR-DEPS-STRICT-FINAL`
 

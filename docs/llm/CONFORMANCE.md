@@ -118,17 +118,23 @@ Contract:
 
 ## CI and provenance contract
 
-Required CI contexts on `main`:
-- `python-tooling`
-- `rust-core`
-- `evidence-bundle`
-- `capid-csprng-audit`
+Required CI context on `main`:
+- `CI gate`
 
-Additional CI jobs such as `ts-c01` and `ts-full` still run in CI, but they are
-not separate branch-protection contexts on `main` today.
+`CI gate` is the stable branch-protection contract. It always requires the
+automatic Linux jobs. Every external fork contributor first needs maintainer
+approval before any workflow starts. For code, executable automation, protocol,
+conformance, SDK, script, and unknown PR paths, `CI gate` also requires
+successful protected-environment approval after the Linux graph plus
+`sdk-platform` and `evidence-bundle` jobs. A new commit cancels the old run and
+requires approval again. Pushes to `main` and manual dispatches run the full
+graph, including fuzz and verify-script smoke jobs, with a unique concurrency
+group per non-PR run.
 
 Evidence policy:
 - CI emits commit-bound bundle `evidence-<commit_sha>.zip`
+- PR evidence is emitted only after an explicit full run; every `main` push
+  emits full evidence automatically
 - bundle includes suite summaries, vector manifests/hashes, toolchain/lock hashes, Rust↔TS divergence summaries
 - local `.local-architect-reports/**` are non-normative and MUST NOT be committed
 - containerized portability certify path: `scripts/certify` (strict, clean-tree required, no permissive fallback)

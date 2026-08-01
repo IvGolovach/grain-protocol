@@ -78,10 +78,7 @@ cat >"${payload_file}" <<JSON
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          {"context": "python-tooling"},
-          {"context": "rust-core"},
-          {"context": "evidence-bundle"},
-          {"context": "capid-csprng-audit"}
+          {"context": "CI gate"}
         ]
       }
     }

@@ -109,6 +109,15 @@ npm --prefix runner/typescript run run:wasm-subset
 
 ## Evidence model
 
+Pull requests always run the Linux verification graph. Docs and approved
+metadata-only changes can finish without platform evidence. Code, executable
+automation, protocol, conformance, SDK, script, and unknown paths require a
+maintainer to approve the protected `full-ci` environment after the final
+commit and a successful Linux graph; that approval starts the GitHub-hosted
+macOS SDK job and same-commit evidence bundle. Every push to `main` runs the
+full graph automatically. The public repository does not use persistent
+self-hosted pull-request runners.
+
 `evidence_content.sha256` is computed from deterministic artifacts only:
 
 - vector manifests

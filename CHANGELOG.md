@@ -3,6 +3,11 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- CI economy and dependency maintenance:
+  - replaced four branch-protection contexts with one fail-closed `CI gate` while preserving all underlying Linux, platform SDK, smoke, and evidence checks.
+  - gated macOS and evidence work per PR commit through the protected `full-ci` environment, with automatic full runs on `main` and cancellation of obsolete PR runs.
+  - kept public PR execution on GitHub-hosted runners, required approval for every external fork workflow, and documented the private-executor boundary for any future self-hosted capacity.
+  - moved routine Dependabot updates to monthly grouped PRs, disabled automatic rebases, capped open version PRs, and removed the unused privileged automerge workflow.
 - Repository boundary:
   - kept Grain focused on public protocol, conformance, SDK, template, and contract surfaces by moving first-party production app and broker implementation code outside the public repository.
   - documented the public/private product boundary and trademark posture for downstream app builders.

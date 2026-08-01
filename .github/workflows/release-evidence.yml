@@ -108,6 +108,7 @@ jobs:
 
       - uses: ./.github/actions/rust-core-verification
         with:
+          commit_sha: ${{ github.sha }}
           build_wasm: "true"
 
       - uses: ./.github/actions/setup-node-typescript
@@ -229,6 +230,7 @@ jobs:
 
       - uses: ./.github/actions/build-evidence-bundle
         with:
+          commit_sha: ${{ github.sha }}
           workflow_name: release-evidence
           tag: ${{ github.ref_name }}
           hash_order: c01-first

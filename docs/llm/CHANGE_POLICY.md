@@ -62,8 +62,10 @@ If `conformance/SPEC.md` changes, or if the input/output or diagnostics contract
 
 If a PR changes CI gates, evidence artifacts, branch protection policy, tag namespace policy, or provenance docs:
 - update `docs/human/repository-settings.md`
+- update `docs/human/dependencies-policy.md` when dependency cadence, runner trust, or explicit full-CI approval changes
 - update `MIGRATION.md` when provenance statements change
 - keep required CI context names stable unless governance update is explicit
+- keep `CI gate` fail-closed and do not attach persistent self-hosted pull-request runners to the public repository
 - keep SDK release artifact claims tied to strict same-commit SDK verification and package metadata checks
 - update `docs/llm/DOC_SYNC.md`
 - update `CHANGELOG.md`

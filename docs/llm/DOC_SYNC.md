@@ -95,9 +95,13 @@ Update:
 Update:
 
 - `.github/workflows/*` that changed
+- `docs/human/dependencies-policy.md` when dependency cadence, runner trust, or full-CI approval changes
 - `docs/human/repository-settings.md`
 - `docs/human/release-process.md`
 - `docs/human/portability-pack.md`
+- `docs/llm/CONFORMANCE.md` when required contexts or full-graph conditions change
+- `GOVERNANCE.md` when the live ruleset contract changes
+- a superseding ADR when accepted CI or dependency automation policy changes
 - `docs/human/repro-checklist.md` if clean-clone verification changed
 - `MIGRATION.md` if the repository provenance note changed
 - `docs/llm/CHANGE_POLICY.md`

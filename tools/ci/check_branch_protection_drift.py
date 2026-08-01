@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--branch", default="main")
     parser.add_argument(
         "--expected-contexts",
-        default="python-tooling,rust-core,evidence-bundle,capid-csprng-audit",
+        default="CI gate",
         help="Comma-separated required context names in the default-branch ruleset.",
     )
     parser.add_argument("--require-strict", action="store_true", default=True)
@@ -76,7 +76,7 @@ def main() -> int:
     if not gh_token:
         print(
             "main ruleset drift check failed: GH_TOKEN is missing. "
-            "Provide DEPENDABOT_AUTOMERGE_TOKEN (or equivalent) with repository-ruleset read access.",
+            "Provide a token with repository-ruleset read access.",
             file=sys.stderr,
         )
         return 2
