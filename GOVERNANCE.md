@@ -57,11 +57,14 @@ Current baseline on `main`:
 
 - changes to `main` go through PRs
 - direct pushes to `main` are disabled
-- required checks:
-  - `python-tooling`
-  - `rust-core`
-  - `evidence-bundle`
-  - `capid-csprng-audit`
+- required check: `CI gate`
+- `CI gate` requires the automatic Linux jobs and fails closed
+- for full-scope PRs, `CI gate` also requires successful GitHub-hosted macOS SDK
+  and evidence jobs
+- full-scope PRs require maintainer approval through the protected `full-ci`
+  environment after the final commit before `CI gate` can pass
+- pull-request jobs use GitHub-hosted runners; persistent self-hosted runners
+  are not attached to this public repository
 - required approving reviews: `0`
 - dismiss stale reviews: `true`
 - code owner reviews: `false`

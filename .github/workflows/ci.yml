@@ -4,12 +4,84 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('ci-pr-{0}', github.event.pull_request.number) || format('ci-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
   actions: read
+  pull-requests: read
+
+env:
+  CI_COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
+  scope:
+    name: Scope CI
+    runs-on: ubuntu-latest
+    outputs:
+      full_required: ${{ steps.scope.outputs.full_required }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Classify this exact event
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            python3 tools/ci/classify_ci_scope.py \
+              --event-name "$EVENT_NAME" \
+              --github-output "$GITHUB_OUTPUT"
+          else
+            files_json="$(mktemp)"
+            trap 'rm -f "$files_json"' EXIT
+            gh api --paginate --slurp \
+              "repos/${REPO}/pulls/${PR_NUMBER}/files?per_page=100" > "$files_json"
+
+            python3 tools/ci/classify_ci_scope.py \
+              --event-name "$EVENT_NAME" \
+              --expected-count "$PR_CHANGED_FILES" \
+              --files-json "$files_json" \
+              --github-output "$GITHUB_OUTPUT"
+          fi
+
+  full-ci-approval:
+    name: Approve full CI
+    needs: [scope, python-tooling, capid-csprng-audit, rust-core, ts-c01, ts-full, wasm-smoke]
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      needs.scope.result == 'success' &&
+      needs.scope.outputs.full_required == 'true' &&
+      needs.python-tooling.result == 'success' &&
+      needs.capid-csprng-audit.result == 'success' &&
+      needs.rust-core.result == 'success' &&
+      needs.ts-c01.result == 'success' &&
+      needs.ts-full.result == 'success' &&
+      needs.wasm-smoke.result == 'success'
+    permissions: {}
+    environment:
+      name: full-ci
+      deployment: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record approval for this workflow run
+        run: echo "Full CI approved for ${CI_COMMIT_SHA}."
+
   python-tooling:
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +92,7 @@ jobs:
       - uses: ./.github/actions/python-policy-checks
         with:
           run_main_ruleset_drift: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          gh_token: ${{ secrets.DEPENDABOT_AUTOMERGE_TOKEN }}
+          ruleset_token: ${{ github.token }}
 
       - name: Run Python guard tests
         run: |
@@ -45,6 +117,10 @@ jobs:
           python3 -m unittest tools.ci.test_check_release_train_docs
           python3 -m unittest tools.ci.test_check_workflow_action_pinning
           python3 -m unittest tools.ci.test_check_dependabot_policy
+          python3 -m unittest tools.ci.test_check_ci_economy_policy
+          python3 -m unittest tools.ci.test_check_full_ci_environment
+          python3 -m unittest tools.ci.test_classify_ci_scope
+          python3 -m unittest tools.ci.test_evaluate_ci_gate
           python3 -m unittest tools.ci.test_check_golden_images_policy
 
   capid-csprng-audit:
@@ -70,12 +146,15 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - uses: ./.github/actions/rust-core-verification
+        with:
+          commit_sha: ${{ env.CI_COMMIT_SHA }}
 
       - name: Upload rust suite summary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: rust-suite-summary
           path: artifacts/rust-suite-summary.json
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   ts-c01:
     runs-on: ubuntu-latest
@@ -106,6 +185,7 @@ jobs:
         with:
           name: ts-c01-results
           path: artifacts/*
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   ts-full:
     runs-on: ubuntu-latest
@@ -146,7 +226,7 @@ jobs:
         run: |
           python3 tools/ci/run_runner_suite.py \
             --vectors-root conformance/vectors \
-            --commit-sha "${GITHUB_SHA}" \
+            --commit-sha "${CI_COMMIT_SHA}" \
             --out artifacts/suite-run-ts.json \
             --runner-cmd node runner/typescript/dist/src/cli.js run --strict --vector
 
@@ -206,6 +286,7 @@ jobs:
         with:
           name: ts-full-results
           path: artifacts/*
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   wasm-smoke:
     runs-on: ubuntu-latest
@@ -243,8 +324,20 @@ jobs:
         with:
           name: wasm-smoke-results
           path: artifacts/wasm*
+          retention-days: ${{ github.event_name == 'pull_request' && 14 || 30 }}
 
   sdk-platform:
+    needs: [scope, full-ci-approval]
+    if: >-
+      always() &&
+      needs.scope.result == 'success' &&
+      (
+        github.event_name != 'pull_request' ||
+        (
+          needs.scope.outputs.full_required == 'true' &&
+          needs.full-ci-approval.result == 'success'
+        )
+      )
     runs-on: macos-15
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
@@ -321,32 +414,37 @@ jobs:
         with:
           name: sdk-platform-results
           path: artifacts/sdk-platform
+          retention-days: 30
 
       - name: Upload client SDK release package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: sdk-release-package
           path: artifacts/sdk-release/*
+          retention-days: 30
 
       - name: Upload SDK registry dry-run results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: sdk-registry-dry-run-results
           path: artifacts/sdk-registry-dry-runs
+          retention-days: 30
 
       - name: Upload external client certification
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: external-client-certification
           path: artifacts/sdk-platform/external-client-certification
+          retention-days: 30
 
   fuzz-smoke:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: scope
+    if: needs.scope.result == 'success' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.CI_COMMIT_SHA }}
           fetch-depth: 0
 
       - name: Set up Python
@@ -368,27 +466,39 @@ jobs:
         with:
           name: fuzz-smoke-results
           path: artifacts/fuzz-smoke
+          retention-days: 30
 
   verify-script-smoke:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: scope
+    if: needs.scope.result == 'success' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.CI_COMMIT_SHA }}
+          persist-credentials: false
 
       - name: Build grain-certify container locally
-        run: docker build -f docker/grain-certify.Dockerfile -t grain-certify-ci:${GITHUB_SHA} .
+        run: docker build -f docker/grain-certify.Dockerfile -t "grain-certify-ci:${CI_COMMIT_SHA}" .
 
       - name: Run one-command verify smoke
-        run: ./scripts/verify --image grain-certify-ci:${GITHUB_SHA} --out-dir artifacts/verify-smoke
+        run: ./scripts/verify --image "grain-certify-ci:${CI_COMMIT_SHA}" --out-dir artifacts/verify-smoke
 
       - name: Verify evidence hash exists
         run: test -f artifacts/verify-smoke/evidence/evidence_content.sha256
 
   evidence-bundle:
+    if: >-
+      always() &&
+      needs.python-tooling.result == 'success' &&
+      needs.capid-csprng-audit.result == 'success' &&
+      needs.rust-core.result == 'success' &&
+      needs.ts-c01.result == 'success' &&
+      needs.ts-full.result == 'success' &&
+      needs.wasm-smoke.result == 'success' &&
+      needs.sdk-platform.result == 'success'
     runs-on: ubuntu-latest
-    needs: [python-tooling, capid-csprng-audit, rust-core, ts-c01, ts-full, wasm-smoke, sdk-platform]
+    needs: [scope, python-tooling, capid-csprng-audit, rust-core, ts-c01, ts-full, wasm-smoke, sdk-platform]
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
         with:
@@ -423,6 +533,7 @@ jobs:
 
       - uses: ./.github/actions/build-evidence-bundle
         with:
+          commit_sha: ${{ env.CI_COMMIT_SHA }}
           workflow_name: ci
           include_sdk_suite: "true"
           hash_order: full-first
@@ -430,5 +541,49 @@ jobs:
       - name: Upload evidence bundle
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: evidence-${{ github.sha }}
-          path: artifacts/evidence-${{ github.sha }}.zip
+          name: evidence-${{ env.CI_COMMIT_SHA }}
+          path: artifacts/evidence-${{ env.CI_COMMIT_SHA }}.zip
+          retention-days: 30
+
+  ci-gate:
+    name: CI gate
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - scope
+      - full-ci-approval
+      - python-tooling
+      - capid-csprng-audit
+      - rust-core
+      - ts-c01
+      - ts-full
+      - wasm-smoke
+      - sdk-platform
+      - fuzz-smoke
+      - verify-script-smoke
+      - evidence-bundle
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Evaluate the fail-closed CI contract
+        env:
+          FULL_REQUIRED: ${{ needs.scope.outputs.full_required }}
+        run: |
+          python3 tools/ci/evaluate_ci_gate.py \
+            --event-name "${{ github.event_name }}" \
+            --full-required "${FULL_REQUIRED}" \
+            --job "scope=${{ needs.scope.result }}" \
+            --job "full-ci-approval=${{ needs.full-ci-approval.result }}" \
+            --job "python-tooling=${{ needs.python-tooling.result }}" \
+            --job "capid-csprng-audit=${{ needs.capid-csprng-audit.result }}" \
+            --job "rust-core=${{ needs.rust-core.result }}" \
+            --job "ts-c01=${{ needs.ts-c01.result }}" \
+            --job "ts-full=${{ needs.ts-full.result }}" \
+            --job "wasm-smoke=${{ needs.wasm-smoke.result }}" \
+            --job "sdk-platform=${{ needs.sdk-platform.result }}" \
+            --job "fuzz-smoke=${{ needs.fuzz-smoke.result }}" \
+            --job "verify-script-smoke=${{ needs.verify-script-smoke.result }}" \
+            --job "evidence-bundle=${{ needs.evidence-bundle.result }}"

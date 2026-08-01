@@ -90,9 +90,11 @@ That command proves:
   checkout
 
 The `ci` workflow runs the same strict platform SDK gate in the `sdk-platform`
-job on a Swift 6-capable macOS runner, packages the SDK release artifacts after
-that strict gate, and re-checks the release manifest before final evidence
-build. The `release-evidence` tag workflow runs the same strict SDK gate before
+job on a GitHub-hosted Swift 6-capable macOS runner for every push to `main`, a
+manual workflow dispatch, or a full-scope PR after a maintainer approves the
+protected `full-ci` environment. The job packages SDK release artifacts after
+the strict gate and re-checks the release manifest before the final evidence build. The
+`release-evidence` tag workflow runs the same strict SDK gate before
 attaching SDK source package assets to the GitHub release, so tag consumers can
 audit the SDK package, evidence bundle, and manifest against one commit. After
 downloading release assets, use `tools/ci/check_release_evidence_assets.py` to

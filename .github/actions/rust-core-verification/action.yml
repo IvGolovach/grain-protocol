@@ -1,6 +1,9 @@
 name: Rust core verification
 description: Run the Rust reference implementation tests and conformance suite.
 inputs:
+  commit_sha:
+    description: Exact commit SHA recorded in the Rust suite summary.
+    required: true
   build_wasm:
     description: Build the wasm target after the Rust suite.
     required: false
@@ -8,6 +11,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Validate Rust evidence commit provenance
+      shell: bash
+      env:
+        COMMIT_SHA: ${{ inputs.commit_sha }}
+      run: test -n "${COMMIT_SHA}"
+
     - name: Set up Rust toolchain
       uses: ./.github/actions/setup-rust-toolchain
 
@@ -28,11 +37,13 @@ runs:
 
     - name: Rust strict conformance suite
       shell: bash
+      env:
+        COMMIT_SHA: ${{ inputs.commit_sha }}
       run: |
         set -euo pipefail
         python3 tools/ci/run_runner_suite.py \
           --vectors-root conformance/vectors \
-          --commit-sha "${GITHUB_SHA}" \
+          --commit-sha "${COMMIT_SHA}" \
           --out artifacts/rust-suite-summary.json \
           --runner-cmd core/rust/target/debug/grain-runner run --strict --vector
 

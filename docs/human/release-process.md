@@ -8,7 +8,8 @@ The goal is simple: keep releases boring, repeatable, and easy to audit.
 Make sure all of these are true:
 
 1. Your local tree is clean.
-2. `main` is green.
+2. `main` is green and its `CI gate` includes the full SDK, fuzz, verify-smoke,
+   and evidence jobs.
 3. The `main protection` ruleset is enabled with the intended settings.
 4. Your tag signing key is configured.
 5. Your release machine is aligned with the repo pins from `.nvmrc`,
@@ -100,6 +101,9 @@ Before promoting `repo-rc-*` to `repo-v*`, run the stabilization checks.
 1. PR smoke gate:
    - already runs in CI under the `ts-full` context
    - command family: `python3 tools/stabilization/run_rc_stab.py --mode smoke ...`
+   - PRs whose scope requires full verification also need maintainer approval
+     through the protected `full-ci` environment after the final commit so
+     `CI gate` proves the GitHub-hosted macOS SDK and evidence jobs
 2. Deep stabilization during an active RC window:
    - workflow: `.github/workflows/rc-stabilization-deep-check.yml`
    - includes deep fuzz, reproducibility check, and rollback rehearsal

@@ -53,15 +53,21 @@ If the change affects users, builders, or maintainers, update the matching human
 If the PR changes encoding, CID, COSE, ledger, E2E, manifest, limits, conformance, or schemas, add an ADR.
 See `adr/0000-template.md`.
 
-## Maintainer-only automation note
+## Maintainer-only CI note
 
-Dependency automation uses repository secret `DEPENDABOT_AUTOMERGE_TOKEN`.
-If that token is missing or under-scoped, the automation stops and tells you why:
+Routine dependency updates are grouped monthly and merged manually. There is no
+privileged Dependabot automerge token. See
+`docs/human/dependencies-policy.md`.
 
-- `DEPS_ERR_TOKEN_MISSING`
-- `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS`
+Workflow runs from every external fork contributor require maintainer approval
+before any job starts. This is separate from the full-CI approval below.
 
-See `docs/human/dependencies-policy.md`.
+For code, executable automation, protocol, conformance, SDK, script, or unknown
+paths, the workflow first runs its Linux graph, then waits at `Approve full CI`.
+After reviewing the final diff, a maintainer approves the protected `full-ci`
+environment from the run's `Review deployments` prompt. Only then can the
+GitHub-hosted macOS and evidence jobs start. Do not attach a persistent
+self-hosted runner to this public repository.
 
 If you are working in a sandbox where `.git` is readable but not writable, use `scripts/git-sandbox-safe ...` to run git through a writable mirror in `/tmp`.
 

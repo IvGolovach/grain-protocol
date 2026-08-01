@@ -42,9 +42,14 @@ If you only do one thing before reviewing or merging changes, do steps 1 through
 1. Run `./scripts/doctor`.
 2. Run `./scripts/bootstrap` if the host toolchain is not ready yet.
 3. Read the PR for scope, risk, and docs sync.
-4. Run the relevant checks, or ask for them if the PR does not include proof.
-5. Make sure the diff is one logical change.
-6. Merge only when the story in code, tests, and docs matches.
+4. For an external fork, review workflow changes and choose `Approve workflows
+   to run` before any CI starts.
+5. Run the relevant checks, or ask for them if the PR does not include proof.
+6. After the Linux jobs pass, if the run waits at `Approve full CI`, review the
+   final diff, select `Review deployments`, and approve the protected `full-ci`
+   environment.
+7. Make sure the diff is one logical change.
+8. Merge only when the story in code, tests, and docs matches.
 
 ### Debug a red branch
 
@@ -71,6 +76,7 @@ If you only do one thing before reviewing or merging changes, do steps 1 through
 - `CONTRIBUTING.md`: contributor rules and local hygiene
 - `docs/human/release-process.md`: release runbook
 - `docs/human/repository-settings.md`: GitHub settings baseline
+- `docs/human/dependencies-policy.md`: low-noise dependency and explicit full-CI policy
 - `docs/human/portability-pack.md`: verification and evidence model
 - `examples/reference-fixtures/README.md`: repo-native examples and fixture catalog
 - `conformance/interop-matrix.v1.json`: Rust, TypeScript, and WASM proof lanes
