@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-065",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bkRldmljZUtleUdyYW50YXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFjcHViWCBiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmRjYXBzgmRyZWFkZHJlYWQ=",
+    "object_type": "DeviceKeyGrant"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_DUP"
+    ]
+  },
+  "meta": {
+    "desc": "DeviceKeyGrant.caps must be unique."
+  }
+}

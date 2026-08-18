@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-072",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pmF0bFNlcnZpbmdPZmZlcmF2AWN2YXKhZGtjYWwJZG1lYW6hZGtjYWwZAmxpc2VydmluZ19nIGppc3N1ZXJfa2lkUEFBQUFBQUFBQUFBQUFBQUE=",
+    "object_type": "ServingOffer"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "Food Profile serving_g must be non-negative."
+  }
+}

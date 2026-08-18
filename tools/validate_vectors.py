@@ -22,6 +22,39 @@ REQUIRED_INPUT_BY_OP = {
     "ledger_reduce": {"root_kid", "events"},
 }
 
+TYPED_OBJECT_TYPES = frozenset(
+    {
+        "IngredientRef",
+        "NutrientProfile",
+        "CookRun",
+        "NutritionComputeResult",
+        "IntakeEvent",
+        "ServingOffer",
+        "LedgerGenesis",
+        "DeviceKeyGrant",
+        "DeviceKeyRevoke",
+        "VoidEvent",
+        "CorrectionEvent",
+        "LedgerEvent",
+        "EncryptedObject",
+        "ManifestRecord",
+    }
+)
+
+INVALID_OBJECT_SELECTOR_VECTOR_IDS = frozenset(
+    {
+        "NEG-OBJ-097",  # object_type is not a string
+        "NEG-OBJ-098",  # object_type is an unknown string
+        "NEG-OBJ-099",  # unknown string after strict-byte failure
+    }
+)
+
+INVALID_OBJECT_SELECTOR_EXPECTED_DIAG = {
+    "NEG-OBJ-097": "GRAIN_ERR_SCHEMA",
+    "NEG-OBJ-098": "GRAIN_ERR_SCHEMA",
+    "NEG-OBJ-099": "GRAIN_ERR_NONCANONICAL",
+}
+
 PLACEHOLDER_TOKENS = ("placeholder", "illustrative", "next phase")
 MAX_SAFE_INTEGER = 9007199254740991
 
@@ -131,9 +164,20 @@ def _looks_like_wa_id(vector_id: str) -> bool:
     return True
 
 
+def _looks_like_object_id(vector_id: str) -> bool:
+    parts = vector_id.split("-")
+    if len(parts) != 3:
+        return False
+    head, area, digits = parts
+    return head in {"POS", "NEG"} and area == "OBJ" and len(digits) == 3 and digits.isdigit()
+
+
 def main() -> int:
     bad = []
     known_ops = set(REQUIRED_INPUT_BY_OP.keys())
+    seen_vector_ids: dict[str, str] = {}
+    positive_object_types: set[str] = set()
+    invalid_selector_vectors_seen: set[str] = set()
 
     for p in sorted(VECTORS_DIR.rglob("*.json")):
         obj = json.loads(p.read_text(encoding="utf-8"))
@@ -146,6 +190,12 @@ def main() -> int:
 
         if not isinstance(obj["vector_id"], str):
             bad.append((rel, "vector_id must be string"))
+        else:
+            previous = seen_vector_ids.get(obj["vector_id"])
+            if previous is not None:
+                bad.append((rel, f"duplicate vector_id also used by {previous}"))
+            else:
+                seen_vector_ids[obj["vector_id"]] = rel
 
         expected_name = p.stem
         if obj["vector_id"] != expected_name:
@@ -153,6 +203,10 @@ def main() -> int:
 
         if "-WA-" in obj["vector_id"] and not _looks_like_wa_id(obj["vector_id"]):
             bad.append((rel, "Wave-A vector_id must match POS/NEG-<AREA>-WA-####"))
+
+        is_object_vector = p.parent == VECTORS_DIR / "object"
+        if is_object_vector and not _looks_like_object_id(obj["vector_id"]):
+            bad.append((rel, "typed-object vector_id must match POS/NEG-OBJ-###"))
 
         if obj["strict"] is not True:
             bad.append((rel, "strict must be true for v0.1 vectors"))
@@ -170,6 +224,43 @@ def main() -> int:
         missing_input = required_input - set(obj["input"].keys())
         if missing_input:
             bad.append((rel, f"missing op input keys: {sorted(missing_input)}"))
+
+        if "object_type" in obj["input"]:
+            object_type = obj["input"]["object_type"]
+            vector_id = obj["vector_id"]
+            if op != "dagcbor_validate":
+                bad.append((rel, "object_type is only valid for dagcbor_validate"))
+            elif not isinstance(object_type, str):
+                if not is_object_vector or vector_id != "NEG-OBJ-097":
+                    bad.append((rel, "object_type must be string except in NEG-OBJ-097"))
+                else:
+                    invalid_selector_vectors_seen.add(vector_id)
+            elif object_type not in TYPED_OBJECT_TYPES:
+                if not is_object_vector or vector_id not in {"NEG-OBJ-098", "NEG-OBJ-099"}:
+                    bad.append((rel, f"unknown object_type: {object_type}"))
+                else:
+                    invalid_selector_vectors_seen.add(vector_id)
+            elif is_object_vector and obj["vector_id"].startswith("POS-OBJ-"):
+                if obj.get("expect", {}).get("pass") is not True:
+                    bad.append((rel, "positive typed-object vector must set expect.pass to true"))
+                else:
+                    positive_object_types.add(object_type)
+        elif is_object_vector:
+            bad.append((rel, "typed-object vectors must include input.object_type"))
+
+        if is_object_vector and op != "dagcbor_validate":
+            bad.append((rel, "typed-object vectors must use dagcbor_validate"))
+
+        if obj["vector_id"] in INVALID_OBJECT_SELECTOR_VECTOR_IDS:
+            expected_diag = INVALID_OBJECT_SELECTOR_EXPECTED_DIAG[obj["vector_id"]]
+            expected_diags = obj.get("expect", {}).get("diag_contains", [])
+            if obj.get("expect", {}).get("pass") is not False or expected_diag not in expected_diags:
+                bad.append(
+                    (
+                        rel,
+                        f"selector-boundary vector must reject with {expected_diag}",
+                    )
+                )
 
         # Ban placeholder/illustrative vectors.
         for s in _walk_strings(obj):
@@ -259,6 +350,26 @@ def main() -> int:
                     err = _validate_ledger_event_shape(ev)
                     if err:
                         bad.append((rel, f"events[{i}]: {err}"))
+
+    missing_positive_object_types = sorted(TYPED_OBJECT_TYPES - positive_object_types)
+    if missing_positive_object_types:
+        bad.append(
+            (
+                "conformance/vectors/object",
+                f"missing positive typed-object coverage: {missing_positive_object_types}",
+            )
+        )
+
+    missing_invalid_selector_vectors = sorted(
+        INVALID_OBJECT_SELECTOR_VECTOR_IDS - invalid_selector_vectors_seen
+    )
+    if missing_invalid_selector_vectors:
+        bad.append(
+            (
+                "conformance/vectors/object",
+                f"missing invalid object-selector coverage: {missing_invalid_selector_vectors}",
+            )
+        )
 
     if bad:
         for f, err in bad:

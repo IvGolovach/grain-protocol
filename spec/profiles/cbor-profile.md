@@ -29,6 +29,55 @@ Any other tag MUST be rejected.
 Top-level keys for each object type are closed by NES rule.
 Unknown top-level keys MUST be rejected.
 
+### 4.1 Typed Object Validation v1 (MUST when a known type is selected)
+
+The `runner_v1` `dagcbor_validate` operation MAY receive `object_type` to
+select one of the 14 top-level productions in `grain-v0.1.cddl`.
+`object_type` is validation context and MUST NOT appear in encoded bytes.
+
+Validation MUST cover the complete selected production, not only its
+top-level key list:
+
+- required fields and exact CBOR value kinds,
+- fixed byte widths (`bstr12`, `bstr16`, `bstr32`),
+- complete blessed CID-link bytes after the tag-42 `0x00` prefix,
+- nested `CookInput`, `MapDecision`, and `EventRef` maps,
+- exactly one `IntakeEvent` source branch,
+- exactly one `ManifestRecord` `put` or `del` branch,
+- int64, uint63, variance, and Food Profile non-negative domains,
+- `ext`, `crit`, and all declared set-array rules,
+- generic and type-specific Conformance Baseline Limits.
+
+For fixed-type productions, encoded `t` MUST equal the selected production.
+For `LedgerEvent`, `object_type="LedgerEvent"` selects the envelope while the
+encoded `t` remains the event-type text string required by CDDL.
+
+Typed validation diagnostic precedence is:
+
+1. runner input/base64 shape, including the JSON type of `object_type`;
+2. applicable generic or selected-context pre-parse size limits;
+3. strict canonical DAG-CBOR, duplicate-key, tag, and CID-link checks;
+4. string-selector recognition, top-level map, schema major, and selected-type
+   envelope;
+5. unknown keys;
+6. common top-level `ext`/`crit` shape, `ext`/`crit` limits, and `crit`
+   set-array checks;
+7. Manifest `op`/branch shape;
+8. remaining selected-production checks in deterministic schema traversal,
+   including required/type/fixed-width/nested/union/numeric, type-specific
+   set-array, and type-specific limit rules.
+
+Consequently, a non-string `object_type` is an input-shape failure. An unknown
+string selector is checked after strict byte validation: malformed canonical
+encoding, forbidden map-key shape, tag, or CID-link errors retain precedence.
+Common top-level `ext`/`crit` failures precede Manifest branch validation.
+Manifest `op`/branch shape then precedes remaining field-width failures.
+
+General shape failures use `GRAIN_ERR_SCHEMA`. Existing specific diagnostics,
+including `GRAIN_ERR_UNKNOWN_TOPLEVEL_KEY`, `GRAIN_ERR_BAD_CID_LINK`,
+`GRAIN_ERR_MANIFEST_OP`, set-array diagnostics, and `GRAIN_ERR_LIMIT`, remain
+stable.
+
 ## 5. Set-array semantics (MUST)
 
 Grain v0.1 defines a **closed list** of fields that MUST be treated as set-arrays:

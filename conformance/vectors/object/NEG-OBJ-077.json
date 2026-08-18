@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-077",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pGF0Z0Nvb2tSdW5hdgFmaW5wdXRzgaJjaW5n2CpYJQABcRIgERERERERERERERERERERERERERERERERERERERERERFoYW1vdW50X2cYZGd5aWVsZF9nIA==",
+    "object_type": "CookRun"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "Food Profile yield_g must be non-negative."
+  }
+}

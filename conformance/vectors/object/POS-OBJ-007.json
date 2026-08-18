@@ -1,0 +1,15 @@
+{
+  "vector_id": "POS-OBJ-007",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "qGF0a0ludGFrZUV2ZW50YXYBY3ZhcqFka2NhbABkbWVhbqFka2NhbBg0ZG1vZGVsZnJvbV9wcm9maWxlZ3Byb2ZpbGXYKlglAAFxEiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM2hzZXJ2aW5ncwFsc291cmNlX2NsYXNzaGF0dGVzdGVk",
+    "object_type": "IntakeEvent"
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "Valid IntakeEvent selects the from_profile branch."
+  }
+}

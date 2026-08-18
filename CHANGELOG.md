@@ -3,6 +3,16 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Typed Object Validation v1:
+  - added optional `object_type` context to existing `dagcbor_validate` without
+    changing the frozen `runner_v1` operation set or output contract.
+  - added shared positive coverage for all 14 top-level v0.1 CDDL productions,
+    all three IntakeEvent branches, and both ManifestRecord branches.
+  - added deterministic negative coverage for required fields, exact kinds,
+    fixed widths, nested productions, unions, numeric domains, full CID links,
+    set-arrays, limits, Manifest diagnostics, and reject precedence.
+  - documented the existing NES/CDDL enforcement boundary in ADR-0012 and
+    synchronized implementer, porter, diagnostic, and LLM guidance.
 - CI economy and dependency maintenance:
   - replaced four branch-protection contexts with one fail-closed `CI gate` while preserving all underlying Linux, platform SDK, smoke, and evidence checks.
   - gated macOS and evidence work per PR commit through the protected `full-ci` environment, with automatic full runs on `main` and cancellation of obsolete PR runs.

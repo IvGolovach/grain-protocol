@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-063",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFkY3JpdIJhYWFhZnJlZl9pZGVhcHBsZWhyZWZfdHlwZWVsb2NhbA==",
+    "object_type": "IngredientRef"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_DUP"
+    ]
+  },
+  "meta": {
+    "desc": "crit must not contain duplicates."
+  }
+}

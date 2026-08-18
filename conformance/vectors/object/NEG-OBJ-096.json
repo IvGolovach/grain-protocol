@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-096",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pmF0b0VuY3J5cHRlZE9iamVjdGF2AWJjdFggc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NjYWxnaENIQUNIQTIwZW5vbmNlTHJycnJycnJycnJycmZjYXBfaWRYIHFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFx",
+    "object_type": "EncryptedObject"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "EncryptedObject.alg is fixed to A256GCM."
+  }
+}

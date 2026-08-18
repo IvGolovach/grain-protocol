@@ -22,6 +22,8 @@ A strong interoperability claim is made after two independent implementations pa
 ## Structure
 
 - `vectors/` — test vectors grouped by area
+- `vectors/object/` — Typed Object Validation v1 across all top-level CDDL
+  productions, selected by optional `dagcbor_validate.object_type`
 - `reference-fixtures.v1.json` lives under `examples/reference-fixtures/` and
   points humans at the smallest inspectable examples
 - `security-regressions.v1.json` — named guards for closed security findings

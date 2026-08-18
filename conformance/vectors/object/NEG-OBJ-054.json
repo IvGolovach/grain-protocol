@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-054",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "qGF0dk51dHJpdGlvbkNvbXB1dGVSZXN1bHRhdgFjbWFwgaFjaW5n2CpYJQABcRIgERERERERERERERERERERERERERERERERERERERERERFjb3V0omRrY2FsGDRpcHJvdGVpbl9nAGdjb29rcnVu2CpYJQABcRIgISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISFpZW5naW5lX2lkaXJlZmVyZW5jZW5lbmdpbmVfdmVyc2lvbmExc2RhdGFzZXRfc25hcHNob3RfaWRpZGF0YXNldC0x",
+    "object_type": "NutritionComputeResult"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "MapDecision requires profile."
+  }
+}

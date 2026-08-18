@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-044",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pmF0bk1hbmlmZXN0UmVjb3JkYXYBYmFrT2FhYWFhYWFhYWFhYWFhYWJvcGNkZWxjY2lk2CpYJQABcRIggYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYFjc2VxAg==",
+    "object_type": "ManifestRecord"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "ManifestRecord.ak must be bstr16."
+  }
+}

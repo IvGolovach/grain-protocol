@@ -44,6 +44,30 @@ The runner MUST provide a mode where:
   (`NEG-COSE-030` through `NEG-COSE-035`)
 - vectors are concrete test cases (no placeholder/illustrative vectors)
 
+## Typed Object Validation v1
+
+`runner_v1` keeps the same operation list. The existing `dagcbor_validate`
+operation accepts optional `input.object_type` for complete validation against
+one of the 14 top-level v0.1 CDDL productions.
+
+- `object_type` absent: legacy strict DAG-CBOR path.
+- `object_type` present: envelope, closed keys, required/types, fixed widths,
+  full CID links, nested productions, unions, numeric domains, set-arrays, and
+  applicable limits all become part of the verdict.
+- Fixed-type productions require encoded `t` to match the selector.
+- `LedgerEvent` is context-selected because its encoded `t` is event data.
+- This is an additive input, not a new operation or contract version.
+
+Shared vectors live under `conformance/vectors/object/`. The positive pack
+covers all productions plus every IntakeEvent and ManifestRecord branch. The
+negative pack freezes reject diagnostics and precedence across Rust and
+TypeScript.
+
+`NEG-OBJ-097` through `NEG-OBJ-099` freeze selector input type, unknown-selector,
+and strict-byte-before-unknown-selector precedence. The WASM subset includes
+these boundaries plus representative IngredientRef, LedgerEvent, and
+ManifestRecord typed validation.
+
 ## Invariant mapping
 
 `docs/llm/INVARIANTS.md` is the authoritative invariant -> vector mapping.

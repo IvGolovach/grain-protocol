@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-052",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "o2F0Z0Nvb2tSdW5hdgFmaW5wdXRzgqJjaW5n2CpYJQABcRIgEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhJoYW1vdW50X2cYZKJjaW5n2CpYJQABcRIgERERERERERERERERERERERERERERERERERERERERERFoYW1vdW50X2cYZA==",
+    "object_type": "CookRun"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SET_ARRAY_ORDER"
+    ]
+  },
+  "meta": {
+    "desc": "CookRun.inputs must be sorted by canonical item bytes."
+  }
+}

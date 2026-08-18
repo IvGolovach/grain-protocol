@@ -25,6 +25,11 @@ You only need:
    (including public-key encodings and signature `R` encodings with x=0 and
    the x-sign bit set), and non-canonical signature scalars.
 8. Keep deterministic diagnostics by error codes; free-text is non-normative.
+9. Implement optional `dagcbor_validate.object_type` as validation context,
+   never as a field injected into protocol bytes.
+10. For a selected known type, validate the complete CDDL production: required
+    and nested fields, exact kinds, fixed widths, full CID links, unions,
+    numeric domains, set-arrays, and limits.
 
 ## Minimal boot path
 
@@ -39,9 +44,16 @@ You only need:
 
 Then run full vectors in strict mode and compare divergence against reference engines.
 
+Before moving to the other operations, run
+`conformance/vectors/object/POS-OBJ-001.json` through `POS-OBJ-017` and the
+matching negative pack. `LedgerEvent` is the one selector whose encoded `t`
+remains an event-type text string rather than the literal selector name.
+
 ## Fast failure checklist
 
 - If one vector differs, treat it as a real contract mismatch first.
 - If diagnostics differ, compare codes only.
 - If results differ across OS/runtime, pin toolchain and compare inside container.
 - If your parser library normalizes maps/strings, replace it or add a strict scanner before decode.
+- If a tag-42 library accepts arbitrary prefixed bytes, add explicit CIDv1 +
+  dag-cbor + sha2-256 multihash parsing before calling the link valid.

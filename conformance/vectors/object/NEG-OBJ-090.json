@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-090",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pmF0bk1hbmlmZXN0UmVjb3JkYXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFib3BncmVwbGFjZWNjaWTYKlglAAFxEiCBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgWNzZXEC",
+    "object_type": "ManifestRecord"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_MANIFEST_OP"
+    ]
+  },
+  "meta": {
+    "desc": "Unknown ManifestRecord op rejects with the manifest diagnostic."
+  }
+}

@@ -65,8 +65,28 @@ Vectors MUST be concrete test cases. Placeholder/illustrative vectors are forbid
 Implementations MUST support these operations for v0.1 conformance:
 
 - `dagcbor_validate`:
-  - input: `bytes_b64`
+  - input: `bytes_b64`, optional `object_type`
   - output: accept/reject; if accept, optional canonical bytes
+  - without `object_type`, preserves the existing strict DAG-CBOR validation path
+  - with `object_type`, validates the complete selected top-level v0.1 CDDL
+    production, including envelope, required fields, exact value kinds,
+    fixed-width byte strings, full CID links, nested productions, union
+    exclusivity, numeric domains, set-arrays, and applicable limits
+  - supported `object_type` values:
+    `IngredientRef`, `NutrientProfile`, `CookRun`,
+    `NutritionComputeResult`, `IntakeEvent`, `ServingOffer`,
+    `LedgerGenesis`, `DeviceKeyGrant`, `DeviceKeyRevoke`, `VoidEvent`,
+    `CorrectionEvent`, `LedgerEvent`, `EncryptedObject`, `ManifestRecord`
+  - when present, `object_type` MUST be a string naming one of those values;
+    a non-string or unknown selector rejects with `GRAIN_ERR_SCHEMA`
+  - an unknown string selector is rejected only after strict byte validation,
+    so an earlier encoding diagnostic retains precedence
+  - for fixed-type productions, encoded `t` MUST equal `object_type`
+  - `LedgerEvent` is context-selected; its encoded `t` remains the event-type tstr
+  - general typed-shape failures return `GRAIN_ERR_SCHEMA`
+  - Manifest `op`/branch failures return `GRAIN_ERR_MANIFEST_OP`
+  - existing specific diagnostics retain the precedence documented in
+    `core/rust/grain-core/docs/errors.md`
 
 - `cid_derive`:
   - input: `bytes_b64` (canonical DAG-CBOR)

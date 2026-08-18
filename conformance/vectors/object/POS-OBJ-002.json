@@ -1,0 +1,15 @@
+{
+  "vector_id": "POS-OBJ-002",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "p2F0b051dHJpZW50UHJvZmlsZWF2AWRudXRyomRrY2FsGDRpcHJvdGVpbl9nAGViYXNpc2hwZXJfMTAwZ2Zzb3VyY2VjbGFiZnVuY2VydKFka2NhbABzZGF0YXNldF9zbmFwc2hvdF9pZGlkYXRhc2V0LTE=",
+    "object_type": "NutrientProfile"
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "Valid NutrientProfile matches required dataset, nutrient-map, and non-negative uncertainty variance fields."
+  }
+}
