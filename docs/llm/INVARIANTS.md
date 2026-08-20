@@ -36,6 +36,32 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
   Ref: spec/profiles/cbor-profile.md §5  
   Vectors: NEG-UTF8-WA-0003
 
+## Typed Object Validation v1
+
+- INV-OBJ-001: Optional `dagcbor_validate.object_type` MUST select a supported top-level v0.1 CDDL production; fixed-type objects require matching `t`, `v=1`, and a top-level map. `LedgerEvent` is context-selected and retains its event-type tstr.
+  Ref: NES §2.3.1; spec/profiles/cbor-profile.md §4.1
+  Vectors: POS-OBJ-001, POS-OBJ-014, NEG-OBJ-001, NEG-OBJ-002, NEG-OBJ-003, NEG-OBJ-004, NEG-OBJ-005, NEG-OBJ-006, NEG-OBJ-007, NEG-OBJ-097, NEG-OBJ-098, NEG-OBJ-099
+
+- INV-OBJ-002: A selected known object MUST satisfy all required fields, exact CBOR value kinds, closed nested productions, and exactly one IntakeEvent or ManifestRecord union branch.
+  Ref: NES §2.3.1; spec/schemas/grain-v0.1.cddl
+  Vectors: POS-OBJ-003, POS-OBJ-004, POS-OBJ-005, POS-OBJ-006, POS-OBJ-007, POS-OBJ-016, POS-OBJ-017, NEG-OBJ-010, NEG-OBJ-023, NEG-OBJ-030, NEG-OBJ-044, NEG-OBJ-050, NEG-OBJ-054, NEG-OBJ-057, NEG-OBJ-058, NEG-OBJ-059, NEG-OBJ-060, NEG-OBJ-089, NEG-OBJ-090, NEG-OBJ-091, NEG-OBJ-092, NEG-OBJ-093, NEG-OBJ-094
+
+- INV-OBJ-003: Typed validation MUST enforce fixed-width byte strings, complete blessed CID-link structure, int64/uint63 ranges, non-negative Food Profile quantities, and non-negative variance.
+  Ref: NES §2.3.1, §4, §6.6, §6.8; spec/profiles/cbor-profile.md §4.1, §6
+  Vectors: POS-OBJ-003, POS-OBJ-008, POS-OBJ-009, POS-OBJ-015, POS-OBJ-016, NEG-OBJ-035, NEG-OBJ-036, NEG-OBJ-038, NEG-OBJ-039, NEG-OBJ-041, NEG-OBJ-042, NEG-OBJ-043, NEG-OBJ-044, NEG-OBJ-045, NEG-OBJ-046, NEG-OBJ-047, NEG-OBJ-070, NEG-OBJ-071, NEG-OBJ-072, NEG-OBJ-073, NEG-OBJ-074, NEG-OBJ-075, NEG-OBJ-076, NEG-OBJ-077, NEG-OBJ-078
+
+- INV-OBJ-004: Typed set-arrays MUST use raw UTF-8 ordering for tstr items and canonical encoded-byte ordering for structured items, with exact duplicate rejection.
+  Ref: spec/profiles/cbor-profile.md §5
+  Vectors: POS-OBJ-003, POS-OBJ-004, POS-OBJ-010, NEG-OBJ-052, NEG-OBJ-053, NEG-OBJ-055, NEG-OBJ-056, NEG-OBJ-062, NEG-OBJ-063, NEG-OBJ-064, NEG-OBJ-065
+
+- INV-OBJ-005: Typed validation MUST enforce generic and applicable type-specific Conformance Baseline Limits.
+  Ref: NES §9; spec/profiles/cbor-profile.md §4.1, §7
+  Vectors: POS-OBJ-001, POS-OBJ-008, POS-OBJ-014, POS-OBJ-017, NEG-OBJ-080, NEG-OBJ-081, NEG-OBJ-082, NEG-OBJ-083, NEG-OBJ-084, NEG-OBJ-085, NEG-OBJ-086
+
+- INV-OBJ-006: Typed validation diagnostics MUST follow the documented precedence; ManifestRecord op/branch failures use `GRAIN_ERR_MANIFEST_OP`, while earlier byte and unknown-key failures retain their specific codes.
+  Ref: spec/profiles/cbor-profile.md §4.1; core/rust/grain-core/docs/errors.md
+  Vectors: POS-OBJ-016, POS-OBJ-017, NEG-OBJ-068, NEG-OBJ-069, NEG-OBJ-089, NEG-OBJ-090, NEG-OBJ-091, NEG-OBJ-092, NEG-OBJ-093, NEG-OBJ-094, NEG-OBJ-095, NEG-OBJ-097, NEG-OBJ-098, NEG-OBJ-099
+
 ## Identity / CID
 
 - INV-CID-001: Blessed CID set: CIDv1 + dag-cbor + sha2-256; text base32 lower when used.  

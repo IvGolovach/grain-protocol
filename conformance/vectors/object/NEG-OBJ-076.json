@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-076",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "qWF0bk1hbmlmZXN0UmVjb3JkYXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFib3BjcHV0Y2NpZNgqWCUAAXESIIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBY3NlcQFkc2l6ZSBlY2hhc2hYIIODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODZmNhcF9pZFgggoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoI=",
+    "object_type": "ManifestRecord"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "ManifestRecord.size must be uint63."
+  }
+}

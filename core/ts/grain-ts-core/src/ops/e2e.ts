@@ -2,16 +2,9 @@ import { createDecipheriv, hkdfSync } from "node:crypto";
 
 import { GrainDiagError, LIMITS } from "../types.js";
 import type { Json, OperationActual } from "../types.js";
-import {
-  STRICT_DAG_CBOR_OPTIONS,
-  mapGet,
-  nodeAsBytes,
-  nodeAsText,
-  nodeAsU,
-  parseExact
-} from "../cbor.js";
+import { mapGet, nodeAsBytes } from "../cbor.js";
+import { validateTypedObjectV1 } from "../typed-object.js";
 import { bytesEq, decodeB64, encodeB64, sha256 } from "../utils.js";
-import { schemaChecks } from "./dagcbor.js";
 
 const KEY_INFO = Buffer.from("GrainE2E\0v0.1\0A256GCM\0key", "ascii");
 const NONCE_INFO_PREFIX = Buffer.from("GrainE2E\0v0.1\0A256GCM\0nonce\0", "ascii");
@@ -50,25 +43,17 @@ export function opE2eDecrypt(input: Record<string, Json>): OperationActual {
     }
   }
 
-  const node = parseExact(encryptedObjectBytes, STRICT_DAG_CBOR_OPTIONS);
-  schemaChecks(node);
+  const node = validateTypedObjectV1(encryptedObjectBytes, "EncryptedObject");
 
   if (node.kind !== "m") {
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
 
-  const t = nodeAsText(mapGet(node, "t"));
-  const v = nodeAsU(mapGet(node, "v"));
-  const alg = nodeAsText(mapGet(node, "alg"));
   const capId = nodeAsBytes(mapGet(node, "cap_id"));
   const nonceEnv = nodeAsBytes(mapGet(node, "nonce"));
   const ct = nodeAsBytes(mapGet(node, "ct"));
 
-  if (t !== "EncryptedObject" || v !== 1n || alg !== "A256GCM" || !capId || !nonceEnv || !ct) {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-
-  if (capId.length !== 32 || nonceEnv.length !== 12) {
+  if (!capId || !nonceEnv || !ct) {
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
 

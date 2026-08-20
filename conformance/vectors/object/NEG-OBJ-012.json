@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-012",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "omF0Z0Nvb2tSdW5hdgE=",
+    "object_type": "CookRun"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "CookRun requires inputs."
+  }
+}

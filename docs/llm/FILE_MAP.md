@@ -12,6 +12,8 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
    - Machine-readable schema shapes.
 3. `conformance/vectors/`
    - Executable release gate and interop criterion in strict mode.
+   - `conformance/vectors/object/` covers optional `dagcbor_validate.object_type`
+     validation for every top-level v0.1 CDDL production.
 4. `spec/profiles/`
    - Normative CBOR / COSE / E2E / QR profile details, including strict Ed25519 COSE verification inputs.
 5. `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
@@ -24,7 +26,9 @@ Hi teammate LLM. If you are deciding what to trust first, use this order.
    - Human onboarding and contributor process docs. Helpful, but they do not override spec or vectors. If you need the maintainer front door, start with `docs/human/maintainer-start-here.md`.
 9. `core/rust/`, `core/ts/grain-ts-core/`, `runner/typescript/`, `core/`, `sdk/`
    - Implementations. They must conform to the contract above.
-10. `.github/workflows/`, `.githooks/*`, `scripts/setup_local_hygiene.sh`, `tools/ci/check_history_hygiene.py`, `MIGRATION.md`, `docs/human/rationale/TOR-PORTABILITY-A01.md`, `docs/human/repository-settings.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`
+   - Typed Object Validation v1 is selected through the existing
+     `dagcbor_validate` operation; do not add a new `runner_v1` operation.
+10. `.github/workflows/`, `.githooks/*`, `scripts/setup_local_hygiene.sh`, `tools/ci/check_history_hygiene.py`, `tools/ci/check_ci_economy_policy.py`, `tools/ci/check_dependabot_policy.py`, `tools/ci/check_branch_protection_drift.py`, `tools/ci/check_full_ci_environment.py`, `tools/ci/classify_ci_scope.py`, `tools/ci/evaluate_ci_gate.py`, `tools/github/apply_branch_protection.sh`, `tools/github/apply_full_ci_environment.sh`, `MIGRATION.md`, `docs/human/rationale/TOR-PORTABILITY-A01.md`, `docs/human/repository-settings.md`, `docs/human/dependencies-policy.md`, `docs/human/portability-pack.md`, `docs/human/porting-grain.md`
    - Provenance, local hygiene enforcement, and policy enforcement (CI gates, evidence artifacts, branch protection).
 11. `stabilization/RC-STAB-A01/*`, `tools/stabilization/run_rc_stab.py`, `.github/workflows/rc-stabilization-deep-check.yml`
    - RC pressure-test tooling plus a historical RC stabilization record. Use this as reference material when a new RC window is opened.

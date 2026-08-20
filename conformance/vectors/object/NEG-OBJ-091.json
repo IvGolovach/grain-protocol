@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-091",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "qGF0bk1hbmlmZXN0UmVjb3JkYXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFib3BjcHV0Y2NpZNgqWCUAAXESIIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBY3NlcQFkc2l6ZRggZWNoYXNoWCCDg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODgw==",
+    "object_type": "ManifestRecord"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_MANIFEST_OP"
+    ]
+  },
+  "meta": {
+    "desc": "Manifest put requires cap_id."
+  }
+}

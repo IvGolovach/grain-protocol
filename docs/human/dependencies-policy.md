@@ -1,92 +1,56 @@
 # Dependencies Policy
 
-This page defines the safe automation boundary for Dependabot PRs.
-The idea is simple: let boring updates stay boring, and force human review for risky ones.
+This page defines the low-noise update policy for dependency pull requests.
+The goals are to keep security updates prompt, batch routine maintenance, and
+avoid privileged merge automation.
 
 ADR references:
 
-- `adr/conformance/0003-dependabot-autonomous-safe-lane.md`
-- `adr/conformance/0004-dependabot-strict-fail-closed.md`
+- `adr/conformance/0006-ci-economy-and-trusted-runners.md`
 
-## Goal
+## Version updates
 
-Dependabot safe-lane updates should remove stale review and merge friction while preserving:
+Dependabot uses a monthly version-update cadence for three ecosystems:
 
-- the `main protection` ruleset
-- required checks
-- linear history
-- evidence workflows
-- frozen-core safeguards
+- GitHub Actions at `/`: grouped minor and patch updates
+- Cargo at `/core/rust`: grouped patch updates
+- npm at `/runner/typescript`: grouped minor and patch updates
 
-## Two-lane policy
+Every entry keeps `rebase-strategy: disabled` and its
+open-pull-requests-limit at or below 2. This prevents background rebases from
+starting new CI runs and limits the active maintenance queue. Major updates and
+Cargo minor updates stay separate for manual review.
 
-### 1) Safe auto-merge lane (Dependabot only)
+## Security updates
 
-- author is the Dependabot bot account
-- changed files are only in the allowlist:
-  - `.github/dependabot.yml`
-  - `.github/ISSUE_TEMPLATE/**`
-- required checks still run before merge
-- branch update is requested automatically when behind
+Dependabot security updates remain immediate and are not delayed by the monthly
+version-update schedule. Repository vulnerability alerts and automated security
+updates must remain enabled in GitHub settings. Security PRs still require the
+same tests and manual merge as every other dependency PR.
 
-### 2) Manual review lane
+## CI behavior
 
-- any PR touching non-allowlisted paths
-- any PR touching executable automation (`.github/workflows/**` or `.github/actions/**`)
-- any PR touching frozen-critical zones (`spec/**`, `conformance/**`, `core/**`, `runner/**`, `docs/llm/**`, `tools/**`)
-- semver-major workflow dependency bumps require manual review
+- Every external fork contributor requires maintainer approval before any
+  workflow jobs start.
+- Every PR runs the automatic Linux verification jobs.
+- Docs and approved repository metadata changes can pass without the macOS job.
+- Code, executable automation, protocol, conformance, SDK, script, or unknown
+  paths wait at the protected `full-ci` environment after the automatic Linux
+  jobs succeed.
+- After reviewing the final diff, a maintainer selects `Review deployments` and
+  approves `full-ci`. The GitHub-hosted macOS SDK gate and evidence bundle start
+  only after that approval.
+- A new commit or Dependabot branch update cancels the old run and requires a
+  new environment approval.
+- `CI gate` fails closed if required work fails, is cancelled, or is skipped.
 
-## Automation workflow
+## Merge policy
 
-- Workflow: `/.github/workflows/dependabot-automerge.yml`
-- Trigger: trusted `workflow_run` for successful `ci` pull_request runs
-- Token strategy:
-  - canonical and required: repository secret `DEPENDABOT_AUTOMERGE_TOKEN`
-  - no fallback path
+There is no privileged automerge workflow and no automerge PAT. Maintainers use
+manual merge after `CI gate` succeeds and the diff is reviewed. This avoids a
+standing write-capable token and keeps dependency updates auditable.
 
-Recommended token permissions:
-
-- Fine-grained PAT:
-  - `Contents: Read & Write`
-  - `Pull requests: Read & Write`
-  - `Workflows: Read & Write`
-  - `Metadata: Read`
-- Classic PAT:
-  - `repo`
-  - `workflow`
-
-Provisioning path:
-
-- GitHub repository -> `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`
-- secret name must be exactly `DEPENDABOT_AUTOMERGE_TOKEN`
-
-Safety design:
-
-- does not check out PR head
-- uses GitHub API only
-- validates changed files against allowlist, denylist, and the executable automation manual lane
-- updates the branch when behind (`update-branch` plus `@dependabot rebase` request)
-- auto-approves safe PRs
-- enables auto-merge (`--auto --rebase`)
-- posts deterministic audit-trail comments
-
-## Explicit diagnostics
-
-The workflow hard-fails with these diagnostics:
-
-- `DEPS_ERR_TOKEN_MISSING` when `DEPENDABOT_AUTOMERGE_TOKEN` is absent
-- `DEPS_ERR_TOKEN_INSUFFICIENT_PERMS` when token permission probe fails
-
-There is no warning-only path and no fallback token.
-
-Major-bump behavior:
-
-- semver-major workflow dependency bumps require manual review
-- the workflow keeps `BLOCK_SEMVER_MAJOR_ACTIONS=true`
-
-## Governance notes
-
-- CODEOWNERS documents ownership for core paths even though code owner review is not currently required on `main`
-- the safe `.github` dependency path is policy-guarded by allowlist and required checks
-- executable automation changes are never auto-approved by this safe lane
-- dependency automation must not change protocol semantics
+The public Grain repository must not run pull-request code on a persistent
+self-hosted runner. The explicit full lane uses GitHub-hosted `macos-15`. A
+future private executor must live in a separate private repository and use an
+isolated runner identity.

@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-014",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "p2F0a0ludGFrZUV2ZW50YXYBY3ZhcqFka2NhbAFkbW9kZWxmcm9tX2Nvb2tydW5nY29va3J1btgqWCUAAXESIDExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTExaGFtb3VudF9nGGRsc291cmNlX2NsYXNzaG1lYXN1cmVk",
+    "object_type": "IntakeEvent"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "IntakeEvent requires mean."
+  }
+}

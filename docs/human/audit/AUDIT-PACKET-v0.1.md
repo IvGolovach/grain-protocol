@@ -174,8 +174,10 @@ None for v0.1, except external cryptographic breaks (future major bump class).
 - Tag namespaces are intentionally split:
   - protocol line: `protocol-*`
   - repository milestones: `repo-*`
-- Required CI checks on `main`:
-  - `python-tooling`
-  - `rust-core`
-  - `evidence-bundle`
-  - `capid-csprng-audit`
+- Required CI check on `main`:
+  - `CI gate`
+- `CI gate` always requires the automatic Linux jobs.
+- Full-scope PRs additionally require approval through the protected `full-ci`
+  environment, then successful `sdk-platform` and `evidence-bundle` jobs.
+- `main` pushes additionally require `sdk-platform`, `evidence-bundle`,
+  `fuzz-smoke`, and `verify-script-smoke`; the approval job is skipped.

@@ -44,8 +44,15 @@ Use these shortcuts when you already know the job:
   - `docs/llm/DOC_SYNC.md`
 - CI, release, or provenance change:
   - `docs/llm/FILE_MAP.md`
+  - `docs/llm/CONFORMANCE.md`
   - `docs/llm/CHANGE_POLICY.md`
   - `docs/llm/DOC_SYNC.md`
+  - `docs/human/repository-settings.md`
+  - `docs/human/dependencies-policy.md`
+  - `docs/human/release-process.md`
+  - `docs/human/portability-pack.md`
+  - `GOVERNANCE.md`
+  - the applicable CI, release, or provenance ADR
 - Contributor workflow or repo hygiene change:
   - `CONTRIBUTING.md`
   - `docs/human/maintainer-start-here.md`

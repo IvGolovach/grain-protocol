@@ -3,15 +3,21 @@ use std::collections::BTreeSet;
 use crate::cbor::{parse_exact_to_error, CborValue, ParseOptions};
 use crate::error::{Diag, GrainError, GrainResult};
 use crate::limits::Limits;
+use crate::object_schema::schema_for_legacy_t;
+use crate::typed_object::validate_typed_object_v1;
 
 pub fn validate_strict_dagcbor(bytes: &[u8]) -> GrainResult<CborValue> {
+    let value = parse_strict_dagcbor_encoding(bytes)?;
+    validate_schema_level(&value)?;
+    Ok(value)
+}
+
+pub(crate) fn parse_strict_dagcbor_encoding(bytes: &[u8]) -> GrainResult<CborValue> {
     if bytes.len() > Limits::STRICT_BASELINE.max_dagcbor_object_bytes {
         return Err(GrainError::from_diag(Diag::Limit));
     }
 
-    let value = parse_exact_to_error(bytes, ParseOptions::strict_dag_cbor())?;
-    validate_schema_level(&value)?;
-    Ok(value)
+    parse_exact_to_error(bytes, ParseOptions::strict_dag_cbor())
 }
 
 pub fn validate_serving_offer_payload(
@@ -22,25 +28,10 @@ pub fn validate_serving_offer_payload(
         return Err(GrainError::from_diag(Diag::Schema));
     }
 
-    let value = validate_strict_dagcbor(payload)?;
-    if value.map_get("t").and_then(CborValue::as_text_bytes) != Some(b"ServingOffer") {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-    if !matches!(value.map_get("v"), Some(CborValue::Unsigned(1))) {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
+    let value = validate_typed_object_v1(payload, "ServingOffer")?;
     match value.map_get("issuer_kid").and_then(CborValue::as_bytes) {
         Some(kid) if kid == expected_issuer_kid => {}
         _ => return Err(GrainError::from_diag(Diag::Schema)),
-    }
-    if !matches!(value.map_get("serving_g"), Some(CborValue::Unsigned(_))) {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-    if !matches!(value.map_get("mean"), Some(CborValue::Map(_))) {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-    if !matches!(value.map_get("var"), Some(CborValue::Map(_))) {
-        return Err(GrainError::from_diag(Diag::Schema));
     }
 
     Ok(value)
@@ -53,12 +44,12 @@ fn validate_schema_level(value: &CborValue) -> GrainResult<()> {
 
     let t = map_find_text(map, "t");
     if let Some(t) = t {
-        if let Some(allowed) = allowed_top_level_keys(&t) {
+        if let Some(schema) = schema_for_legacy_t(&t) {
             for (k, _) in map {
                 let Some(key) = k.as_text() else {
                     return Err(GrainError::from_diag(Diag::NonCanonical));
                 };
-                if !allowed.contains(&key.as_str()) {
+                if !schema.allowed_top_level_keys.contains(&key.as_str()) {
                     return Err(GrainError::from_diag(Diag::UnknownTopLevelKey));
                 }
             }
@@ -91,7 +82,7 @@ fn map_find_text(map: &[(CborValue, CborValue)], key: &str) -> Option<String> {
     map_find(map, key).and_then(|v| v.as_text())
 }
 
-fn validate_tstr_set_array(value: &CborValue, is_crit: bool) -> GrainResult<()> {
+pub(crate) fn validate_tstr_set_array(value: &CborValue, is_crit: bool) -> GrainResult<()> {
     let CborValue::Array(items) = value else {
         return Err(GrainError::from_diag(Diag::Schema));
     };
@@ -137,83 +128,6 @@ fn validate_tstr_set_array(value: &CborValue, is_crit: bool) -> GrainResult<()> 
     }
 
     Ok(())
-}
-
-fn allowed_top_level_keys(t: &str) -> Option<&'static [&'static str]> {
-    match t {
-        "IngredientRef" => Some(&[
-            "v",
-            "t",
-            "ref_type",
-            "ref_id",
-            "ref_version",
-            "name",
-            "ext",
-            "crit",
-        ]),
-        "NutrientProfile" => Some(&[
-            "v",
-            "t",
-            "dataset_snapshot_id",
-            "source",
-            "basis",
-            "nutr",
-            "uncert",
-            "ext",
-            "crit",
-        ]),
-        "CookRun" => Some(&["v", "t", "inputs", "yield_g", "ts_ms", "ext", "crit"]),
-        "NutritionComputeResult" => Some(&[
-            "v",
-            "t",
-            "cookrun",
-            "engine_id",
-            "engine_version",
-            "dataset_snapshot_id",
-            "map",
-            "out",
-            "ext",
-            "crit",
-        ]),
-        "IntakeEvent" => Some(&[
-            "v",
-            "t",
-            "source_class",
-            "mean",
-            "var",
-            "mode",
-            "cookrun",
-            "amount_g",
-            "ing",
-            "profile",
-            "servings",
-            "ts_ms",
-            "ext",
-            "crit",
-        ]),
-        "ServingOffer" => Some(&[
-            "v",
-            "t",
-            "issuer_kid",
-            "serving_g",
-            "mean",
-            "var",
-            "nonce",
-            "ext",
-            "crit",
-        ]),
-        "LedgerGenesis" => Some(&["v", "t", "root_kid", "root_pub", "ext", "crit"]),
-        "DeviceKeyGrant" => Some(&["v", "t", "ak", "pub", "caps", "ext", "crit"]),
-        "DeviceKeyRevoke" => Some(&["v", "t", "ak", "ext", "crit"]),
-        "VoidEvent" => Some(&["v", "t", "target", "reason", "ext", "crit"]),
-        "CorrectionEvent" => Some(&["v", "t", "target", "reason", "ext", "crit"]),
-        "LedgerEvent" => Some(&["v", "t", "ak", "seq", "ts_ms", "body", "ext", "crit"]),
-        "EncryptedObject" => Some(&["v", "t", "alg", "cap_id", "nonce", "ct", "ext", "crit"]),
-        "ManifestRecord" => Some(&[
-            "v", "t", "ak", "seq", "cid", "op", "cap_id", "chash", "size", "ext", "crit",
-        ]),
-        _ => None,
-    }
 }
 
 #[cfg(test)]

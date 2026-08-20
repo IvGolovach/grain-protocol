@@ -1,0 +1,15 @@
+{
+  "vector_id": "POS-OBJ-013",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "o2F0b0NvcnJlY3Rpb25FdmVudGF2AWZ0YXJnZXSiYmFrUGFhYWFhYWFhYWFhYWFhYWFjc2VxAQ==",
+    "object_type": "CorrectionEvent"
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "Valid CorrectionEvent contains a closed EventRef."
+  }
+}

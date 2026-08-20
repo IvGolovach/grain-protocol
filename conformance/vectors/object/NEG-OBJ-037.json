@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-037",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bkRldmljZUtleUdyYW50YXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFjcHViWCBiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmRjYXBzgmRyZWFkAQ==",
+    "object_type": "DeviceKeyGrant"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "DeviceKeyGrant.caps items must be tstr."
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "vector_id": "POS-OBJ-003",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "o2F0Z0Nvb2tSdW5hdgFmaW5wdXRzgaJjaW5n2CpYJQABcRIgERERERERERERERERERERERERERERERERERERERERERFoYW1vdW50X2cYZA==",
+    "object_type": "CookRun"
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "Valid CookRun contains a typed CookInput and a full blessed CID link."
+  }
+}

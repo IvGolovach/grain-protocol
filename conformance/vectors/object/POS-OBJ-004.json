@@ -1,0 +1,15 @@
+{
+  "vector_id": "POS-OBJ-004",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "qGF0dk51dHJpdGlvbkNvbXB1dGVSZXN1bHRhdgFjbWFwgaJjaW5n2CpYJQABcRIgERERERERERERERERERERERERERERERERERERERERERFncHJvZmlsZdgqWCUAAXESIBISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISY291dKJka2NhbBg0aXByb3RlaW5fZwBnY29va3J1btgqWCUAAXESICEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhaWVuZ2luZV9pZGlyZWZlcmVuY2VuZW5naW5lX3ZlcnNpb25hMXNkYXRhc2V0X3NuYXBzaG90X2lkaWRhdGFzZXQtMQ==",
+    "object_type": "NutritionComputeResult"
+  },
+  "expect": {
+    "pass": true
+  },
+  "meta": {
+    "desc": "Valid NutritionComputeResult contains a typed MapDecision set."
+  }
+}

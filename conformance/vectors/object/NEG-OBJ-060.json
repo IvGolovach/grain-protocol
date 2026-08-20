@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-060",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "qGF0a0ludGFrZUV2ZW50YXYBY3ZhcqFka2NhbABkbWVhbqFka2NhbBg0ZG1vZGVsZnJvbV9wcm9maWxlZ3Byb2ZpbGXYKlglAAFxEiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM2hhbW91bnRfZwpsc291cmNlX2NsYXNzaGF0dGVzdGVk",
+    "object_type": "IntakeEvent"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "from_profile branch requires servings and forbids amount_g."
+  }
+}

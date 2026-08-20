@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-023",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bk1hbmlmZXN0UmVjb3JkYXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFib3BjZGVsY3NlcQI=",
+    "object_type": "ManifestRecord"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "ManifestRecord requires cid before branch semantics."
+  }
+}

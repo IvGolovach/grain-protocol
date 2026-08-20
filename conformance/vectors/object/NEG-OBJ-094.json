@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-094",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "p2F0bk1hbmlmZXN0UmVjb3JkYXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFib3BjZGVsY2NpZNgqWCUAAXESIIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBY3NlcQJlY2hhc2hYIIODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4OD",
+    "object_type": "ManifestRecord"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_MANIFEST_OP"
+    ]
+  },
+  "meta": {
+    "desc": "Manifest del forbids chash."
+  }
+}

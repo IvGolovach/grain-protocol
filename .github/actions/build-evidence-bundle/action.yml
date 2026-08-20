@@ -1,6 +1,9 @@
 name: Build evidence bundle
 description: Stage deterministic evidence artifacts and archive the final bundle.
 inputs:
+  commit_sha:
+    description: Exact commit SHA recorded in every evidence artifact.
+    required: true
   workflow_name:
     description: Workflow name recorded in the evidence summary.
     required: true
@@ -19,6 +22,12 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Validate evidence commit provenance
+      shell: bash
+      env:
+        COMMIT_SHA: ${{ inputs.commit_sha }}
+      run: test -n "${COMMIT_SHA}"
+
     - name: Prepare evidence inputs
       shell: bash
       run: |
@@ -48,6 +57,7 @@ runs:
     - name: Build suite summary JSON
       shell: bash
       env:
+        COMMIT_SHA: ${{ inputs.commit_sha }}
         WORKFLOW_NAME: ${{ inputs.workflow_name }}
         TAG_VALUE: ${{ inputs.tag }}
         INCLUDE_SDK_SUITE: ${{ inputs.include_sdk_suite }}
@@ -69,7 +79,7 @@ runs:
         include_sdk_suite = os.environ["INCLUDE_SDK_SUITE"].lower() == "true"
         workflow_name = os.environ["WORKFLOW_NAME"]
         tag = os.environ.get("TAG_VALUE", "")
-        commit = os.environ["GITHUB_SHA"]
+        commit = os.environ["COMMIT_SHA"]
 
         suite_summary = {
           "commit_sha": commit,
@@ -158,10 +168,12 @@ runs:
 
     - name: Build interop evidence summary
       shell: bash
+      env:
+        COMMIT_SHA: ${{ inputs.commit_sha }}
       run: |
         set -euo pipefail
         python3 tools/ci/build_interop_summary.py \
-          --commit-sha "${GITHUB_SHA}" \
+          --commit-sha "${COMMIT_SHA}" \
           --out-dir artifacts/evidence \
           --suite-rust artifacts/evidence/suite-run-rust.json \
           --suite-ts artifacts/evidence/suite-run-ts.json \
@@ -212,7 +224,9 @@ runs:
 
     - name: Archive evidence
       shell: bash
+      env:
+        COMMIT_SHA: ${{ inputs.commit_sha }}
       run: |
         set -euo pipefail
         cd artifacts
-        zip -r "evidence-${GITHUB_SHA}.zip" evidence
+        zip -r "evidence-${COMMIT_SHA}.zip" evidence

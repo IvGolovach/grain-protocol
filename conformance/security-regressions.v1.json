@@ -76,11 +76,14 @@
     },
     {
       "id": "GRAIN-SEC-09",
-      "title": "Dependabot automerge cannot self-approve executable workflow or action updates",
+      "title": "Dependency automation cannot self-merge or reach a persistent public-repository runner",
       "evidence": [
         {"kind": "path", "path": "tools/ci/check_dependabot_policy.py"},
         {"kind": "path", "path": "tools/ci/test_check_dependabot_policy.py"},
-        {"kind": "path", "path": ".github/workflows/dependabot-automerge.yml"}
+        {"kind": "path", "path": "tools/ci/check_ci_economy_policy.py"},
+        {"kind": "path", "path": "tools/ci/check_full_ci_environment.py"},
+        {"kind": "path", "path": ".github/dependabot.yml"},
+        {"kind": "path", "path": ".github/workflows/ci.yml"}
       ]
     },
     {

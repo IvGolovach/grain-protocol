@@ -49,6 +49,17 @@ The operation set for `runner_v1` is frozen to:
 Normative manifest file:
 - `conformance/contract/runner_v1.ops.json`
 
+### Additive `dagcbor_validate` typed context
+
+`dagcbor_validate` MAY receive optional string input `object_type`. It selects
+one of the 14 top-level v0.1 CDDL productions for complete typed validation.
+It does not add an operation, flag, or output field. Vectors without
+`object_type` retain the original strict DAG-CBOR behavior.
+
+Supported selector values and validation semantics are defined in
+`conformance/SPEC.md` and `spec/profiles/cbor-profile.md`. `object_type` is
+runner metadata and is never injected into protocol bytes.
+
 ## Compatibility policy
 
 - Additive changes that do not change flags/output schema/operation names MAY be introduced under `runner_v1`.

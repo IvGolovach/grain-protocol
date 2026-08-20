@@ -44,6 +44,30 @@ The runner MUST provide a mode where:
   (`NEG-COSE-030` through `NEG-COSE-035`)
 - vectors are concrete test cases (no placeholder/illustrative vectors)
 
+## Typed Object Validation v1
+
+`runner_v1` keeps the same operation list. The existing `dagcbor_validate`
+operation accepts optional `input.object_type` for complete validation against
+one of the 14 top-level v0.1 CDDL productions.
+
+- `object_type` absent: legacy strict DAG-CBOR path.
+- `object_type` present: envelope, closed keys, required/types, fixed widths,
+  full CID links, nested productions, unions, numeric domains, set-arrays, and
+  applicable limits all become part of the verdict.
+- Fixed-type productions require encoded `t` to match the selector.
+- `LedgerEvent` is context-selected because its encoded `t` is event data.
+- This is an additive input, not a new operation or contract version.
+
+Shared vectors live under `conformance/vectors/object/`. The positive pack
+covers all productions plus every IntakeEvent and ManifestRecord branch. The
+negative pack freezes reject diagnostics and precedence across Rust and
+TypeScript.
+
+`NEG-OBJ-097` through `NEG-OBJ-099` freeze selector input type, unknown-selector,
+and strict-byte-before-unknown-selector precedence. The WASM subset includes
+these boundaries plus representative IngredientRef, LedgerEvent, and
+ManifestRecord typed validation.
+
 ## Invariant mapping
 
 `docs/llm/INVARIANTS.md` is the authoritative invariant -> vector mapping.
@@ -118,17 +142,23 @@ Contract:
 
 ## CI and provenance contract
 
-Required CI contexts on `main`:
-- `python-tooling`
-- `rust-core`
-- `evidence-bundle`
-- `capid-csprng-audit`
+Required CI context on `main`:
+- `CI gate`
 
-Additional CI jobs such as `ts-c01` and `ts-full` still run in CI, but they are
-not separate branch-protection contexts on `main` today.
+`CI gate` is the stable branch-protection contract. It always requires the
+automatic Linux jobs. Every external fork contributor first needs maintainer
+approval before any workflow starts. For code, executable automation, protocol,
+conformance, SDK, script, and unknown PR paths, `CI gate` also requires
+successful protected-environment approval after the Linux graph plus
+`sdk-platform` and `evidence-bundle` jobs. A new commit cancels the old run and
+requires approval again. Pushes to `main` and manual dispatches run the full
+graph, including fuzz and verify-script smoke jobs, with a unique concurrency
+group per non-PR run.
 
 Evidence policy:
 - CI emits commit-bound bundle `evidence-<commit_sha>.zip`
+- PR evidence is emitted only after an explicit full run; every `main` push
+  emits full evidence automatically
 - bundle includes suite summaries, vector manifests/hashes, toolchain/lock hashes, Rust↔TS divergence summaries
 - local `.local-architect-reports/**` are non-normative and MUST NOT be committed
 - containerized portability certify path: `scripts/certify` (strict, clean-tree required, no permissive fallback)

@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-036",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pGF0bUxlZGdlckdlbmVzaXNhdgFocm9vdF9raWRQUVFRUVFRUVFRUVFRUVFRUWhyb290X3B1YlgfUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUlJSUg==",
+    "object_type": "LedgerGenesis"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "LedgerGenesis.root_pub must be bstr32."
+  }
+}

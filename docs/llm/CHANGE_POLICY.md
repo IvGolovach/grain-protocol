@@ -26,6 +26,8 @@ These still require ADR + vectors:
 - new transport profiles with new prefixes (`GR2:`, etc.)
 - new pairing mechanisms that distribute `sync_secret` without changing envelope semantics
 - additional tooling and docs
+- additive runner inputs that preserve operation names, CLI shape, and output,
+  such as `dagcbor_validate.object_type` for enforcing an existing CDDL rule
 
 ## DOC_SYNC rule
 
@@ -51,19 +53,30 @@ If you cannot update the docs in the same PR, stop and split the work.
 ## If conformance contract changes
 
 If `conformance/SPEC.md` changes, or if the input/output or diagnostics contract changes:
-- add an ADR under `adr/conformance/`
+- add an ADR under `adr/conformance/`, except for the bounded Typed Object
+  Validation v1 case described below
 - update `conformance/contract/runner_v1.md` and bump the contract version if incompatible
 - update `docs/llm/CONFORMANCE.md`
 - update `docs/llm/INVARIANTS.md` and `docs/llm/EDGE_CASES.md` for vector mapping
 - update `docs/llm/DOC_SYNC.md`
 - update `CHANGELOG.md`
 
+Typed Object Validation v1 is the bounded compatibility case documented in
+ADR-0012: it adds optional input to `dagcbor_validate`, preserves the frozen
+operation list/output, and may strengthen rejection only for bytes that fail an
+already selected v0.1 CDDL production. Adding a typed validation operation or
+renaming the existing operation is not compatible with `runner_v1`. ADR-0012
+under `adr/protocol/` is the approved sole ADR for this exception because the
+validity rule is owned by NES/CDDL; do not add a duplicate conformance ADR.
+
 ## If provenance or CI policy changes
 
 If a PR changes CI gates, evidence artifacts, branch protection policy, tag namespace policy, or provenance docs:
 - update `docs/human/repository-settings.md`
+- update `docs/human/dependencies-policy.md` when dependency cadence, runner trust, or explicit full-CI approval changes
 - update `MIGRATION.md` when provenance statements change
 - keep required CI context names stable unless governance update is explicit
+- keep `CI gate` fail-closed and do not attach persistent self-hosted pull-request runners to the public repository
 - keep SDK release artifact claims tied to strict same-commit SDK verification and package metadata checks
 - update `docs/llm/DOC_SYNC.md`
 - update `CHANGELOG.md`

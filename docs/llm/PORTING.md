@@ -22,13 +22,16 @@ This is the final behavior check. If implementation disagrees with vectors, the 
 - UTF-8 ordering: sort strictly by UTF-8 bytes, not locale or UTF-16 behavior.
 - Duplicate map keys: reject at any depth (never `last-wins`).
 - Non-canonical CBOR: reject, do not repair.
+- Canonical DAG-CBOR is not proof of typed validity: a selected known object
+  must still satisfy its complete CDDL production.
 - HKDF labels: `0x00` is a real byte separator.
 - E2E AAD: it is raw `cap_id` bytes.
 - JS/TS numbers: where int64 or uint63 is required, use BigInt, not Number.
 
 ## Minimal Implementation Plan
 
-1. Implement `dagcbor_validate`.
+1. Implement `dagcbor_validate`, including optional `object_type` and complete
+   validation of all 14 top-level v0.1 CDDL productions.
 2. Implement `cid_derive`.
 3. Implement `cose_verify`.
 4. Implement `parse_cborseq_stream_v1`.

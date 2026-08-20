@@ -22,6 +22,28 @@ If an implementation disagrees, treat it as a bug or drift candidate.
 - NEG-UTF8-WA-0002: UTF-16/locale sorting trap (`U+1F600` vs `U+E000`) -> REJECT
 - NEG-UTF8-WA-0003: duplicate set-array item by exact UTF-8 bytes -> REJECT
 
+## Typed Object Validation v1
+
+- NEG-OBJ-001 through NEG-OBJ-007: selected type, `v`/`t`, and top-level-map envelope failures -> `GRAIN_ERR_SCHEMA`
+- NEG-OBJ-010 through NEG-OBJ-023: missing required fields across all 14 top-level CDDL productions -> reject
+- NEG-OBJ-030 through NEG-OBJ-044: wrong value kinds, fixed widths, or nested EventRef shape -> `GRAIN_ERR_SCHEMA`
+- NEG-OBJ-045 through NEG-OBJ-047: incomplete, wrong-codec, or trailing-byte CID link -> `GRAIN_ERR_BAD_CID_LINK`
+- NEG-OBJ-050 through NEG-OBJ-060: nested CookInput/MapDecision and Intake union failures -> reject
+- NEG-OBJ-061 through NEG-OBJ-067: invalid `crit`, `caps`, or `ext` shape/set semantics -> reject
+- NEG-OBJ-068: unknown top-level key precedes missing-required-field diagnosis -> `GRAIN_ERR_UNKNOWN_TOPLEVEL_KEY`
+- NEG-OBJ-069: strict byte failure precedes typed schema checks -> `GRAIN_ERR_NONCANONICAL`
+- NEG-OBJ-070 through NEG-OBJ-078: non-negative, int64, and uint63 domain failures -> `GRAIN_ERR_SCHEMA`
+- NEG-OBJ-080 through NEG-OBJ-086: `crit`, tstr, `ext`, ServingOffer, LedgerEvent, and ManifestRecord limits -> `GRAIN_ERR_LIMIT`
+- NEG-OBJ-089 through NEG-OBJ-095: invalid ManifestRecord op/branch shape and precedence -> `GRAIN_ERR_MANIFEST_OP`
+- NEG-OBJ-096: EncryptedObject algorithm differs from `A256GCM` -> `GRAIN_ERR_SCHEMA`
+- NEG-OBJ-097: non-string `object_type` input -> `GRAIN_ERR_SCHEMA`
+- NEG-OBJ-098: unknown string `object_type` after valid bytes -> `GRAIN_ERR_SCHEMA`
+- NEG-OBJ-099: strict byte failure precedes unknown string selector rejection -> `GRAIN_ERR_NONCANONICAL`
+
+Positive coverage is `POS-OBJ-001` through `POS-OBJ-017`: every top-level v0.1
+CDDL production, all three IntakeEvent branches, both ManifestRecord branches,
+and the context-selected LedgerEvent envelope.
+
 ## CID links
 - NEG-CID-010: tag42 CID link missing 0x00 prefix -> REJECT
 
