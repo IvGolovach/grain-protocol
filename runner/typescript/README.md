@@ -16,6 +16,12 @@ Implemented full conformance op set:
 - `e2e_derive_v1`
 - `e2e_decrypt`
 
+`dagcbor_validate` also accepts optional `input.object_type` for complete
+Typed Object Validation v1. This is an additive input to the existing
+operation; the frozen operation list is unchanged.
+The WASM subset exercises representative typed objects, Manifest diagnostic
+precedence, and selector boundary vectors `NEG-OBJ-097` through `NEG-OBJ-099`.
+
 ## Independence boundary
 
 - No Rust FFI or WASM in engine execution
@@ -87,5 +93,6 @@ npm --prefix runner/typescript run build
 - UTF-8 comparisons are raw-byte lexicographic only
 - HKDF labels are ASCII with explicit `0x00` separators
 - DAG-CBOR decoding is strict and rejects duplicate map keys and non-canonical forms
+- selected typed-object validation covers the full named v0.1 CDDL production
 - Ledger and manifest outputs are order-independent for identical input sets
 - runner JSON output encodes unsafe integers as decimal strings once values move past the JavaScript safe-integer range

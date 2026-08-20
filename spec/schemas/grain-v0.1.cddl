@@ -5,6 +5,10 @@
 ; - Protocol objects are DAG-CBOR strict with string keys only.
 ; - Tags are forbidden except tag 42 for CID links (#6.42).
 ; - Closed top-level keys are a NES rule (not fully enforceable in CDDL).
+; - runner_v1 Typed Object Validation selects one of the 14 top-level
+;   productions below with the optional dagcbor_validate.object_type input.
+; - object_type is runner metadata, never an encoded protocol-object field.
+; - LedgerEvent is context-selected because its encoded "t" is the event type.
 
 bstr16 = bstr .size 16
 bstr32 = bstr .size 32
@@ -40,7 +44,7 @@ NutrientProfile = {
   "source": tstr,
   "basis": tstr, ; e.g., "per_100g"
   "nutr": nutrient-map,
-  ? "uncert": { * tstr => int }, ; optional per-nutrient variance or metadata (fixed-point)
+  ? "uncert": { * tstr => int }, ; optional per-nutrient variance (fixed-point); NES requires >= 0
   ? "ext": ext,
   ? "crit": crit,
 }

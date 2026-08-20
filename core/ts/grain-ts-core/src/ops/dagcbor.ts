@@ -1,19 +1,26 @@
 import { GrainDiagError, LIMITS } from "../types.js";
 import type { CborNode, Json, OperationActual } from "../types.js";
 import {
-  encodeCanonical,
-  STRICT_DAG_CBOR_OPTIONS,
   mapGet,
   nodeAsBytes,
   nodeAsText,
-  parseExact,
   validateSetArrayUtf8
 } from "../cbor.js";
+import { schemaForLegacyTypeV1 } from "../object-schema.js";
+import { parseDagCborStrict, validateTypedObjectV1 } from "../typed-object.js";
 import { bytesEq, decodeB64, sha256 } from "../utils.js";
+
+export { parseDagCborStrict, validateTypedObjectV1 } from "../typed-object.js";
 
 export function opDagCborValidate(input: Record<string, Json>): OperationActual {
   const bytes = decodeB64(input.bytes_b64);
-  validateDagCborStrict(bytes);
+  if (input.object_type === undefined) {
+    validateDagCborStrict(bytes);
+  } else if (typeof input.object_type === "string") {
+    validateTypedObjectV1(bytes, input.object_type);
+  } else {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
   return { accepted: true, diag: [], out: {} };
 }
 
@@ -30,11 +37,7 @@ export function opCidDerive(input: Record<string, Json>): OperationActual {
 }
 
 export function validateDagCborStrict(bytes: Uint8Array): CborNode {
-  if (bytes.length > LIMITS.CBL_MAX_DAGCBOR_OBJECT_BYTES) {
-    throw new GrainDiagError("GRAIN_ERR_LIMIT");
-  }
-
-  const node = parseExact(bytes, STRICT_DAG_CBOR_OPTIONS);
+  const node = parseDagCborStrict(bytes);
   schemaChecks(node);
   return node;
 }
@@ -44,28 +47,9 @@ export function validateServingOfferPayload(payload: Uint8Array, expectedIssuerK
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
 
-  const node = validateDagCborStrict(payload);
-  if (nodeAsText(mapGet(node, "t")) !== "ServingOffer") {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-  const version = mapGet(node, "v");
-  if (!version || version.kind !== "u" || version.value !== 1n) {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
+  const node = validateTypedObjectV1(payload, "ServingOffer");
   const issuerKid = nodeAsBytes(mapGet(node, "issuer_kid"));
   if (!issuerKid || !bytesEq(issuerKid, expectedIssuerKid)) {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-  const servingG = mapGet(node, "serving_g");
-  if (!servingG || servingG.kind !== "u") {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-  const mean = mapGet(node, "mean");
-  if (!mean || mean.kind !== "m") {
-    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
-  }
-  const variance = mapGet(node, "var");
-  if (!variance || variance.kind !== "m") {
     throw new GrainDiagError("GRAIN_ERR_SCHEMA");
   }
 
@@ -82,9 +66,9 @@ export function schemaChecks(node: CborNode): void {
     return;
   }
 
-  const allowed = allowedTopLevelKeys(t);
-  if (allowed) {
-    const allowedSet = new Set(allowed);
+  const schema = schemaForLegacyTypeV1(t);
+  if (schema) {
+    const allowedSet = new Set(schema.allowedTopLevelKeys);
     for (const entry of node.entries) {
       if (entry.key.kind !== "t") {
         throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
@@ -101,7 +85,7 @@ export function schemaChecks(node: CborNode): void {
     if (crit.kind !== "a") {
       throw new GrainDiagError("GRAIN_ERR_SCHEMA");
     }
-    if (crit.items.length > 64) {
+    if (crit.items.length > LIMITS.CBL_MAX_CRIT_ENTRIES) {
       throw new GrainDiagError("GRAIN_ERR_LIMIT");
     }
     let total = 0;
@@ -111,7 +95,7 @@ export function schemaChecks(node: CborNode): void {
       }
       total += it.bytes.length;
     }
-    if (total > 4096) {
+    if (total > LIMITS.CBL_MAX_CRIT_TOTAL_UTF8_BYTES) {
       throw new GrainDiagError("GRAIN_ERR_LIMIT");
     }
 
@@ -192,39 +176,4 @@ function base32LowerNoPad(data: Uint8Array): string {
   }
 
   return out;
-}
-
-function allowedTopLevelKeys(t: string): string[] | undefined {
-  switch (t) {
-    case "IngredientRef":
-      return ["v", "t", "ref_type", "ref_id", "ref_version", "name", "ext", "crit"];
-    case "NutrientProfile":
-      return ["v", "t", "dataset_snapshot_id", "source", "basis", "nutr", "uncert", "ext", "crit"];
-    case "CookRun":
-      return ["v", "t", "inputs", "yield_g", "ts_ms", "ext", "crit"];
-    case "NutritionComputeResult":
-      return ["v", "t", "cookrun", "engine_id", "engine_version", "dataset_snapshot_id", "map", "out", "ext", "crit"];
-    case "IntakeEvent":
-      return ["v", "t", "source_class", "mean", "var", "mode", "cookrun", "amount_g", "ing", "profile", "servings", "ts_ms", "ext", "crit"];
-    case "ServingOffer":
-      return ["v", "t", "issuer_kid", "serving_g", "mean", "var", "nonce", "ext", "crit"];
-    case "LedgerGenesis":
-      return ["v", "t", "root_kid", "root_pub", "ext", "crit"];
-    case "DeviceKeyGrant":
-      return ["v", "t", "ak", "pub", "caps", "ext", "crit"];
-    case "DeviceKeyRevoke":
-      return ["v", "t", "ak", "ext", "crit"];
-    case "VoidEvent":
-      return ["v", "t", "target", "reason", "ext", "crit"];
-    case "CorrectionEvent":
-      return ["v", "t", "target", "reason", "ext", "crit"];
-    case "LedgerEvent":
-      return ["v", "t", "ak", "seq", "ts_ms", "body", "ext", "crit"];
-    case "EncryptedObject":
-      return ["v", "t", "alg", "cap_id", "nonce", "ct", "ext", "crit"];
-    case "ManifestRecord":
-      return ["v", "t", "ak", "seq", "cid", "op", "cap_id", "chash", "size", "ext", "crit"];
-    default:
-      return undefined;
-  }
 }

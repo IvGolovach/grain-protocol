@@ -5,7 +5,7 @@ Strict reference executor for Grain Protocol v0.1.
 ## Modules
 
 - `cbor`: low-level CBOR parser/encoder used for strict verification paths
-- `dagcbor`: strict DAG-CBOR + schema-level checks
+- `dagcbor`: strict DAG-CBOR plus optional selected typed-object validation
 - `cid`: CIDv1 derivation (dag-cbor + sha2-256)
 - `cose`: COSE_Sign1 narrow profile verification
 - `cborseq`: raw CBOR-seq framing parser for stream tests
@@ -22,3 +22,6 @@ See:
 - `core/rust/grain-core/docs/errors.md`
 - `conformance/SPEC.md`
 - `docs/llm/INVARIANTS.md`
+
+The runner-facing typed selector is optional `object_type` on the existing
+`dagcbor_validate` operation. It is validation context, not a protocol field.

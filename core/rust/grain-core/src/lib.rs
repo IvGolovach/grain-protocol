@@ -8,7 +8,9 @@ pub mod error;
 pub mod ledger;
 pub mod limits;
 pub mod manifest;
+pub mod object_schema;
 pub mod qr;
+pub mod typed_object;
 
 use std::collections::BTreeSet;
 
@@ -25,6 +27,7 @@ use crate::error::{Diag, GrainError};
 use crate::ledger::{reduce_ledger, LedgerEvent};
 use crate::manifest::{resolve_manifest, ManifestRecord, ManifestResolveInput};
 use crate::qr::decode_gr1_to_cose;
+use crate::typed_object::validate_typed_object_v1;
 
 #[derive(Debug, Clone)]
 pub struct OperationResult {
@@ -77,7 +80,15 @@ pub fn execute_operation(op: &str, input: &Value, strict: bool) -> OperationResu
 
 fn op_dagcbor_validate(input: &Value) -> Result<(Value, Vec<Diag>), GrainError> {
     let bytes = decode_b64_field(input, "bytes_b64")?;
-    let _ = validate_strict_dagcbor(&bytes)?;
+    match input.get("object_type") {
+        None => {
+            let _ = validate_strict_dagcbor(&bytes)?;
+        }
+        Some(Value::String(object_type)) => {
+            let _ = validate_typed_object_v1(&bytes, object_type)?;
+        }
+        Some(_) => return Err(GrainError::from_diag(Diag::Schema)),
+    }
     Ok((json!({}), Vec::new()))
 }
 
@@ -213,8 +224,8 @@ fn op_ledger_reduce(input: &Value) -> Result<(Value, Vec<Diag>), GrainError> {
         .get("events")
         .ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
 
-    let events: Vec<LedgerEvent> =
-        serde_json::from_value(events_value.clone()).map_err(|_| GrainError::from_diag(Diag::Schema))?;
+    let events: Vec<LedgerEvent> = serde_json::from_value(events_value.clone())
+        .map_err(|_| GrainError::from_diag(Diag::Schema))?;
 
     let totals = reduce_ledger(root_kid, &events)?;
 

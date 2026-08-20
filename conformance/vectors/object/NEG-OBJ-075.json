@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-075",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0a0N1c3RvbUV2ZW50YXYBYmFrUGFhYWFhYWFhYWFhYWFhYWFjc2VxG4AAAAAAAAAAZGJvZHmhZXZhbHVlBw==",
+    "object_type": "LedgerEvent"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "Unsigned protocol integers must fit uint63."
+  }
+}

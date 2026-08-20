@@ -57,6 +57,30 @@ If an object is canonical and otherwise valid but `t` is unknown:
 - MUST forward on export/sync,
 - MUST ignore in reducers (no semantic effect).
 
+### 2.3.1 Known type validation (MUST)
+When an implementation handles bytes as a known v0.1 object type, the object
+MUST fully match the corresponding top-level production in
+`spec/schemas/grain-v0.1.cddl`.
+
+Full matching includes:
+- top-level map and schema-major envelope,
+- the fixed `t` literal where the selected production defines one,
+- closed top-level and nested production keys,
+- every required field and its exact CBOR value type,
+- fixed-width byte strings,
+- complete CIDv1 + dag-cbor + sha2-256 link structure,
+- nested productions and exactly one branch of each CDDL choice,
+- int64/uint63 and profile-specific non-negative numeric domains,
+- set-array ordering and uniqueness,
+- applicable strict conformance limits.
+
+`LedgerEvent` is selected by context because its `t` field is an event-type
+text string rather than the literal `"LedgerEvent"`.
+
+Failure to match a selected known production MUST reject. In the conformance
+runner, general typed-shape failures use `GRAIN_ERR_SCHEMA`; existing more
+specific diagnostics keep their documented meaning and precedence.
+
 ### 2.4 Unknown critical handling (MUST quarantine)
 If `crit` contains an unknown critical identifier:
 - MUST quarantine deterministically:

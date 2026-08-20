@@ -17,7 +17,9 @@ INTEROP = (ROOT / "spec" / "INTEROP-v0.1.md").read_text(encoding="utf-8")
 E2E = (ROOT / "spec" / "profiles" / "e2e-profile.md").read_text(encoding="utf-8")
 CBOR = (ROOT / "spec" / "profiles" / "cbor-profile.md").read_text(encoding="utf-8")
 CONF_SPEC = (ROOT / "conformance" / "SPEC.md").read_text(encoding="utf-8")
+RUNNER_V1 = (ROOT / "conformance" / "contract" / "runner_v1.md").read_text(encoding="utf-8")
 ADR_WAVE_A = ROOT / "adr" / "conformance" / "0001-wave-a-byte-level-ops.md"
+ADR_TYPED_OBJECT = ROOT / "adr" / "protocol" / "0012-typed-object-validation-v1.md"
 
 
 def require(text: str, needle: str, err: str) -> None:
@@ -67,6 +69,16 @@ def main() -> int:
     require(CONF_SPEC, "GRAIN_ERR_CBORSEQ_INVALID_INITIAL_BYTE", "Conformance SPEC missing CBOR-seq invalid-initial diagnostic.")
     if not ADR_WAVE_A.exists():
         raise SystemExit("Missing ADR for Wave A conformance contract extensions (adr/conformance/0001-wave-a-byte-level-ops.md).")
+
+    # Typed Object Validation v1 is an additive runner_v1 input over existing schemas.
+    require(NES, "Known type validation (MUST)", "NES missing known typed-object validation rule.")
+    require(CDDL, "optional dagcbor_validate.object_type input", "CDDL missing typed-object selector comment.")
+    require(CBOR, "Typed Object Validation v1", "CBOR profile missing typed-object validation section.")
+    require(CONF_SPEC, "optional `object_type`", "Conformance SPEC missing optional typed-object selector.")
+    require(RUNNER_V1, "Additive `dagcbor_validate` typed context", "runner_v1 contract missing additive typed-object context.")
+    require(CONF_SPEC, "GRAIN_ERR_MANIFEST_OP", "Conformance SPEC missing typed Manifest diagnostic.")
+    if not ADR_TYPED_OBJECT.exists():
+        raise SystemExit("Missing ADR for Typed Object Validation v1 (adr/protocol/0012-typed-object-validation-v1.md).")
 
     # Interop claim anchors.
     require(INTEROP, "Strict Conformance Mode", "INTEROP spec missing strict-mode scope anchor.")

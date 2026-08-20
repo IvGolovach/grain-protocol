@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-003",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pGF0bUluZ3JlZGllbnRSZWZhdgJmcmVmX2lkZWFwcGxlaHJlZl90eXBlZWxvY2Fs",
+    "object_type": "IngredientRef"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "Unknown protocol schema major rejects."
+  }
+}

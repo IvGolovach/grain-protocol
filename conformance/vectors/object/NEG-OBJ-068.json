@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-068",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pGF0bUluZ3JlZGllbnRSZWZhdgFlYm9ndXMBaHJlZl90eXBlZWxvY2Fs",
+    "object_type": "IngredientRef"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_UNKNOWN_TOPLEVEL_KEY"
+    ]
+  },
+  "meta": {
+    "desc": "Unknown top-level key wins before missing required-field checks."
+  }
+}

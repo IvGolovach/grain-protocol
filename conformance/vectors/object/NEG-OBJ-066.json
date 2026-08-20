@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-066",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0bUluZ3JlZGllbnRSZWZhdgFjZXh0gGZyZWZfaWRlYXBwbGVocmVmX3R5cGVlbG9jYWw=",
+    "object_type": "IngredientRef"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "ext must be a string-keyed map."
+  }
+}

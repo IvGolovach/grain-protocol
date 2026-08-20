@@ -4,9 +4,9 @@ use hkdf::Hkdf;
 use sha2::{Digest, Sha256};
 
 use crate::cid::ensure_cid_link_prefix_0;
-use crate::dagcbor::validate_strict_dagcbor;
 use crate::error::{Diag, GrainError, GrainResult};
 use crate::limits::Limits;
+use crate::typed_object::validate_typed_object_v1;
 
 const KEY_INFO: &[u8] = b"GrainE2E\0v0.1\0A256GCM\0key";
 const NONCE_INFO_PREFIX: &[u8] = b"GrainE2E\0v0.1\0A256GCM\0nonce\0";
@@ -17,7 +17,11 @@ pub struct DerivedKeyNonce {
     pub nonce: [u8; 12],
 }
 
-pub fn derive_key_nonce(sync_secret: &[u8], cap_id: &[u8], cid_link_bstr: &[u8]) -> GrainResult<DerivedKeyNonce> {
+pub fn derive_key_nonce(
+    sync_secret: &[u8],
+    cap_id: &[u8],
+    cid_link_bstr: &[u8],
+) -> GrainResult<DerivedKeyNonce> {
     if sync_secret.len() != 32 || cap_id.len() != 32 {
         return Err(GrainError::from_diag(Diag::E2eInputLength));
     }
@@ -57,36 +61,15 @@ pub fn decrypt_encrypted_object(
         }
     }
 
-    let value = validate_strict_dagcbor(encrypted_object_bytes)?;
+    let value = validate_typed_object_v1(encrypted_object_bytes, "EncryptedObject")?;
     let Some(map) = value.as_map() else {
         return Err(GrainError::from_diag(Diag::Schema));
     };
 
-    let t = map_find_text(map, "t");
-    if t.as_deref() != Some("EncryptedObject") {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-
-    let v = map_find_unsigned(map, "v");
-    if v != Some(1) {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-
-    let alg = map_find_text(map, "alg");
-    if alg.as_deref() != Some("A256GCM") {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-
-    let cap_id = map_find_bytes(map, "cap_id").ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
-    if cap_id.len() != 32 {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-
-    let nonce_env = map_find_bytes(map, "nonce").ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
-    if nonce_env.len() != 12 {
-        return Err(GrainError::from_diag(Diag::Schema));
-    }
-
+    let cap_id =
+        map_find_bytes(map, "cap_id").ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
+    let nonce_env =
+        map_find_bytes(map, "nonce").ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
     let ct = map_find_bytes(map, "ct").ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
 
     let derived = derive_key_nonce(sync_secret, &cap_id, cid_link_bstr)?;
@@ -94,7 +77,8 @@ pub fn decrypt_encrypted_object(
         return Err(GrainError::from_diag(Diag::NonceProfileMismatch));
     }
 
-    let cipher = Aes256Gcm::new_from_slice(&derived.key).map_err(|e| GrainError::Internal(e.to_string()))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&derived.key).map_err(|e| GrainError::Internal(e.to_string()))?;
     let nonce = Nonce::from_slice(&derived.nonce);
 
     let pt = cipher
@@ -110,7 +94,10 @@ pub fn decrypt_encrypted_object(
     Ok(pt)
 }
 
-fn map_find<'a>(map: &'a [(crate::cbor::CborValue, crate::cbor::CborValue)], key: &str) -> Option<&'a crate::cbor::CborValue> {
+fn map_find<'a>(
+    map: &'a [(crate::cbor::CborValue, crate::cbor::CborValue)],
+    key: &str,
+) -> Option<&'a crate::cbor::CborValue> {
     for (k, v) in map {
         if k.as_text_bytes() == Some(key.as_bytes()) {
             return Some(v);
@@ -119,19 +106,10 @@ fn map_find<'a>(map: &'a [(crate::cbor::CborValue, crate::cbor::CborValue)], key
     None
 }
 
-fn map_find_text(map: &[(crate::cbor::CborValue, crate::cbor::CborValue)], key: &str) -> Option<String> {
-    map_find(map, key).and_then(|v| v.as_text())
-}
-
-fn map_find_unsigned(map: &[(crate::cbor::CborValue, crate::cbor::CborValue)], key: &str) -> Option<u64> {
-    let v = map_find(map, key)?;
-    match v {
-        crate::cbor::CborValue::Unsigned(n) => Some(*n),
-        _ => None,
-    }
-}
-
-fn map_find_bytes(map: &[(crate::cbor::CborValue, crate::cbor::CborValue)], key: &str) -> Option<Vec<u8>> {
+fn map_find_bytes(
+    map: &[(crate::cbor::CborValue, crate::cbor::CborValue)],
+    key: &str,
+) -> Option<Vec<u8>> {
     map_find(map, key).and_then(|v| v.as_bytes().map(|b| b.to_vec()))
 }
 
@@ -141,6 +119,7 @@ mod tests {
     use base64::Engine;
 
     use super::*;
+    use crate::cbor::{encode_canonical, CborValue};
 
     #[test]
     fn derive_key_nonce_is_deterministic_for_same_inputs() {
@@ -208,6 +187,29 @@ mod tests {
 
         let err = decrypt_encrypted_object(&encrypted, &sync_secret, &cid_link, None).unwrap_err();
         assert_eq!(err.diag(), Diag::NonceProfileMismatch);
+    }
+
+    #[test]
+    fn decrypt_encrypted_object_keeps_short_ct_as_aead_auth_failure() {
+        let sync_secret = [0u8; 32];
+        let cap_id = [1u8; 32];
+        let cid_link = [0x00, 0x42];
+        let derived = derive_key_nonce(&sync_secret, &cap_id, &cid_link).unwrap();
+
+        let text = |value: &str| CborValue::Text(value.as_bytes().to_vec());
+        let value = CborValue::Map(vec![
+            (text("v"), CborValue::Unsigned(1)),
+            (text("t"), text("EncryptedObject")),
+            (text("alg"), text("A256GCM")),
+            (text("cap_id"), CborValue::Bytes(cap_id.to_vec())),
+            (text("nonce"), CborValue::Bytes(derived.nonce.to_vec())),
+            (text("ct"), CborValue::Bytes(Vec::new())),
+        ]);
+        let mut envelope = Vec::new();
+        encode_canonical(&value, &mut envelope);
+
+        let err = decrypt_encrypted_object(&envelope, &sync_secret, &cid_link, None).unwrap_err();
+        assert_eq!(err.diag(), Diag::AeadAuth);
     }
 
     fn tamper_ct_bstr_payload(bytes: &mut [u8]) {

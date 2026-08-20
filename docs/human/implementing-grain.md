@@ -36,6 +36,28 @@ Treat the conformance vectors as the final behavior check. Implementations shoul
 - HKDF labels with incorrect `0x00` separators.
 - `parse_cborseq_stream_v1` treated as partial-success instead of XOR accept/reject framing verdict.
 - Silent dependency on host toolchain/runtime instead of containerized verify path.
+- Treating canonical DAG-CBOR as sufficient proof that a selected known object
+  matches its full CDDL production.
+- Checking only the tag-42 `0x00` prefix instead of the complete CIDv1,
+  dag-cbor, sha2-256, 32-byte-digest structure.
+
+## Typed object validation
+
+Use the existing `dagcbor_validate` runner operation with optional
+`object_type` when the caller knows which v0.1 production it expects:
+
+```json
+{
+  "bytes_b64": "<canonical DAG-CBOR>",
+  "object_type": "ServingOffer"
+}
+```
+
+This is a pure validation selector. It is not encoded into the object and does
+not create a second wire format. A complete implementation validates required
+fields, exact value kinds, fixed byte widths, full CID links, nested records,
+union branches, numeric domains, set-arrays, and limits. Start with
+`conformance/vectors/object/POS-OBJ-001.json`, then run the full object pack.
 
 ## Conformance statements
 

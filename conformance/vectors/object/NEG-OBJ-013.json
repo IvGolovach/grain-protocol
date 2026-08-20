@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-013",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "p2F0dk51dHJpdGlvbkNvbXB1dGVSZXN1bHRhdgFjbWFwgaJjaW5n2CpYJQABcRIgERERERERERERERERERERERERERERERERERERERERERFncHJvZmlsZdgqWCUAAXESIBISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhISZ2Nvb2tydW7YKlglAAFxEiAhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhIWllbmdpbmVfaWRpcmVmZXJlbmNlbmVuZ2luZV92ZXJzaW9uYTFzZGF0YXNldF9zbmFwc2hvdF9pZGlkYXRhc2V0LTE=",
+    "object_type": "NutritionComputeResult"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "NutritionComputeResult requires out."
+  }
+}

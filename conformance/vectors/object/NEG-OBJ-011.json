@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-011",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pWF0b051dHJpZW50UHJvZmlsZWF2AWViYXNpc2hwZXJfMTAwZ2Zzb3VyY2VjbGFic2RhdGFzZXRfc25hcHNob3RfaWRpZGF0YXNldC0x",
+    "object_type": "NutrientProfile"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "NutrientProfile requires nutr."
+  }
+}

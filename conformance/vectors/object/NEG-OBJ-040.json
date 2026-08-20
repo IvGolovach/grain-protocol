@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-040",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "o2F0b0NvcnJlY3Rpb25FdmVudGF2AWZ0YXJnZXSjYmFrUGFhYWFhYWFhYWFhYWFhYWFjc2VxAWVleHRyYQE=",
+    "object_type": "CorrectionEvent"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "EventRef keys are closed."
+  }
+}

@@ -38,6 +38,20 @@ Update:
 - `docs/llm/CHANGE_POLICY.md`
 - any human docs that explain the changed workflow or guarantee
 
+For Typed Object Validation v1, protocol ADR-0012 is the approved exception to
+the general `adr/conformance/` location rule because NES/CDDL owns known-object
+validity; do not add a duplicate conformance ADR. Also keep these synchronized:
+
+- `adr/protocol/0012-typed-object-validation-v1.md`
+- `conformance/vectors/object/`
+- `core/rust/grain-core/docs/errors.md`
+- `docs/llm/PORTING.md`
+- `docs/human/implementing-grain.md`
+- `docs/human/porting-grain.md`
+
+Do not add a new `runner_v1` operation for typed validation. The compatible
+surface is optional `object_type` on existing `dagcbor_validate`.
+
 ### SDK behavior changes
 
 Update:

@@ -1,0 +1,18 @@
+{
+  "vector_id": "NEG-OBJ-042",
+  "op": "dagcbor_validate",
+  "strict": true,
+  "input": {
+    "bytes_b64": "pmF0b0VuY3J5cHRlZE9iamVjdGF2AWJjdFggc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3NjYWxnZ0EyNTZHQ01lbm9uY2VMcnJycnJycnJycnJyZmNhcF9pZFgfcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcXFxcQ==",
+    "object_type": "EncryptedObject"
+  },
+  "expect": {
+    "pass": false,
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ]
+  },
+  "meta": {
+    "desc": "EncryptedObject.cap_id must be bstr32."
+  }
+}
