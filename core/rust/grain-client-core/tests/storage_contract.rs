@@ -2,8 +2,9 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use grain_client_core::platform::storage::{list_accepted_scans, put_accepted_scan_atomically};
 use grain_client_core::{
-    client_lifecycle, device_add_key, identity_create_root, scan_accept_prepare,
-    AcceptedScanRecord, ClientStore, MemoryClientStore, StorePutResult, StoreSnapshotStatus,
+    client_lifecycle, device_add_key, device_set_active, identity_create_root, scan_accept_prepare,
+    AcceptedScanRecord, ClientStore, IdentityClientStore, MemoryClientStore, StorePutResult,
+    StoreSnapshotStatus,
 };
 use serde_json::Value;
 
@@ -132,6 +133,144 @@ fn storage_snapshot_round_trips_identity_lifecycle_and_scans() {
     assert_eq!(lifecycle.device_count, 2);
     assert_eq!(lifecycle.accepted_record_count, 1);
     assert_eq!(lifecycle.lifecycle_event_count, 1);
+}
+
+#[test]
+fn storage_snapshot_restore_preserves_sequence_high_water_mark() {
+    let mut store = MemoryClientStore::new();
+    assert!(identity_create_root(&mut store, "phone").diag.is_empty());
+    let old_snapshot = store.export_store_snapshot().snapshot_b64.unwrap();
+    assert!(device_add_key(&mut store, "first-device").diag.is_empty());
+    let first = store.list_lifecycle_events().remove(0);
+    assert_eq!(first.seq, 1);
+
+    let restored = store.restore_store_snapshot(&old_snapshot);
+    assert_eq!(restored.status, StoreSnapshotStatus::Restored);
+    assert_eq!(restored.device_count, 1);
+    assert_eq!(restored.lifecycle_event_count, 0);
+
+    // Saving identity state must not overwrite the retained sequence counter.
+    assert!(device_set_active(&mut store, &first.ak).diag.is_empty());
+    assert!(device_add_key(&mut store, "second-device").diag.is_empty());
+    let second = store.list_lifecycle_events().remove(0);
+    assert_eq!(second.ak, first.ak);
+    assert_ne!(second.payload_cid, first.payload_cid);
+    assert_eq!(second.seq, 2);
+}
+
+#[test]
+fn storage_snapshot_restore_persists_sequence_high_water_mark() {
+    let mut store = MemoryClientStore::new();
+    assert!(identity_create_root(&mut store, "phone").diag.is_empty());
+    let old_snapshot = store.export_store_snapshot().snapshot_b64.unwrap();
+    assert!(device_add_key(&mut store, "first-device").diag.is_empty());
+    assert!(device_add_key(&mut store, "second-device").diag.is_empty());
+    for _ in 0..2 {
+        assert_eq!(
+            store.restore_store_snapshot(&old_snapshot).status,
+            StoreSnapshotStatus::Restored
+        );
+    }
+
+    // Persist immediately after restore, before another event updates identity.
+    let persisted = store.export_store_snapshot().snapshot_b64.unwrap();
+    let mut restarted = MemoryClientStore::new();
+    assert_eq!(
+        restarted.restore_store_snapshot(&persisted).status,
+        StoreSnapshotStatus::Restored
+    );
+    assert!(device_add_key(&mut restarted, "third-device")
+        .diag
+        .is_empty());
+    assert_eq!(restarted.list_lifecycle_events()[0].seq, 3);
+}
+
+#[test]
+fn storage_snapshot_restore_uses_newer_snapshot_sequence() {
+    let mut source = MemoryClientStore::new();
+    assert!(identity_create_root(&mut source, "phone").diag.is_empty());
+    assert!(device_add_key(&mut source, "first-device").diag.is_empty());
+    let mut target = MemoryClientStore::new();
+    let older = source.export_store_snapshot().snapshot_b64.unwrap();
+    assert_eq!(
+        target.restore_store_snapshot(&older).status,
+        StoreSnapshotStatus::Restored
+    );
+
+    assert!(device_add_key(&mut source, "second-device").diag.is_empty());
+    let newer = source.export_store_snapshot().snapshot_b64.unwrap();
+    assert_eq!(
+        target.restore_store_snapshot(&newer).status,
+        StoreSnapshotStatus::Restored
+    );
+    assert!(device_add_key(&mut target, "third-device").diag.is_empty());
+    let mut sequences: Vec<_> = target
+        .list_lifecycle_events()
+        .iter()
+        .map(|event| event.seq)
+        .collect();
+    sequences.sort_unstable();
+    assert_eq!(sequences, vec![1, 2, 3]);
+}
+
+#[test]
+fn storage_snapshot_restore_keeps_exhausted_sequence() {
+    let mut store = MemoryClientStore::new();
+    assert!(identity_create_root(&mut store, "phone").diag.is_empty());
+    let old_snapshot = store.export_store_snapshot().snapshot_b64.unwrap();
+    store
+        .atomic(|tx| {
+            let mut identity = tx.load_identity_bundle().unwrap();
+            identity
+                .seq_state
+                .insert(identity.root_kid.clone(), u64::MAX.to_string());
+            tx.save_identity_bundle(identity)?;
+            Ok(())
+        })
+        .unwrap();
+
+    assert_eq!(
+        store.restore_store_snapshot(&old_snapshot).status,
+        StoreSnapshotStatus::Restored
+    );
+    let before = store.export_store_snapshot();
+    let rejected = device_add_key(&mut store, "must-not-reuse-seq");
+    assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_CONFLICT"]);
+    assert_eq!(store.export_store_snapshot(), before);
+}
+
+#[test]
+fn storage_snapshot_rejection_preserves_sequence_high_water_mark() {
+    let mut store = MemoryClientStore::new();
+    assert!(identity_create_root(&mut store, "phone").diag.is_empty());
+    assert!(device_add_key(&mut store, "first-device").diag.is_empty());
+    let before = store.export_store_snapshot();
+    let mut snapshot: Value = serde_json::from_slice(
+        &STANDARD
+            .decode(before.snapshot_b64.as_ref().unwrap())
+            .unwrap(),
+    )
+    .unwrap();
+    let root_kid = snapshot["identity"]["root_kid"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    snapshot["identity"]["seq_state"][&root_kid] = serde_json::json!("not-a-sequence");
+    let invalid = STANDARD.encode(serde_json::to_vec(&snapshot).unwrap());
+
+    let rejected = store.restore_store_snapshot(&invalid);
+    assert_eq!(rejected.status, StoreSnapshotStatus::Rejected);
+    assert_eq!(rejected.diag, vec!["SDK_ERR_STORE_SNAPSHOT_INVALID"]);
+    assert_eq!(store.export_store_snapshot(), before);
+    assert!(device_add_key(&mut store, "second-device").diag.is_empty());
+    assert_eq!(
+        store
+            .list_lifecycle_events()
+            .iter()
+            .map(|event| event.seq)
+            .max(),
+        Some(2)
+    );
 }
 
 #[test]

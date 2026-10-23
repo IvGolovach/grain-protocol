@@ -144,6 +144,12 @@ The identity, device lifecycle, pairing, and sync slice is now present:
 - pairing envelopes move an identity bundle through an app-controlled transfer channel and are idempotent on replay
 - sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics
 - lifecycle events imported from sync bundles or snapshots are revalidated as derived root-authored grant/revoke records before any store mutation
+- restoring an older snapshot preserves the highest sequence already known
+  for each author, and identity-bearing snapshots persist those counters for
+  later saves and restarts; restored data still follows snapshot replacement
+- restoring an old backup into a fresh client cannot recover sequence history
+  absent from the backup; apps must provide durable rollback protection when
+  reusing an existing identity after backup recovery
 - Swift, Kotlin, and WASM wrappers expose the same workflow methods through their public `GrainClient` APIs
 
 This is still a portable SDK core, not final production key custody. iOS,

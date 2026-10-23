@@ -70,10 +70,24 @@ impl MemoryClientStore {
             return snapshot_rejected(SDK_ERR_STORE_ATOMIC_NESTED);
         }
 
-        let (snapshot, replacement) = match decode_store_snapshot(snapshot_b64) {
+        let (mut snapshot, mut replacement) = match decode_store_snapshot(snapshot_b64) {
             Ok(decoded) => decoded,
             Err(diag) => return snapshot_rejected(diag),
         };
+
+        // Restoring older state must not reissue a sequence already used here.
+        for (ak, seq) in &self.seq_by_ak {
+            let restored_seq = replacement.seq_by_ak.entry(ak.clone()).or_default();
+            *restored_seq = (*restored_seq).max(*seq);
+        }
+        // Identity is also the serialized counter source for subsequent saves.
+        if let Some(identity) = &mut snapshot.identity {
+            identity.seq_state = replacement
+                .seq_by_ak
+                .iter()
+                .map(|(ak, seq)| (ak.clone(), seq.to_string()))
+                .collect();
+        }
 
         self.accepted_scans = replacement.accepted_scans;
         self.identity_bundle = snapshot.identity.clone();
