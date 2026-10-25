@@ -660,6 +660,36 @@ async function run(): Promise<number> {
       fail("SDK-REG-0002 identity import keeps per-author maxima and incoming authorization", String(err));
     }
 
+    for (const operation of ["event", "manifest-put", "manifest-del"] as const) {
+      const check = `SDK-REG-0002 identity import preserves live ${operation} counters`;
+      try {
+        const allocate = async (client: GrainSdk, label: string): Promise<bigint> => {
+          if (operation === "event") {
+            return (await client.events.append({ t: "IntakeEvent", payload_cid: label, body: {} })).event.seq;
+          }
+          if (operation === "manifest-put") {
+            return (await client.manifest.put(label, new Uint8Array(16), new Uint8Array(32))).seq;
+          }
+          return (await client.manifest.del(label)).seq;
+        };
+        const importSdk = new GrainSdk();
+        const { root_kid: root } = await importSdk.identity.createRoot();
+        const old = await importSdk.identity.exportBundle();
+        assert.equal(await allocate(importSdk, "first"), 1n);
+        await importSdk.identity.importBundle(old);
+        assert.equal((await importSdk.identity.exportBundle()).seq_state[root], "1");
+        await importSdk.identity.setActiveAk(root);
+        assert.equal(await allocate(importSdk, "second"), 2n);
+        await importSdk.identity.importBundle(old);
+        const restarted = new GrainSdk();
+        await restarted.identity.importBundle(await importSdk.identity.exportBundle());
+        assert.equal(await allocate(restarted, "third"), 3n);
+        ok(check);
+      } catch (err) {
+        fail(check, String(err));
+      }
+    }
+
     const importRollbackBase = new InMemorySdkStore();
     await importRollbackBase.identity.save(originalBundle);
     await importRollbackBase.sequence.importSnapshot(originalBundle.seq_state);

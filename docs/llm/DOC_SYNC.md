@@ -72,7 +72,7 @@ Identity import sequence-safety changes also keep
 `adr/sdk/0009-identity-import-sequence-high-water.md`, the Rust
 `identity_device_lifecycle` tests, the TypeScript `SDK-REG-0002` checks, and
 `sdk/workflows/contract/client_workflow_v1.md` synchronized. State the saved
-counter guarantee separately from authorization reconciliation and cold-backup
+counter guarantee and TypeScript live-allocator coverage separately from authorization reconciliation and cold-backup
 rollback protection.
 
 Snapshot sequence-safety changes also keep

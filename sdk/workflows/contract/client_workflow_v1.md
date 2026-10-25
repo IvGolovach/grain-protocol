@@ -107,7 +107,8 @@ The fixture runner creates a root identity, adds a device key, activates that de
 
 Same-root identity import retains the maximum saved sequence for every author
 across the current and incoming identity bundles, including entries missing
-from either map. Root compatibility is checked and both allocator and identity
+from either map. TypeScript also retains its live allocator counters, including
+values advanced by event append and manifest put/delete. Root compatibility is checked and both allocator and identity
 state are saved inside one atomic transaction. Repeated import, later identity
 saves, and export/reimport must preserve the merged counters. Invalid sequence
 input rejects without mutation; Rust's exhausted u64 allocator remains exhausted.

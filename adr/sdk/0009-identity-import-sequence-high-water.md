@@ -1,4 +1,4 @@
-# ADR 0009: Preserve Saved Sequence High-Water Marks on Identity Import
+# ADR 0009: Preserve Sequence High-Water Marks on Identity Import
 
 Status: Accepted
 
@@ -17,8 +17,9 @@ for the counters recorded in the current identity.
 - Validate the incoming bundle before mutation.
 - Inside the atomic transaction, check root compatibility and retain the
   maximum sequence per author across the current and incoming identity bundles.
-  Retain entries missing from either input, comparing numeric u64 values rather
-  than decimal strings.
+  TypeScript also merges the live allocator snapshot: public event and manifest
+  operations can advance it without updating the saved identity. Retain entries
+  missing from any input, comparing numeric values rather than decimal strings.
 - Install the merged sequence map in both the allocator and the saved identity.
   Subsequent identity saves, repeated imports, and identity exports must not
   undo the merge. Valid store snapshots also persist these merged counters.
@@ -41,9 +42,10 @@ for the counters recorded in the current identity.
 - Exported identity bytes can differ from the imported bundle because counters
   retain newer saved values. Public API, bundle schema, and protocol rules do
   not change. No protocol major bump is required.
-- This guarantee covers sequence history saved in either identity bundle.
-  Custom stores must persist allocations with identity state atomically;
-  unsaved low-level reservations are not reconstructed by identity import.
+- Rust covers sequence history saved in either identity bundle. Custom Rust
+  stores must persist allocations with identity state atomically; unsaved
+  low-level reservations are not reconstructed by identity import. TypeScript
+  additionally retains all counters exposed by its live allocator snapshot.
 - A fresh store importing an old backup cannot infer later sequence history
   missing from that backup. Apps own durable rollback protection and custody.
 - Existing authorization replacement semantics remain: an older identity may
@@ -60,7 +62,9 @@ for the counters recorded in the current identity.
 by another identity save and event, export/restart, repeated import, missing
 author entries, higher incoming counters, and unchanged authorization rules.
 Rust also covers snapshot persistence, exhausted counters, and invalid
-sequence input without mutation. Existing TypeScript transaction-failure
+sequence input without mutation. TypeScript also covers counters advanced only
+by public event append and manifest put/delete, including export/restart after
+import. Existing TypeScript transaction-failure
 coverage continues to assert rollback of identity and allocator state.
 
 ## Invariants touched

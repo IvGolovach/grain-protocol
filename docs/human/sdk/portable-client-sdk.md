@@ -143,6 +143,8 @@ The identity, device lifecycle, pairing, and sync slice is now present:
 - importing an older identity bundle in Rust or TypeScript preserves the
   highest sequence saved for each author in the current or incoming identity;
   merged counters survive later identity saves and exports
+- TypeScript import also retains live counters advanced by event and manifest
+  operations that have not updated the saved identity bundle
 - identity import still replaces device authorization while keeping lifecycle
   records. If old authorization conflicts with those records, a later snapshot
   restore can reject; counter retention does not reconcile that history

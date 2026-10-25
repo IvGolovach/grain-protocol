@@ -54,7 +54,7 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0013 identity import rollback`, `SDK-INV-0013 correct rollback`)
   Modules: `core/ts/grain-sdk/src/store.ts`, `core/ts/grain-sdk/src/memory-store.ts`, `core/ts/grain-sdk/src/identity.ts`, `core/ts/grain-sdk/src/events.ts`, `core/ts/grain-sdk/src/manifest.ts`
 
-- SDK-INV-0013a: same-root identity import MUST retain per-author sequence maxima across the current and incoming identity bundles inside the atomic transaction, including entries absent from either input, and save the merged map in both allocator and identity state. Counter retention does not merge authorization or reconstruct history missing from both bundles; see `adr/sdk/0009-identity-import-sequence-high-water.md`.
+- SDK-INV-0013a: same-root identity import MUST retain per-author sequence maxima across the current and incoming identity bundles inside the atomic transaction, including entries absent from either input; TypeScript MUST also retain live allocator counters. Save the merged map in both allocator and identity state. Counter retention does not merge authorization or reconstruct history missing from both bundles; see `adr/sdk/0009-identity-import-sequence-high-water.md`.
   Tests: `core/rust/grain-client-core/tests/identity_device_lifecycle.rs`, `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-REG-0002`)
   Modules: `core/rust/grain-client-core/src/identity.rs`, `core/ts/grain-sdk/src/identity.ts`
 
