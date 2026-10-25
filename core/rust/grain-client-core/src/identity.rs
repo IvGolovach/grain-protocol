@@ -10,6 +10,7 @@ use sha2::{Digest, Sha256};
 use crate::diag::{
     SDK_ERR_CSPRNG_UNAVAILABLE, SDK_ERR_IDENTITY_BUNDLE_INVALID, SDK_ERR_IDENTITY_BUNDLE_VERSION,
     SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_IDENTITY_EXISTS, SDK_ERR_IDENTITY_MISSING,
+    SDK_ERR_STORE_CONFLICT,
 };
 use crate::store::IdentityClientStore;
 use crate::types::{
@@ -71,22 +72,35 @@ pub fn identity_import_bundle<S: IdentityClientStore>(
     store: &mut S,
     bundle_b64: &str,
 ) -> IdentityResult {
-    let bundle = match decode_identity_bundle_b64(bundle_b64) {
+    let mut bundle = match decode_identity_bundle_b64(bundle_b64) {
         Ok(bundle) => bundle,
         Err(diag) => return identity_rejected(IdentityStatus::Rejected, diag),
     };
 
-    if let Some(existing) = store.load_identity_bundle() {
-        if existing.root_kid != bundle.root_kid {
-            return identity_rejected(IdentityStatus::Rejected, SDK_ERR_IDENTITY_CONFLICT);
-        }
-    }
-
     match store.atomic(|tx| {
+        if let Some(existing) = tx.load_identity_bundle() {
+            if existing.root_kid != bundle.root_kid {
+                return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
+            }
+            // Import may replace authorization, but must not rewind saved counters.
+            for (ak, seq) in existing.seq_state {
+                let current = seq
+                    .parse::<u64>()
+                    .map_err(|_| SDK_ERR_STORE_CONFLICT.to_string())?;
+                let incoming = bundle.seq_state.entry(ak).or_insert_with(|| "0".into());
+                let imported = incoming
+                    .parse::<u64>()
+                    .map_err(|_| SDK_ERR_IDENTITY_BUNDLE_INVALID.to_string())?;
+                *incoming = current.max(imported).to_string();
+            }
+        }
         tx.import_seq_state(bundle.seq_state.clone())?;
-        tx.save_identity_bundle(bundle.clone()).map(|_| ())
+        tx.save_identity_bundle(bundle.clone())?;
+        Ok(bundle)
     }) {
-        Ok(()) => identity_from_bundle(IdentityStatus::Imported, Vec::new(), Some(bundle), store),
+        Ok(bundle) => {
+            identity_from_bundle(IdentityStatus::Imported, Vec::new(), Some(bundle), store)
+        }
         Err(diag) => identity_rejected(IdentityStatus::Rejected, diag),
     }
 }

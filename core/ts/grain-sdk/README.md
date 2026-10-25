@@ -21,6 +21,7 @@ What it does for you:
 - deterministic error messages with NES/vector references
 - deterministic transport bundle import/export with strict row validation and standard-base64 checks on imported binary fields (`grain-transport-bundle-v1`)
 - strict identity bundle import with derived key-ID checks, duplicate-device rejection, root-conflict rejection, and atomic rollback
+- same-root identity import retains per-author saved sequence maxima in allocator and identity state, including counters missing from the incoming bundle; see [SDK ADR-0009](../../../adr/sdk/0009-identity-import-sequence-high-water.md) for recovery limits
 - raw CBOR-seq export that rejects non-finite, fractional, or unsafe JavaScript numbers before bytes are emitted
 - clear transport boundary: `decodeGR1()` decodes, `verifyGR1()` requires explicit trust and rejects malformed `trust.pub_b64`
 - device lifecycle APIs that keep local authorization and ledger history in sync

@@ -68,6 +68,13 @@ Update:
 - `docs/llm/CHANGE_POLICY.md`
 - the human SDK docs that explain the changed behavior
 
+Identity import sequence-safety changes also keep
+`adr/sdk/0009-identity-import-sequence-high-water.md`, the Rust
+`identity_device_lifecycle` tests, the TypeScript `SDK-REG-0002` checks, and
+`sdk/workflows/contract/client_workflow_v1.md` synchronized. State the saved
+counter guarantee separately from authorization reconciliation and cold-backup
+rollback protection.
+
 Snapshot sequence-safety changes also keep
 `adr/sdk/0008-snapshot-sequence-high-water.md`,
 `sdk/workflows/contract/client_workflow_v1.md`, and
