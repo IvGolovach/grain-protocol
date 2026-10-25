@@ -1,5 +1,10 @@
 # Grain SDK
 
+The additive [Signed Food Ledger](../docs/human/sdk/signed-food-ledger.md) path
+connects a Rust typed writer, Swift app-owned signing/storage and independent
+Node verification. It uses separate signer-bound state and preserves existing
+unsigned client APIs.
+
 The production TypeScript SDK code lives in `core/ts/grain-sdk`.
 The optional TypeScript AI sidecar lives in `core/ts/grain-sdk-ai`.
 This top-level `sdk/` path also holds cross-platform client workflow contracts,

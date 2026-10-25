@@ -37,6 +37,7 @@
     "run:protocol-suite": "npm run build --silent && node dist/scripts/run-protocol-suite.js",
     "test:invariants": "npm run build --silent && node dist/scripts/test-sdk-invariants.js",
     "test:food-wallet": "npm run build --silent && node dist/scripts/test-food-wallet.js",
+    "test:signed-food": "npm run build --silent && node dist/scripts/test-signed-food.js",
     "demo:e2e": "npm run build --silent && node dist/scripts/demo-end-to-end.js"
   },
   "dependencies": {

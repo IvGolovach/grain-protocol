@@ -1,5 +1,10 @@
 # GitHub Repository Settings
 
+Signed Food Ledger v1 adds tests inside existing ts-full and sdk-platform jobs.
+The Swift check exports a synthetic signed file consumed by a separate Node
+verifier, alongside storage/signer fault injection. Required context names,
+full-CI approval policy and release publication gates remain unchanged.
+
 This page records the GitHub settings the canonical repository should keep.
 If you only want to contribute code, you can skip this page.
 If you maintain the repo, this page saves you from guessing.

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SDK_ROOTS = [
     ROOT / "sdk" / "swift" / "Sources" / "GrainClient",
     ROOT / "sdk" / "swift" / "Sources" / "GrainClientIOSAdapters",
+    ROOT / "sdk" / "swift" / "Sources" / "GrainSignedFood",
     ROOT / "sdk" / "kotlin" / "src" / "main" / "kotlin" / "dev" / "grain",
     ROOT / "sdk" / "wasm" / "src",
     ROOT / "examples" / "ios-scanner" / "Sources" / "GrainIOSScanner",

@@ -54,6 +54,11 @@ surface is optional `object_type` on existing `dagcbor_validate`.
 
 ### SDK behavior changes
 
+Signed Food Ledger changes keep SDK ADR-0013, the signed_food_v1 contract,
+Rust signed_food tests, the signed corpus/TS verifier, Swift coordinator/smoke,
+generated UDL bindings and public API snapshot synchronized. Preserve the
+distinction between sensitive signed transfers and legacy safe summaries.
+
 Raw ledger CBOR-sequence changes also keep SDK ADR-0011, SDK-INV-0011,
 SDK-REG-0004 and the TypeScript README synchronized. Distinguish canonical
 reducer-model bytes from typed/signed protocol events.

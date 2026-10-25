@@ -432,6 +432,22 @@ fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
+    typealias FfiType = Int64
+    typealias SwiftType = Int64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -738,6 +754,225 @@ public func FfiConverterTypeGrainClientMemoryStore_lift(_ handle: UInt64) throws
 #endif
 public func FfiConverterTypeGrainClientMemoryStore_lower(_ value: GrainClientMemoryStore) -> UInt64 {
     return FfiConverterTypeGrainClientMemoryStore.lower(value)
+}
+
+
+
+
+
+
+public protocol GrainSignedFoodJournalProtocol: AnyObject, Sendable {
+
+    func commitSignature(operationId: String, signatureB64: String)  -> FfiSignedFoodResult
+
+    func exportSnapshot()  -> FfiSignedFoodResult
+
+    func exportTransfer()  -> FfiSignedFoodResult
+
+    func importTransfer(transferJson: String, trustedRootPubB64: String)  -> FfiSignedFoodResult
+
+    func initialize(rootPubB64: String)  -> FfiSignedFoodResult
+
+    func prepareGrant(operationId: String, devicePubB64: String)  -> FfiSignedFoodResult
+
+    func prepareIntake(authorPubB64: String, operationId: String, sourceClass: String, meanKcal: Int64, varKcal: Int64)  -> FfiSignedFoodResult
+
+    func prepareRevoke(operationId: String, devicePubB64: String)  -> FfiSignedFoodResult
+
+    func restoreSnapshot(snapshotB64: String, trustedRootPubB64: String)  -> FfiSignedFoodResult
+
+}
+open class GrainSignedFoodJournal: GrainSignedFoodJournalProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_grain_client_core_fn_clone_grainsignedfoodjournal(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+    uniffi_grain_client_core_fn_constructor_grainsignedfoodjournal_new($0
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_grain_client_core_fn_free_grainsignedfoodjournal(handle, $0) }
+    }
+
+
+
+
+open func commitSignature(operationId: String, signatureB64: String) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_commit_signature(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(operationId),
+        FfiConverterString.lower(signatureB64),$0
+    )
+})
+}
+
+open func exportSnapshot() -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_export_snapshot(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func exportTransfer() -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_export_transfer(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+
+open func importTransfer(transferJson: String, trustedRootPubB64: String) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_import_transfer(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(transferJson),
+        FfiConverterString.lower(trustedRootPubB64),$0
+    )
+})
+}
+
+open func initialize(rootPubB64: String) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_initialize(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(rootPubB64),$0
+    )
+})
+}
+
+open func prepareGrant(operationId: String, devicePubB64: String) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_grant(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(operationId),
+        FfiConverterString.lower(devicePubB64),$0
+    )
+})
+}
+
+open func prepareIntake(authorPubB64: String, operationId: String, sourceClass: String, meanKcal: Int64, varKcal: Int64) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_intake(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(authorPubB64),
+        FfiConverterString.lower(operationId),
+        FfiConverterString.lower(sourceClass),
+        FfiConverterInt64.lower(meanKcal),
+        FfiConverterInt64.lower(varKcal),$0
+    )
+})
+}
+
+open func prepareRevoke(operationId: String, devicePubB64: String) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_revoke(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(operationId),
+        FfiConverterString.lower(devicePubB64),$0
+    )
+})
+}
+
+open func restoreSnapshot(snapshotB64: String, trustedRootPubB64: String) -> FfiSignedFoodResult  {
+    return try!  FfiConverterTypeFfiSignedFoodResult_lift(try! rustCall() {
+    uniffi_grain_client_core_fn_method_grainsignedfoodjournal_restore_snapshot(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(snapshotB64),
+        FfiConverterString.lower(trustedRootPubB64),$0
+    )
+})
+}
+
+
+
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGrainSignedFoodJournal: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = GrainSignedFoodJournal
+
+    public static func lift(_ handle: UInt64) throws -> GrainSignedFoodJournal {
+        return GrainSignedFoodJournal(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: GrainSignedFoodJournal) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GrainSignedFoodJournal {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: GrainSignedFoodJournal, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGrainSignedFoodJournal_lift(_ handle: UInt64) throws -> GrainSignedFoodJournal {
+    return try FfiConverterTypeGrainSignedFoodJournal.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGrainSignedFoodJournal_lower(_ value: GrainSignedFoodJournal) -> UInt64 {
+    return FfiConverterTypeGrainSignedFoodJournal.lower(value)
 }
 
 
@@ -1387,6 +1622,92 @@ public func FfiConverterTypeFfiScanPreviewRequest_lower(_ value: FfiScanPreviewR
 }
 
 
+public struct FfiSignedFoodResult: Equatable, Hashable {
+    public var status: String
+    public var diag: [String]
+    public var operationId: String?
+    public var seq: UInt64?
+    public var signingBytesB64: String?
+    public var snapshotB64: String?
+    public var transferJson: String?
+    public var sumMeanKcal: Int64?
+    public var sumVarKcal: Int64?
+    public var eventCount: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(status: String, diag: [String], operationId: String?, seq: UInt64?, signingBytesB64: String?, snapshotB64: String?, transferJson: String?, sumMeanKcal: Int64?, sumVarKcal: Int64?, eventCount: UInt64) {
+        self.status = status
+        self.diag = diag
+        self.operationId = operationId
+        self.seq = seq
+        self.signingBytesB64 = signingBytesB64
+        self.snapshotB64 = snapshotB64
+        self.transferJson = transferJson
+        self.sumMeanKcal = sumMeanKcal
+        self.sumVarKcal = sumVarKcal
+        self.eventCount = eventCount
+    }
+
+
+
+
+}
+
+#if compiler(>=6)
+extension FfiSignedFoodResult: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiSignedFoodResult: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiSignedFoodResult {
+        return
+            try FfiSignedFoodResult(
+                status: FfiConverterString.read(from: &buf),
+                diag: FfiConverterSequenceString.read(from: &buf),
+                operationId: FfiConverterOptionString.read(from: &buf),
+                seq: FfiConverterOptionUInt64.read(from: &buf),
+                signingBytesB64: FfiConverterOptionString.read(from: &buf),
+                snapshotB64: FfiConverterOptionString.read(from: &buf),
+                transferJson: FfiConverterOptionString.read(from: &buf),
+                sumMeanKcal: FfiConverterOptionInt64.read(from: &buf),
+                sumVarKcal: FfiConverterOptionInt64.read(from: &buf),
+                eventCount: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiSignedFoodResult, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.status, into: &buf)
+        FfiConverterSequenceString.write(value.diag, into: &buf)
+        FfiConverterOptionString.write(value.operationId, into: &buf)
+        FfiConverterOptionUInt64.write(value.seq, into: &buf)
+        FfiConverterOptionString.write(value.signingBytesB64, into: &buf)
+        FfiConverterOptionString.write(value.snapshotB64, into: &buf)
+        FfiConverterOptionString.write(value.transferJson, into: &buf)
+        FfiConverterOptionInt64.write(value.sumMeanKcal, into: &buf)
+        FfiConverterOptionInt64.write(value.sumVarKcal, into: &buf)
+        FfiConverterUInt64.write(value.eventCount, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSignedFoodResult_lift(_ buf: RustBuffer) throws -> FfiSignedFoodResult {
+    return try FfiConverterTypeFfiSignedFoodResult.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiSignedFoodResult_lower(_ value: FfiSignedFoodResult) -> RustBuffer {
+    return FfiConverterTypeFfiSignedFoodResult.lower(value)
+}
+
+
 public struct FfiStoreSnapshotResult: Equatable, Hashable {
     public var status: String
     public var diag: [String]
@@ -1579,6 +1900,54 @@ public func FfiConverterTypeFfiSyncResult_lower(_ value: FfiSyncResult) -> RustB
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionUInt64: FfiConverterRustBuffer {
+    typealias SwiftType = UInt64?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
+    typealias SwiftType = Int64?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterInt64.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -1740,7 +2109,37 @@ private let initializationResult: InitializationResult = {
     if (uniffi_grain_client_core_checksum_method_grainclientmemorystore_set_active_device() != 10852) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_commit_signature() != 52683) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_export_snapshot() != 32780) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_export_transfer() != 40481) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_import_transfer() != 47893) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_initialize() != 7321) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_grant() != 22573) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_intake() != 1842) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_revoke() != 15067) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_restore_snapshot() != 9716) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_grain_client_core_checksum_constructor_grainclientmemorystore_new() != 12349) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_grain_client_core_checksum_constructor_grainsignedfoodjournal_new() != 27921) {
         return InitializationResult.apiChecksumMismatch
     }
 

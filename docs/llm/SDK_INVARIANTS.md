@@ -2,6 +2,24 @@
 
 Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
 
+Signed Food Ledger v1 adds these separate workflow invariants (SDK ADR-0013):
+
+- SDK-INV-0033: signed entries MUST pass canonical typed-object, CID, signature,
+  author/key, genesis and linked-profile checks before reduction. Root-only
+  authorization, retroactive revoke and conflict ignore-all remain unchanged.
+  Fresh public import is read-only. Tests: `core/rust/grain-client-core/tests/signed_food.rs`
+  and `core/ts/grain-sdk/scripts/test-signed-food.ts`.
+  Modules: `core/rust/grain-client-core/src/signed_food/mod.rs`, `core/ts/grain-sdk/src/signed-food.ts`
+- SDK-INV-0034: Swift MUST acknowledge persistence before signing a reserved
+  operation and before reporting commit success. Identical retries retain bytes
+  and sequence; known maxima survive restore; failed reload stops writes.
+  Tests: `sdk/swift/Sources/GrainSignedFoodSmoke/main.swift` and Rust signed_food tests.
+  Modules: `sdk/swift/Sources/GrainSignedFood/GrainSignedFoodWallet.swift`, `core/rust/grain-client-core/src/signed_food/mod.rs`
+
+Signed transfer files and their synthetic interoperability corpus contain food
+payloads and public verification material. They are distinct from Food Wallet
+safe reports and safe-summary fixtures covered by SDK-INV-0032.
+
 - SDK-INV-0001: strict-by-default execution for public SDK APIs.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0001 strict-by-default reducer`)
   Modules: `core/ts/grain-sdk/src/sdk.ts`, `core/ts/grain-sdk/src/events.ts`

@@ -158,6 +158,8 @@ run_check "Food Wallet contract policy" \
 if have_cmd node && have_cmd npm; then
   run_check "TypeScript Food Wallet SDK smoke" \
     npm --prefix core/ts/grain-sdk run test:food-wallet
+  run_check "Signed Food Ledger independent verifier" \
+    npm --prefix core/ts/grain-sdk run test:signed-food
   run_check "TypeScript Food Wallet AI boundary smoke" \
     npm --prefix core/ts/grain-sdk-ai run test:food-boundary
 else

@@ -3,6 +3,14 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+
+- Signed Food Ledger v1 (additive SDK path):
+  - typed signed genesis, grants/revokes and confirmed estimated/measured food,
+    with app-owned Ed25519 signing and persistent sequence reservations.
+  - Swift persistence before signing and before success; independent TypeScript
+    file verification, recovery/fault tests and a Swift-to-Node handoff gate.
+  - legacy APIs and frozen rules retained; SDK ADR-0013 defines read-only imports,
+    cold-backup limits and app storage/key responsibilities.
 - Reproducible SDK source packages:
   - normalize archive ordering, timestamps, owners and permissions while
     preserving source bytes and executable intent; reject symlinks/special files.

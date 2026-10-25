@@ -1,5 +1,16 @@
 # SDK_FILE_MAP
 
+Signed Food Ledger v1 (SDK ADR-0013):
+- `core/rust/grain-client-core/src/signed_food/`: typed producer, verified import,
+  private reservations and recovery; `tests/signed_food.rs` checks state/corpus.
+- `core/ts/grain-sdk/src/signed-food.ts`: independent Node verifier; scripts
+  `test-signed-food.ts` and `verify-signed-food.ts` consume artifact files.
+- `sdk/swift/Sources/GrainSignedFood/`: signer/storage coordinator;
+  `GrainSignedFoodSmoke` exercises faults and cross-process handoff.
+- `sdk/workflows/contract/signed_food_v1.md` and
+  `sdk/workflows/signed-food/v1.json`: separate signed contract and corpus.
+- `docs/human/sdk/signed-food-ledger.md`: app integration and proof boundaries.
+
 Hi teammate LLM. This is the shortest safe path through the SDK layer.
 
 Raw reducer-model CBOR-sequence export lives in `core/ts/grain-sdk/src/events.ts`;

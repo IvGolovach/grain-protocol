@@ -85,6 +85,11 @@ If a PR changes CI gates, evidence artifacts, branch protection policy, tag name
 
 ## If SDK strict contracts change
 
+Signed Food Ledger v1 is the additive SDK ADR-0013 path: signer-bound state,
+separate transfer/snapshot formats and explicit app durability responsibility.
+Do not reinterpret legacy unsigned identities as keys or claim signatures on raw
+reducer exports. Existing protocol rules and legacy API gates remain intact.
+
 If a PR changes SDK strict orchestration behavior (`core/ts/grain-sdk/**`) in any of these areas:
 - strict enforcement defaults
 - SDK/core diagnostic boundary or mappings

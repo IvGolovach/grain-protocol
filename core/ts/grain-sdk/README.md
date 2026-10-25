@@ -1,5 +1,11 @@
 # grain-sdk-ts
 
+Use `verifySignedFoodTransfer` with explicit root trust to independently verify
+signed food files in Node. Run `npm run test:signed-food` for the signed corpus and
+adversarial cases. This API checks typed objects, signatures and profile CIDs
+before reduction; it does not sign or call Rust. See
+[Signed Food Ledger](../../../docs/human/sdk/signed-food-ledger.md).
+
 Friendly, strict building blocks for apps on Grain.
 
 If you are new here, start with:

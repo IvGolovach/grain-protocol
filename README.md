@@ -3,6 +3,10 @@
 Portable, verifiable records for real-world events.
 Food is the first production profile in v0.1.
 
+For a signed food entry that survives app restart and can be independently
+verified from a file, see [Signed Food Ledger](docs/human/sdk/signed-food-ledger.md).
+This additive Swift/Rust/Node workflow requires app-owned signing keys and storage.
+
 Grain is a protocol plus a conformance suite.
 It is not an app, not a hosted platform, and not a global registry.
 

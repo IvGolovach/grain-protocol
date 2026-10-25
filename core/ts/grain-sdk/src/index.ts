@@ -27,3 +27,5 @@ export type {
   SelfIssuedFoodIntakeDraftInput,
   VerifiedServingOfferSummary
 } from "./food-wallet.js";
+export { verifySignedFoodTransfer } from "./signed-food.js";
+export type { SignedFoodVerification } from "./signed-food.js";

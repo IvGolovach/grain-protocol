@@ -1,5 +1,9 @@
 # Minimal App Example
 
+For actual signed food history with durable Swift storage and an independent
+file verifier, use [Signed Food Ledger](./signed-food-ledger.md). This page keeps
+its existing unsigned reducer-model demonstration.
+
 This is the smallest Grain app we recommend for a first try.
 
 If you are building a scanner app for iOS, Android, browser, glasses, robots, or

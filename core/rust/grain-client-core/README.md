@@ -6,6 +6,13 @@ It sits above `grain-core` and below generated Swift, Kotlin, WASM, or future de
 
 ## Current surface
 
+- `GrainSignedFoodJournal`
+  - typed signed-food producer/verifier with private sequence reservations
+  - host persists prepared state before signing and committed state before success
+  - public imports require external root trust and are read-only in fresh journals
+  - contract: `sdk/workflows/contract/signed_food_v1.md`, SDK ADR-0013
+  - private keys and durable storage stay outside Rust
+
 - `scan_preview(qr_string, trust_pub_b64)`
   - returns `Verified` for valid GR1 scans with explicit valid trust
   - returns `Untrusted` for valid GR1 scans without trust material
