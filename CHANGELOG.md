@@ -3,6 +3,11 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Portable client snapshot sequence safety:
+  - retain per-author sequence high-water marks when restoring older snapshots,
+    including the identity state used by subsequent saves and exports.
+  - add restore/persistence, newer-counter, overflow, and rejection regressions;
+    document the local-state boundary in SDK ADR-0008.
 - Typed Object Validation v1:
   - added optional `object_type` context to existing `dagcbor_validate` without
     changing the frozen `runner_v1` operation set or output contract.

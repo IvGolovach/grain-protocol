@@ -158,8 +158,21 @@ Expected public API behavior:
 - non-empty stores export status `Exported`, a `snapshot_b64` payload, and
   accepted-scan/device/lifecycle counters;
 - restore into a fresh client returns `Restored` and reproduces those counters;
+- restore retains the maximum sequence for each author key across current
+  state and the snapshot, including keys absent from either input;
+- when the restored snapshot contains identity, those maxima are persisted in
+  its sequence state before any later identity save or snapshot export;
+- exhausted sequence counters remain exhausted: the next allocation rejects
+  with `SDK_ERR_STORE_CONFLICT`;
 - malformed or unsupported snapshot payloads return `Rejected` without mutating
   existing client state.
+
+Restored identity-bearing state may export different bytes from the input when
+the current store knows higher sequence counters. Accepted scans, authorization,
+and lifecycle records still follow snapshot replacement semantics. A fresh
+store cannot recover counters absent from the backup; apps own durable backup
+rollback protection. Snapshots without identity have no persisted sequence
+state, so any retained counters remain in memory only.
 
 The snapshot payload is opaque SDK state. Apps persist the returned string; they
 must not parse it or use it as a raw mutation surface.

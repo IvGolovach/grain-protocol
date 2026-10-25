@@ -68,6 +68,12 @@ Update:
 - `docs/llm/CHANGE_POLICY.md`
 - the human SDK docs that explain the changed behavior
 
+Snapshot sequence-safety changes also keep
+`adr/sdk/0008-snapshot-sequence-high-water.md`,
+`sdk/workflows/contract/client_workflow_v1.md`, and
+`core/rust/grain-client-core/tests/storage_contract.rs` synchronized, including
+the limits of restoring backups without newer local sequence state.
+
 ### Human onboarding changes
 
 Update:

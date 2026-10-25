@@ -55,6 +55,7 @@ Expected contract:
 - pairing preview is pure, pairing accept is atomic, and repeated pairing accept is idempotent
 - sync bundle export/import carries identity, accepted scans, and derived root-authored grant/revoke lifecycle events atomically
 - sync/snapshot import rejects forged lifecycle event IDs, unknown lifecycle event types, mismatched payload CIDs, out-of-range sequence numbers, root targets, and unknown target devices before mutation
+- `storage_contract` regressions require snapshot restore to retain per-author sequence maxima, persist them in restored identity state before any further mutation, accept higher incoming counters, preserve overflow rejection, and leave state unchanged on invalid input; cold restoration cannot recover history absent from the backup
 - pairing and sync transfer metadata rejects unsupported or falsely device-bound
   custody claims before mutation
 - Rust and binding DTO debug output redacts snapshots, identity bundles, pairing
