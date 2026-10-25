@@ -7,10 +7,10 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 
+use crate::device::validate_lifecycle_event_record;
 use crate::diag::{
     SDK_ERR_CSPRNG_UNAVAILABLE, SDK_ERR_IDENTITY_BUNDLE_INVALID, SDK_ERR_IDENTITY_BUNDLE_VERSION,
     SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_IDENTITY_EXISTS, SDK_ERR_IDENTITY_MISSING,
-    SDK_ERR_STORE_CONFLICT,
 };
 use crate::store::IdentityClientStore;
 use crate::types::{
@@ -72,27 +72,24 @@ pub fn identity_import_bundle<S: IdentityClientStore>(
     store: &mut S,
     bundle_b64: &str,
 ) -> IdentityResult {
-    let mut bundle = match decode_identity_bundle_b64(bundle_b64) {
+    let bundle = match decode_identity_bundle_b64(bundle_b64) {
         Ok(bundle) => bundle,
         Err(diag) => return identity_rejected(IdentityStatus::Rejected, diag),
     };
 
     match store.atomic(|tx| {
-        if let Some(existing) = tx.load_identity_bundle() {
-            if existing.root_kid != bundle.root_kid {
-                return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
-            }
-            // Import may replace authorization, but must not rewind saved counters.
-            for (ak, seq) in existing.seq_state {
-                let current = seq
-                    .parse::<u64>()
-                    .map_err(|_| SDK_ERR_STORE_CONFLICT.to_string())?;
-                let incoming = bundle.seq_state.entry(ak).or_insert_with(|| "0".into());
-                let imported = incoming
-                    .parse::<u64>()
-                    .map_err(|_| SDK_ERR_IDENTITY_BUNDLE_INVALID.to_string())?;
-                *incoming = current.max(imported).to_string();
-            }
+        let bundle = merge_identity_bundle(
+            tx.load_identity_bundle(),
+            bundle,
+            SDK_ERR_IDENTITY_BUNDLE_INVALID,
+        )?;
+        // Do not accept an identity that leaves retained lifecycle history unrestorable.
+        if tx
+            .list_lifecycle_events()
+            .iter()
+            .any(|event| !validate_lifecycle_event_record(event, &bundle))
+        {
+            return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
         }
         tx.import_seq_state(bundle.seq_state.clone())?;
         tx.save_identity_bundle(bundle.clone())?;
@@ -103,6 +100,92 @@ pub fn identity_import_bundle<S: IdentityClientStore>(
         }
         Err(diag) => identity_rejected(IdentityStatus::Rejected, diag),
     }
+}
+
+pub(crate) fn merge_identity_bundle(
+    existing: Option<IdentityBundleV1>,
+    mut incoming: IdentityBundleV1,
+    invalid_diag: &str,
+) -> Result<IdentityBundleV1, String> {
+    let Some(mut existing) = existing else {
+        return Ok(incoming);
+    };
+    if existing.root_kid != incoming.root_kid
+        || existing.root_pub_b64 != incoming.root_pub_b64
+        || existing.sync_secret_b64 != incoming.sync_secret_b64
+    {
+        return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
+    }
+
+    let mut known_device_pubs = BTreeMap::new();
+    for device in &existing.device_keys {
+        known_device_pubs.insert(device.ak.clone(), device.pub_b64.clone());
+    }
+    let mut new_devices = Vec::new();
+    for device in incoming.device_keys.drain(..) {
+        match known_device_pubs.get(&device.ak) {
+            Some(existing_pub_b64) if existing_pub_b64 != &device.pub_b64 => {
+                return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
+            }
+            Some(_) => {}
+            None => {
+                known_device_pubs.insert(device.ak.clone(), device.pub_b64.clone());
+                new_devices.push(device);
+            }
+        }
+    }
+    new_devices.sort_by(|left, right| left.ak.cmp(&right.ak));
+    existing.device_keys.extend(new_devices);
+
+    for revoked in incoming.revoked_aks {
+        if !existing.revoked_aks.iter().any(|known| known == &revoked) {
+            existing.revoked_aks.push(revoked);
+        }
+    }
+    existing.revoked_aks.sort();
+
+    for (ak, incoming_seq) in incoming.seq_state {
+        let incoming_seq = incoming_seq
+            .parse::<u64>()
+            .map_err(|_| invalid_diag.to_string())?;
+        let merged_seq = existing
+            .seq_state
+            .get(&ak)
+            .map(|seq| {
+                seq.parse::<u64>()
+                    .map(|existing_seq| existing_seq.max(incoming_seq))
+                    .map_err(|_| invalid_diag.to_string())
+            })
+            .transpose()?
+            .unwrap_or(incoming_seq);
+        existing.seq_state.insert(ak, merged_seq.to_string());
+    }
+
+    if existing
+        .revoked_aks
+        .iter()
+        .any(|revoked| revoked == &existing.active_ak)
+        || !existing
+            .device_keys
+            .iter()
+            .any(|device| device.ak == existing.active_ak)
+    {
+        existing.active_ak = incoming.active_ak;
+        if existing
+            .revoked_aks
+            .iter()
+            .any(|revoked| revoked == &existing.active_ak)
+            || !existing
+                .device_keys
+                .iter()
+                .any(|device| device.ak == existing.active_ak)
+        {
+            existing.active_ak = existing.root_kid.clone();
+        }
+    }
+
+    validate_identity_bundle(&existing).map_err(|_| invalid_diag.to_string())?;
+    Ok(existing)
 }
 
 pub fn client_lifecycle<S: IdentityClientStore>(store: &S) -> ClientLifecycle {

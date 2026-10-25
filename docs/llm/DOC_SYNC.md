@@ -75,6 +75,11 @@ Identity import sequence-safety changes also keep
 counter guarantee and TypeScript live-allocator coverage separately from authorization reconciliation and cold-backup
 rollback protection.
 
+Identity history merge changes also keep SDK ADR-0010, Rust `identity_recovery`
+and public `binding_api` tests, TypeScript `SDK-REG-0003`, and the identity/sync
+merge policy synchronized. Distinguish valid-state preservation from recovery
+of legacy state with missing metadata.
+
 Snapshot sequence-safety changes also keep
 `adr/sdk/0008-snapshot-sequence-high-water.md`,
 `sdk/workflows/contract/client_workflow_v1.md`, and

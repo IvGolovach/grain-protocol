@@ -145,9 +145,12 @@ The identity, device lifecycle, pairing, and sync slice is now present:
   merged counters survive later identity saves and exports
 - TypeScript import also retains live counters advanced by event and manifest
   operations that have not updated the saved identity bundle
-- identity import still replaces device authorization while keeping lifecycle
-  records. If old authorization conflicts with those records, a later snapshot
-  restore can reject; counter retention does not reconcile that history
+- same-root identity import merges devices and revocations, keeps a still-valid
+  local active key, and rejects conflicting key material; an old bundle cannot
+  erase known device history or undo a revocation
+- Rust import validates retained lifecycle records against the merged identity
+  before saving, so valid stores remain snapshot-restorable; legacy inconsistent
+  stores need a compatible bundle containing missing metadata (SDK ADR-0010)
 - device authorization keys can be added, activated, revoked, and reported through `client_lifecycle`
 - pairing envelopes move an identity bundle through an app-controlled transfer channel and are idempotent on replay
 - sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics

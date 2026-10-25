@@ -246,7 +246,7 @@ fn imported_identity_sequence_survives_snapshot_restart() {
 }
 
 #[test]
-fn identity_import_merges_sequence_maxima_without_merging_authorization() {
+fn identity_import_merges_sequence_maxima_with_retained_authorization() {
     let mut store = MemoryClientStore::new();
     let root = identity_create_root(&mut store, "root").root_kid.unwrap();
     let old = identity_export_bundle(&store).bundle_b64.unwrap();
@@ -272,10 +272,14 @@ fn identity_import_merges_sequence_maxima_without_merging_authorization() {
     assert_eq!(merged.seq_state[&root], "11");
     assert_eq!(merged.seq_state[&device], "9");
     assert_eq!(merged.seq_state["incoming-only"], "11");
-    assert_eq!(merged.device_keys.len(), 1);
+    assert_eq!(merged.device_keys.len(), 2);
+    assert_eq!(
+        device_set_active(&mut store, "incoming-only").status,
+        DeviceStatus::Rejected
+    );
     assert_eq!(
         device_set_active(&mut store, &device).status,
-        DeviceStatus::Rejected
+        DeviceStatus::Active
     );
     assert_eq!(
         device_add_key(&mut store, "next").status,

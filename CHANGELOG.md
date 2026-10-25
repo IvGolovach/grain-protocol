@@ -3,6 +3,13 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Identity recovery history safety:
+  - merge compatible same-root devices, revocations, and sequence state in Rust
+    and TypeScript; preserve local active selection when still authorized.
+  - reject changed sync secrets and incompatible retained lifecycle history
+    without mutation; keep snapshots restorable after stale identity import.
+  - add recovery and public-binding regressions; SDK ADR-0010 records the
+    intentional change from replacement to merge and cold-backup limits.
 - Identity import sequence safety:
   - retain per-author sequence maxima from current and incoming identity bundles
     in Rust and TypeScript, plus TypeScript's live event/manifest counters,

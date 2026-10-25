@@ -649,15 +649,16 @@ async function run(): Promise<number> {
       await importSdk.identity.importBundle(old);
       const merged = await importSdk.identity.exportBundle();
       assert.deepEqual(merged.seq_state, { [root]: "11", [device.ak]: "9", "incoming-only": "11" });
-      assert.equal(merged.device_keys.length, 1);
-      await assert.rejects(importSdk.identity.setActiveAk(device.ak), { code: "SDK_ERR_UNAUTHORIZED_AK" });
+      assert.equal(merged.device_keys.length, 2);
+      await importSdk.identity.setActiveAk(device.ak);
+      await assert.rejects(importSdk.identity.setActiveAk("incoming-only"), { code: "SDK_ERR_UNAUTHORIZED_AK" });
       assert.equal((await importSdk.identity.addDeviceKey("next")).grant_event.seq, 12n);
       old.seq_state = {};
       await importSdk.identity.importBundle(old);
       assert.equal((await importSdk.identity.exportBundle()).seq_state[root], "12");
-      ok("SDK-REG-0002 identity import keeps per-author maxima and incoming authorization");
+      ok("SDK-REG-0002 identity import keeps per-author maxima and retained authorization");
     } catch (err) {
-      fail("SDK-REG-0002 identity import keeps per-author maxima and incoming authorization", String(err));
+      fail("SDK-REG-0002 identity import keeps per-author maxima and retained authorization", String(err));
     }
 
     for (const operation of ["event", "manifest-put", "manifest-del"] as const) {
@@ -688,6 +689,88 @@ async function run(): Promise<number> {
       } catch (err) {
         fail(check, String(err));
       }
+    }
+
+    for (const history of ["grant", "revoke"] as const) {
+      const check = `SDK-REG-0003 identity import retains local ${history} history`;
+      try {
+        const store = new InMemorySdkStore();
+        const client = new GrainSdk(store);
+        const { root_kid: root } = await client.identity.createRoot();
+        const beforeGrant = await client.identity.exportBundle();
+        const { device } = await client.identity.addDeviceKey("local");
+        await client.identity.setActiveAk(device.ak);
+        const old = history === "grant" ? beforeGrant : await client.identity.exportBundle();
+        if (history === "revoke") await client.identity.revokeDeviceKey(device.ak);
+        const events = await store.events.list();
+        await client.identity.importBundle(old);
+        const merged = await client.identity.exportBundle();
+        assert(merged.device_keys.some((key) => key.ak === device.ak));
+        assert.equal(merged.active_ak, history === "grant" ? device.ak : root);
+        assert.equal(merged.revoked_aks.includes(device.ak), history === "revoke");
+        assert.deepEqual(await store.events.list(), events);
+        await client.identity.importBundle(old);
+        assert(stableJson(await client.identity.exportBundle()) === stableJson(merged));
+        const restarted = new GrainSdk();
+        await restarted.identity.importBundle(merged);
+        if (history === "revoke") {
+          await assert.rejects(restarted.identity.setActiveAk(device.ak), { code: "SDK_ERR_UNAUTHORIZED_AK" });
+        } else {
+          await restarted.identity.setActiveAk(device.ak);
+        }
+        assert.equal((await restarted.identity.addDeviceKey("next")).grant_event.seq, history === "grant" ? 2n : 3n);
+        ok(check);
+      } catch (err) {
+        fail(check, String(err));
+      }
+    }
+
+    try {
+      const source = new GrainSdk();
+      const { root_kid: root } = await source.identity.createRoot();
+      const { device: common } = await source.identity.addDeviceKey("common");
+      const store = new InMemorySdkStore();
+      const target = new GrainSdk(store);
+      await target.identity.importBundle(await source.identity.exportBundle());
+      await target.identity.setActiveAk(common.ak);
+      const { device: local } = await target.identity.addDeviceKey("local");
+      const events = await store.events.list();
+      await source.identity.revokeDeviceKey(common.ak);
+      const { device: remote } = await source.identity.addDeviceKey("remote");
+      const incoming = await source.identity.exportBundle();
+      await target.identity.importBundle(incoming);
+      const merged = await target.identity.exportBundle();
+      assert.equal(merged.device_keys.length, 4);
+      assert(merged.device_keys.some((key) => key.ak === local.ak));
+      assert(merged.device_keys.some((key) => key.ak === remote.ak));
+      assert(merged.revoked_aks.includes(common.ak));
+      assert.equal(merged.active_ak, root);
+      assert.equal(merged.seq_state[root], "3");
+      assert.deepEqual(await store.events.list(), events);
+      await target.identity.importBundle(incoming);
+      assert(stableJson(await target.identity.exportBundle()) === stableJson(merged));
+      ok("SDK-REG-0003 identity import merges new devices and revocations");
+    } catch (err) {
+      fail("SDK-REG-0003 identity import merges new devices and revocations", String(err));
+    }
+
+    try {
+      const store = new InMemorySdkStore();
+      const client = new GrainSdk(store);
+      await client.identity.createRoot();
+      await client.identity.addDeviceKey("device");
+      const before = await client.identity.exportBundle();
+      const counters = await store.sequence.snapshot();
+      const incoming = structuredClone(before);
+      const secret = Buffer.from(incoming.sync_secret_b64, "base64");
+      secret[0] ^= 1;
+      incoming.sync_secret_b64 = secret.toString("base64");
+      await assert.rejects(client.identity.importBundle(incoming), { code: "SDK_ERR_IDENTITY_CONFLICT" });
+      assert(stableJson(await client.identity.exportBundle()) === stableJson(before));
+      assert.deepEqual(await store.sequence.snapshot(), counters);
+      ok("SDK-REG-0003 identity import rejects changed sync secret without mutation");
+    } catch (err) {
+      fail("SDK-REG-0003 identity import rejects changed sync secret without mutation", String(err));
     }
 
     const importRollbackBase = new InMemorySdkStore();

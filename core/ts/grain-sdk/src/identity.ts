@@ -137,10 +137,10 @@ export class IdentityManager {
   async importBundle(bundle: IdentityBundleV1): Promise<void> {
     validateIdentityBundle(bundle);
 
-    const nextBundle = cloneIdentityBundle(bundle);
+    const incoming = cloneIdentityBundle(bundle);
     await this.store.atomic(async () => {
       const existing = await this.store.identity.load();
-      assertIdentityRootCompatible(nextBundle, existing?.root_kid);
+      const nextBundle = mergeIdentityAuthorization(existing, incoming);
       // Events and manifests can advance the allocator beyond the saved identity.
       const allocatorState = await this.store.sequence.snapshot();
       for (const state of [existing?.seq_state ?? {}, allocatorState]) {
@@ -150,6 +150,7 @@ export class IdentityManager {
           nextBundle.seq_state[ak] = (current > incoming ? current : incoming).toString();
         }
       }
+      validateIdentityBundle(nextBundle);
       await this.store.sequence.importSnapshot(nextBundle.seq_state);
       await this.store.identity.save(nextBundle);
     });
@@ -276,10 +277,31 @@ function validateIdentityBundle(bundle: IdentityBundleV1): void {
   }
 }
 
-function assertIdentityRootCompatible(bundle: IdentityBundleV1, existingRootKid?: string): void {
-  if (existingRootKid && existingRootKid !== bundle.root_kid) {
-    throw new SdkError("SDK_ERR_IDENTITY_CONFLICT", "Imported identity root does not match existing root");
+function mergeIdentityAuthorization(existing: IdentityBundleV1 | null, incoming: IdentityBundleV1): IdentityBundleV1 {
+  if (!existing) return cloneIdentityBundle(incoming);
+  if (existing.root_kid !== incoming.root_kid
+    || existing.root_pub_b64 !== incoming.root_pub_b64
+    || existing.sync_secret_b64 !== incoming.sync_secret_b64) {
+    throw new SdkError("SDK_ERR_IDENTITY_CONFLICT", "Imported identity key material conflicts with existing identity");
   }
+  const merged = cloneIdentityBundle(existing);
+  const known = new Map(merged.device_keys.map((device) => [device.ak, device.pub_b64]));
+  const additions: DeviceKey[] = [];
+  for (const device of incoming.device_keys) {
+    const pub = known.get(device.ak);
+    if (pub !== undefined && pub !== device.pub_b64) {
+      throw new SdkError("SDK_ERR_IDENTITY_CONFLICT", "Imported device key conflicts with existing device");
+    }
+    if (pub === undefined) additions.push({ ...device });
+  }
+  additions.sort((left, right) => left.ak < right.ak ? -1 : left.ak > right.ak ? 1 : 0);
+  merged.device_keys.push(...additions);
+  merged.revoked_aks = [...new Set([...existing.revoked_aks, ...incoming.revoked_aks])].sort();
+  merged.seq_state = { ...incoming.seq_state };
+  if (!isAuthorized(merged, merged.active_ak)) {
+    merged.active_ak = isAuthorized(merged, incoming.active_ak) ? incoming.active_ak : merged.root_kid;
+  }
+  return merged;
 }
 
 function decodeIdentityBytes(value: string, message: string): Uint8Array {
