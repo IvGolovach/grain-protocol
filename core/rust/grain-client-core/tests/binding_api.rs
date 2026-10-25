@@ -95,3 +95,44 @@ fn binding_memory_store_scan_accept_is_idempotent_and_listable() {
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].scan_id, first.scan_id.expect("scan id"));
 }
+
+#[test]
+fn binding_old_identity_import_round_trips_snapshot_with_scans_and_revocations() {
+    for backup_before_grant in [true, false] {
+        let store = GrainClientMemoryStore::new();
+        assert_eq!(store.create_root_identity("root".into()).status, "Created");
+        let initial = store.export_identity_bundle().bundle_b64.unwrap();
+        let device = store.add_device_key("device".into()).device_ak.unwrap();
+        assert_eq!(store.set_active_device(device.clone()).status, "Active");
+        let old = if backup_before_grant {
+            initial
+        } else {
+            store.export_identity_bundle().bundle_b64.unwrap()
+        };
+        assert_eq!(store.revoke_device_key(device.clone()).status, "Revoked");
+        assert_eq!(
+            store
+                .scan_accept(FfiScanAcceptRequest {
+                    qr_string: qr_string(),
+                    trust_pub_b64: trusted_pub_b64(),
+                })
+                .status,
+            "Accepted"
+        );
+        assert_eq!(store.import_identity_bundle(old).status, "Imported");
+        let snapshot = store.export_store_snapshot().snapshot_b64.unwrap();
+        let restarted = GrainClientMemoryStore::new();
+        assert_eq!(
+            restarted.restore_store_snapshot(snapshot).status,
+            "Restored"
+        );
+        let state = restarted.client_lifecycle();
+        assert_eq!(state.device_count, 2);
+        assert_eq!(state.revoked_count, 1);
+        assert_eq!(state.lifecycle_event_count, 2);
+        assert_eq!(state.accepted_record_count, 1);
+        assert_eq!(restarted.set_active_device(device).status, "Rejected");
+        assert_eq!(restarted.add_device_key("next".into()).status, "Added");
+        assert_eq!(restarted.client_lifecycle().lifecycle_event_count, 3);
+    }
+}

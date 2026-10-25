@@ -1,12 +1,12 @@
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 
 use crate::accepted_scan::validate_accepted_scan_record;
 use crate::custody::PortableTransferCustodyV1;
 use crate::device::validate_lifecycle_event_record;
 use crate::diag::{SDK_ERR_IDENTITY_CONFLICT, SDK_ERR_SYNC_BUNDLE_INVALID};
-use crate::identity::{decode_json_b64, encode_json_b64, validate_identity_bundle};
+use crate::identity::{
+    decode_json_b64, encode_json_b64, merge_identity_bundle, validate_identity_bundle,
+};
 use crate::store::{IdentityClientStore, StorePutResult};
 use crate::types::{
     AcceptedScanRecord, IdentityBundleV1, LifecycleEventRecord, SyncResult, SyncStatus,
@@ -80,7 +80,11 @@ pub fn sync_import_bundle<S: IdentityClientStore>(store: &mut S, bundle_b64: &st
         let mut inserted = false;
 
         if let Some(incoming) = bundle.identity.clone() {
-            let identity = merge_identity_bundle(tx.load_identity_bundle(), incoming)?;
+            let identity = merge_identity_bundle(
+                tx.load_identity_bundle(),
+                incoming,
+                SDK_ERR_SYNC_BUNDLE_INVALID,
+            )?;
             tx.import_seq_state(identity.seq_state.clone())?;
             inserted |= matches!(tx.save_identity_bundle(identity)?, StorePutResult::Inserted);
         }
@@ -143,91 +147,6 @@ fn decode_sync_bundle(bundle_b64: &str) -> Result<SyncBundleV1, String> {
         }
     }
     Ok(bundle)
-}
-
-fn merge_identity_bundle(
-    existing: Option<IdentityBundleV1>,
-    mut incoming: IdentityBundleV1,
-) -> Result<IdentityBundleV1, String> {
-    let Some(mut existing) = existing else {
-        return Ok(incoming);
-    };
-    if existing.root_kid != incoming.root_kid
-        || existing.root_pub_b64 != incoming.root_pub_b64
-        || existing.sync_secret_b64 != incoming.sync_secret_b64
-    {
-        return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
-    }
-
-    let mut known_device_pubs = BTreeMap::new();
-    for device in &existing.device_keys {
-        known_device_pubs.insert(device.ak.clone(), device.pub_b64.clone());
-    }
-    let mut new_devices = Vec::new();
-    for device in incoming.device_keys.drain(..) {
-        match known_device_pubs.get(&device.ak) {
-            Some(existing_pub_b64) if existing_pub_b64 != &device.pub_b64 => {
-                return Err(SDK_ERR_IDENTITY_CONFLICT.to_string());
-            }
-            Some(_) => {}
-            None => {
-                known_device_pubs.insert(device.ak.clone(), device.pub_b64.clone());
-                new_devices.push(device);
-            }
-        }
-    }
-    new_devices.sort_by(|left, right| left.ak.cmp(&right.ak));
-    existing.device_keys.extend(new_devices);
-
-    for revoked in incoming.revoked_aks {
-        if !existing.revoked_aks.iter().any(|known| known == &revoked) {
-            existing.revoked_aks.push(revoked);
-        }
-    }
-    existing.revoked_aks.sort();
-
-    for (ak, incoming_seq) in incoming.seq_state {
-        let incoming_seq = incoming_seq
-            .parse::<u64>()
-            .map_err(|_| SDK_ERR_SYNC_BUNDLE_INVALID.to_string())?;
-        let merged_seq = existing
-            .seq_state
-            .get(&ak)
-            .map(|seq| {
-                seq.parse::<u64>()
-                    .map(|existing_seq| existing_seq.max(incoming_seq))
-                    .map_err(|_| SDK_ERR_SYNC_BUNDLE_INVALID.to_string())
-            })
-            .transpose()?
-            .unwrap_or(incoming_seq);
-        existing.seq_state.insert(ak, merged_seq.to_string());
-    }
-
-    if existing
-        .revoked_aks
-        .iter()
-        .any(|revoked| revoked == &existing.active_ak)
-        || !existing
-            .device_keys
-            .iter()
-            .any(|device| device.ak == existing.active_ak)
-    {
-        existing.active_ak = incoming.active_ak;
-        if existing
-            .revoked_aks
-            .iter()
-            .any(|revoked| revoked == &existing.active_ak)
-            || !existing
-                .device_keys
-                .iter()
-                .any(|device| device.ak == existing.active_ak)
-        {
-            existing.active_ak = existing.root_kid.clone();
-        }
-    }
-
-    validate_identity_bundle(&existing).map_err(|_| SDK_ERR_SYNC_BUNDLE_INVALID.to_string())?;
-    Ok(existing)
 }
 
 fn sync_custody_default() -> PortableTransferCustodyV1 {

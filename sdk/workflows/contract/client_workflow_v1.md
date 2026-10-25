@@ -112,10 +112,14 @@ values advanced by event append and manifest put/delete. Root compatibility is c
 state are saved inside one atomic transaction. Repeated import, later identity
 saves, and export/reimport must preserve the merged counters. Invalid sequence
 input rejects without mutation; Rust's exhausted u64 allocator remains exhausted.
-Counter retention does not grant authorization or merge lifecycle history.
-An older identity can still conflict with retained device events, causing a
-later snapshot restore to reject. A fresh client cannot infer counters absent
-from its backup. See `adr/sdk/0009-identity-import-sequence-high-water.md`.
+Counter entries alone do not grant authorization. Same-root identity import
+merges compatible devices and revocations, preserves a still-authorized local
+active key, and rejects changed key material. Revocations cannot be removed by
+an older bundle. Rust validates retained lifecycle records against the merged
+identity before saving; incompatible legacy history rejects without mutation
+until a complete compatible bundle is supplied. Accepted scans and events are
+not deleted or synthesized. A fresh client cannot infer history absent from
+its backup. See SDK ADR-0009 and `adr/sdk/0010-identity-import-history-merge.md`.
 
 ## `pairing`
 

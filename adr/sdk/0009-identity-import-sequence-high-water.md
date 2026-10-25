@@ -1,6 +1,7 @@
 # ADR 0009: Preserve Sequence High-Water Marks on Identity Import
 
-Status: Accepted
+Status: Accepted. Authorization replacement and its snapshot inconsistency limit
+are superseded by [SDK ADR-0010](0010-identity-import-history-merge.md).
 
 Date: 2026-10-24
 
