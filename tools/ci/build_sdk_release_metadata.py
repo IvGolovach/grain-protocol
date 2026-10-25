@@ -154,6 +154,7 @@ def sha256_file(path: Path) -> str:
 
 
 def source_created_at(commit: str) -> str:
+    """Return a full commit ID's committer timestamp as an ISO 8601 UTC value."""
     if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
         raise ValueError("SDK_RELEASE_METADATA_ERR_COMMIT")
     epoch = int(subprocess.check_output(

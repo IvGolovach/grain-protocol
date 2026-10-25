@@ -10,6 +10,11 @@ from pathlib import Path
 
 
 def compare_packages(first: Path, second: Path) -> dict[str, object]:
+    """Require identical nonempty archive sets and immutable package file hashes.
+
+    Return the shared hashes for CI evidence; reject differing sets or bytes and
+    propagate file errors when required metadata cannot be read.
+    """
     names_a = {path.name for path in first.glob("*.tar.gz")}
     names_b = {path.name for path in second.glob("*.tar.gz")}
     if not names_a or names_a != names_b:
@@ -30,6 +35,7 @@ def compare_packages(first: Path, second: Path) -> dict[str, object]:
 
 
 def main() -> int:
+    """Compare two package directories and save a report only after success."""
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--first-dir", type=Path, required=True)
     parser.add_argument("--second-dir", type=Path, required=True)
