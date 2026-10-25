@@ -184,15 +184,16 @@ function encodeJsonValue(value: Json, out: number[]): void {
 
 function encodeCanonicalMap(entries: Array<{ key: string; value: Json | bigint }>, out: number[]): void {
   const sorted = entries
-    .map((entry) => ({
-      ...entry,
-      keyBytes: toUtf8(entry.key)
-    }))
-    .sort((a, b) => compareBytesLex(a.keyBytes, b.keyBytes));
+    .map((entry) => {
+      const encodedKey: number[] = [];
+      encodeText(entry.key, encodedKey);
+      return { ...entry, keyBytes: new Uint8Array(encodedKey) };
+    })
+    .sort((a, b) => a.keyBytes.length - b.keyBytes.length || compareBytesLex(a.keyBytes, b.keyBytes));
 
   writeTypeArg(5, BigInt(sorted.length), out);
   for (const entry of sorted) {
-    encodeText(entry.key, out);
+    pushBytes(out, entry.keyBytes);
     if (typeof entry.value === "bigint") {
       if (entry.value >= 0n) {
         encodeUnsigned(entry.value, out);

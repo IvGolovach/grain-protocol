@@ -30,6 +30,7 @@ Expected contract:
 - SDK invariants currently cover `SDK-INV-0001` through `SDK-INV-0032` and `SDK-AI-000` through `SDK-AI-008`
 - identity import rejects non-derived key IDs, duplicate device keys, unauthorized active keys, replacement roots, and invalid sequence-state values before mutation
 - raw CBOR-seq JSON export rejects non-finite, fractional, and unsafe numeric values before bytes are emitted
+- SDK-INV-0011 strictly parses each raw CBOR-sequence item; SDK-REG-0004 checks nested UTF-8 map-key order, the 23/24-byte header boundary, insertion-order independence, and retained values. Framing alone does not establish canonical object validity or COSE signatures (SDK ADR-0011).
 
 ## Portable client core
 

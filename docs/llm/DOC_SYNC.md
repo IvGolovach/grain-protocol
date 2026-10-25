@@ -54,6 +54,10 @@ surface is optional `object_type` on existing `dagcbor_validate`.
 
 ### SDK behavior changes
 
+Raw ledger CBOR-sequence changes also keep SDK ADR-0011, SDK-INV-0011,
+SDK-REG-0004 and the TypeScript README synchronized. Distinguish canonical
+reducer-model bytes from typed/signed protocol events.
+
 Update:
 
 - `core/ts/grain-sdk/src/*`

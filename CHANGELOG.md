@@ -3,6 +3,11 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Raw TypeScript ledger export canonicality:
+  - sort map keys by encoded length then encoded bytes, including nested maps;
+    preserve event ordering and values while correcting non-canonical output.
+  - add strict per-item and UTF-8/header-boundary regression checks; SDK ADR-0011
+    documents changed export bytes and the unsigned reducer-model boundary.
 - Identity recovery history safety:
   - merge compatible same-root devices, revocations, and sequence state in Rust
     and TypeScript; preserve local active selection when still authorized.

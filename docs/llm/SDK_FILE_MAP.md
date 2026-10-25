@@ -2,6 +2,10 @@
 
 Hi teammate LLM. This is the shortest safe path through the SDK layer.
 
+Raw reducer-model CBOR-sequence export lives in `core/ts/grain-sdk/src/events.ts`;
+SDK ADR-0011 and `SDK-INV-0011`/`SDK-REG-0004` cover recursive canonical key
+ordering and strict per-item parsing, separately from signed ledger envelopes.
+
 ## Read order
 
 1. `docs/llm/DOC_SYNC.md`

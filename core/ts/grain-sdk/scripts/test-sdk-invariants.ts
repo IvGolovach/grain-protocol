@@ -4,7 +4,7 @@ import { createHash, createPrivateKey, createPublicKey, sign } from "node:crypto
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { encodeCanonical } from "grain-ts-core/cbor";
+import { encodeCanonical, parseOne, STRICT_DAG_CBOR_OPTIONS } from "grain-ts-core/cbor";
 import type { CborNode } from "grain-ts-core/types";
 
 import { GrainSdk, InMemorySdkStore } from "../src/index.js";
@@ -476,6 +476,14 @@ async function run(): Promise<number> {
     try {
       const exportedA = await sdk.events.exportDeterministicCborSeq(seqEvents);
       const exportedB = await sdk.events.exportDeterministicCborSeq([...seqEvents].reverse());
+      // Stream framing alone does not check the canonical ordering inside each item.
+      let offset = 0;
+      for (const _event of seqEvents) {
+        const parsed = parseOne(exportedA.subarray(offset), STRICT_DAG_CBOR_OPTIONS);
+        assert.equal(parsed.node.kind, "m");
+        offset += parsed.used;
+      }
+      assert.equal(offset, exportedA.length);
 
       if (!Buffer.from(exportedA).equals(Buffer.from(exportedB))) {
         fail("SDK-INV-0011 raw CBOR-seq export determinism", "export bytes changed when input order changed");
@@ -498,6 +506,38 @@ async function run(): Promise<number> {
     } catch (err) {
       const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
       fail("SDK-INV-0011 raw CBOR-seq export determinism", `unexpected code: ${code}`);
+    }
+
+    try {
+      const entries: Array<[string, number]> = [
+        ["a".repeat(24), 24], ["é", 2], ["aaaa", 4], ["z", 1],
+        ["b".repeat(23), 23], ["zz", 3]
+      ];
+      const expectedKeys = ["z", "zz", "é", "aaaa", "b".repeat(23), "a".repeat(24)];
+      const event: LedgerEvent = {
+        t: "IntakeEvent", ak: "canonical-test", seq: 1n, payload_cid: "canonical-test",
+        body: { nested: [Object.fromEntries(entries)] }
+      };
+      const bytes = await sdk.events.exportDeterministicCborSeq([event]);
+      const reversed = await sdk.events.exportDeterministicCborSeq([
+        { ...event, body: { nested: [Object.fromEntries([...entries].reverse())] } }
+      ]);
+      assert.deepEqual(bytes, reversed);
+      const parsed = parseOne(bytes, STRICT_DAG_CBOR_OPTIONS);
+      assert.equal(parsed.used, bytes.length);
+      assert.equal(parsed.node.kind, "m");
+      if (parsed.node.kind !== "m") throw new Error("expected event map");
+      const keys = parsed.node.entries.map(({ key }) => key.kind === "t" ? Buffer.from(key.bytes).toString("utf8") : "");
+      assert.deepEqual(keys, ["t", "ak", "seq", "body", "payload_cid"]);
+      const body = parsed.node.entries.find(({ key }) => key.kind === "t" && Buffer.from(key.bytes).toString("utf8") === "body")?.value;
+      if (body?.kind !== "m") throw new Error("expected body map");
+      const nested = body.entries[0]?.value;
+      if (nested?.kind !== "a" || nested.items[0]?.kind !== "m") throw new Error("expected nested map");
+      assert.deepEqual(nested.items[0].entries.map(({ key }) => key.kind === "t" ? Buffer.from(key.bytes).toString("utf8") : ""), expectedKeys);
+      assert.deepEqual(nested.items[0].entries.map(({ value }) => value.kind === "u" ? Number(value.value) : null), [1, 3, 2, 4, 23, 24]);
+      ok("SDK-REG-0004 raw CBOR-seq orders nested UTF-8 keys canonically");
+    } catch (err) {
+      fail("SDK-REG-0004 raw CBOR-seq orders nested UTF-8 keys canonically", String(err));
     }
 
     const lifecycleSdk = new GrainSdk();
