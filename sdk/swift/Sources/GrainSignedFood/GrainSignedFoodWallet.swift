@@ -63,6 +63,7 @@ public actor GrainSignedFoodWallet {
     private let persistence: any GrainSnapshotPersistence
     private let trustedRootPubB64: String
     private var journal: GrainSignedFoodJournal?
+    private var hasDurableSnapshot = false
 
     public init(trustedRootPublicKey: Data, persistence: any GrainSnapshotPersistence) throws {
         guard trustedRootPublicKey.count == 32 else {
@@ -75,6 +76,7 @@ public actor GrainSignedFoodWallet {
             if let saved = try persistence.loadSnapshotB64() {
                 let result = loaded.restoreSnapshot(snapshotB64: saved, trustedRootPubB64: trustedRootPubB64)
                 guard result.status == "Restored" else { throw GrainSignedFoodError.rejected(result.diag) }
+                hasDurableSnapshot = true
             }
         } catch let error as GrainSignedFoodError {
             throw error
@@ -166,16 +168,29 @@ public actor GrainSignedFoodWallet {
             journal = nil
             throw GrainSignedFoodError.writerUnavailable
         }
-        do { try persistence.saveSnapshotB64(snapshot) }
+        do {
+            try persistence.saveSnapshotB64(snapshot)
+            hasDurableSnapshot = true
+        }
         catch {
             // Save may have succeeded before its acknowledgement failed. Re-read durable
             // state instead of rolling back a counter or assuming the old state survived.
             journal = nil
-            if let saved = try? persistence.loadSnapshotB64() {
+            do {
+                let saved = try persistence.loadSnapshotB64()
                 let loaded = GrainSignedFoodJournal()
-                if loaded.restoreSnapshot(snapshotB64: saved, trustedRootPubB64: trustedRootPubB64).status == "Restored" {
+                if let saved {
+                    if loaded.restoreSnapshot(snapshotB64: saved, trustedRootPubB64: trustedRootPubB64).status == "Restored" {
+                        journal = loaded
+                        hasDurableSnapshot = true
+                    }
+                } else if !hasDurableSnapshot {
+                    // No successful save means no signer could have received a
+                    // reservation from this wallet. A confirmed empty store is retryable.
                     journal = loaded
                 }
+            } catch {
+                // Failed reads leave the writer unavailable.
             }
             throw GrainSignedFoodError.persistenceFailed
         }

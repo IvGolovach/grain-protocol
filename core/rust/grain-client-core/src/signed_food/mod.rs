@@ -349,6 +349,9 @@ impl GrainSignedFoodJournal {
     pub fn export_transfer(&self) -> FfiSignedFoodResult {
         self.mutate(|state| {
             let current = state.as_ref().ok_or_else(|| INVALID.to_string())?;
+            if current.transfer.events.is_empty() {
+                return Err("SDK_ERR_SIGNED_FOOD_PENDING".into());
+            }
             let verified =
                 verify_transfer(current.transfer.clone(), &current.transfer.root_pub_b64)?;
             let mut response = result(current, "Exported", None, None)?;
@@ -491,13 +494,16 @@ fn prepare(
     if current.read_only {
         return Err("SDK_ERR_SIGNED_FOOD_READ_ONLY".into());
     }
+    if current.transfer.events.is_empty() {
+        return Err("SDK_ERR_SIGNED_FOOD_PENDING".into());
+    }
     let public = public_key(author)?;
     let ak = hex(&kid(&public));
     let verified = verify_transfer(current.transfer.clone(), &current.transfer.root_pub_b64)?;
-    for event in verified
+    if let Some(event) = verified
         .events
         .values()
-        .filter(|event| event.ak == ak && event.operation_id.as_deref() == Some(id))
+        .find(|event| event.ak == ak && event.operation_id.as_deref() == Some(id))
     {
         if event.kind != kind || encode(&event.body) != encode(&body) {
             return Err("SDK_ERR_SIGNED_FOOD_OPERATION_CONFLICT".into());
@@ -570,7 +576,7 @@ fn validate_state(state: &State, trusted_root: &str) -> Result<(), String> {
     }
     if let Some(verified) = &verified {
         for (ak, seq) in &verified.counters {
-            if state.counters.get(ak).map_or(true, |counter| counter < seq) {
+            if state.counters.get(ak).is_none_or(|counter| counter < seq) {
                 return Err(INVALID.into());
             }
         }
@@ -588,7 +594,7 @@ fn validate_state(state: &State, trusted_root: &str) -> Result<(), String> {
             || state
                 .counters
                 .get(&ak)
-                .map_or(true, |seq| *seq < pending.seq)
+                .is_none_or(|seq| *seq < pending.seq)
         {
             return Err(INVALID.into());
         }

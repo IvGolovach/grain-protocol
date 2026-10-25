@@ -116,6 +116,33 @@ fn transfer(journal: &GrainSignedFoodJournal) -> String {
 }
 
 #[test]
+fn uncommitted_genesis_blocks_operations_without_losing_its_reservation() {
+    let root = key(63);
+    let device = key(64);
+    let writer = GrainSignedFoodJournal::new();
+    let genesis = writer.initialize(public(&root));
+    let before = snapshot(&writer);
+    for rejected in [
+        intake(&writer, &root, "meal-before-genesis", 100),
+        writer.prepare_grant("grant-before-genesis".into(), public(&device)),
+        writer.prepare_revoke("revoke-before-genesis".into(), public(&device)),
+        writer.export_transfer(),
+    ] {
+        assert_eq!(rejected.status, "Rejected");
+        assert_eq!(rejected.diag, ["SDK_ERR_SIGNED_FOOD_PENDING"]);
+        assert!(snapshot(&writer) == before);
+    }
+    let retry = writer.initialize(public(&root));
+    assert_eq!(retry.seq, Some(0));
+    assert!(retry.signing_bytes_b64 == genesis.signing_bytes_b64);
+    complete(&writer, &root, retry);
+    assert_eq!(
+        complete(&writer, &root, intake(&writer, &root, "first-meal", 100)).seq,
+        Some(1)
+    );
+}
+
+#[test]
 fn preparation_survives_restart_and_committed_retry_does_not_allocate_again() {
     let root = key(41);
     let first = journal(&root);

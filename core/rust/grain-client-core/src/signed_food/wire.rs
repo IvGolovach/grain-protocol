@@ -478,7 +478,7 @@ fn evaluate(
     if genesis != 1
         || sequences
             .get(&(root_ak.clone(), 0))
-            .map_or(true, |set| set.len() != 1)
+            .is_none_or(|set| set.len() != 1)
     {
         return Err(TRUST.into());
     }

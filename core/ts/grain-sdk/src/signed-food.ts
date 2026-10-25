@@ -31,26 +31,41 @@ interface Event {
 }
 
 function reject(code: string = INVALID): never { throw new GrainDiagError(code); }
-// JSON.parse validates grammar but silently overwrites duplicate keys. Scan only
-// structural/string tokens after parsing to reject that ambiguity, including escaped keys.
+// JSON.parse validates grammar but silently overwrites duplicate keys. Scan
+// validated tokens linearly: a regex with per-character alternatives can exhaust
+// V8's regexp stack on a string within the transfer byte limit.
 function rejectDuplicateKeys(json: string): void {
   const stack: ({ keys: Set<string>; expectingKey: boolean } | null)[] = [];
-  for (const match of json.matchAll(/"(?:[^"\\]|\\.)*"|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|[{}\[\]:,]/gs)) {
-    const token = match[0];
+  for (let index = 0; index < json.length; index++) {
+    const token = json[index];
+    if (token === '"') {
+      const start = index++;
+      while (json[index] !== '"') {
+        if (json[index] === "\\") index++;
+        index++;
+      }
+      const current = stack.at(-1);
+      if (current?.expectingKey) {
+        const key = JSON.parse(json.slice(start, index + 1)) as string;
+        if (current.keys.has(key)) return reject();
+        current.keys.add(key);
+        current.expectingKey = false;
+      }
+      continue;
+    }
     // bundle_v is the only numeric field in this container. Match Rust's
     // integer deserializer: 1.0 and 1e0 are not version-one integer literals.
-    if (/^[-0-9]/.test(token) && token !== "1") return reject();
+    if (token === "-" || (token >= "0" && token <= "9")) {
+      const start = index;
+      while (index + 1 < json.length && "0123456789.eE+-".includes(json[index + 1])) index++;
+      if (json.slice(start, index + 1) !== "1") return reject();
+      continue;
+    }
     if (token === "{") { stack.push({ keys: new Set(), expectingKey: true }); continue; }
     if (token === "[") { stack.push(null); continue; }
     if (token === "}" || token === "]") { stack.pop(); continue; }
     const current = stack.at(-1);
     if (token === "," && current) current.expectingKey = true;
-    if (token.startsWith('"') && current?.expectingKey) {
-      const key = JSON.parse(token) as string;
-      if (current.keys.has(key)) return reject();
-      current.keys.add(key);
-      current.expectingKey = false;
-    }
   }
 }
 function object(value: unknown): Record<string, unknown> {

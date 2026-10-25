@@ -87,6 +87,26 @@ struct SignedFoodSmoke {
             return
         }
         let signer = TestSigner()
+        let emptyStorage = FaultStore()
+        let freshWallet = try GrainSignedFoodWallet(trustedRootPublicKey: signer.publicKey, persistence: emptyStorage)
+        emptyStorage.inject(offset: 1)
+        try await storageFailure { try await freshWallet.initialize(using: signer) }
+        try check(signer.count == 0, "failed first save must not sign")
+        let initialized = try await freshWallet.initialize(using: signer)
+        try check(initialized.sequence == 0 && signer.count == 1, "empty durable reload permits initialization retry")
+
+        // Losing state after any durable reservation must never reopen a fresh
+        // writer and allow signatures to reuse an earlier sequence.
+        let reloadedWallet = try GrainSignedFoodWallet(trustedRootPublicKey: signer.publicKey, persistence: emptyStorage)
+        emptyStorage.clearSnapshot()
+        for existingWallet in [freshWallet, reloadedWallet] {
+            emptyStorage.inject(offset: 1)
+            try await storageFailure { try await existingWallet.record(food("lost-state"), using: signer) }
+            do { _ = try await existingWallet.initialize(using: signer); throw SmokeError.assertion("lost-state writer not stopped") }
+            catch GrainSignedFoodError.writerUnavailable {}
+        }
+        try check(signer.count == 1, "lost durable state must not issue another signature")
+
         let storage = FaultStore()
         var wallet = try GrainSignedFoodWallet(trustedRootPublicKey: signer.publicKey, persistence: storage)
         _ = try await wallet.initialize(using: signer)
@@ -175,6 +195,12 @@ struct SignedFoodSmoke {
         try check(imported.sumMeanKcal == 700, "verified public import")
         do { _ = try await reader.record(food("viewer-write"), using: fileSigner); throw SmokeError.assertion("public import writable") }
         catch GrainSignedFoodError.rejected(let diagnostics) { try check(diagnostics == ["SDK_ERR_SIGNED_FOOD_READ_ONLY"], "read-only diagnostic") }
+        let emptyImportStorage = FaultStore()
+        let importRetry = try GrainSignedFoodWallet(trustedRootPublicKey: fileSigner.publicKey, persistence: emptyImportStorage)
+        emptyImportStorage.inject(offset: 1)
+        try await storageFailure { try await importRetry.importTransfer(transfer) }
+        let retriedImport = try await importRetry.importTransfer(transfer)
+        try check(retriedImport.sumMeanKcal == 700, "empty durable reload permits import retry")
         print("signed food Swift smoke: PASS (durability faults, restart, idempotency, concurrency, file handoff)")
     }
 }

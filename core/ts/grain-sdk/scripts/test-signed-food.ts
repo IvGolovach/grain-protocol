@@ -102,6 +102,17 @@ for (const fixture of fixtures) {
   }
 }
 const confirmed = fixtures.find((fixture) => fixture.name === "confirmed")!;
+// Valid JSON near the byte limit must reject with a domain diagnostic, never a
+// regexp stack error, for both ordinary strings and dense escape sequences.
+for (const token of ['"' + "a".repeat(15_999_998) + '"', '"' + "\\n".repeat(7_999_999) + '"']) {
+  assert.equal(Buffer.byteLength(token), 16_000_000);
+  assert.throws(() => verifySignedFoodTransfer(token, confirmed.trustedRootPubB64),
+    (error: unknown) => error instanceof GrainDiagError && error.code === "SDK_ERR_SIGNED_FOOD_INVALID");
+  checks++;
+}
+const escapedDuplicate = JSON.stringify(confirmed.transfer).replace('"bundle_v":1', '"bundle_v":1,"bundle_\\u0076":1');
+assert.throws(() => verifySignedFoodTransfer(escapedDuplicate, confirmed.trustedRootPubB64), GrainDiagError);
+checks++;
 for (const literal of ["1.0", "1e0"]) {
   assert.throws(() => verifySignedFoodTransfer(JSON.stringify(confirmed.transfer).replace('"bundle_v":1', `"bundle_v":${literal}`), confirmed.trustedRootPubB64), GrainDiagError);
   checks++;

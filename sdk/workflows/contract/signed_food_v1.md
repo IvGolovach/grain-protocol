@@ -32,6 +32,8 @@ hyphen or underscore characters, persisted in body.ext under
 input resumes the exact reserved bytes or returns AlreadyCommitted; changing
 input under a committed ID rejects. A pending operation blocks another operation.
 Overflow and invalid input reject before a new signing request is issued.
+Until genesis is committed, other preparations and public export reject with
+`SDK_ERR_SIGNED_FOOD_PENDING`; retry initialization to resume its reservation.
 
 Rust low-level preparation returns Prepared, a sequence, operation ID, exact
 base64 COSE Sig_structure and private snapshot. The host must save that snapshot
@@ -39,6 +41,10 @@ before calling any signer, then commit the returned signature and save the new
 snapshot before acknowledging success. Rust memory alone is not persistence.
 The Swift actor enforces this order and returns only a receipt. It reloads storage
 after failed or uncertain save acknowledgement. A failed reload stops that writer.
+If the first save fails and reload confirms an empty store, the wallet returns
+to its initial state so initialization or import can be retried. Once any snapshot
+has been saved or loaded, a missing snapshot also stops the writer: silently
+restarting from empty could reuse sequences whose signatures already escaped.
 Signer failures retain the exact durable reservation. Never reuse a sequence for
 different bytes. There is no implicit cancellation that recycles reservations.
 
@@ -80,6 +86,10 @@ transfer JSON; 34,000 bytes per COSE envelope; existing typed-object limits also
 apply (LedgerEvent payload 32,768 bytes). Private base64 snapshots are capped at
 16,000,000 characters, so importing a file must also fit the resulting snapshot.
 This is a bounded local journal, not a segmented archival store.
+Each mutation currently revalidates the complete journal and writes a complete
+snapshot. The item cap bounds storage; it is not a mobile latency guarantee.
+Incremental verification and segmented persistence require separate performance
+measurement and recovery-equivalence tests before changing this safety model.
 
 Transfers contain sensitive food data and public verification material. They
 contain no private signing keys, sync secrets or images. They are intentionally
