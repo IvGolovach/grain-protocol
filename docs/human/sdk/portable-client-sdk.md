@@ -140,6 +140,14 @@ These adapters still do not own protocol semantics. They only turn platform came
 The identity, device lifecycle, pairing, and sync slice is now present:
 
 - `grain-client-core` can create/export/import a portable identity bundle
+- importing an older identity bundle in Rust or TypeScript preserves the
+  highest sequence saved for each author in the current or incoming identity;
+  merged counters survive later identity saves and exports
+- TypeScript import also retains live counters advanced by event and manifest
+  operations that have not updated the saved identity bundle
+- identity import still replaces device authorization while keeping lifecycle
+  records. If old authorization conflicts with those records, a later snapshot
+  restore can reject; counter retention does not reconcile that history
 - device authorization keys can be added, activated, revoked, and reported through `client_lifecycle`
 - pairing envelopes move an identity bundle through an app-controlled transfer channel and are idempotent on replay
 - sync bundles carry identity, accepted scans, and lifecycle events across clients with atomic import semantics

@@ -105,6 +105,18 @@ Expected fields:
 
 The fixture runner creates a root identity, adds a device key, activates that device, revokes it, and checks `client_lifecycle()`.
 
+Same-root identity import retains the maximum saved sequence for every author
+across the current and incoming identity bundles, including entries missing
+from either map. TypeScript also retains its live allocator counters, including
+values advanced by event append and manifest put/delete. Root compatibility is checked and both allocator and identity
+state are saved inside one atomic transaction. Repeated import, later identity
+saves, and export/reimport must preserve the merged counters. Invalid sequence
+input rejects without mutation; Rust's exhausted u64 allocator remains exhausted.
+Counter retention does not grant authorization or merge lifecycle history.
+An older identity can still conflict with retained device events, causing a
+later snapshot restore to reject. A fresh client cannot infer counters absent
+from its backup. See `adr/sdk/0009-identity-import-sequence-high-water.md`.
+
 ## `pairing`
 
 Input fields:

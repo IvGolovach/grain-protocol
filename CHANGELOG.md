@@ -3,6 +3,12 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Identity import sequence safety:
+  - retain per-author sequence maxima from current and incoming identity bundles
+    in Rust and TypeScript, plus TypeScript's live event/manifest counters,
+    including the state used by later saves and exports.
+  - add stale-import, restart, missing/newer-counter, and rejection regressions;
+    preserve Rust overflow rejection and document recovery limits in SDK ADR-0009.
 - Portable client snapshot sequence safety:
   - retain per-author sequence high-water marks when restoring older snapshots,
     including the identity state used by subsequent saves and exports.

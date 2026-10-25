@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash, createPrivateKey, createPublicKey, sign } from "node:crypto";
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { encodeCanonical } from "grain-ts-core/cbor";
@@ -599,6 +600,94 @@ async function run(): Promise<number> {
     } catch (err) {
       const code = err instanceof SdkError ? err.code : "SDK_ERR_INTERNAL";
       fail("SDK-REG-0001 identity bundle accepts empty labels", `unexpected code: ${code}`);
+    }
+
+    try {
+      const importSdk = new GrainSdk();
+      const { root_kid: root } = await importSdk.identity.createRoot();
+      const old = await importSdk.identity.exportBundle();
+      const first = await importSdk.identity.addDeviceKey("first");
+      await importSdk.identity.importBundle(old);
+      await importSdk.identity.setActiveAk(root);
+      const second = await importSdk.identity.addDeviceKey("second");
+      assert.equal(second.grant_event.ak, first.grant_event.ak);
+      assert.notEqual(second.grant_event.payload_cid, first.grant_event.payload_cid);
+      assert.equal(second.grant_event.seq, first.grant_event.seq + 1n);
+      assert.deepEqual((await importSdk.identity.exportBundle()).seq_state, { [root]: "2" });
+      ok("SDK-REG-0002 stale identity import preserves sequence");
+    } catch (err) {
+      fail("SDK-REG-0002 stale identity import preserves sequence", String(err));
+    }
+
+    try {
+      const importSdk = new GrainSdk();
+      const { root_kid: root } = await importSdk.identity.createRoot();
+      const old = await importSdk.identity.exportBundle();
+      await importSdk.identity.addDeviceKey("first");
+      await importSdk.identity.importBundle(old);
+      await importSdk.identity.importBundle(old);
+      const restarted = new GrainSdk();
+      await restarted.identity.importBundle(await importSdk.identity.exportBundle());
+      assert.equal((await restarted.identity.addDeviceKey("after restart")).grant_event.seq, 2n);
+      assert.deepEqual(old.seq_state, {});
+      assert.equal((await restarted.identity.exportBundle()).seq_state[root], "2");
+      ok("SDK-REG-0002 imported sequence survives export and restart");
+    } catch (err) {
+      fail("SDK-REG-0002 imported sequence survives export and restart", String(err));
+    }
+
+    try {
+      const importSdk = new GrainSdk();
+      const { root_kid: root } = await importSdk.identity.createRoot();
+      const old = await importSdk.identity.exportBundle();
+      const { device } = await importSdk.identity.addDeviceKey("local-device");
+      const current = await importSdk.identity.exportBundle();
+      current.seq_state[root] = "9";
+      current.seq_state[device.ak] = "9";
+      await importSdk.identity.importBundle(current);
+      old.seq_state = { [root]: "11", "incoming-only": "11" };
+      await importSdk.identity.importBundle(old);
+      const merged = await importSdk.identity.exportBundle();
+      assert.deepEqual(merged.seq_state, { [root]: "11", [device.ak]: "9", "incoming-only": "11" });
+      assert.equal(merged.device_keys.length, 1);
+      await assert.rejects(importSdk.identity.setActiveAk(device.ak), { code: "SDK_ERR_UNAUTHORIZED_AK" });
+      assert.equal((await importSdk.identity.addDeviceKey("next")).grant_event.seq, 12n);
+      old.seq_state = {};
+      await importSdk.identity.importBundle(old);
+      assert.equal((await importSdk.identity.exportBundle()).seq_state[root], "12");
+      ok("SDK-REG-0002 identity import keeps per-author maxima and incoming authorization");
+    } catch (err) {
+      fail("SDK-REG-0002 identity import keeps per-author maxima and incoming authorization", String(err));
+    }
+
+    for (const operation of ["event", "manifest-put", "manifest-del"] as const) {
+      const check = `SDK-REG-0002 identity import preserves live ${operation} counters`;
+      try {
+        const allocate = async (client: GrainSdk, label: string): Promise<bigint> => {
+          if (operation === "event") {
+            return (await client.events.append({ t: "IntakeEvent", payload_cid: label, body: {} })).event.seq;
+          }
+          if (operation === "manifest-put") {
+            return (await client.manifest.put(label, new Uint8Array(16), new Uint8Array(32))).seq;
+          }
+          return (await client.manifest.del(label)).seq;
+        };
+        const importSdk = new GrainSdk();
+        const { root_kid: root } = await importSdk.identity.createRoot();
+        const old = await importSdk.identity.exportBundle();
+        assert.equal(await allocate(importSdk, "first"), 1n);
+        await importSdk.identity.importBundle(old);
+        assert.equal((await importSdk.identity.exportBundle()).seq_state[root], "1");
+        await importSdk.identity.setActiveAk(root);
+        assert.equal(await allocate(importSdk, "second"), 2n);
+        await importSdk.identity.importBundle(old);
+        const restarted = new GrainSdk();
+        await restarted.identity.importBundle(await importSdk.identity.exportBundle());
+        assert.equal(await allocate(restarted, "third"), 3n);
+        ok(check);
+      } catch (err) {
+        fail(check, String(err));
+      }
     }
 
     const importRollbackBase = new InMemorySdkStore();

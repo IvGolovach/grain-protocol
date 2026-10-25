@@ -52,6 +52,7 @@ Expected contract:
 - TypeScript `transport.verifyGR1()` verifies COSE under explicit trust and rejects signed payloads that are not strict `ServingOffer` records for the protected issuer `kid`
 - failed or nested store mutations reject or roll back deterministically
 - identity/device lifecycle workflows create, import/export, activate, revoke, and report lifecycle counts deterministically
+- Rust `identity_device_lifecycle` and TypeScript `SDK-REG-0002` regressions require same-root identity import to preserve per-author saved sequence maxima, missing entries, higher incoming counters, subsequent identity saves, and export/restart. TypeScript additionally checks live counters advanced by event append and manifest put/delete. Rust also checks snapshot persistence, exhausted counters, and malformed sequence rejection; existing TypeScript transaction-failure coverage checks atomic rollback. This does not reconcile authorization history or recover sequence history absent from both identity bundles (SDK ADR-0009).
 - pairing preview is pure, pairing accept is atomic, and repeated pairing accept is idempotent
 - sync bundle export/import carries identity, accepted scans, and derived root-authored grant/revoke lifecycle events atomically
 - sync/snapshot import rejects forged lifecycle event IDs, unknown lifecycle event types, mismatched payload CIDs, out-of-range sequence numbers, root targets, and unknown target devices before mutation

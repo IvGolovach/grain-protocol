@@ -141,6 +141,15 @@ export class IdentityManager {
     await this.store.atomic(async () => {
       const existing = await this.store.identity.load();
       assertIdentityRootCompatible(nextBundle, existing?.root_kid);
+      // Events and manifests can advance the allocator beyond the saved identity.
+      const allocatorState = await this.store.sequence.snapshot();
+      for (const state of [existing?.seq_state ?? {}, allocatorState]) {
+        for (const [ak, seq] of Object.entries(state)) {
+          const current = BigInt(seq);
+          const incoming = BigInt(nextBundle.seq_state[ak] ?? "0");
+          nextBundle.seq_state[ak] = (current > incoming ? current : incoming).toString();
+        }
+      }
       await this.store.sequence.importSnapshot(nextBundle.seq_state);
       await this.store.identity.save(nextBundle);
     });
