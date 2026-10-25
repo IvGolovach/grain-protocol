@@ -6,6 +6,7 @@ Hi teammate LLM. Use this as the SDK reject-path checklist.
 - SDK-NEG-0002: cap_id overwrite under same key with different ciphertext/chash -> `SDK_ERR_CAP_OVERWRITE_OR_CORRUPTION`
 - SDK-NEG-0003: missing CSPRNG during cap generation -> `SDK_ERR_CSPRNG_UNAVAILABLE`
 - SDK-NEG-0004: non-canonical bytes into codec strict validate -> core reject diagnostic (`GRAIN_ERR_NONCANONICAL` or equivalent)
+- SDK-REG-0004: raw ledger export with nested keys of differing UTF-8 lengths or 23/24-byte text headers -> encoded-key length/byte ordering and strict per-item parsing, regardless of object insertion order; canonical raw maps do not imply typed LedgerEvent or signature validity.
 - SDK-NEG-0005: invalid identity bundle format/version/base64 on imported binary fields, non-derived `root_kid`, non-derived device `ak`, duplicate device keys, unauthorized `active_ak`, or non-u64 sequence state -> `SDK_ERR_IDENTITY_BUNDLE_INVALID` / `SDK_ERR_IDENTITY_BUNDLE_VERSION`
 - SDK-NEG-0006: duplicate entries through set-array builder -> `GRAIN_ERR_SET_ARRAY_DUP`
 - SDK-NEG-0007: malformed bundle import payload/root schema, invalid base64 on imported bundle fields, or raw CBOR-seq JSON export containing non-finite/fractional/unsafe numeric values -> `SDK_ERR_TRANSPORT_BUNDLE_SCHEMA` / `SDK_ERR_CBORSEQ_UNSUPPORTED_NUMBER`

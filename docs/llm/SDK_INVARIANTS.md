@@ -42,8 +42,8 @@ Hi teammate LLM. These are SDK-level MUST invariants for TOR-SDK-A01.
   Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0010 transport bundle determinism`, `SDK-INV-0010 transport verify requires explicit trust`, `SDK-NEG-0029 verifyGR1 rejects ServingOffer issuer_kid mismatch`)
   Modules: `core/ts/grain-sdk/src/transport.ts`
 
-- SDK-INV-0011: raw ledger CBOR-seq export MUST be deterministic and parseable as canonical CBOR sequence. JSON-number inputs MUST reject non-finite, fractional, or unsafe integer values before export.
-  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0011 raw CBOR-seq export determinism`, `SDK-NEG-0007 raw CBOR-seq export rejects fractional numbers`)
+- SDK-INV-0011: raw ledger CBOR-seq export MUST be deterministic and every item MUST pass strict canonical CBOR parsing. Map keys, including nested maps, sort by encoded-key length then encoded bytes. This reducer-model export is not a typed or signed ledger envelope. JSON-number inputs MUST reject non-finite, fractional, or unsafe integer values before export.
+  Tests: `core/ts/grain-sdk/scripts/test-sdk-invariants.ts` (`SDK-INV-0011 raw CBOR-seq export determinism`, `SDK-REG-0004 raw CBOR-seq orders nested UTF-8 keys canonically`, `SDK-NEG-0007 raw CBOR-seq export rejects fractional numbers`)
   Modules: `core/ts/grain-sdk/src/events.ts`
 
 - SDK-INV-0012: public device lifecycle APIs MUST keep bundle authorization state synchronized with persisted grant/revoke ledger events.
