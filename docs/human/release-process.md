@@ -62,6 +62,11 @@ python3 tools/ci/check_toolchain_bootstrap.py
      `sbom.spdx.json`, and source SDK archives, including the TypeScript SDK
      packet, verified by
      `check_sdk_release_package.py --require-strict --require-clean`
+   - the upstream `sdk-platform` job also passed source-package byte comparison;
+     its `package-reproducibility.json` records the immutable file hashes.
+     Manifest `created_at`, SPDX creation time and tar/gzip timestamps are source
+     commit time in UTC, not the workflow run time (SDK ADR-0012). Do not rewrite
+     existing releases when adopting the normalized archive format.
    - for `repo-*` tags, image alias `stable` is updated
    - for `repo-rc-*` tags, publish tag is `repo-rc-*` only and must not overwrite `stable`
 8. Download and verify the attached release assets as one handoff:

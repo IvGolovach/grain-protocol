@@ -8,6 +8,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -150,6 +151,15 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def source_created_at(commit: str) -> str:
+    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+        raise ValueError("SDK_RELEASE_METADATA_ERR_COMMIT")
+    epoch = int(subprocess.check_output(
+        ["git", "show", "-s", "--format=%ct", f"{commit}^{{commit}}"], cwd=ROOT, text=True
+    ).strip())
+    return dt.datetime.fromtimestamp(epoch, dt.UTC).isoformat().replace("+00:00", "Z")
 
 
 def load_cargo_package(path: str) -> dict[str, str]:
@@ -307,7 +317,8 @@ def main() -> int:
     if not out_dir.is_dir():
         raise SystemExit(f"SDK_RELEASE_METADATA_ERR_OUT_DIR_MISSING: {out_dir}")
 
-    created_at = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # Source time is stable; workflow run time belongs to separate CI evidence.
+    created_at = source_created_at(args.commit)
     sdk_versions = load_sdk_versions()
     version_matrix = ROOT / "docs/human/sdk/version-matrix.md"
 

@@ -2,6 +2,15 @@
 
 Use this page when you want the clean-clone answer, not the "it works on my laptop" answer.
 
+For SDK source packages, build from two clean checkouts of the same commit with
+the same pinned toolchain and verification mode/source, then compare the two
+output directories with `tools/ci/check_sdk_package_reproducibility.py
+--first-dir <a> --second-dir <b> --report <report.json>`. Each package still needs
+the ordinary strict SDK verification before it is release evidence. Diagnostic
+`--skip-verify` output is explicitly unverified. Source commit timestamps and
+normalized archive metadata follow SDK ADR-0012; CI run timestamps and compiled
+binary reproducibility are separate.
+
 ## 1) Clean clone
 
 ```bash

@@ -6,6 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 cd "$ROOT"
 
 COMMIT_SHA="$(git rev-parse HEAD)"
+PACKAGE_SOURCE_EPOCH="$(git show -s --format=%ct "$COMMIT_SHA")"
 OUT_DIR="artifacts/sdk-release/$COMMIT_SHA"
 RUN_VERIFY=1
 ALLOW_DIRTY=0
@@ -165,7 +166,9 @@ cp -R core/rust/grain-core core/rust/grain-client-core core/rust/grain-client-wa
 tar_gz() {
   local artifact="$1"
   shift
-  tar --exclude '._*' --exclude '.DS_Store' -czf "$OUT_DIR_ABS/$artifact" "$@"
+  python3 tools/ci/build_sdk_source_archive.py \
+    --output "$OUT_DIR_ABS/$artifact" --source-epoch "$PACKAGE_SOURCE_EPOCH" \
+    --exclude '._*' --exclude '.DS_Store' "$@"
 }
 
 assert_archive_clean() {

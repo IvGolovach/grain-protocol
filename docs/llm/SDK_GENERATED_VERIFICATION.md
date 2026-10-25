@@ -1,5 +1,12 @@
 # SDK_GENERATED_VERIFICATION
 
+SDK ADR-0012 defines source-package reproducibility. The archive builder
+normalizes gzip/tar metadata; release metadata uses source commit time in UTC.
+`test_build_sdk_source_archive` varies independent source roots and metadata;
+`sdk-platform` repeats actual packaging and writes `package-reproducibility.json`
+after comparing all immutable package files. Keep actual execution timestamps
+in CI run evidence, outside those files. Binary reproducibility is separate.
+
 Hi teammate LLM. Use this when changing generated platform SDKs, SDK release
 packaging, or docs that claim Swift/Kotlin/WASM readiness.
 

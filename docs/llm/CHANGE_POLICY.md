@@ -78,6 +78,7 @@ If a PR changes CI gates, evidence artifacts, branch protection policy, tag name
 - keep required CI context names stable unless governance update is explicit
 - keep `CI gate` fail-closed and do not attach persistent self-hosted pull-request runners to the public repository
 - keep SDK release artifact claims tied to strict same-commit SDK verification and package metadata checks
+- keep SDK source-package byte reproducibility separate from runtime evidence and compiled-binary reproducibility; follow SDK ADR-0012 for source timestamps and normalized archive metadata
 - update `docs/llm/DOC_SYNC.md`
 - update `CHANGELOG.md`
 - update `spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` when RC or claim process changes

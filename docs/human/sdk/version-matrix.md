@@ -82,6 +82,9 @@ That command proves:
 - the release package checker verifies artifact checksums, archive cleanliness,
   SDK component versions, including the TypeScript package versions, the
   version-matrix hash, and SBOM package checksums
+- `sdk-platform` packages twice and compares all eight archives, manifest,
+  checksums and SBOM byte-for-byte; this covers identical source/toolchain and
+  verification inputs, separately from compiled binaries or RC interop evidence
 - the release package is source-only: registry publication, compiled WASM
   binaries, PWA packaging, app-store packaging, and device custody policy stay
   outside this certificate

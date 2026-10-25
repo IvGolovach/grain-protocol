@@ -3,6 +3,13 @@
 This project follows a protocol-frozen posture: v0.1 core invariants do not change.
 
 ## [Unreleased]
+- Reproducible SDK source packages:
+  - normalize archive ordering, timestamps, owners and permissions while
+    preserving source bytes and executable intent; reject symlinks/special files.
+  - use source commit time for manifest/SBOM creation fields; actual workflow
+    times remain in CI evidence. Existing release assets are unchanged.
+  - compare all immutable package files in `sdk-platform` and add isolated
+    metadata-variation regressions; SDK ADR-0012 records the guarantee's limits.
 - Raw TypeScript ledger export canonicality:
   - sort map keys by encoded length then encoded bytes, including nested maps;
     preserve event ordering and values while correcting non-canonical output.

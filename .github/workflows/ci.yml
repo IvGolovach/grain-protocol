@@ -101,6 +101,7 @@ jobs:
           python3 -m unittest tools.ci.test_check_repo_native_developer_platform
           python3 -m unittest tools.ci.test_check_npm_release_dry_run
           python3 -m unittest tools.ci.test_check_sdk_release_package
+          python3 -m unittest tools.ci.test_build_sdk_source_archive
           python3 -m unittest tools.ci.test_check_external_sdk_handoff
           python3 -m unittest tools.ci.test_check_release_evidence_assets
           python3 -m unittest tools.ci.test_check_external_consumer_templates
@@ -392,6 +393,17 @@ jobs:
             --skip-verify \
             --verified-by sdk-platform \
             --out-dir artifacts/sdk-release
+
+      - name: Verify reproducible SDK source package
+        run: |
+          scripts/sdk/package_client_sdks.sh \
+            --skip-verify \
+            --verified-by sdk-platform \
+            --out-dir artifacts/sdk-release-repeat
+          python3 tools/ci/check_sdk_package_reproducibility.py \
+            --first-dir artifacts/sdk-release \
+            --second-dir artifacts/sdk-release-repeat \
+            --report artifacts/sdk-platform/package-reproducibility.json
 
       - name: Verify external developer handoff
         run: |

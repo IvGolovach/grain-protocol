@@ -42,6 +42,7 @@ ordering and strict per-item parsing, separately from signed ledger envelopes.
    - Verification and release-packaging map for generated platform SDKs.
 17. `scripts/sdk/doctor`, `scripts/sdk/package_client_sdks.sh`, `tools/ci/build_sdk_release_metadata.py`, and `tools/ci/check_sdk_release_package.py`
    - SDK release packaging, manifest/SHA256/SBOM generation, and package metadata certification.
+   - `tools/ci/build_sdk_source_archive.py` normalizes source tar/gzip metadata; `tools/ci/check_sdk_package_reproducibility.py` compares complete immutable packages; `tools/ci/test_build_sdk_source_archive.py` varies checkout metadata. SDK ADR-0012 defines source-time and toolchain boundaries.
 18. `core/rust/grain-issuer-kit`
    - Reference issuer CLI/library for local scanner development. It emits signed `GR1:` examples and public trust material; it is not a platform SDK API or production key-management system.
 19. `core/rust/grain-client-core/src/*`
