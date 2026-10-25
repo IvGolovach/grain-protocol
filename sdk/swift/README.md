@@ -1,5 +1,11 @@
 # Grain Swift Client
 
+For confirmed signed food history, add the separate `GrainSignedFood` product.
+Its actor coordinates an app-owned signer and persistence, including uncertain
+write recovery. See [Signed Food Ledger](../../docs/human/sdk/signed-food-ledger.md).
+`check_swift_package.sh` needs Node for independent verification of Swift exports
+in addition to its existing Swift/Rust checks. Legacy products remain unchanged.
+
 Swift package for the portable Grain client workflow surface.
 
 This package wraps the generated UniFFI bindings with a small `GrainClient`

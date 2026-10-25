@@ -4,6 +4,32 @@ namespace grain_client_core {
     FfiPairingResult grain_pairing_preview_envelope(FfiPairingEnvelopeRequest request);
 };
 
+interface GrainSignedFoodJournal {
+    constructor();
+    FfiSignedFoodResult initialize(string root_pub_b64);
+    FfiSignedFoodResult prepare_intake(string author_pub_b64, string operation_id, string source_class, i64 mean_kcal, i64 var_kcal);
+    FfiSignedFoodResult prepare_grant(string operation_id, string device_pub_b64);
+    FfiSignedFoodResult prepare_revoke(string operation_id, string device_pub_b64);
+    FfiSignedFoodResult commit_signature(string operation_id, string signature_b64);
+    FfiSignedFoodResult export_snapshot();
+    FfiSignedFoodResult restore_snapshot(string snapshot_b64, string trusted_root_pub_b64);
+    FfiSignedFoodResult export_transfer();
+    FfiSignedFoodResult import_transfer(string transfer_json, string trusted_root_pub_b64);
+};
+
+dictionary FfiSignedFoodResult {
+    string status;
+    sequence<string> diag;
+    string? operation_id;
+    u64? seq;
+    string? signing_bytes_b64;
+    string? snapshot_b64;
+    string? transfer_json;
+    i64? sum_mean_kcal;
+    i64? sum_var_kcal;
+    u64 event_count;
+};
+
 interface GrainClientMemoryStore {
     constructor();
     FfiScanAccept scan_accept(FfiScanAcceptRequest request);

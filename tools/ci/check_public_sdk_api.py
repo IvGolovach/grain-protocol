@@ -76,7 +76,7 @@ def validate_symbols(surface: str, symbols: object, source_text: str) -> int:
         require(isinstance(name, str) and name, f"PUBLIC_SDK_API_ERR_SYMBOL_NAME: {surface}")
         require(kind in {"method", "type", "function", "constant"}, f"PUBLIC_SDK_API_ERR_SYMBOL_KIND: {surface}:{name}")
         if kind == "method":
-            if surface == "swift":
+            if surface.startswith("swift"):
                 found = swift_method_pattern(name).search(source_text) is not None
             elif surface == "kotlin":
                 found = kotlin_method_pattern(name).search(source_text) is not None
@@ -156,6 +156,12 @@ def check_public_sdk_api(*, root: Path = ROOT, snapshot_path: Path | None = None
         "kotlin": (root / "sdk/kotlin/src/main/kotlin/dev/grain/GrainClient.kt").read_text(encoding="utf-8"),
         "wasm": (root / "sdk/wasm/src/index.d.ts").read_text(encoding="utf-8"),
     }
+    for surface, path in {
+        "swift_signed_food": "sdk/swift/Sources/GrainSignedFood/GrainSignedFoodWallet.swift",
+        "typescript_signed_food": "core/ts/grain-sdk/src/signed-food.ts",
+    }.items():
+        if surface in surfaces:
+            sources[surface] = (root / path).read_text(encoding="utf-8")
     checked_symbols = 0
     for surface, source_text in sources.items():
         surface_data = surfaces.get(surface)

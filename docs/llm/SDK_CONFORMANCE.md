@@ -1,5 +1,17 @@
 # SDK_CONFORMANCE
 
+## Signed Food Ledger v1
+
+SDK-INV-0033/0034 are additive to the legacy invariant suite. Run Rust
+`cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core --test signed_food`
+and TS `npm --prefix core/ts/grain-sdk run test:signed-food`. The corpus checks
+shared payload CIDs, totals, revoke/conflict behavior and exact u63 sequences.
+`scripts/sdk/check_swift_package.sh` additionally runs CryptoKit signing,
+durability fault injection and file restart, then sends its export to a separate
+Node verifier. It requires Node as well as Swift/Rust. These checks run in the
+existing developer, ts-full and sdk-platform gates; required contexts stay the
+same. This corpus is separate from legacy workflow fixtures and protocol vectors.
+
 Hi teammate LLM. This file links SDK behavior to executable checks.
 
 ## Protocol suite through SDK

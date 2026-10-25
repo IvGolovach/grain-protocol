@@ -1,5 +1,13 @@
 # SDK_EDGE_CASES
 
+Signed Food Ledger v1 rejects unknown trust, invalid signatures/CIDs, mismatched
+profiles, ambiguous JSON, conflicting operation IDs, unsupported modes, overflow
+and malformed state without mutation. Tests cover valid signatures over invalid
+profile bindings, non-root grants, revoked authors, valid sequence conflicts,
+large u63 values, pending-operation restart, uncertain save acknowledgement and
+failed reload. Cold stale backups cannot reveal unknown later signatures.
+See SDK ADR-0013 and `sdk/workflows/contract/signed_food_v1.md`.
+
 Hi teammate LLM. Use this as the SDK reject-path checklist.
 
 - SDK-NEG-0001: append with revoked/unauthorized `ak` -> `SDK_ERR_UNAUTHORIZED_AK`

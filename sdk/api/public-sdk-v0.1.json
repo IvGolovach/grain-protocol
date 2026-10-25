@@ -2,6 +2,29 @@
   "schema": "grain.public-sdk-api.v0.1",
   "version": "0.1",
   "surfaces": {
+    "swift_signed_food": {
+      "symbols": [
+        {"kind": "type", "name": "GrainSignedFoodWallet"},
+        {"kind": "type", "name": "GrainFoodSigner"},
+        {"kind": "type", "name": "GrainConfirmedFood"},
+        {"kind": "type", "name": "GrainSignedFoodReceipt"},
+        {"kind": "type", "name": "GrainSignedFoodError"},
+        {"kind": "type", "name": "GrainSignedFoodSource"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.initialize(using:)"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.record(_:using:)"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.grantDevice(publicKey:operationId:using:)"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.revokeDevice(publicKey:operationId:using:)"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.importTransfer(_:)"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.restoreBackup(_:)"},
+        {"kind": "method", "name": "GrainSignedFoodWallet.exportTransfer()"}
+      ]
+    },
+    "typescript_signed_food": {
+      "symbols": [
+        {"kind": "function", "name": "verifySignedFoodTransfer"},
+        {"kind": "type", "name": "SignedFoodVerification"}
+      ]
+    },
     "swift": {
       "symbols": [
         {"kind": "method", "name": "GrainClient.scanPreview(qrString:trustPubB64:)"},

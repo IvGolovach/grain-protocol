@@ -669,7 +669,27 @@ internal object IntegrityCheckingUniffiLib {
     ): Short
     external fun uniffi_grain_client_core_checksum_method_grainclientmemorystore_set_active_device(
     ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_commit_signature(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_export_snapshot(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_export_transfer(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_import_transfer(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_initialize(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_grant(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_intake(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_revoke(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_restore_snapshot(
+    ): Short
     external fun uniffi_grain_client_core_checksum_constructor_grainclientmemorystore_new(
+    ): Short
+    external fun uniffi_grain_client_core_checksum_constructor_grainsignedfoodjournal_new(
     ): Short
     external fun ffi_grain_client_core_uniffi_contract_version(
     ): Int
@@ -690,151 +710,175 @@ internal object UniffiLib {
 
     }
     external fun uniffi_grain_client_core_fn_clone_grainclientmemorystore(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Long
-    external fun uniffi_grain_client_core_fn_free_grainclientmemorystore(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Unit
-    external fun uniffi_grain_client_core_fn_constructor_grainclientmemorystore_new(uniffi_out_err: UniffiRustCallStatus,
-    ): Long
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_accept_pairing_envelope(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_add_device_key(`ptr`: Long,`label`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_client_lifecycle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_create_pairing_envelope(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_create_root_identity(`ptr`: Long,`label`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_identity_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_store_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_identity_bundle(`ptr`: Long,`bundleB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_sync_bundle(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_restore_store_snapshot(`ptr`: Long,`snapshotB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_revoke_device_key(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_scan_accept(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_set_active_device(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_func_grain_pairing_preview_envelope(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_func_grain_scan_accept_prepare(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun uniffi_grain_client_core_fn_func_grain_scan_preview(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun ffi_grain_client_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun ffi_grain_client_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun ffi_grain_client_core_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
-    ): Unit
-    external fun ffi_grain_client_core_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun ffi_grain_client_core_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_u8(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_u8(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Byte
-    external fun ffi_grain_client_core_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_i8(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_i8(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Byte
-    external fun ffi_grain_client_core_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_u16(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_u16(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Short
-    external fun ffi_grain_client_core_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_i16(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_i16(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Short
-    external fun ffi_grain_client_core_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_u32(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_u32(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Int
-    external fun ffi_grain_client_core_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_i32(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_i32(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Int
-    external fun ffi_grain_client_core_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_u64(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_u64(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Long
-    external fun ffi_grain_client_core_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_i64(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_i64(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Long
-    external fun ffi_grain_client_core_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_f32(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_f32(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Float
-    external fun ffi_grain_client_core_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_f64(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_f64(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Double
-    external fun ffi_grain_client_core_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_rust_buffer(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_rust_buffer(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): RustBuffer.ByValue
-    external fun ffi_grain_client_core_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_cancel_void(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_free_void(`handle`: Long,
-    ): Unit
-    external fun ffi_grain_client_core_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
-    ): Unit
+): Long
+external fun uniffi_grain_client_core_fn_free_grainclientmemorystore(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Unit
+external fun uniffi_grain_client_core_fn_constructor_grainclientmemorystore_new(uniffi_out_err: UniffiRustCallStatus,
+): Long
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_accept_pairing_envelope(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_add_device_key(`ptr`: Long,`label`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_client_lifecycle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_create_pairing_envelope(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_create_root_identity(`ptr`: Long,`label`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_identity_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_store_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_export_sync_bundle(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_identity_bundle(`ptr`: Long,`bundleB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_import_sync_bundle(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_list_accepted_scans(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_restore_store_snapshot(`ptr`: Long,`snapshotB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_revoke_device_key(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_scan_accept(`ptr`: Long,`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainclientmemorystore_set_active_device(`ptr`: Long,`ak`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_clone_grainsignedfoodjournal(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Long
+external fun uniffi_grain_client_core_fn_free_grainsignedfoodjournal(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Unit
+external fun uniffi_grain_client_core_fn_constructor_grainsignedfoodjournal_new(uniffi_out_err: UniffiRustCallStatus,
+): Long
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_commit_signature(`ptr`: Long,`operationId`: RustBuffer.ByValue,`signatureB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_export_snapshot(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_export_transfer(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_import_transfer(`ptr`: Long,`transferJson`: RustBuffer.ByValue,`trustedRootPubB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_initialize(`ptr`: Long,`rootPubB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_grant(`ptr`: Long,`operationId`: RustBuffer.ByValue,`devicePubB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_intake(`ptr`: Long,`authorPubB64`: RustBuffer.ByValue,`operationId`: RustBuffer.ByValue,`sourceClass`: RustBuffer.ByValue,`meanKcal`: Long,`varKcal`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_revoke(`ptr`: Long,`operationId`: RustBuffer.ByValue,`devicePubB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_method_grainsignedfoodjournal_restore_snapshot(`ptr`: Long,`snapshotB64`: RustBuffer.ByValue,`trustedRootPubB64`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_func_grain_pairing_preview_envelope(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_func_grain_scan_accept_prepare(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun uniffi_grain_client_core_fn_func_grain_scan_preview(`request`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun ffi_grain_client_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun ffi_grain_client_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun ffi_grain_client_core_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus,
+): Unit
+external fun ffi_grain_client_core_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun ffi_grain_client_core_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_u8(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_u8(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Byte
+external fun ffi_grain_client_core_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_i8(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_i8(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Byte
+external fun ffi_grain_client_core_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_u16(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_u16(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Short
+external fun ffi_grain_client_core_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_i16(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_i16(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Short
+external fun ffi_grain_client_core_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_u32(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_u32(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Int
+external fun ffi_grain_client_core_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_i32(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_i32(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Int
+external fun ffi_grain_client_core_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_u64(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_u64(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Long
+external fun ffi_grain_client_core_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_i64(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_i64(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Long
+external fun ffi_grain_client_core_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_f32(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_f32(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Float
+external fun ffi_grain_client_core_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_f64(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_f64(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Double
+external fun ffi_grain_client_core_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_rust_buffer(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_rust_buffer(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): RustBuffer.ByValue
+external fun ffi_grain_client_core_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_cancel_void(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_free_void(`handle`: Long,
+): Unit
+external fun ffi_grain_client_core_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus,
+): Unit
 
 
 }
@@ -904,7 +948,37 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_grain_client_core_checksum_method_grainclientmemorystore_set_active_device() != 10852.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_commit_signature() != 52683.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_export_snapshot() != 32780.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_export_transfer() != 40481.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_import_transfer() != 47893.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_initialize() != 7321.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_grant() != 22573.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_intake() != 1842.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_prepare_revoke() != 15067.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_method_grainsignedfoodjournal_restore_snapshot() != 9716.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_grain_client_core_checksum_constructor_grainclientmemorystore_new() != 12349.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_grain_client_core_checksum_constructor_grainsignedfoodjournal_new() != 27921.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1084,6 +1158,29 @@ public object FfiConverterULong: FfiConverter<ULong, Long> {
 
     override fun write(value: ULong, buf: ByteBuffer) {
         buf.putLong(value.toLong())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterLong: FfiConverter<Long, Long> {
+    override fun lift(value: Long): Long {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Long {
+        return buf.getLong()
+    }
+
+    override fun lower(value: Long): Long {
+        return value
+    }
+
+    override fun allocationSize(value: Long) = 8UL
+
+    override fun write(value: Long, buf: ByteBuffer) {
+        buf.putLong(value)
     }
 }
 
@@ -1613,6 +1710,384 @@ public object FfiConverterTypeGrainClientMemoryStore: FfiConverter<GrainClientMe
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+public interface GrainSignedFoodJournalInterface {
+
+    fun `commitSignature`(`operationId`: kotlin.String, `signatureB64`: kotlin.String): FfiSignedFoodResult
+
+    fun `exportSnapshot`(): FfiSignedFoodResult
+
+    fun `exportTransfer`(): FfiSignedFoodResult
+
+    fun `importTransfer`(`transferJson`: kotlin.String, `trustedRootPubB64`: kotlin.String): FfiSignedFoodResult
+
+    fun `initialize`(`rootPubB64`: kotlin.String): FfiSignedFoodResult
+
+    fun `prepareGrant`(`operationId`: kotlin.String, `devicePubB64`: kotlin.String): FfiSignedFoodResult
+
+    fun `prepareIntake`(`authorPubB64`: kotlin.String, `operationId`: kotlin.String, `sourceClass`: kotlin.String, `meanKcal`: kotlin.Long, `varKcal`: kotlin.Long): FfiSignedFoodResult
+
+    fun `prepareRevoke`(`operationId`: kotlin.String, `devicePubB64`: kotlin.String): FfiSignedFoodResult
+
+    fun `restoreSnapshot`(`snapshotB64`: kotlin.String, `trustedRootPubB64`: kotlin.String): FfiSignedFoodResult
+
+    companion object
+}
+
+open class GrainSignedFoodJournal: Disposable, AutoCloseable, GrainSignedFoodJournalInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    constructor() :
+        this(UniffiWithHandle,
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_constructor_grainsignedfoodjournal_new(
+
+        _status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_grain_client_core_fn_free_grainsignedfoodjournal(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_grain_client_core_fn_clone_grainsignedfoodjournal(handle, status)
+        }
+    }
+
+    override fun `commitSignature`(`operationId`: kotlin.String, `signatureB64`: kotlin.String): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_commit_signature(
+        it,
+        FfiConverterString.lower(`operationId`),FfiConverterString.lower(`signatureB64`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `exportSnapshot`(): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_export_snapshot(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
+    override fun `exportTransfer`(): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_export_transfer(
+        it,
+        _status)
+}
+    }
+    )
+    }
+
+
+    override fun `importTransfer`(`transferJson`: kotlin.String, `trustedRootPubB64`: kotlin.String): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_import_transfer(
+        it,
+        FfiConverterString.lower(`transferJson`),FfiConverterString.lower(`trustedRootPubB64`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `initialize`(`rootPubB64`: kotlin.String): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_initialize(
+        it,
+        FfiConverterString.lower(`rootPubB64`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `prepareGrant`(`operationId`: kotlin.String, `devicePubB64`: kotlin.String): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_grant(
+        it,
+        FfiConverterString.lower(`operationId`),FfiConverterString.lower(`devicePubB64`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `prepareIntake`(`authorPubB64`: kotlin.String, `operationId`: kotlin.String, `sourceClass`: kotlin.String, `meanKcal`: kotlin.Long, `varKcal`: kotlin.Long): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_intake(
+        it,
+        FfiConverterString.lower(`authorPubB64`),FfiConverterString.lower(`operationId`),FfiConverterString.lower(`sourceClass`),FfiConverterLong.lower(`meanKcal`),FfiConverterLong.lower(`varKcal`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `prepareRevoke`(`operationId`: kotlin.String, `devicePubB64`: kotlin.String): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_prepare_revoke(
+        it,
+        FfiConverterString.lower(`operationId`),FfiConverterString.lower(`devicePubB64`),_status)
+}
+    }
+    )
+    }
+
+
+    override fun `restoreSnapshot`(`snapshotB64`: kotlin.String, `trustedRootPubB64`: kotlin.String): FfiSignedFoodResult {
+            return FfiConverterTypeFfiSignedFoodResult.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_grain_client_core_fn_method_grainsignedfoodjournal_restore_snapshot(
+        it,
+        FfiConverterString.lower(`snapshotB64`),FfiConverterString.lower(`trustedRootPubB64`),_status)
+}
+    }
+    )
+    }
+
+
+
+
+
+
+
+
+
+    /**
+     * @suppress
+     */
+    companion object
+
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGrainSignedFoodJournal: FfiConverter<GrainSignedFoodJournal, Long> {
+    override fun lower(value: GrainSignedFoodJournal): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): GrainSignedFoodJournal {
+        return GrainSignedFoodJournal(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): GrainSignedFoodJournal {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: GrainSignedFoodJournal) = 8UL
+
+    override fun write(value: GrainSignedFoodJournal, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
 
 data class FfiAcceptedScan (
     var `scanId`: kotlin.String
@@ -2124,6 +2599,84 @@ public object FfiConverterTypeFfiScanPreviewRequest: FfiConverterRustBuffer<FfiS
 
 
 
+data class FfiSignedFoodResult (
+    var `status`: kotlin.String
+    ,
+    var `diag`: List<kotlin.String>
+    ,
+    var `operationId`: kotlin.String?
+    ,
+    var `seq`: kotlin.ULong?
+    ,
+    var `signingBytesB64`: kotlin.String?
+    ,
+    var `snapshotB64`: kotlin.String?
+    ,
+    var `transferJson`: kotlin.String?
+    ,
+    var `sumMeanKcal`: kotlin.Long?
+    ,
+    var `sumVarKcal`: kotlin.Long?
+    ,
+    var `eventCount`: kotlin.ULong
+
+){
+
+
+
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiSignedFoodResult: FfiConverterRustBuffer<FfiSignedFoodResult> {
+    override fun read(buf: ByteBuffer): FfiSignedFoodResult {
+        return FfiSignedFoodResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalLong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiSignedFoodResult) = (
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`diag`) +
+            FfiConverterOptionalString.allocationSize(value.`operationId`) +
+            FfiConverterOptionalULong.allocationSize(value.`seq`) +
+            FfiConverterOptionalString.allocationSize(value.`signingBytesB64`) +
+            FfiConverterOptionalString.allocationSize(value.`snapshotB64`) +
+            FfiConverterOptionalString.allocationSize(value.`transferJson`) +
+            FfiConverterOptionalLong.allocationSize(value.`sumMeanKcal`) +
+            FfiConverterOptionalLong.allocationSize(value.`sumVarKcal`) +
+            FfiConverterULong.allocationSize(value.`eventCount`)
+    )
+
+    override fun write(value: FfiSignedFoodResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`diag`, buf)
+            FfiConverterOptionalString.write(value.`operationId`, buf)
+            FfiConverterOptionalULong.write(value.`seq`, buf)
+            FfiConverterOptionalString.write(value.`signingBytesB64`, buf)
+            FfiConverterOptionalString.write(value.`snapshotB64`, buf)
+            FfiConverterOptionalString.write(value.`transferJson`, buf)
+            FfiConverterOptionalLong.write(value.`sumMeanKcal`, buf)
+            FfiConverterOptionalLong.write(value.`sumVarKcal`, buf)
+            FfiConverterULong.write(value.`eventCount`, buf)
+    }
+}
+
+
+
 data class FfiStoreSnapshotResult (
     var `status`: kotlin.String
     ,
@@ -2268,6 +2821,70 @@ public object FfiConverterTypeFfiSyncResult: FfiConverterRustBuffer<FfiSyncResul
             FfiConverterULong.write(value.`acceptedRecordCount`, buf)
             FfiConverterULong.write(value.`deviceCount`, buf)
             FfiConverterULong.write(value.`lifecycleEventCount`, buf)
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
+    override fun read(buf: ByteBuffer): kotlin.ULong? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterULong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ULong?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterULong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ULong?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterULong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
+    override fun read(buf: ByteBuffer): kotlin.Long? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterLong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Long?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterLong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Long?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterLong.write(value, buf)
+        }
     }
 }
 

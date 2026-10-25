@@ -54,11 +54,23 @@ let package = Package(
         .library(name: "GrainClient", targets: ["GrainClient"]),
         .library(name: "GrainClientIOSAdapters", targets: ["GrainClientIOSAdapters"]),
         .library(name: "GrainFoodWallet", targets: ["GrainFoodWallet"]),
+        .library(name: "GrainSignedFood", targets: ["GrainSignedFood"]),
+        .executable(name: "GrainSignedFoodSmoke", targets: ["GrainSignedFoodSmoke"]),
         .executable(name: "GrainClientFixtureRunner", targets: ["GrainClientFixtureRunner"]),
         .executable(name: "GrainClientIOSAdaptersSmoke", targets: ["GrainClientIOSAdaptersSmoke"]),
         .executable(name: "GrainFoodWalletSmoke", targets: ["GrainFoodWalletSmoke"]),
     ],
     targets: [
+        .target(
+            name: "GrainSignedFood",
+            dependencies: ["GrainClientFFI", "GrainClientIOSAdapters"],
+            path: "Sources/GrainSignedFood"
+        ),
+        .executableTarget(
+            name: "GrainSignedFoodSmoke",
+            dependencies: ["GrainSignedFood", "GrainClientIOSAdapters"],
+            path: "Sources/GrainSignedFoodSmoke"
+        ),
         .target(
             name: "grain_client_coreFFI",
             path: "Sources/grain_client_coreFFI",

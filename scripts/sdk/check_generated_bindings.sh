@@ -24,6 +24,10 @@ for expected in \
   grainScanPreview \
   grainScanAcceptPrepare \
   GrainClientMemoryStore \
+  GrainSignedFoodJournal \
+  FfiSignedFoodResult \
+  prepareIntake \
+  commitSignature \
   "scanAccept(request" \
   listAcceptedScans \
   createRootIdentity \

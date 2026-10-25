@@ -26,6 +26,10 @@ swift build --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH"
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainClientIOSAdaptersSmoke
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainClientFixtureRunner
 swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainFoodWalletSmoke
+swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainSignedFoodSmoke "$SWIFT_SCRATCH/signed-food"
+swift run --package-path sdk/swift --scratch-path "$SWIFT_SCRATCH" GrainSignedFoodSmoke --resume "$SWIFT_SCRATCH/signed-food"
+npm --prefix core/ts/grain-sdk run build --silent
+node core/ts/grain-sdk/dist/scripts/test-signed-food.js "$SWIFT_SCRATCH/signed-food"
 
 AFTER_STATUS="$(git status --porcelain=v1 --untracked-files=all)"
 if [[ "$AFTER_STATUS" != "$BEFORE_STATUS" ]]; then

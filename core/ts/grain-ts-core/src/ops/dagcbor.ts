@@ -122,7 +122,8 @@ export function schemaChecks(node: CborNode): void {
   }
 }
 
-function deriveCidV1DagCborSha256(bytes: Uint8Array): string {
+// Caller validates the bytes in their typed context before deriving their CID.
+export function deriveCidV1DagCborSha256(bytes: Uint8Array): string {
   const digest = sha256(bytes);
   const cidBytes: number[] = [];
   pushVarint(1n, cidBytes);

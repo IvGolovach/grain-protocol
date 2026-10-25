@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SDK_ROOTS = [
     ROOT / "sdk" / "swift" / "Sources" / "GrainClient",
     ROOT / "sdk" / "swift" / "Sources" / "GrainClientIOSAdapters",
+    ROOT / "sdk" / "swift" / "Sources" / "GrainSignedFood",
     ROOT / "sdk" / "kotlin" / "src" / "main" / "kotlin" / "dev" / "grain",
     ROOT / "sdk" / "wasm" / "src",
     ROOT / "examples" / "ios-scanner" / "Sources" / "GrainIOSScanner",
@@ -33,6 +34,12 @@ LOG_TOKENS = [
     "Timber.",
 ]
 SENSITIVE_TOKENS = [
+    "signingBytesB64",
+    "signing_bytes_b64",
+    "transferJson",
+    "transfer_json",
+    "signatureB64",
+    "signature_b64",
     "bundleB64",
     "bundle_b64",
     "coseB64",

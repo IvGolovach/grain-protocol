@@ -13,6 +13,7 @@ mod memory_store;
 mod pairing;
 pub mod platform;
 mod scan;
+mod signed_food;
 mod store;
 mod sync;
 mod trust;
@@ -37,6 +38,7 @@ pub use identity::{
 pub use memory_store::MemoryClientStore;
 pub use pairing::{pairing_accept_envelope, pairing_create_envelope, pairing_preview_envelope};
 pub use scan::{scan_accept, scan_accept_prepare, scan_preview};
+pub use signed_food::{FfiSignedFoodResult, GrainSignedFoodJournal};
 pub use store::{ClientStore, IdentityClientStore, StorePutResult};
 pub use sync::{sync_export_bundle, sync_import_bundle};
 pub use types::{
