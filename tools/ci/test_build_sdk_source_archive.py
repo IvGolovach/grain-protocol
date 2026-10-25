@@ -17,6 +17,7 @@ from tools.ci.check_sdk_package_reproducibility import compare_packages
 
 class SdkSourceArchiveTests(unittest.TestCase):
     def test_distinct_checkouts_produce_identical_archives(self) -> None:
+        """Host metadata and creation order must not change source archive bytes."""
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             outputs = []
@@ -54,6 +55,7 @@ class SdkSourceArchiveTests(unittest.TestCase):
             self.assertEqual(int.from_bytes(outputs[0][4:8], "little"), 1_700_000_000)
 
     def test_input_order_and_overlapping_roots_do_not_duplicate_entries(self) -> None:
+        """Overlapping roots must preserve one sorted entry for each source path."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "src").mkdir()
@@ -65,6 +67,7 @@ class SdkSourceArchiveTests(unittest.TestCase):
             self.assertEqual(a.read_bytes(), b.read_bytes())
 
     def test_rejects_symlinks_traversal_and_invalid_epoch(self) -> None:
+        """Reject paths and timestamps outside the source archive contract."""
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "link").symlink_to("/tmp")
@@ -74,12 +77,14 @@ class SdkSourceArchiveTests(unittest.TestCase):
                         build_archive(root / "result.gz", root, paths, [], epoch)
 
     def test_metadata_uses_commit_time_in_utc(self) -> None:
+        """Release timestamps must identify the supplied full commit in UTC."""
         with patch("tools.ci.build_sdk_release_metadata.subprocess.check_output", return_value="1700000000\n"):
             self.assertEqual(source_created_at("a" * 40), "2023-11-14T22:13:20Z")
         with self.assertRaisesRegex(ValueError, "SDK_RELEASE_METADATA_ERR_COMMIT"):
             source_created_at("HEAD")
 
     def test_comparison_rejects_missing_or_changed_artifacts_and_metadata(self) -> None:
+        """A reproducibility report requires the same archive set and file bytes."""
         with tempfile.TemporaryDirectory() as tmp:
             a, b = Path(tmp) / "a", Path(tmp) / "b"
             a.mkdir()

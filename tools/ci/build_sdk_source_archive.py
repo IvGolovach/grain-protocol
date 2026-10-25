@@ -14,11 +14,17 @@ from pathlib import Path, PurePosixPath
 def build_archive(
     output: Path, root: Path, paths: list[str], excludes: list[str], source_epoch: int
 ) -> None:
+    """Archive selected relative paths with stable metadata and source timestamps.
+
+    Exclusions prune matching entries before traversal. Reject symlinks, special
+    files, escaping paths and epochs that cannot fit the gzip timestamp field.
+    """
     if not 0 <= source_epoch <= 0xFFFFFFFF:
         raise ValueError("SDK_ARCHIVE_ERR_SOURCE_EPOCH")
     entries: dict[str, Path] = {}
 
     def visit(name: str) -> None:
+        """Collect each allowed entry once without traversing symbolic links."""
         relative = PurePosixPath(name)
         if relative.is_absolute() or ".." in relative.parts or str(relative) == ".":
             raise ValueError("SDK_ARCHIVE_ERR_PATH")
@@ -63,6 +69,7 @@ def build_archive(
 
 
 def main() -> int:
+    """Parse packaging inputs and write the requested deterministic archive."""
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--source-epoch", type=int, required=True)
