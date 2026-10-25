@@ -139,6 +139,7 @@ Contract:
 - SDK invariants are additional and MUST NOT weaken protocol vectors
 - AI boundary checks are separate from core SDK checks and live in the optional sidecar package
 - CI includes SDK checks inside required context `ts-full`
+- `sdk-platform` compares repeated source SDK packages byte-for-byte under SDK ADR-0012, including manifest/checksums/SBOM; existing platform, external handoff, approval and required `CI gate` contracts remain in place
 
 ## CI and provenance contract
 

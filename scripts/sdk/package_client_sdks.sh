@@ -6,12 +6,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 cd "$ROOT"
 
 COMMIT_SHA="$(git rev-parse HEAD)"
+PACKAGE_SOURCE_EPOCH="$(git show -s --format=%ct "$COMMIT_SHA")"
 OUT_DIR="artifacts/sdk-release/$COMMIT_SHA"
 RUN_VERIFY=1
 ALLOW_DIRTY=0
 DIRTY_STATUS=""
 VERIFIED_BY=""
 
+# Print packaging options and the default clean-worktree verification contract.
 usage() {
   cat <<'EOF'
 Usage: scripts/sdk/package_client_sdks.sh [options]
@@ -69,6 +71,7 @@ if [[ -n "$VERIFIED_BY" && "$RUN_VERIFY" -eq 1 ]]; then
   exit 2
 fi
 
+# Resolve the output location and reject paths outside this repository.
 resolve_out_dir() {
   local raw="$1"
   local candidate
@@ -107,6 +110,7 @@ find "$OUT_DIR_ABS" -maxdepth 1 -type f \( \
   -o -name 'sbom.spdx.json' \
 \) -delete
 
+# Stop packaging when a required SDK or consumer source is missing.
 require_source_path() {
   local path="$1"
   if [[ ! -e "$path" ]]; then
@@ -162,12 +166,16 @@ target.write_text(text, encoding="utf-8")
 PY
 cp -R core/rust/grain-core core/rust/grain-client-core core/rust/grain-client-wasm "$RUST_CLIENT_STAGE/"
 
+# Build one source archive with this commit's timestamp and stable metadata.
 tar_gz() {
   local artifact="$1"
   shift
-  tar --exclude '._*' --exclude '.DS_Store' -czf "$OUT_DIR_ABS/$artifact" "$@"
+  python3 tools/ci/build_sdk_source_archive.py \
+    --output "$OUT_DIR_ABS/$artifact" --source-epoch "$PACKAGE_SOURCE_EPOCH" \
+    --exclude '._*' --exclude '.DS_Store' "$@"
 }
 
+# Reject archives that accidentally include generated binaries or build caches.
 assert_archive_clean() {
   local artifact="$1"
   if tar -tzf "$OUT_DIR_ABS/$artifact" | grep -E '(^|/)(node_modules|dist|build|\.build|\.gradle|\.kotlin|target|pkg)/|(^|/)tsconfig\.build\.tsbuildinfo$|\.wasm$' >/dev/null; then

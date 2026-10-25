@@ -75,6 +75,11 @@ That verifier checks the downloaded `evidence-<sha>.zip`, confirms the
 suite to be present and green, and reuses the SDK package checker for
 `manifest.json`, `SHA256SUMS`, `sbom.spdx.json`, and source archives.
 
+The upstream `sdk-platform` gate also compares two source-package builds under
+SDK ADR-0012. Archive and manifest/SBOM timestamps describe the source commit,
+while runtime evidence retains actual run times. SDK package byte equality is
+separate from interop evidence reproducibility and compiled binary claims.
+
 ## Golden images
 
 Build or publish script:

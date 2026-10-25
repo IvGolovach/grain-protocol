@@ -1,5 +1,13 @@
 # Source SDK Handoff
 
+SDK source archives use deterministic path ordering, normalized permissions and
+owners, and the source commit timestamp. Manifest `created_at` and SPDX creation
+time also describe source time; CI retains the actual run times separately.
+The `sdk-platform` gate repeats packaging and compares all eight archives plus
+manifest, SHA256SUMS and SBOM before external handoff. Same commit, toolchain and
+verification metadata are required for byte equality. This does not establish
+compiled-binary reproducibility; see SDK ADR-0012.
+
 Use this page when one Grain SDK SHA is ready for an app developer to consume.
 It is the handoff checklist for source SDK artifacts, generated binding
 snapshots, scanner examples, and the local issuer QR path.

@@ -119,6 +119,10 @@ Historical imported milestone tags have GitHub release pages now, but some older
 - Tag release evidence must also attach the same-commit SDK source release
   package assets, including the TypeScript source SDK packet, after the strict
   platform SDK gate passes.
+- Within `sdk-platform`, repeated SDK source packaging must produce identical
+  archives, manifest, checksums and SBOM for the same inputs (SDK ADR-0012).
+  Archive/metadata timestamps derive from the source commit; workflow execution
+  timestamps remain in run evidence. The required `CI gate` context is unchanged.
 - Evidence bundle must include:
   - suite summaries
   - vector manifests plus hashes

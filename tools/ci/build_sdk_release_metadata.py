@@ -8,6 +8,7 @@ import datetime as dt
 import hashlib
 import json
 import re
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -131,6 +132,7 @@ ARTIFACT_KINDS = {
 
 
 def parse_args() -> argparse.Namespace:
+    """Read the source identity, output directory and verification provenance."""
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--commit", required=True)
@@ -145,6 +147,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def sha256_file(path: Path) -> str:
+    """Hash a file in bounded chunks and return its hexadecimal SHA-256 digest."""
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
@@ -152,7 +155,18 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def source_created_at(commit: str) -> str:
+    """Return a full commit ID's committer timestamp as an ISO 8601 UTC value."""
+    if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
+        raise ValueError("SDK_RELEASE_METADATA_ERR_COMMIT")
+    epoch = int(subprocess.check_output(
+        ["git", "show", "-s", "--format=%ct", f"{commit}^{{commit}}"], cwd=ROOT, text=True
+    ).strip())
+    return dt.datetime.fromtimestamp(epoch, dt.UTC).isoformat().replace("+00:00", "Z")
+
+
 def load_cargo_package(path: str) -> dict[str, str]:
+    """Read a repository-relative Cargo package's release identity and license."""
     data = tomllib.loads((ROOT / path).read_text(encoding="utf-8"))
     package = data["package"]
     return {
@@ -164,6 +178,7 @@ def load_cargo_package(path: str) -> dict[str, str]:
 
 
 def load_wasm_package() -> dict[str, str]:
+    """Read the WASM npm package identity for the source release manifest."""
     path = "sdk/wasm/package.json"
     data = json.loads((ROOT / path).read_text(encoding="utf-8"))
     return {
@@ -175,6 +190,7 @@ def load_wasm_package() -> dict[str, str]:
 
 
 def load_npm_package(path: str) -> dict[str, str]:
+    """Read a repository-relative npm package identity for release metadata."""
     data = json.loads((ROOT / path).read_text(encoding="utf-8"))
     return {
         "name": str(data["name"]),
@@ -185,6 +201,7 @@ def load_npm_package(path: str) -> dict[str, str]:
 
 
 def load_kotlin_package() -> dict[str, str]:
+    """Read the Kotlin SDK version, rejecting a build file without one."""
     path = "sdk/kotlin/build.gradle.kts"
     text = (ROOT / path).read_text(encoding="utf-8")
     match = re.search(r'^\s*version\s*=\s*"([^"]+)"', text, re.MULTILINE)
@@ -199,6 +216,7 @@ def load_kotlin_package() -> dict[str, str]:
 
 
 def load_sdk_versions() -> dict[str, dict[str, str]]:
+    """Collect all SDK component identities, including the commit-pinned Swift SDK."""
     return {
         "grain_client_core": load_cargo_package("core/rust/grain-client-core/Cargo.toml"),
         "grain_client_wasm": load_cargo_package("core/rust/grain-client-wasm/Cargo.toml"),
@@ -217,6 +235,7 @@ def load_sdk_versions() -> dict[str, dict[str, str]]:
 
 
 def classify_artifact(file_name: str, commit: str) -> dict[str, object]:
+    """Require a known source archive kind with the exact expected commit suffix."""
     suffix = f"-{commit}.tar.gz"
     if not file_name.endswith(suffix):
         raise SystemExit(f"SDK_RELEASE_METADATA_ERR_ARTIFACT_NAME: {file_name}")
@@ -234,6 +253,7 @@ def build_sbom(
     artifacts: list[dict[str, object]],
     sdk_versions: dict[str, dict[str, str]],
 ) -> dict[str, object]:
+    """Describe archives and SDK components in SPDX using the supplied source time."""
     packages: list[dict[str, object]] = []
     relationships: list[dict[str, str]] = []
 
@@ -302,12 +322,14 @@ def build_sbom(
 
 
 def main() -> int:
+    """Write the manifest, checksum list and SPDX document for a complete package set."""
     args = parse_args()
     out_dir = Path(args.out_dir).resolve()
     if not out_dir.is_dir():
         raise SystemExit(f"SDK_RELEASE_METADATA_ERR_OUT_DIR_MISSING: {out_dir}")
 
-    created_at = dt.datetime.now(dt.UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    # Source time is stable; workflow run time belongs to separate CI evidence.
+    created_at = source_created_at(args.commit)
     sdk_versions = load_sdk_versions()
     version_matrix = ROOT / "docs/human/sdk/version-matrix.md"
 

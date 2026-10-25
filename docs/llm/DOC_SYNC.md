@@ -128,6 +128,12 @@ Update:
 
 ### CI, release, and provenance changes
 
+SDK source-package reproducibility also keeps SDK ADR-0012,
+`build_sdk_source_archive.py`, `build_sdk_release_metadata.py`,
+`check_sdk_package_reproducibility.py`, the archive tests, `sdk-platform`, and
+the source handoff/version-matrix docs synchronized. Source timestamps are not
+workflow execution times; immutable SDK files and runtime evidence are distinct.
+
 Update:
 
 - `.github/workflows/*` that changed
