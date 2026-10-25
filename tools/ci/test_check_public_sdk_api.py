@@ -75,6 +75,36 @@ def write_fixture(root: Path, snapshot: dict[str, object]) -> None:
 
 
 class PublicSdkApiTests(unittest.TestCase):
+    def test_swift_argument_label_changes_fail_api_freeze(self) -> None:
+        """Both Swift surfaces must reject a renamed external argument label."""
+        module = load_module()
+        symbols = [{"kind": "method", "name": "Wallet.record(_:using:)"}]
+        for surface in ("swift", "swift_signed_food"):
+            for declaration in (
+                "public func record(_ food: Food, signer: any Signer) {}",
+                "public func record(food: Food, using signer: any Signer) {}",
+                "public func record(using signer: any Signer, _ food: Food) {}",
+                "public func record(_ food: Food, using signer: any Signer, extra: Bool) {}",
+            ):
+                with self.subTest(surface=surface, declaration=declaration):
+                    with self.assertRaisesRegex(SystemExit, "PUBLIC_SDK_API_ERR_SYMBOL_MISSING"):
+                        module.validate_symbols(surface, symbols, declaration)
+
+    def test_swift_labels_allow_internal_names_defaults_and_overloads(self) -> None:
+        """Snapshot labels survive local renames, whitespace and overloads."""
+        module = load_module()
+        source = """
+        public func record(value: Food) {}
+        public func record(
+            _ confirmed: Food,
+            using signingProvider: Signer? = nil
+        ) throws -> Receipt {}
+        public func exportTransfer() throws -> String {}
+        """
+        symbols = [{"kind": "method", "name": "Wallet.record(_:using:)"},
+                   {"kind": "method", "name": "Wallet.exportTransfer()"}]
+        self.assertEqual(module.validate_symbols("swift_signed_food", symbols, source), 2)
+
     def test_snapshot_symbols_pass_when_public_surface_is_present(self) -> None:
         module = load_module()
         with tempfile.TemporaryDirectory() as tmp:

@@ -52,8 +52,24 @@ def load_json(path: Path) -> dict[str, object]:
 
 
 def swift_method_pattern(symbol: str) -> re.Pattern[str]:
-    method = symbol.split(".", 1)[1].split("(", 1)[0]
-    return re.compile(r"\bpublic\s+func\s+" + re.escape(method) + r"\s*\(")
+    """Match external labels for the snapshot's simple Swift parameter lists.
+
+    Local parameter names, whitespace and default values are not caller labels.
+    Tuple/closure parameter types need a parser extension if added to the API.
+    """
+    signature = symbol.split(".", 1)[1]
+    parsed = re.fullmatch(r"([A-Za-z_]\w*)\(((?:[A-Za-z_]\w*:)*)\)", signature)
+    require(parsed is not None, f"PUBLIC_SDK_API_ERR_SWIFT_SIGNATURE: {symbol}")
+    method, arguments = parsed.groups()
+    labels = arguments.split(":")[:-1]
+    parameters = [
+        re.escape(label) + r"(?:\s+[A-Za-z_]\w*)?\s*:\s*[^,()]+?"
+        for label in labels
+    ]
+    return re.compile(
+        r"\bpublic\s+func\s+" + re.escape(method) + r"\s*\(\s*"
+        + r"\s*,\s*".join(parameters) + r"\s*\)"
+    )
 
 
 def kotlin_method_pattern(symbol: str) -> re.Pattern[str]:

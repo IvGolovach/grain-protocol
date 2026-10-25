@@ -78,6 +78,8 @@ const verified = verifySignedFoodTransfer(fileContents, enrolledRootPubB64);
 ## Reproduce the checks
 
 ```bash
+npm ci --prefix core/ts/grain-ts-core
+npm ci --prefix core/ts/grain-sdk
 cargo test --manifest-path core/rust/Cargo.toml -p grain-client-core --test signed_food
 npm --prefix core/ts/grain-sdk run test:signed-food
 scripts/sdk/check_swift_package.sh
