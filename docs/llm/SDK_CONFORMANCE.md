@@ -341,6 +341,11 @@ Expected iOS adapter contract:
 - blank or unknown trust anchors reject with `SDK_ERR_TRUST_ANCHOR_*`
 - local trust anchor bundles load through `GrainStaticTrustProvider(bundleJSON:)`
   and invalid bundles fail closed before scan preview/accept
+- `templates/ios-starter` loads its bundled trust JSON and sample QR from the
+  copied `Resources` subdirectory of `Bundle.module`, without depending on
+  recursive root lookup. `GrainIOSStarterSmoke` checks both resources before
+  preview/accept/persist/restore, using the default SwiftPM build system in
+  starter-template, strict SDK, and extracted release-consumer checks.
 - URL-based scanner bundle loading accepts only local file URLs
 - preview and rejected accept paths do not write accepted records
 - static guards reject raw protocol API calls, hidden trust lookup, network trust discovery, TOFU, and fallback trust patterns

@@ -3,10 +3,38 @@ import GrainClientIOSAdapters
 import GrainIOSScanner
 import GrainIOSStarterCore
 
+try starterLoadsBundledSample()
+try starterLoadsBundledTrustAnchor()
+print("iOS starter resource checks: PASS (2 checks)")
+
 try await MainActor.run {
     try starterPreviewsAcceptsPersistsAndRestores()
 }
 print("iOS starter smoke: PASS")
+
+/// Checks the sample loaded through the public accessor before scanner setup.
+private func starterLoadsBundledSample() throws {
+    let sample = StarterResources.sampleQrString
+    try require(sample.hasPrefix("GR1:"), "bundled sample QR missing")
+    try require(
+        sample == sample.trimmingCharacters(in: .whitespacesAndNewlines),
+        "bundled sample QR was not trimmed"
+    )
+}
+
+/// Checks that the packaged JSON contains the starter's configured trust anchor.
+private func starterLoadsBundledTrustAnchor() throws {
+    let url = StarterResources.trustAnchorBundleURL
+    try require(url.isFileURL, "bundled trust anchor must be a local resource")
+    let data = try Data(contentsOf: url)
+    let bundle = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+    try require(bundle?["bundle_v"] as? Int == 1, "bundled trust anchor version mismatch")
+    let anchors = bundle?["anchors"] as? [[String: Any]] ?? []
+    try require(
+        anchors.contains { $0["id"] as? String == StarterResources.trustAnchorID },
+        "bundled trust anchor does not contain the starter anchor"
+    )
+}
 
 @MainActor
 private func starterPreviewsAcceptsPersistsAndRestores() throws {

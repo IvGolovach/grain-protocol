@@ -6,7 +6,8 @@ public enum StarterResources {
     public static var trustAnchorBundleURL: URL {
         guard let url = Bundle.module.url(
             forResource: "TRUST-ANCHOR-BUNDLE-0001",
-            withExtension: "json"
+            withExtension: "json",
+            subdirectory: "Resources"
         ) else {
             preconditionFailure("SDK_ERR_IOS_STARTER_TRUST_BUNDLE_MISSING")
         }
@@ -14,7 +15,11 @@ public enum StarterResources {
     }
 
     public static var sampleQrString: String {
-        guard let url = Bundle.module.url(forResource: "SAMPLE-GR1", withExtension: "txt"),
+        guard let url = Bundle.module.url(
+            forResource: "SAMPLE-GR1",
+            withExtension: "txt",
+            subdirectory: "Resources"
+        ),
               let value = try? String(contentsOf: url, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
               !value.isEmpty else {
             return ""
