@@ -36,6 +36,7 @@ private func starterLoadsBundledTrustAnchor() throws {
     )
 }
 
+/// Verifies preview, acceptance, snapshot restore, and idempotent re-acceptance.
 @MainActor
 private func starterPreviewsAcceptsPersistsAndRestores() throws {
     let snapshotURL = FileManager.default.temporaryDirectory

@@ -29,8 +29,12 @@ scripts/sdk/check_starter_templates.sh
 
 The iOS smoke first checks the packaged sample QR and trust anchor, then verifies
 preview, accept, persistence, restore, and duplicate-accept behavior. These checks
-also run in `scripts/sdk/verify_all_sdks.sh --strict` and against extracted SDK
-release packages.
+also run in `scripts/sdk/verify_all_sdks.sh --strict`.
+
+The default release dry run checks the extracted package layout only. Use
+`scripts/sdk/release_dry_run.sh --strict-consumer-smoke` to execute the smoke
+against extracted SDK release packages; this requires Swift and the other
+consumer toolchains. CI invokes the strict extracted-consumer checks directly.
 
 On macOS, select full Xcode for this command when `xcode-select` points to the
 standalone Command Line Tools:

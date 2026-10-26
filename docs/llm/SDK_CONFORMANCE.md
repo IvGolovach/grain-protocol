@@ -345,7 +345,10 @@ Expected iOS adapter contract:
   copied `Resources` subdirectory of `Bundle.module`, without depending on
   recursive root lookup. `GrainIOSStarterSmoke` checks both resources before
   preview/accept/persist/restore, using the default SwiftPM build system in
-  starter-template, strict SDK, and extracted release-consumer checks.
+  starter-template and strict SDK checks. Executable checks against extracted
+  packages require `release_dry_run.sh --strict-consumer-smoke` (or the direct
+  strict consumer check used by CI) and the Swift toolchain; the default release
+  dry run checks package layout only.
 - URL-based scanner bundle loading accepts only local file URLs
 - preview and rejected accept paths do not write accepted records
 - static guards reject raw protocol API calls, hidden trust lookup, network trust discovery, TOFU, and fallback trust patterns
