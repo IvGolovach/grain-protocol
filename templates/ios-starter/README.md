@@ -15,8 +15,31 @@ The starter is intentionally source-level. Add signing, entitlements, camera UI,
 and app-specific storage policy in your application shell. Grain owns preview,
 accept, list, export, diagnostics, idempotency, and the opaque snapshot format.
 
+The package copies its `Resources` directory intact. `StarterResources` loads
+the trust anchor JSON and sample QR from that subdirectory of `Bundle.module`,
+so lookup works with both Swift Build (the default in Swift 6.4 / Xcode 27.1)
+and the native SwiftPM build system. It does not search the source checkout or
+fetch trust material from the network.
+
 ## Check
 
 ```bash
 scripts/sdk/check_starter_templates.sh
+```
+
+The iOS smoke first checks the packaged sample QR and trust anchor, then verifies
+preview, accept, persistence, restore, and duplicate-accept behavior. These checks
+also run in `scripts/sdk/verify_all_sdks.sh --strict`.
+
+The default release dry run checks the extracted package layout only. Use
+`scripts/sdk/release_dry_run.sh --strict-consumer-smoke` to execute the smoke
+against extracted SDK release packages; this requires Swift and the other
+consumer toolchains. CI invokes the strict extracted-consumer checks directly.
+
+On macOS, select full Xcode for this command when `xcode-select` points to the
+standalone Command Line Tools:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  mise exec -- scripts/sdk/check_starter_templates.sh
 ```
