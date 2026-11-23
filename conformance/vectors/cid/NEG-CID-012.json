@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_BAD_CID_LINK"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "oWNyZWbYKlhFAAFxE0DITT2Nq1mRVig+6BqRBN2AC6wTPYqEHm4HCPhUCzMVE0+MdNmIeBz53jrMpmGTvAAs5Czy6lgabLpIpNNjcy4w"
+  },
+  "meta": {
+    "desc": "Untyped strict DAG-CBOR: a CID link using sha2-512 is outside the blessed set and rejects."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-CID-012"
+}

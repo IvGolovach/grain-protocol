@@ -138,6 +138,12 @@ CID links MUST be encoded as:
 
 `tag42(bstr)` missing the 0x00 prefix MUST be rejected.
 
+The binary CID bytes after the prefix MUST be a blessed CID (§4.1): exactly
+`0x01 0x71 0x12 0x20` followed by a 32-byte sha2-256 digest, with no trailing
+bytes. Any other CID version, codec, multihash or digest length inside tag 42
+MUST be rejected with `GRAIN_ERR_BAD_CID_LINK`. This applies to every strict
+DAG-CBOR protocol object, including objects of unknown `t` (§2.3).
+
 ## 5. Signature Layer — COSE narrow profile
 
 ### 5.1 COSE container (MUST)
@@ -231,6 +237,23 @@ The v0.1 shipped domain profile is Food Profile 1.0.
 Food-specific `IntakeEvent` source classes, reducer-visible nutrient units, and food quantity units are fixed in `spec/profiles/food-profile.md` and its machine-readable mirror `spec/profiles/food-profile.v1.json`.
 
 These food-profile constraints do not add food semantics to domain-neutral core layers.
+
+### 6.9 Events without v0.1 reducer semantics (MUST)
+The v0.1 normative reducer gives totals effect only to authorized, non-conflicted
+`IntakeEvent` records. `DeviceKeyGrant` and `DeviceKeyRevoke` affect totals only
+through authorization (§6.2–§6.4).
+
+Every other valid ledger event, including an unknown `t` (§2.3), `VoidEvent`
+and `CorrectionEvent`:
+- MUST be retained and forwarded,
+- MUST still participate in `(ak, seq)` conflict detection (§6.5) when eligible after quarantine (§2.4),
+- MUST make no direct contribution to `sum_mean` or `sum_var`. A conflict can exclude an otherwise contributing intake.
+
+`VoidEvent` and `CorrectionEvent` are typed, signed statements about an earlier
+event. Applications MAY use them for presentation. In v0.1 they do not remove or
+replace the target event's contribution to normative totals. Normative
+void/correction semantics would change reducer outputs for existing valid
+ledgers, so they require a versioned reducer profile or a protocol major bump.
 
 ## 7. E2E Layer — private sync with capability addressing
 

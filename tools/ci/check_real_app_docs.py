@@ -40,14 +40,6 @@ RULES = {
             "## App Handoff Checklist",
         ],
     },
-    Path("docs/superpowers/plans/2026-05-05-real-app-sdk-roadmap.md"): {
-        "all_of": [
-            "Distribution and custody hardening",
-            "docs/human/sdk/distribution-roadmap.md",
-            "docs/human/sdk/custody-threat-model.md",
-            "source-only now",
-        ],
-    },
 }
 
 

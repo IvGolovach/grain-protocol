@@ -198,6 +198,7 @@ npm --prefix runner/typescript run test:integer-precision
 npm --prefix core/ts/grain-sdk run run:protocol-suite
 npm --prefix core/ts/grain-sdk run test:invariants
 npm --prefix core/ts/grain-sdk run test:signed-food
+GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix core/ts/grain-sdk run test:signed-ledger
 npm --prefix core/ts/grain-sdk-ai run test:boundary
 
 cp runner/typescript/.c01-last-run.json "$OUT_DIR_ABS/ts-c01-summary.json"

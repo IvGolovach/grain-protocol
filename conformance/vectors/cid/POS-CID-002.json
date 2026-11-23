@@ -1,0 +1,14 @@
+{
+  "expect": {
+    "pass": true
+  },
+  "input": {
+    "bytes_b64": "pGF0ckV4YW1wbGVPcGFxdWVFdmVudGF2AWNleHShZHJlZnOB2CpYJQABcRIgKqPfb5Q68+yYZ+wXAieYr2BYrIDf0VXQTqwQFiaVnopjcmVm2CpYJQABcRIgKqPfb5Q68+yYZ+wXAieYr2BYrIDf0VXQTqwQFiaVnoo="
+  },
+  "meta": {
+    "desc": "Blessed CID links (CIDv1, dag-cbor, sha2-256, 32-byte digest) are valid anywhere in an untyped strict DAG-CBOR object."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "POS-CID-002"
+}

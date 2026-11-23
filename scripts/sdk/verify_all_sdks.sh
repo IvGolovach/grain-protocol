@@ -160,6 +160,8 @@ if have_cmd node && have_cmd npm; then
     npm --prefix core/ts/grain-sdk run test:food-wallet
   run_check "Signed Food Ledger independent verifier" \
     npm --prefix core/ts/grain-sdk run test:signed-food
+  run_check "TypeScript Signed Ledger writer and verifier" \
+    npm --prefix core/ts/grain-sdk run test:signed-ledger
   run_check "TypeScript Food Wallet AI boundary smoke" \
     npm --prefix core/ts/grain-sdk-ai run test:food-boundary
 else

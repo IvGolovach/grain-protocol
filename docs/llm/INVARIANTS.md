@@ -72,6 +72,18 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
   Ref: NES §4.3  
   Vectors: NEG-CID-010, NEG-E2E-WA-0003
 
+- INV-CID-003: The CID inside every tag42 link MUST be blessed (CIDv1, dag-cbor, sha2-256, 32-byte digest, no trailing bytes) in typed and untyped strict DAG-CBOR alike.  
+  Ref: NES §4.1; NES §4.3  
+  Vectors: POS-CID-002, NEG-CID-011, NEG-CID-012, NEG-CID-013, NEG-CID-014, NEG-CID-015, NEG-CID-022, NEG-OBJ-045, NEG-OBJ-046, NEG-OBJ-047
+
+- INV-CID-004: CID derivation MUST run over strict canonical DAG-CBOR and reject invalid input instead of hashing it.  
+  Ref: NES §3.2; NES §3.3; NES §4.2  
+  Vectors: NEG-CID-020, NEG-CID-021, NEG-CID-022
+
+- INV-CID-005: `cid_derive` accepts the same optional typed context as `dagcbor_validate`; ledger event payload CIDs are derived with `object_type: LedgerEvent`.  
+  Ref: NES §2.3.1; NES §4.2; NES §6.5  
+  Vectors: POS-CID-003, NEG-CID-030
+
 ## COSE signatures
 
 - INV-COSE-001: COSE_Sign1 only; Ed25519 only; headers exact; external_aad empty; unprotected {}.  
@@ -119,6 +131,18 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
 - INV-LED-006: Raw CBOR-seq ledger framing is deterministic and malformed framing MUST reject.  
   Ref: NES §3.2; NES §9.1 (CBOR-seq limits); spec/profiles/cbor-profile.md §7  
   Vectors: POS-LED-WA-0001, POS-LED-WA-0002, POS-LED-WA-0003, POS-LED-WA-0004, NEG-LED-WA-0001, NEG-LED-WA-0002, NEG-LED-WA-0003
+
+- INV-LED-007: Unknown event `t` is retained, forwarded and ignored by reducers, but still participates in `(ak,seq)` conflict detection.  
+  Ref: NES §2.3; NES §6.5; NES §6.9  
+  Vectors: POS-LED-003, POS-LED-006, NEG-LED-050
+
+- INV-LED-008: `VoidEvent` and `CorrectionEvent` make no direct contribution to v0.1 totals. Eligible events still participate in conflicts that can exclude an intake.
+  Ref: NES §6.9  
+  Vectors: POS-LED-004
+
+- INV-LED-009: `ledger_reduce` runner integer inputs are JSON integers or canonical base-10 decimal strings, identically in every runner.  
+  Ref: conformance/SPEC.md (Runner JSON boundary)  
+  Vectors: POS-LED-005, NEG-LED-060, NEG-LED-061
 
 ## E2E semantics
 
@@ -192,7 +216,7 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
 
 - INV-LIM-001: Implementations MUST support baseline limits; strict mode enforces baseline and returns GRAIN_ERR_LIMIT.  
   Ref: NES §9; cbor-profile.md §7-8  
-  Vectors: NEG-LIM-001
+  Vectors: NEG-LIM-001, POS-LIM-001, POS-LIM-002, NEG-LIM-002, POS-LIM-003, NEG-LIM-003, POS-LIM-004, NEG-LIM-004
 
 ## Stabilization Infrastructure
 

@@ -22,7 +22,7 @@ export function encodeB64(bytes: Uint8Array): string {
 
 export function decodeUtf8(bytes: Uint8Array): string {
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
   }
@@ -56,6 +56,16 @@ export function sha256(bytes: Uint8Array): Uint8Array {
 
 export function normalizeDiag(diag: string[]): string[] {
   return [...new Set(diag)].sort();
+}
+
+/** Leading bytes of every blessed CID-link bstr (NES §4.1, §4.3): the 0x00
+ * link prefix, CIDv1, dag-cbor, sha2-256 and a 32-byte digest length. */
+export const BLESSED_CID_LINK_PREFIX = new Uint8Array([0x00, 0x01, 0x71, 0x12, 0x20]);
+export const BLESSED_CID_LINK_BSTR_LEN = BLESSED_CID_LINK_PREFIX.length + 32;
+
+export function isBlessedCidLinkBstr(bytes: Uint8Array): boolean {
+  return bytes.length === BLESSED_CID_LINK_BSTR_LEN
+    && BLESSED_CID_LINK_PREFIX.every((byte, index) => bytes[index] === byte);
 }
 
 export function bytesEq(a: Uint8Array, b: Uint8Array): boolean {

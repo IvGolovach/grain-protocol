@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_BAD_CID_LINK"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "omF2AWNyZWbYKlgkAAFxEiAqo99vlDrz7Jhn7BcCJ5ivYFisgN/RVdBOrBAWJpWe"
+  },
+  "meta": {
+    "desc": "CID derivation MUST reject an object containing a CID link outside the blessed set."
+  },
+  "op": "cid_derive",
+  "strict": true,
+  "vector_id": "NEG-CID-022"
+}

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::cid::is_blessed_cid_link_bstr;
 use crate::error::{Diag, GrainError, GrainResult};
 use crate::limits::Limits;
 
@@ -290,7 +291,7 @@ impl<'a> Parser<'a> {
                     let Some(cid_bstr) = inner.as_bytes() else {
                         return Err(ParseFail::Diag(Diag::BadCidLink));
                     };
-                    if cid_bstr.first().copied() != Some(0x00) {
+                    if !is_blessed_cid_link_bstr(cid_bstr) {
                         return Err(ParseFail::Diag(Diag::BadCidLink));
                     }
                 }

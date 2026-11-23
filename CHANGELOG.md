@@ -4,6 +4,47 @@ This project follows a protocol-frozen posture: v0.1 core invariants do not chan
 
 ## [Unreleased]
 
+- TypeScript Signed Ledger v1 (SDK ADR-0014):
+  - `SignedLedgerWriter` writes NES v0.1 ledger events of any type through an
+    app-owned Ed25519 `GrainSigner`: reserve and persist, sign, verify, persist,
+    then succeed. Retries are idempotent by operation ID, sequences are never
+    reissued, and a failed reload stops the writer.
+  - `verifySignedLedgerTransfer` verifies the shared transfer container for any
+    event type and reports per-event status under NES §6.
+    `verifySignedFoodTransfer` now runs as the food profile on the same core,
+    with unchanged outputs.
+  - CI cross-checks: the Rust core accepts every TS-signed event and reduces it
+    to the same totals; the Rust signed-food corpus gives identical results
+    through the generic verifier.
+  - The writer checks projected bounds and totals before signing. Restored
+    reservations require unused slots, and retrying repeated attachments or
+    looking up a pre-revocation receipt works after restart.
+  - Signed event quarantine precedes conflict detection, authorization and
+    reduction (NES §2.4). The food-only profile rejects critical extensions.
+- Protocol and conformance hardening (212 vectors):
+  - Both normalized reducers accept opaque scalar, null and array event bodies
+    (`POS-LED-006`, conformance ADR-0010).
+  - NES §6.9 and INV-LED-007/008: unknown event types and
+    `VoidEvent`/`CorrectionEvent` never change v0.1 totals but still take part
+    in `(ak, seq)` conflicts. The contradicting CDDL comment is fixed
+    (conformance ADR-0007).
+  - NES §4.3: every tag-42 link must hold a blessed CID in typed and untyped
+    validation and in `cid_derive`. Both parsers previously accepted CID
+    version 2, sha2-512, raw-codec, CIDv0-shaped and truncated links
+    (protocol ADR-0013).
+  - Exact-boundary vectors for tstr bytes, nesting depth, map pairs and array
+    length. Nesting depth is now defined (conformance ADR-0008).
+  - `cid_derive` accepts optional `object_type`, so ledger payload CIDs can be
+    derived through the suite. `ledger_reduce` integer inputs accept JSON
+    integers or canonical decimal strings identically in both runners; TS
+    previously also accepted non-canonical strings and Rust no strings at all
+    (conformance ADR-0009).
+- Honest labeling: SDK onboarding, READMEs, the client workflow contract and
+  TypeScript JSDoc now state which paths sign and which are the unsigned
+  reducer model with placeholder keys. README, GOVERNANCE and status reflect a
+  single maintainer and source-only distribution. Internal agent execution
+  plans were removed from `docs/`.
+
 - Signed Food Ledger v1 (additive SDK path):
   - typed signed genesis, grants/revokes and confirmed estimated/measured food,
     with app-owned Ed25519 signing and persistent sequence reservations.

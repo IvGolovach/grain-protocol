@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_BAD_CID_LINK"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "oWNyZWbYKlgkAAFxEiAqo99vlDrz7Jhn7BcCJ5ivYFisgN/RVdBOrBAWJpWe"
+  },
+  "meta": {
+    "desc": "Untyped strict DAG-CBOR: a CID link whose sha2-256 digest is truncated to 31 bytes rejects."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-CID-014"
+}

@@ -175,6 +175,7 @@ def check_public_sdk_api(*, root: Path = ROOT, snapshot_path: Path | None = None
     for surface, path in {
         "swift_signed_food": "sdk/swift/Sources/GrainSignedFood/GrainSignedFoodWallet.swift",
         "typescript_signed_food": "core/ts/grain-sdk/src/signed-food.ts",
+        "typescript_signed_ledger": "core/ts/grain-sdk/src/signed-ledger.ts",
     }.items():
         if surface in surfaces:
             sources[surface] = (root / path).read_text(encoding="utf-8")
@@ -183,6 +184,11 @@ def check_public_sdk_api(*, root: Path = ROOT, snapshot_path: Path | None = None
         surface_data = surfaces.get(surface)
         require(isinstance(surface_data, dict), f"PUBLIC_SDK_API_ERR_SURFACE: {surface}")
         checked_symbols += validate_symbols(surface, surface_data.get("symbols"), source_text)
+
+    if "typescript_signed_ledger" in sources:
+        package_index = (root / "core/ts/grain-sdk/src/index.ts").read_text(encoding="utf-8")
+        exports = re.findall(r'export(?: type)?\s*\{([^{}]*)\}\s*from\s*"\./signed-ledger\.js"', package_index)
+        validate_symbols("typescript_signed_ledger_root", surfaces["typescript_signed_ledger"]["symbols"], "\n".join(exports))
 
     workflow_data = surfaces.get("workflow_contract")
     require(isinstance(workflow_data, dict), "PUBLIC_SDK_API_ERR_WORKFLOW_CONTRACT")

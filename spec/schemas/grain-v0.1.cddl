@@ -14,7 +14,8 @@ bstr16 = bstr .size 16
 bstr32 = bstr .size 32
 bstr12 = bstr .size 12
 
-; CID link: tag 42 wrapping a bstr. NES additionally requires leading 0x00 prefix.
+; CID link: tag 42 wrapping a bstr. NES §4.3 additionally requires the 0x00
+; prefix followed by exactly one blessed CIDv1 (dag-cbor, sha2-256, 32 bytes).
 cid-link = #6.42(bstr)
 
 crit = [* tstr] ; NES: set-array (sorted, unique), closed field list.
@@ -176,7 +177,8 @@ CorrectionEvent = {
   "t": "CorrectionEvent",
   "target": EventRef,
   ? "reason": tstr,
-  ; Replacement is modeled as a separate event; reducer treats target as voided and applies later events.
+  ; Replacement is a separate event. Under NES §6.9 neither marker directly
+  ; contributes to totals. An eligible marker still participates in conflicts.
   ? "ext": ext,
   ? "crit": crit,
 }
@@ -187,7 +189,7 @@ LedgerEvent = {
   "ak": bstr16,
   "seq": uint,
   ? "ts_ms": int,
-  "body": any,
+  "body": any, ; Unknown event types may carry scalar, null, array or map bodies (NES §2.3).
   ? "ext": ext,
   ? "crit": crit,
 }

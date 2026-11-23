@@ -6,6 +6,10 @@ It sits above `grain-core` and below generated Swift, Kotlin, WASM, or future de
 
 ## Current surface
 
+Only `GrainSignedFoodJournal` produces signed records. The identity, device,
+pairing, sync and snapshot workflows are an unsigned reducer model: identities
+come from random 32-byte placeholders with no private key (see SDK ADR-0013).
+
 - `GrainSignedFoodJournal`
   - typed signed-food producer/verifier with private sequence reservations
   - host persists prepared state before signing and committed state before success

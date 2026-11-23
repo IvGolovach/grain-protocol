@@ -89,7 +89,11 @@ Implementations MUST support these operations for v0.1 conformance:
     `core/rust/grain-core/docs/errors.md`
 
 - `cid_derive`:
-  - input: `bytes_b64` (canonical DAG-CBOR)
+  - input: `bytes_b64` (canonical DAG-CBOR); optional `object_type` with the
+    same selector values and validation as `dagcbor_validate`. Use
+    `object_type: "LedgerEvent"` for ledger event payloads: without typed
+    context a payload whose `t` names a known production is checked against
+    that production's closed keys (`NEG-CID-030`)
   - output: `cid` (base32 lower, multibase `b`)
 
 - `cose_verify`:
@@ -142,7 +146,8 @@ Implementations MUST support these operations for v0.1 conformance:
 - `ledger_reduce`:
   - input:
     - `root_kid` (string)
-    - `events` (array of normalized event objects for semantics testing)
+    - `events` (array of normalized event objects for semantics testing, after NES §2.4 quarantine)
+    - every event includes `body`. Unknown types allow any JSON value, including null.
   - output: deterministic totals (sum_mean/sum_var) or deterministic error
 
 Implementations MAY provide additional ops, but conformance only depends on the above.
@@ -153,6 +158,10 @@ Implementations MAY provide additional ops, but conformance only depends on the 
 
 - For `runner_v1` JSON output, integers with absolute value greater than `9007199254740991` MUST be encoded as decimal strings.
 - Safe integers MAY stay as JSON numbers.
+- `ledger_reduce` event inputs (`seq`, `mean.kcal`, `var.kcal`) MAY be JSON
+  integers or canonical base-10 decimal strings (`0` or `-?[1-9][0-9]*`).
+  Leading zeros, `-0` and values outside the field's range reject with
+  `GRAIN_ERR_SCHEMA` (`POS-LED-005`, `NEG-LED-060`, `NEG-LED-061`).
 - This rule is about the portability-facing JSON boundary only; internal implementations may use native 64-bit integer types.
 
 Suggested deterministic diag codes (non-exhaustive):

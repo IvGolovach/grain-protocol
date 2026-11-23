@@ -1,12 +1,23 @@
 # grain-sdk-ts
 
-Use `verifySignedFoodTransfer` with explicit root trust to independently verify
-signed food files in Node. Run `npm run test:signed-food` for the signed corpus and
-adversarial cases. This API checks typed objects, signatures and profile CIDs
-before reduction; it does not sign or call Rust. See
-[Signed Food Ledger](../../../docs/human/sdk/signed-food-ledger.md).
+Strict building blocks for apps on Grain.
 
-Friendly, strict building blocks for apps on Grain.
+## Two layers
+
+| Layer | Use it for | Produces |
+| --- | --- | --- |
+| **Signed Ledger** (`SignedLedgerWriter`, `verifySignedLedgerTransfer`) | Records other people or tools must be able to verify | Real Grain v0.1 ledger events: canonical DAG-CBOR, COSE_Sign1 Ed25519, payload CIDs |
+| **Reducer model** (`GrainSdk`: `identity`, `events`, `manifest`, `e2e`, `transport`) | Local app state, reducer semantics, E2E sync primitives, GR1 transport | Unsigned model records; identity key IDs are random placeholders, not signing keys |
+
+If a record leaves the device as evidence, write it through the Signed Ledger.
+Nothing produced by the reducer model is accepted as signed evidence.
+
+- [Signed Ledger guide](../../../docs/human/sdk/signed-ledger.md): any event
+  type, app-owned signer and storage. `npm run test:signed-ledger`; set
+  `GRAIN_RUST_RUNNER_BIN` to also check every signed event with the Rust core.
+- [Signed Food Ledger](../../../docs/human/sdk/signed-food-ledger.md):
+  `verifySignedFoodTransfer` verifies files from the Rust/Swift food producer.
+  It is the food profile of the same verifier. `npm run test:signed-food`.
 
 If you are new here, start with:
 - [SDK Start Here](../../../docs/human/sdk/start-here.md)
@@ -31,7 +42,7 @@ What it does for you:
 - same-root identity import merges compatible device and revocation history, preserves an authorized local active key, and rejects changed sync secrets; see [SDK ADR-0010](../../../adr/sdk/0010-identity-import-history-merge.md)
 - raw CBOR-seq export with recursive canonical map-key ordering that rejects non-finite, fractional, or unsafe JavaScript numbers before bytes are emitted; this exports the reducer model, not typed/signed COSE ledger events (see [SDK ADR-0011](../../../adr/sdk/0011-canonical-raw-ledger-export.md)); corrected key ordering changes previously non-canonical export bytes and their hashes
 - clear transport boundary: `decodeGR1()` decodes, `verifyGR1()` requires explicit trust and rejects malformed `trust.pub_b64`
-- device lifecycle APIs that keep local authorization and ledger history in sync
+- reducer-model device lifecycle APIs that keep local authorization and model ledger history in sync (these key IDs are placeholders; use the Signed Ledger for signing keys)
 - atomic rollback for multi-step SDK mutations like `identity.importBundle()` and `events.correct()`
 - no outbound network behavior in the SDK core
 

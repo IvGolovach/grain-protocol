@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_BAD_CID_LINK"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "oWNyZWbYKlglAAFVEiAqo99vlDrz7Jhn7BcCJ5ivYFisgN/RVdBOrBAWJpWeig=="
+  },
+  "meta": {
+    "desc": "Untyped strict DAG-CBOR: a CID link with the raw (0x55) codec is outside the blessed set and rejects."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-CID-013"
+}

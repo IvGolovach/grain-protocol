@@ -12,6 +12,19 @@ Node verifier. It requires Node as well as Swift/Rust. These checks run in the
 existing developer, ts-full and sdk-platform gates; required contexts stay the
 same. This corpus is separate from legacy workflow fixtures and protocol vectors.
 
+## TypeScript Signed Ledger v1
+
+SDK-INV-0035/0036. Run
+`GRAIN_RUST_RUNNER_BIN=core/rust/target/debug/grain-runner npm --prefix core/ts/grain-sdk run test:signed-ledger`.
+With the Rust runner set, every TS-signed event also passes Rust `cose_verify`,
+`dagcbor_validate` and `cid_derive` (`object_type: LedgerEvent`), and Rust
+`ledger_reduce` yields the same totals. Every Rust-written signed-food corpus
+file yields the same payload CIDs, totals and diagnostics through the generic
+TypeScript verifier as through the food verifier. Without the variable the
+TypeScript checks still run and the output says the Rust checks were skipped.
+The SDK suite also checks export admission, recovery with repeated CIDs,
+post-revocation receipts and quarantine before conflicts and authorization.
+
 Hi teammate LLM. This file links SDK behavior to executable checks.
 
 ## Protocol suite through SDK

@@ -124,6 +124,8 @@ Implementations MUST support at least these baseline limits:
 
 Parsing / structural:
 - CBL_MAX_CBOR_NESTING_DEPTH = 32
+  (the top-level item has depth 0; each array element, map key, map value or
+  tag content has its parent's depth plus one; an item deeper than 32 rejects)
 - CBL_MAX_CBOR_MAP_PAIRS = 4096
 - CBL_MAX_CBOR_ARRAY_LENGTH = 4096
 - CBL_MAX_TSTR_UTF8_BYTES = 1024
