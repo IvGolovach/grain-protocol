@@ -177,8 +177,8 @@ CorrectionEvent = {
   "t": "CorrectionEvent",
   "target": EventRef,
   ? "reason": tstr,
-  ; Replacement is modeled as a separate event. NES §6.9: in v0.1 neither
-  ; VoidEvent nor CorrectionEvent changes normative reducer totals.
+  ; Replacement is a separate event. Under NES §6.9 neither marker directly
+  ; contributes to totals. An eligible marker still participates in conflicts.
   ? "ext": ext,
   ? "crit": crit,
 }

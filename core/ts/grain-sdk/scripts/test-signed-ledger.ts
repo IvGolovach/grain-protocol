@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { GENERIC_CBOR_CANONICAL_OPTIONS, parseExact, STRICT_DAG_CBOR_OPTIONS } from "grain-ts-core/cbor";
+import { encodeCanonical, GENERIC_CBOR_CANONICAL_OPTIONS, parseExact, STRICT_DAG_CBOR_OPTIONS } from "grain-ts-core/cbor";
 import { deriveCidV1DagCborSha256 } from "grain-ts-core/ops/dagcbor";
 import { GrainDiagError, type CborNode } from "grain-ts-core/types";
 import {
@@ -17,6 +17,7 @@ import {
   InMemorySignedLedgerStore,
   kidHex,
   SignedLedgerWriter,
+  toCborNode,
   verifySignedLedgerTransfer,
   type GrainSigner,
   type GrainValue,
@@ -53,16 +54,19 @@ function counting(signer: GrainSigner): GrainSigner & { calls: number } {
 class FlakyStore implements SignedLedgerStore {
   readonly inner = new InMemorySignedLedgerStore();
   failSaves = new Set<number>();
+  failAfterSave = new Set<number>();
   failLoads = false;
+  lostSnapshot = false;
   saves = 0;
   async load(): Promise<string | null> {
     if (this.failLoads) throw new Error("load failed");
-    return this.inner.load();
+    return this.lostSnapshot ? null : this.inner.load();
   }
   async save(snapshot: string): Promise<void> {
     this.saves++;
     if (this.failSaves.has(this.saves)) throw new Error("save failed");
     await this.inner.save(snapshot);
+    if (this.failAfterSave.has(this.saves)) throw new Error("acknowledgement lost");
   }
 }
 
@@ -314,6 +318,54 @@ checks += 2;
   checks++;
 }
 
+// If persistence succeeded but the acknowledgement was lost, recover exactly that write.
+for (const phase of [1, 2]) {
+  const store = new FlakyStore();
+  const signer = counting(root);
+  const journal = await SignedLedgerWriter.open({ trustedRootPublicKey: root.publicKey, store });
+  await journal.initialize(signer);
+  store.failAfterSave.add(store.saves + phase);
+  const input = { operationId: "ack", t: "Note", body: "hello" };
+  await rejectsWith("SDK_ERR_SIGNED_LEDGER_STORE", () => journal.append(signer, input), "uncertain storage acknowledgement");
+  const retry = await journal.append(signer, input);
+  assert.deepEqual([retry.seq, retry.status, signer.calls], [1n, phase === 1 ? "committed" : "already_committed", 2]);
+  checks++;
+}
+
+// A storage outage after reservation cannot make a live writer forget a signed sequence.
+{
+  const store = new FlakyStore();
+  const signer = counting(root);
+  const journal = await SignedLedgerWriter.open({ trustedRootPublicKey: root.publicKey, store });
+  await journal.initialize(signer);
+  store.failSaves.add(store.saves + 2);
+  store.lostSnapshot = true;
+  await rejectsWith("SDK_ERR_SIGNED_LEDGER_STORE", () => journal.append(signer, { operationId: "note", t: "Note", body: 1 }), "missing reserved snapshot");
+  await rejectsWith("SDK_ERR_SIGNED_LEDGER_STORE", () => journal.initialize(signer), "stopped after lost reservation");
+  assert.equal(signer.calls, 2);
+  checks++;
+}
+
+// A nested extension identifier has protocol meaning only at typed extension points.
+{
+  const journal = await SignedLedgerWriter.open({ trustedRootPublicKey: root.publicKey, store: new InMemorySignedLedgerStore() });
+  await journal.initialize(root);
+  const foreign = { crit: ["future.units"] };
+  const bodies: Array<{ t: string; [key: string]: GrainValue }> = [
+    { v: 1, t: "CookRun", inputs: [{ ing: profileLink, amount_g: 1, ...foreign }] },
+    { v: 1, t: "NutritionComputeResult", cookrun: profileLink, engine_id: "a", engine_version: "v1", dataset_snapshot_id: "d", map: [{ ing: profileLink, profile: profileLink, ...foreign }], out: { kcal: 1 } }
+  ];
+  for (const body of bodies) await journal.append(root, { operationId: body.t, t: body.t, body });
+  const note = { x: "plain", "\uFEFFx": "\uFEFFcontent", nested: foreign };
+  await journal.append(root, { operationId: "note", t: "Note", body: note });
+  const events = (await journal.verify()).events;
+  for (const { t } of bodies) assert.equal(events.find(event => event.t === t)?.status, "quarantined");
+  const read = events.find(event => event.t === "Note");
+  assert.equal(read?.status, "counted");
+  assert.deepEqual(read?.body, note);
+  checks += 4;
+}
+
 // --- Values -------------------------------------------------------------------
 {
   const big = (1n << 63n) - 1n;
@@ -355,6 +407,40 @@ checks += 2;
   }
   const shuffled = { ...parsed, events: [...parsed.events].reverse().concat(parsed.events[0]) };
   assert.deepEqual(verifySignedLedgerTransfer(JSON.stringify(shuffled), rootB64), verified);
+  checks++;
+}
+
+// A device can authenticate these records but only a root can grant or revoke authority.
+{
+  const base = JSON.parse(transfer) as { events: string[] };
+  const template = base.events.find(encoded => eventType(encoded) === "IntakeEvent")!;
+  const deviceEnvelope = parseExact(Buffer.from(template, "base64"), GENERIC_CBOR_CANONICAL_OPTIONS);
+  assert.ok(deviceEnvelope.kind === "a" && deviceEnvelope.items[0].kind === "b");
+  const protectedHeader = deviceEnvelope.items[0];
+  const rootId = Buffer.from(kidHex(root.publicKey), "hex");
+  const deviceId = Buffer.from(kidHex(device.publicKey), "hex");
+  for (const [t, seq, body] of [
+    ["DeviceKeyGrant", 30, { v: 1, t: "DeviceKeyGrant", ak: deviceId, pub: device.publicKey, caps: [] }],
+    ["DeviceKeyRevoke", 31, { v: 1, t: "DeviceKeyRevoke", ak: rootId }]
+  ] as const) {
+    const payload = encodeGrainValue({ v: 1, ak: deviceId, t, seq, body: { ...body } as GrainValue });
+    const structure = encodeCanonical({ kind: "a", items: [toCborNode("Signature1"), protectedHeader, toCborNode(new Uint8Array()), toCborNode(payload)] });
+    const signature = await device.sign(structure);
+    const cose = encodeCanonical({ kind: "a", items: [protectedHeader, toCborNode({}), toCborNode(payload), toCborNode(signature)] });
+    const result = verifySignedLedgerTransfer(JSON.stringify({ ...base, events: [...base.events, b64(cose)] }), rootB64);
+    assert.equal(result.events.find(ev => ev.seq === BigInt(seq))?.status, "unauthorized");
+    assert.equal(result.sumMeanKcal, verified.sumMeanKcal);
+    assert.deepEqual(result.authorizedAks, verified.authorizedAks);
+    checks += 3;
+  }
+  const node = parseExact(payloadOf(template), STRICT_DAG_CBOR_OPTIONS);
+  assert.ok(node.kind === "m");
+  const time = node.entries.find(entry => entry.key.kind === "t" && Buffer.from(entry.key.bytes).toString() === "ts_ms")?.value;
+  assert.ok(time?.kind === "u");
+  time.value += 1n;
+  deviceEnvelope.items[2] = toCborNode(encodeCanonical(node));
+  const changed = base.events.map(encoded => encoded === template ? b64(encodeCanonical(deviceEnvelope)) : encoded);
+  assert.throws(() => verifySignedLedgerTransfer(JSON.stringify({ ...base, events: changed }), rootB64), GrainDiagError);
   checks++;
 }
 

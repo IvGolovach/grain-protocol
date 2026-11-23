@@ -22,7 +22,7 @@ export function encodeB64(bytes: Uint8Array): string {
 
 export function decodeUtf8(bytes: Uint8Array): string {
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
   } catch {
     throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
   }

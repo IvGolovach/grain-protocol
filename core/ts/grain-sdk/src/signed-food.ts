@@ -60,9 +60,10 @@ function operationId(event: VerifiedEvent): string | undefined {
 export function verifySignedFoodTransfer(transferJson: string, trustedRootPubB64: string): SignedFoodVerification {
   const parsed = parseSignedTransfer(transferJson, trustedRootPubB64, CODES);
   const { events } = verifyLedgerEvents(parsed.root, parsed.events, CODES, (event) => {
-    if (event.quarantined || !FOOD_KINDS.has(event.t)) reject(UNSUPPORTED);
+    if (event.quarantined) reject(UNSUPPORTED);
+    if (event.t === "DeviceKeyRevoke" && hex(bytes(field(event.body, "ak"))) === parsed.rootKid) reject(TRUST);
     operationId(event);
-  });
+  }, (t) => { if (!FOOD_KINDS.has(t)) reject(UNSUPPORTED); });
   const profiles = new Map<string, CborNode>();
   for (const [id, data] of parsed.objects) {
     if (deriveCidV1DagCborSha256(data) !== id) return reject();

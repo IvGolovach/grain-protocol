@@ -47,17 +47,23 @@ Does not guarantee:
 ./scripts/verify      # full developer verification
 ```
 
-Sign and verify a record in Node:
+After bootstrap, run this from the repository root to build the source SDK and open its Node module context:
 
-```ts
-import { ed25519SignerFromSeed, InMemorySignedLedgerStore, SignedLedgerWriter, verifySignedLedgerTransfer } from "grain-sdk-ts";
+```bash
+cd core/ts/grain-sdk
+npm run build
+node --input-type=module <<'JS'
+import { generateEd25519Signer, InMemorySignedLedgerStore, SignedLedgerWriter, verifySignedLedgerTransfer } from "grain-sdk-ts";
 
-const root = ed25519SignerFromSeed(rootSeed); // your key custody supplies the seed
+const { signer: root } = generateEd25519Signer(); // ephemeral demo key
+const rootPublicKeyBase64 = Buffer.from(root.publicKey).toString("base64");
 const ledger = await SignedLedgerWriter.open({ trustedRootPublicKey: root.publicKey, store: new InMemorySignedLedgerStore() });
 await ledger.initialize(root);
 await ledger.append(root, { operationId: "note-1", t: "FieldNote", body: { text: "fence repaired", observed_at_ms: Date.now() } });
 
 const result = verifySignedLedgerTransfer(await ledger.exportTransfer(), rootPublicKeyBase64);
+console.log(result.events.map(event => event.t));
+JS
 ```
 
 ## Where to go next

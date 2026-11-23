@@ -38,6 +38,9 @@
         {"kind": "function", "name": "ed25519SignerFromSeed"},
         {"kind": "function", "name": "generateEd25519Signer"},
         {"kind": "function", "name": "kidHex"},
+        {"kind": "type", "name": "AppendSignedEventInput"},
+        {"kind": "type", "name": "SignedLedgerEvent"},
+        {"kind": "type", "name": "SignedLedgerEventStatus"},
         {"kind": "type", "name": "SignedLedgerReceipt"},
         {"kind": "type", "name": "SignedLedgerVerification"},
         {"kind": "constant", "name": "SIGNED_LEDGER_ERR"}

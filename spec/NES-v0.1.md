@@ -247,7 +247,7 @@ Every other valid ledger event, including an unknown `t` (§2.3), `VoidEvent`
 and `CorrectionEvent`:
 - MUST be retained and forwarded,
 - MUST still participate in `(ak, seq)` conflict detection (§6.5) when eligible after quarantine (§2.4),
-- MUST NOT change `sum_mean` or `sum_var`, whatever its body contains.
+- MUST make no direct contribution to `sum_mean` or `sum_var`. A conflict can exclude an otherwise contributing intake.
 
 `VoidEvent` and `CorrectionEvent` are typed, signed statements about an earlier
 event. Applications MAY use them for presentation. In v0.1 they do not remove or

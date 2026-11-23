@@ -92,7 +92,7 @@ export type GrainValue =
   | { [key: string]: GrainValue };
 
 const utf8 = new TextEncoder();
-const utf8Strict = new TextDecoder("utf-8", { fatal: true });
+const utf8Strict = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 function textNode(value: string): CborNode {
   const bytes = utf8.encode(value);
@@ -391,6 +391,15 @@ export function hasCriticalExtensions(node: CborNode): boolean {
   return crit?.kind === "a" && crit.items.length > 0;
 }
 
+// Only these nested productions carry protocol extension fields (CDDL CookInput and MapDecision).
+function bodyRequiresQuarantine(t: string, body: CborNode): boolean {
+  if (!KNOWN_TYPES.has(t)) return false;
+  if (hasCriticalExtensions(body)) return true;
+  const children = t === "CookRun" ? optionalField(body, "inputs")
+    : t === "NutritionComputeResult" ? optionalField(body, "map") : undefined;
+  return children?.kind === "a" && children.items.some(hasCriticalExtensions);
+}
+
 /** One cryptographically verified ledger event. */
 export interface VerifiedEvent {
   payloadCid: string;
@@ -405,11 +414,12 @@ export interface VerifiedEvent {
 }
 
 /** Verify a COSE_Sign1 ledger event with `publicKey`, enforcing NES §5, §6.1 and typed bodies. */
-export function verifyLedgerEventEnvelope(data: Uint8Array, publicKey: Uint8Array, codes: TransferErrorCodes): VerifiedEvent {
+export function verifyLedgerEventEnvelope(data: Uint8Array, publicKey: Uint8Array, codes: TransferErrorCodes, inspectKind?: (t: string) => void): VerifiedEvent {
   const verified = verifyCoseSign1Payload(data, publicKey, new Uint8Array());
   const node = validateTypedObjectV1(verified.payload, "LedgerEvent");
   if (!bytesEq(bytesOf(field(node, "ak", codes), codes), verified.kid)) return fail(codes.trust);
   const t = textOf(field(node, "t", codes), codes);
+  inspectKind?.(t);
   if (NON_EVENT_TYPES.has(t)) return fail(codes.invalid);
   const body = field(node, "body", codes);
   if (KNOWN_TYPES.has(t)) validateTypedObjectV1(encodeCanonical(body), t);
@@ -423,7 +433,7 @@ export function verifyLedgerEventEnvelope(data: Uint8Array, publicKey: Uint8Arra
     body,
     payload: verified.payload,
     cose: data,
-    quarantined: hasCriticalExtensions(node) || (KNOWN_TYPES.has(t) && hasCriticalExtensions(body))
+    quarantined: hasCriticalExtensions(node) || bodyRequiresQuarantine(t, body)
   };
 }
 
@@ -436,7 +446,8 @@ export function verifyLedgerEvents(
   root: Uint8Array,
   envelopes: Uint8Array[],
   codes: TransferErrorCodes,
-  inspect: (event: VerifiedEvent) => void = () => undefined
+  inspect?: (event: VerifiedEvent) => void,
+  inspectKind?: (t: string) => void
 ): { events: Map<string, VerifiedEvent>; keys: Map<string, Uint8Array> } {
   const rootKid = kidHex(root);
   const keys = new Map<string, Uint8Array>([[rootKid, root]]);
@@ -445,8 +456,8 @@ export function verifyLedgerEvents(
   for (const data of envelopes) {
     const ak = coseAuthorKid(data, codes);
     if (ak !== rootKid) { deferred.push({ ak, data }); continue; }
-    const event = verifyLedgerEventEnvelope(data, root, codes);
-    inspect(event);
+    const event = verifyLedgerEventEnvelope(data, root, codes, inspectKind);
+    inspect?.(event);
     if (!event.quarantined && event.t === "DeviceKeyGrant") {
       const granted = bytesOf(field(event.body, "pub", codes), codes);
       const grantedKid = bytesOf(field(event.body, "ak", codes), codes);
@@ -459,8 +470,8 @@ export function verifyLedgerEvents(
   }
   for (const pending of deferred) {
     const key = keys.get(pending.ak) ?? fail(codes.trust);
-    const event = verifyLedgerEventEnvelope(pending.data, key, codes);
-    inspect(event);
+    const event = verifyLedgerEventEnvelope(pending.data, key, codes, inspectKind);
+    inspect?.(event);
     events.set(event.payloadCid, event);
   }
   let genesis = 0;
@@ -475,7 +486,7 @@ export function verifyLedgerEvents(
       if (!valid) return fail(codes.trust);
       genesis++;
     }
-    if (event.t === "DeviceKeyRevoke" && hex(bytesOf(field(event.body, "ak", codes), codes)) === rootKid) return fail(codes.trust);
+    if (event.ak === rootKid && event.t === "DeviceKeyRevoke" && hex(bytesOf(field(event.body, "ak", codes), codes)) === rootKid) return fail(codes.trust);
   }
   if (genesis !== 1 || rootZero !== 1) return fail(codes.trust);
   return { events, keys };
@@ -580,7 +591,8 @@ function eventStatuses(rootKid: string, events: VerifiedEvent[], codes: Transfer
       status.set(event.payloadCid, "quarantined");
       continue;
     }
-    status.set(event.payloadCid, conflicted(event) ? "conflicted" : authorizedAk(event.ak) ? "counted" : "unauthorized");
+    const authorized = ROOT_ONLY_TYPES.has(event.t) ? event.ak === rootKid : authorizedAk(event.ak);
+    status.set(event.payloadCid, conflicted(event) ? "conflicted" : authorized ? "counted" : "unauthorized");
   }
   return {
     status,
@@ -742,7 +754,7 @@ export class SignedLedgerWriter {
   private stopped = false;
   private queue: Promise<unknown> = Promise.resolve();
 
-  private constructor(root: Uint8Array, store: SignedLedgerStore, state: JournalState) {
+  private constructor(root: Uint8Array, store: SignedLedgerStore, state: JournalState, private hasSnapshot: boolean) {
     this.root = root;
     this.rootKid = kidHex(root);
     this.store = store;
@@ -754,7 +766,7 @@ export class SignedLedgerWriter {
     const root = new Uint8Array(options.trustedRootPublicKey);
     if (root.length !== 32) throw ledgerError(SIGNED_LEDGER_ERR.TRUST);
     const saved = await options.store.load();
-    return new SignedLedgerWriter(root, options.store, saved === null ? emptyState(root) : restoreSnapshot(root, saved));
+    return new SignedLedgerWriter(root, options.store, saved === null ? emptyState(root) : restoreSnapshot(root, saved), saved !== null);
   }
 
   get initialized(): boolean {
@@ -940,7 +952,7 @@ export class SignedLedgerWriter {
     const proposed: ReducerEvent = {
       ak, seq, t, body,
       payloadCid: deriveCidV1DagCborSha256(payload),
-      quarantined: KNOWN_TYPES.has(t) && hasCriticalExtensions(body)
+      quarantined: bodyRequiresQuarantine(t, body)
     };
     reduceVerifiedEvents(this.rootKid, [...history, proposed], LEDGER_CODES);
 
@@ -977,13 +989,27 @@ export class SignedLedgerWriter {
   }
 
   private async persist(next: JournalState): Promise<void> {
+    const proposed = snapshotJson(this.root, next);
     try {
-      await this.store.save(snapshotJson(this.root, next));
+      await this.store.save(proposed);
+      this.hasSnapshot = true;
       this.state = next;
     } catch {
       try {
         const saved = await this.store.load();
-        this.state = saved === null ? emptyState(this.root) : restoreSnapshot(this.root, saved);
+        if (saved === null) {
+          this.stopped = this.hasSnapshot;
+        } else {
+          const restored = restoreSnapshot(this.root, saved);
+          const actual = snapshotJson(this.root, restored);
+          // An atomic replace can leave either side of this write durable.
+          if (actual !== proposed && actual !== snapshotJson(this.root, this.state)) {
+            this.stopped = true;
+          } else {
+            this.state = restored;
+            this.hasSnapshot = true;
+          }
+        }
       } catch {
         this.stopped = true;
       }

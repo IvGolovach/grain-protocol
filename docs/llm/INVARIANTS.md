@@ -136,7 +136,7 @@ If code behavior and an invariant disagree, trust the invariant + executable evi
   Ref: NES §2.3; NES §6.5; NES §6.9  
   Vectors: POS-LED-003, POS-LED-006, NEG-LED-050
 
-- INV-LED-008: `VoidEvent` and `CorrectionEvent` have no effect on v0.1 normative reducer totals.  
+- INV-LED-008: `VoidEvent` and `CorrectionEvent` make no direct contribution to v0.1 totals. Eligible events still participate in conflicts that can exclude an intake.
   Ref: NES §6.9  
   Vectors: POS-LED-004
 

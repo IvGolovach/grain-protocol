@@ -63,8 +63,8 @@ runner metadata and is never injected into protocol bytes.
 ### Additive `cid_derive` typed context
 
 `cid_derive` MAY receive the same optional `object_type` input with the same
-semantics. A `LedgerEvent` payload's `t` is its event type, so its CID can only
-be derived in typed context when that type names a known production.
+semantics. When a ledger payload's `t` names a known production, specify
+`object_type: "LedgerEvent"` to validate the envelope against its own closed keys.
 
 ### Integer inputs
 

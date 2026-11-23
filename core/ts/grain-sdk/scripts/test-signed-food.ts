@@ -123,6 +123,15 @@ for (const location of ["envelope", "body"]) {
     (error: unknown) => error instanceof GrainDiagError && error.code === "SDK_ERR_SIGNED_FOOD_UNSUPPORTED");
   checks += 4;
 }
+const unsupported = resign(confirmed, "IntakeEvent", node => {
+  const type = field(node, "t");
+  assert.ok(type.kind === "t");
+  type.bytes = Buffer.from("EncryptedObject");
+});
+assert.throws(() => verifySignedFoodTransfer(JSON.stringify(unsupported), confirmed.trustedRootPubB64),
+  (error: unknown) => error instanceof GrainDiagError && error.code === "SDK_ERR_SIGNED_FOOD_UNSUPPORTED");
+checks++;
+
 const revoked = fixtures.find((fixture) => fixture.name === "revoked")!;
 const heldRevoke = resign(revoked, "DeviceKeyRevoke", addCriticalExtension);
 const stillAuthorized = verifySignedLedgerTransfer(JSON.stringify(heldRevoke), revoked.trustedRootPubB64);

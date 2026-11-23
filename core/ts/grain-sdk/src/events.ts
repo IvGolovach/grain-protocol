@@ -8,8 +8,9 @@ import type { TsCoreEngine } from "./engine.js";
 
 /**
  * Reducer-model events: unsigned rows shaped like `ledger_reduce` input, with a
- * caller-chosen `payload_cid` string. `void()` and `correct()` record intent but
- * do not change v0.1 totals (NES §6.9).
+ * caller-chosen `payload_cid` string. Void and correction markers make no direct
+ * contribution to totals. correct() also appends the replacement event, so an
+ * eligible replacement intake counts alongside the original (NES §6.9).
  */
 export class EventLifecycle {
   private readonly store: GrainSdkStore;

@@ -8,7 +8,7 @@ import {
 } from "../cbor.js";
 import { schemaForLegacyTypeV1 } from "../object-schema.js";
 import { parseDagCborStrict, validateTypedObjectV1 } from "../typed-object.js";
-import { bytesEq, decodeB64, sha256 } from "../utils.js";
+import { bytesEq, decodeB64, decodeUtf8, sha256 } from "../utils.js";
 
 export { parseDagCborStrict, validateTypedObjectV1 } from "../typed-object.js";
 
@@ -81,7 +81,7 @@ export function schemaChecks(node: CborNode): void {
       if (entry.key.kind !== "t") {
         throw new GrainDiagError("GRAIN_ERR_NONCANONICAL");
       }
-      const key = new TextDecoder().decode(entry.key.bytes);
+      const key = decodeUtf8(entry.key.bytes);
       if (!allowedSet.has(key)) {
         throw new GrainDiagError("GRAIN_ERR_UNKNOWN_TOPLEVEL_KEY");
       }

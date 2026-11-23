@@ -1,7 +1,7 @@
 # Signed Ledger (TypeScript)
 
 Use this when a Node application must write records that anyone can verify
-from a file: who wrote each record, and that nothing changed afterwards. It
+from a file. The signature authenticates the author and signed bytes of each record present. It
 works for any event type. Food, inventory, symptoms or your own profile are
 all events with their own `t`.
 
@@ -58,8 +58,9 @@ await ledger.append(phone, {
 const transferJson = await ledger.exportTransfer();
 ```
 
-Keep the operation ID when you retry after an error. An identical retry
-returns `already_committed`. A changed input under the same ID is rejected.
+Retry with the original operation ID and input. A retry that completes a reserved
+write returns `committed`. A previously saved write returns `already_committed`.
+Both receipts indicate success. A changed input under the same ID is rejected.
 Keep the original timestamp and attachment list with that ID. If a write would
 exceed the transfer limit, omit required kcal fields or overflow a total, it
 fails before consuming a sequence number. The writer saves before it signs, and saves again before it reports success.
@@ -77,8 +78,10 @@ console.log(result.sumMeanKcal, result.diagnostics);
 ```
 
 Get the trusted root key from somewhere other than the file. The file includes
-it, but a file cannot vouch for itself. Any broken signature, changed byte,
-unknown key or malformed field rejects the whole file. `status` is `counted`,
+it, but a file cannot vouch for itself. An invalid signature, unknown signing key, malformed field or
+object CID mismatch rejects the transfer. The container has no signature over
+the record list. To detect omitted records, compare the verified CIDs with an
+independently trusted record of the expected contents. `status` is `counted`,
 `unauthorized` (for example a revoked device; revocation is retroactive) or
 `conflicted` (two eligible records with the same author and sequence).
 A `quarantined` record requires an unknown critical extension. Its bytes
@@ -88,7 +91,7 @@ remain in the file and it contributes neither authority, conflicts nor totals.
 
 A signature shows who wrote a record and that it was not changed. It does not
 show that the record is true: a person can sign a wrong estimate.
-`VoidEvent` and `CorrectionEvent` are recorded but do not change v0.1 totals.
+`VoidEvent` and `CorrectionEvent` make no direct contribution to v0.1 totals. An eligible conflict can exclude an intake.
 Apps that hide voided entries do so in their own views.
 
 ## Limits

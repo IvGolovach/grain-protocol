@@ -43,7 +43,7 @@ rule.
 3. Persist the snapshot with the committed event; only then return `committed`.
 
 A failed or uncertain save reloads the durable snapshot and throws
-`SDK_ERR_SIGNED_LEDGER_STORE`. If the reload also fails, the writer stops.
+`SDK_ERR_SIGNED_LEDGER_STORE`. The writer stops if reloading fails, if a previously observed snapshot disappears, or if the recovered state differs from both sides of the atomic save.
 Retrying with the same operation ID and input resumes the pending operation or
 returns `already_committed`, including for an earlier committed operation after
 the device was revoked. The v1 input digest includes the ordered attachment
@@ -91,16 +91,16 @@ is required.
 For each unique event: payload CID, author `ak`, `seq`, `t`, optional `tsMs`,
 the decoded body, and `status`:
 - `counted`: authorized under NES §6 and not conflicted;
-- `unauthorized`: author not granted, or revoked (retroactively);
+- `unauthorized`: a revoked author, an author without an effective grant, or a device issuing a root-only grant or revoke;
 - `conflicted`: another eligible payload shares its `(ak, seq)`.
 - `quarantined`: the envelope or a known typed body requires an unimplemented critical
-  extension (NES §2.4). The SDK currently implements no critical identifiers.
+  extension (NES §2.4), including a `CookInput` or `MapDecision` inside that body. The SDK currently implements no critical identifiers.
   Quarantined records never participate in totals, authorization or conflicts.
   A transfer still needs an eligible genesis and a trusted key for every signature.
 
 Also: authorized and revoked key IDs, objects by CID, and the reducer's
 `sum_mean`/`sum_var` kcal with its diagnostics. A valid signature proves who
-wrote a record and that it was not changed. It does not prove the record is true.
+signed the bytes of each record present. Applications that require completeness must compare the file with an independently trusted record of the expected contents.
 
 ## Limits
 
