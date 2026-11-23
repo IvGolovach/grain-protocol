@@ -11,6 +11,15 @@ Signed Food Ledger v1 (SDK ADR-0013):
   `sdk/workflows/signed-food/v1.json`: separate signed contract and corpus.
 - `docs/human/sdk/signed-food-ledger.md`: app integration and proof boundaries.
 
+TypeScript Signed Ledger v1 (SDK ADR-0014):
+- `core/ts/grain-sdk/src/signed-ledger.ts`: signer-bound writer for any event
+  type, private snapshot, generic verifier and shared transfer parsing.
+  `signed-food.ts` is the food-profile verifier on top of it.
+- `core/ts/grain-sdk/scripts/test-signed-ledger.ts`: durability, retry,
+  revocation, rejection and Rust cross-checks (`GRAIN_RUST_RUNNER_BIN`).
+- `sdk/workflows/contract/signed_ledger_v1.md`: container, snapshot and limits.
+- `docs/human/sdk/signed-ledger.md`: TypeScript integration guide.
+
 Hi teammate LLM. This is the shortest safe path through the SDK layer.
 
 Raw reducer-model CBOR-sequence export lives in `core/ts/grain-sdk/src/events.ts`;

@@ -35,6 +35,13 @@ Any PR that touches these areas must include an ADR link:
 - **Maintainers:** triage issues, review PRs, and keep releases moving
 - **Protocol Stewards (optional):** a small group with final say on protocol changes
 
+Current state: one maintainer (@IvGolovach) and no appointed protocol stewards.
+Maintainer approval is the only review that happens. Signoffs that
+`spec/RC-POLICY.md` and `spec/INTEROP-CLAIM.md` require from independent
+parties cannot be given yet, so the repository makes no strong
+interoperability claim. This section changes when a second maintainer or an
+independent implementer joins.
+
 In v0.1, the default posture is still "no breaking changes."
 Roles can be defined or updated through a PR to this file.
 

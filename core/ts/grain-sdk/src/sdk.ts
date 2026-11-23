@@ -10,6 +10,11 @@ import { ManifestManager } from "./manifest.js";
 import type { GrainSdkStore } from "./store.js";
 import { TransportToolkit } from "./transport.js";
 
+/**
+ * Strict protocol toolkit plus an unsigned reducer model of identity, events,
+ * manifests and E2E sync. Events appended here are not signed and are never
+ * accepted as signed evidence; write those with `SignedLedgerWriter`.
+ */
 export class GrainSdk {
   readonly #store: GrainSdkStore;
   public readonly core: TsCoreEngine;

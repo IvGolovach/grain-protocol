@@ -6,6 +6,11 @@ import type { AppendEventInput, LedgerEvent, ReduceResult } from "./types.js";
 import type { IdentityManager } from "./identity.js";
 import type { TsCoreEngine } from "./engine.js";
 
+/**
+ * Reducer-model events: unsigned rows shaped like `ledger_reduce` input, with a
+ * caller-chosen `payload_cid` string. `void()` and `correct()` record intent but
+ * do not change v0.1 totals (NES §6.9).
+ */
 export class EventLifecycle {
   private readonly store: GrainSdkStore;
   private readonly identity: IdentityManager;

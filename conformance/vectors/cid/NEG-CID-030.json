@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_UNKNOWN_TOPLEVEL_KEY"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "pWF0bUxlZGdlckdlbmVzaXNhdgFiYWtQY+2V1mDgfLmP8OFj24HhZWNzZXEAZGJvZHmkYXRtTGVkZ2VyR2VuZXNpc2F2AWhyb290X2tpZFBj7ZXWYOB8uY/w4WPbgeFlaHJvb3RfcHViWCDiiolwdTMyvXL+9BPmsLLvG0qt2nqiwUHyM3EqaHazUQ=="
+  },
+  "meta": {
+    "desc": "Without typed context the same LedgerEvent payload is read as a LedgerGenesis object, whose closed key set excludes ak/seq/body (NES §2.2, §2.3.1)."
+  },
+  "op": "cid_derive",
+  "strict": true,
+  "vector_id": "NEG-CID-030"
+}

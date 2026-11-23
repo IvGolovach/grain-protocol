@@ -235,6 +235,13 @@ fn envelope_author(bytes: &[u8]) -> Result<String, String> {
         .ok_or_else(|| INVALID.to_string())
 }
 
+fn check_food_extensions(value: &C) -> Result<(), String> {
+    if matches!(value.map_get("crit"), Some(C::Array(ids)) if !ids.is_empty()) {
+        return Err("SDK_ERR_SIGNED_FOOD_UNSUPPORTED".into());
+    }
+    Ok(())
+}
+
 fn verify_event(cose: &[u8], public: &[u8]) -> Result<(String, Event), String> {
     let verified =
         verify_cose_sign1_payload(cose, public, &[]).map_err(|e| e.diag().to_string())?;
@@ -255,6 +262,8 @@ fn verify_event(cose: &[u8], public: &[u8]) -> Result<(String, Event), String> {
     }
     let body = field(&value, "body")?.clone();
     typed(&encode(&body), &kind)?;
+    check_food_extensions(&value)?;
+    check_food_extensions(&body)?;
     let id = if kind == "LedgerGenesis" {
         None
     } else {
@@ -394,6 +403,7 @@ fn evaluate(
             return Err(INVALID.into());
         }
         let profile = typed(&bytes, "NutrientProfile")?;
+        check_food_extensions(&profile)?;
         links.insert(encode(&link(&bytes)), profile);
     }
     let mut genesis = 0;
@@ -527,5 +537,21 @@ fn insert_event(events: &mut BTreeMap<String, Event>, id: String, event: Event) 
         _ => {
             events.insert(id, event);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn food_profile_accepts_empty_crit_and_rejects_unimplemented_identifiers() {
+        assert!(check_food_extensions(&map(vec![])).is_ok());
+        assert!(check_food_extensions(&map(vec![("crit", C::Array(vec![]))])).is_ok());
+        let required = map(vec![("crit", C::Array(vec![text("future.units")]))]);
+        assert_eq!(
+            check_food_extensions(&required),
+            Err("SDK_ERR_SIGNED_FOOD_UNSUPPORTED".into())
+        );
     }
 }

@@ -134,9 +134,9 @@ def _validate_ledger_event_shape(ev: dict) -> str | None:
     missing = required - set(ev.keys())
     if missing:
         return f"ledger event missing keys: {sorted(missing)}"
-    if not isinstance(ev["body"], dict):
-        return "ledger event body must be object"
     t = ev["t"]
+    if t in {"DeviceKeyGrant", "DeviceKeyRevoke", "IntakeEvent"} and not isinstance(ev["body"], dict):
+        return "reducer-visible event body must be an object"
     body = ev["body"]
     if t == "DeviceKeyGrant" and "grant_ak" not in body:
         return "DeviceKeyGrant body must include grant_ak"
@@ -228,8 +228,8 @@ def main() -> int:
         if "object_type" in obj["input"]:
             object_type = obj["input"]["object_type"]
             vector_id = obj["vector_id"]
-            if op != "dagcbor_validate":
-                bad.append((rel, "object_type is only valid for dagcbor_validate"))
+            if op not in {"dagcbor_validate", "cid_derive"}:
+                bad.append((rel, "object_type is only valid for dagcbor_validate and cid_derive"))
             elif not isinstance(object_type, str):
                 if not is_object_vector or vector_id != "NEG-OBJ-097":
                     bad.append((rel, "object_type must be string except in NEG-OBJ-097"))

@@ -16,6 +16,16 @@ pub fn derive_cid_v1_dag_cbor_sha256(bytes: &[u8]) -> GrainResult<String> {
     Ok(format!("b{}", b32))
 }
 
+/// Leading bytes of every blessed CID-link bstr (NES §4.1, §4.3): the 0x00
+/// link prefix, CIDv1, dag-cbor, sha2-256 and a 32-byte digest length.
+pub const BLESSED_CID_LINK_PREFIX: [u8; 5] = [0x00, 0x01, 0x71, 0x12, 0x20];
+pub const BLESSED_CID_LINK_BSTR_LEN: usize = BLESSED_CID_LINK_PREFIX.len() + 32;
+
+pub fn is_blessed_cid_link_bstr(cid_link_bstr: &[u8]) -> bool {
+    cid_link_bstr.len() == BLESSED_CID_LINK_BSTR_LEN
+        && cid_link_bstr[..BLESSED_CID_LINK_PREFIX.len()] == BLESSED_CID_LINK_PREFIX
+}
+
 pub fn ensure_cid_link_prefix_0(cid_link_bstr: &[u8]) -> GrainResult<()> {
     if cid_link_bstr.first().copied() != Some(0x00) {
         return Err(GrainError::from_diag(Diag::BadCidLink));

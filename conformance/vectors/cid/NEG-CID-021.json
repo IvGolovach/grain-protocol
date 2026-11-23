@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_DUP_MAP_KEY"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "omF2AWF2AQ=="
+  },
+  "meta": {
+    "desc": "CID derivation MUST reject duplicate map keys."
+  },
+  "op": "cid_derive",
+  "strict": true,
+  "vector_id": "NEG-CID-021"
+}

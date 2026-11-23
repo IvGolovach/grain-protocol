@@ -3,7 +3,6 @@
 /conformance/** @IvGolovach
 /docs/llm/** @IvGolovach
 /docs/human/** @IvGolovach
-/docs/superpowers/** @IvGolovach
 
 # Implementations
 /core/** @IvGolovach

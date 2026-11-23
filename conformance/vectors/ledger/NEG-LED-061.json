@@ -1,0 +1,33 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_SCHEMA"
+    ],
+    "pass": false
+  },
+  "input": {
+    "events": [
+      {
+        "ak": "root",
+        "body": {
+          "mean": {
+            "kcal": 5
+          },
+          "var": {
+            "kcal": 1
+          }
+        },
+        "payload_cid": "cid-intake-1",
+        "seq": "18446744073709551616",
+        "t": "IntakeEvent"
+      }
+    ],
+    "root_kid": "root"
+  },
+  "meta": {
+    "desc": "Runner JSON boundary: seq 2^64 is outside the unsigned 64-bit range and rejects."
+  },
+  "op": "ledger_reduce",
+  "strict": true,
+  "vector_id": "NEG-LED-061"
+}

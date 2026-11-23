@@ -112,6 +112,11 @@ conflicts are reported, not hidden. Old random-public-field identities cannot
 become real signing keys. Existing APIs remain unchanged; start a fresh explicit
 signer-bound genesis and reconfirm any legacy record the user wants to append.
 
+The food transfer profile supports no critical extensions on event envelopes,
+typed bodies or nutrient profiles. The Rust and TypeScript food readers return
+`SDK_ERR_SIGNED_FOOD_UNSUPPORTED` for such transfers. The generic ledger
+reader reports quarantined events under NES §2.4.
+
 ## Diagnostics and executable acceptance
 
 Core GRAIN_ERR codes remain unchanged. SDK errors use SIGNED_FOOD_INVALID,

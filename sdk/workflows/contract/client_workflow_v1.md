@@ -4,6 +4,11 @@ Client workflow fixtures describe app-facing SDK behavior shared by Rust, Swift,
 
 ## Scope
 
+These workflows model authorization, sync and storage state. They do not sign.
+Identity and device keys here are random placeholder identifiers with no
+private key, and lifecycle records are not COSE-signed ledger events. Signed
+records use `signed_food_v1.md` (Rust/Swift) or `signed_ledger_v1.md` (TypeScript).
+
 This contract is additive. It does not change `conformance/SPEC.md`, protocol vectors, runner operations, or strict protocol verdicts.
 
 Workflow fixtures can reference protocol vectors as input material. A generated SDK passes a workflow fixture only when its public workflow API returns the same status, diagnostics, and mutation behavior as the Rust client core.

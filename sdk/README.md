@@ -1,9 +1,16 @@
 # Grain SDK
 
-The additive [Signed Food Ledger](../docs/human/sdk/signed-food-ledger.md) path
-connects a Rust typed writer, Swift app-owned signing/storage and independent
-Node verification. It uses separate signer-bound state and preserves existing
-unsigned client APIs.
+Signed records:
+- [Signed Ledger](../docs/human/sdk/signed-ledger.md): TypeScript writer and
+  verifier for any event type, with an app-owned Ed25519 signer.
+- [Signed Food Ledger](../docs/human/sdk/signed-food-ledger.md): Rust typed
+  writer, Swift app-owned signing/storage, independent Node verification.
+
+Everything else here (identity, device lifecycle, pairing, sync bundles, store
+snapshots in `grain-client-core` and the generated Swift/Kotlin/WASM
+wrappers) is the **unsigned reducer model**. Its key IDs come from random
+placeholder bytes with no private key. It models authorization and sync state;
+it does not sign. Kotlin and WASM have no signing producer yet.
 
 The production TypeScript SDK code lives in `core/ts/grain-sdk`.
 The optional TypeScript AI sidecar lives in `core/ts/grain-sdk-ai`.

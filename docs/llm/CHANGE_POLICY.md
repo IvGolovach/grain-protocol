@@ -27,7 +27,8 @@ These still require ADR + vectors:
 - new pairing mechanisms that distribute `sync_secret` without changing envelope semantics
 - additional tooling and docs
 - additive runner inputs that preserve operation names, CLI shape, and output,
-  such as `dagcbor_validate.object_type` for enforcing an existing CDDL rule
+  such as `dagcbor_validate.object_type` and `cid_derive.object_type` for
+  enforcing an existing CDDL rule
 
 ## DOC_SYNC rule
 

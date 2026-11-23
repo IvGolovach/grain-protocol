@@ -6,6 +6,7 @@ import { parseInteger, textFromObjectField, toObject, toText } from "./helpers.j
 
 const I64_MIN = -(1n << 63n);
 const I64_MAX = (1n << 63n) - 1n;
+const U64_MAX = (1n << 64n) - 1n;
 
 type LedgerEvent = {
   t: string;
@@ -167,11 +168,14 @@ function parseLedgerEvents(value: Json | undefined): LedgerEvent[] {
     const ak = toText(obj.ak, "GRAIN_ERR_SCHEMA");
     const payloadCid = toText(obj.payload_cid, "GRAIN_ERR_SCHEMA");
     const seq = parseInteger(obj.seq, "GRAIN_ERR_SCHEMA");
-    if (seq < 0n) {
+    if (seq < 0n || seq > U64_MAX) {
       throw new GrainDiagError("GRAIN_ERR_SCHEMA");
     }
 
-    const body = toObject(obj.body, "GRAIN_ERR_SCHEMA");
+    if (obj.body === undefined) throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+    // NES §2.3: only operations with defined reducer semantics inspect the body.
+    const usesBody = t === "DeviceKeyGrant" || t === "DeviceKeyRevoke" || t === "IntakeEvent";
+    const body = usesBody ? toObject(obj.body, "GRAIN_ERR_SCHEMA") : {};
     out.push({ t, ak, seq, payloadCid, body });
   }
 

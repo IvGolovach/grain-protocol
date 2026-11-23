@@ -3,6 +3,11 @@ import type { DeviceKey, IdentityBundleV1, LedgerEvent } from "./types.js";
 import { SdkError } from "./errors.js";
 import { randomBytes32, encodeB64, sha256Hex, decodeB64Strict } from "./utils.js";
 
+/**
+ * Reducer-model identity. Root and device "public keys" are random 32-byte
+ * placeholders with no private key, so nothing here can sign. Use
+ * `SignedLedgerWriter` with a `GrainSigner` for records others must verify.
+ */
 export class IdentityManager {
   private readonly store: GrainSdkStore;
 

@@ -21,8 +21,10 @@ export function parseInteger(value: Json | undefined, code: string): bigint {
     return BigInt(value);
   }
 
+  // Runner JSON boundary: a JSON integer or a canonical base-10 decimal string
+  // (conformance/SPEC.md "Runner JSON boundary").
   if (typeof value === "string") {
-    if (!/^-?[0-9]+$/.test(value)) {
+    if (!/^(0|-?[1-9][0-9]*)$/.test(value)) {
       throw new GrainDiagError(code);
     }
     return BigInt(value);

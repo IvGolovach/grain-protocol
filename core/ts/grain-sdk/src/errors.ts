@@ -54,6 +54,62 @@ const ERROR_MAP: Record<string, Omit<ErrorDescriptor, "code">> = {
     nes_ref: "spec/NES-v0.1.md §6",
     vector_refs: ["INV-LED-001", "INV-LED-002"]
   },
+  SDK_ERR_SIGNED_LEDGER_INVALID: {
+    category: "VALIDATION",
+    summary: "Signed ledger input, file or snapshot is malformed.",
+    human_hint: "Check operation IDs, event bodies and the transfer container; reject the file as a whole.",
+    nes_ref: "spec/NES-v0.1.md §2, §6",
+    vector_refs: ["SDK-INV-0036"]
+  },
+  SDK_ERR_SIGNED_LEDGER_TRUST: {
+    category: "CRYPTO",
+    summary: "Signed ledger trust root, genesis or key binding does not verify.",
+    human_hint: "Obtain the root public key independently of the file; never trust root_pub_b64 from the file itself.",
+    nes_ref: "spec/NES-v0.1.md §5, §6.2",
+    vector_refs: ["SDK-INV-0036"]
+  },
+  SDK_ERR_SIGNED_LEDGER_LIMIT: {
+    category: "LIMITS",
+    summary: "Signed ledger exceeds its bounded event, object or byte limits.",
+    human_hint: "Split history into separate ledgers; the transfer is a bounded local journal.",
+    nes_ref: "spec/NES-v0.1.md §9",
+    vector_refs: ["SDK-INV-0036"]
+  },
+  SDK_ERR_SIGNED_LEDGER_UNINITIALIZED: {
+    category: "CONTRACT",
+    summary: "Signed ledger has no root genesis yet.",
+    human_hint: "Call initialize(rootSigner) once before any other write or export.",
+    nes_ref: "spec/NES-v0.1.md §6.2",
+    vector_refs: ["SDK-INV-0035"]
+  },
+  SDK_ERR_SIGNED_LEDGER_PENDING: {
+    category: "CONTRACT",
+    summary: "Another signed ledger operation is reserved but not committed.",
+    human_hint: "Retry the pending operation with its original ID and input, or abandon it explicitly.",
+    nes_ref: "spec/NES-v0.1.md §6.5",
+    vector_refs: ["SDK-INV-0035"]
+  },
+  SDK_ERR_SIGNED_LEDGER_OPERATION_CONFLICT: {
+    category: "CONTRACT",
+    summary: "Operation ID was reused with different input.",
+    human_hint: "Keep one operation ID per logical write and reuse it only for identical retries.",
+    nes_ref: "spec/NES-v0.1.md §6.5",
+    vector_refs: ["SDK-INV-0035"]
+  },
+  SDK_ERR_SIGNED_LEDGER_SIGNER: {
+    category: "CRYPTO",
+    summary: "The application signer failed or returned an invalid signature.",
+    human_hint: "The reservation is kept; retry with a working signer for the same key.",
+    nes_ref: "spec/NES-v0.1.md §5",
+    vector_refs: ["SDK-INV-0035"]
+  },
+  SDK_ERR_SIGNED_LEDGER_STORE: {
+    category: "CONTRACT",
+    summary: "Signed ledger storage did not acknowledge a write, or the writer stopped.",
+    human_hint: "Repair storage, then reopen the writer; durable state is reloaded and sequences are never reused.",
+    nes_ref: "spec/NES-v0.1.md §6.5",
+    vector_refs: ["SDK-INV-0035"]
+  },
   SDK_ERR_CAP_OVERWRITE_OR_CORRUPTION: {
     category: "E2E",
     summary: "cap_id single-assignment guard detected overwrite/corruption.",

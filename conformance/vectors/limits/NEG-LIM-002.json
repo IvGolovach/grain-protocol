@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_LIMIT"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "oWFhgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYEA"
+  },
+  "meta": {
+    "desc": "CBL_MAX_CBOR_NESTING_DEPTH exceeded: an item at depth 33 rejects."
+  },
+  "op": "dagcbor_validate",
+  "strict": true,
+  "vector_id": "NEG-LIM-002"
+}

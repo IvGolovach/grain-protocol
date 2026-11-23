@@ -60,6 +60,21 @@ Supported selector values and validation semantics are defined in
 `conformance/SPEC.md` and `spec/profiles/cbor-profile.md`. `object_type` is
 runner metadata and is never injected into protocol bytes.
 
+### Additive `cid_derive` typed context
+
+`cid_derive` MAY receive the same optional `object_type` input with the same
+semantics. A `LedgerEvent` payload's `t` is its event type, so its CID can only
+be derived in typed context when that type names a known production.
+
+### Integer inputs
+
+For `ledger_reduce`, the normalized input excludes quarantined events (NES §2.4).
+Opaque events retain their author, sequence and payload CID. Their `body` can be
+any JSON value, including null, as exercised by `POS-LED-006`.
+
+`ledger_reduce` event integers MAY be JSON integers or canonical base-10
+decimal strings, mirroring the output rule above. See `conformance/SPEC.md`.
+
 ## Compatibility policy
 
 - Additive changes that do not change flags/output schema/operation names MAY be introduced under `runner_v1`.

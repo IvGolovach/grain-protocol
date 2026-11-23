@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { verifySignedFoodTransfer } from "../src/signed-food.js";
+import { verifySignedLedgerTransfer } from "../src/signed-ledger.js";
+import { compareCanonicalMapKey } from "grain-ts-core/utils";
 import { GrainDiagError } from "grain-ts-core/types";
 import type { CborNode } from "grain-ts-core/types";
 import { encodeCanonical, GENERIC_CBOR_CANONICAL_OPTIONS, STRICT_DAG_CBOR_OPTIONS, parseExact } from "grain-ts-core/cbor";
@@ -102,6 +104,34 @@ for (const fixture of fixtures) {
   }
 }
 const confirmed = fixtures.find((fixture) => fixture.name === "confirmed")!;
+// The generic verifier retains critical records for forwarding. The narrower food profile rejects them.
+function addCriticalExtension(node: CborNode): void {
+  assert.ok(node.kind === "m");
+  const key: CborNode = { kind: "t", bytes: Buffer.from("crit") };
+  node.entries.push({ key, keyBytes: encodeCanonical(key), value: { kind: "a", items: [{ kind: "t", bytes: Buffer.from("future.units") }] } });
+  node.entries.sort((a, b) => compareCanonicalMapKey(a.keyBytes, b.keyBytes));
+}
+for (const location of ["envelope", "body"]) {
+  const held = resign(confirmed, "IntakeEvent", (node) => addCriticalExtension(location === "body" ? field(node, "body") : node));
+  const verify = (data: Transfer) => verifySignedLedgerTransfer(JSON.stringify(data), confirmed.trustedRootPubB64);
+  const only = verify(held);
+  assert.equal(only.events.find((ev) => ev.t === "IntakeEvent")?.status, "quarantined");
+  assert.equal(only.sumMeanKcal, 0);
+  const combined = verify({ ...held, events: [...held.events, ...confirmed.transfer.events].reverse() });
+  assert.deepEqual([combined.sumMeanKcal, combined.diagnostics], [confirmed.expected.sumMeanKcal, []]);
+  assert.throws(() => verifySignedFoodTransfer(JSON.stringify(held), confirmed.trustedRootPubB64),
+    (error: unknown) => error instanceof GrainDiagError && error.code === "SDK_ERR_SIGNED_FOOD_UNSUPPORTED");
+  checks += 4;
+}
+const revoked = fixtures.find((fixture) => fixture.name === "revoked")!;
+const heldRevoke = resign(revoked, "DeviceKeyRevoke", addCriticalExtension);
+const stillAuthorized = verifySignedLedgerTransfer(JSON.stringify(heldRevoke), revoked.trustedRootPubB64);
+assert.deepEqual([stillAuthorized.revokedAks.length, stillAuthorized.authorizedAks.length, stillAuthorized.sumMeanKcal], [0, 2, 1000]);
+const heldGrant = resign(revoked, "DeviceKeyGrant", addCriticalExtension);
+assert.throws(() => verifySignedLedgerTransfer(JSON.stringify(heldGrant), revoked.trustedRootPubB64),
+  (error: unknown) => error instanceof GrainDiagError && error.code === "SDK_ERR_SIGNED_LEDGER_TRUST");
+checks += 2;
+
 // Valid JSON near the byte limit must reject with a domain diagnostic, never a
 // regexp stack error, for both ordinary strings and dense escape sequences.
 for (const token of ['"' + "a".repeat(15_999_998) + '"', '"' + "\\n".repeat(7_999_999) + '"']) {

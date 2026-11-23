@@ -38,7 +38,8 @@
     "test:invariants": "npm run build --silent && node dist/scripts/test-sdk-invariants.js",
     "test:food-wallet": "npm run build --silent && node dist/scripts/test-food-wallet.js",
     "test:signed-food": "npm run build --silent && node dist/scripts/test-signed-food.js",
-    "demo:e2e": "npm run build --silent && node dist/scripts/demo-end-to-end.js"
+    "demo:e2e": "npm run build --silent && node dist/scripts/demo-end-to-end.js",
+    "test:signed-ledger": "npm run build --silent && node dist/scripts/test-signed-ledger.js"
   },
   "dependencies": {
     "grain-ts-core": "file:../grain-ts-core"

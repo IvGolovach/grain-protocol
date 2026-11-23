@@ -2,10 +2,25 @@
 
 If you are building an app on Grain, start here. Keep the first version small and let the SDK handle the strict protocol work for you.
 
+## Pick the path by what must be verifiable
+
+| You need | Platform | Path |
+| --- | --- | --- |
+| Records anyone can verify from a file (any event type) | Node / TypeScript | [Signed Ledger](./signed-ledger.md) |
+| Signed food entries from an iOS app | Swift + Rust | [Signed Food Ledger](./signed-food-ledger.md) |
+| Verify signed issuer offers from a QR code | iOS, Android, WASM, TypeScript | [Scanner app quickstart](./scan-quickstart.md) |
+| Model ledger semantics or E2E sync locally | TypeScript, generated SDKs | [Minimal app example](./minimal-app-example.md) |
+
+Only the first two paths sign anything. The `GrainSdk` identity/events API
+and the generated-SDK identity, device and sync workflows are an **unsigned
+reducer model**. Their root and device "public keys" are random placeholder
+identifiers with no private key. Use them for local state and tests, never as
+evidence. Kotlin and WASM do not have a signing producer yet.
+
 ## Your first pass
 
-1. If you are building a camera-first iOS, Android, glasses, browser, or robot
-   scanner client, read [Scanner app quickstart](./scan-quickstart.md).
+1. If you are building a camera-first iOS, Android or browser scanner client,
+   read [Scanner app quickstart](./scan-quickstart.md).
 2. If you want the source-level iOS reference app path with local Xcode and an
    ordinary Apple ID, read [iOS reference app quickstart](./quickstart-ios-reference-app.md).
 3. If you want the source-level Android reference app path without Play Console
@@ -25,7 +40,7 @@ If you are building an app on Grain, start here. Keep the first version small an
 10. On a fresh checkout, install `core/ts/grain-ts-core`
    and `core/ts/grain-sdk` before the first SDK build.
 11. If you want the optional AI sidecar, install `core/ts/grain-sdk-ai` separately.
-12. If you are building a camera-first iOS, Android, glasses, or robot client,
+12. If you are building a camera-first iOS or Android client,
    read [Portable client SDK](./portable-client-sdk.md).
 13. For scanner-shell reference code, start with `examples/ios-scanner`,
    `examples/ios-reference-app`, `examples/android-scanner`, or

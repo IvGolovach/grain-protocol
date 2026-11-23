@@ -14,7 +14,6 @@ REQUIRED_PATTERNS = (
     "/sdk/**",
     "/examples/**",
     "/docs/human/**",
-    "/docs/superpowers/**",
     "/tools/**",
     "/.github/**",
     "/.githooks/**",

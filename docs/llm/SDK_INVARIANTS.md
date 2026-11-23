@@ -16,6 +16,33 @@ Signed Food Ledger v1 adds these separate workflow invariants (SDK ADR-0013):
   Tests: `sdk/swift/Sources/GrainSignedFoodSmoke/main.swift` and Rust signed_food tests.
   Modules: `sdk/swift/Sources/GrainSignedFood/GrainSignedFoodWallet.swift`, `core/rust/grain-client-core/src/signed_food/mod.rs`
 
+TypeScript Signed Ledger v1 is the domain-neutral producer and verifier
+(SDK ADR-0014). Signed Food Ledger v1 is its food profile in TypeScript:
+
+- SDK-INV-0035: the TypeScript writer MUST persist a sequence reservation
+  before calling the signer, verify the returned COSE_Sign1 against the
+  signer's key, and persist the committed event before reporting success.
+  Identical retries under one operation ID return the committed receipt or
+  resume the reserved bytes, which MUST be rebuilt from the retried input and
+  equal the stored payload before any signer call; changed input rejects. Sequences are never
+  reissued, including after `abandonPendingOperation()`. A failed save reloads
+  durable state; a failed reload stops the writer. Projected totals and transfer
+  bounds are checked before reservation. Pending slots must equal the stored
+  counter and have no committed occupant.
+  Tests: `core/ts/grain-sdk/scripts/test-signed-ledger.ts` (durability ordering block).
+  Modules: `core/ts/grain-sdk/src/signed-ledger.ts`
+- SDK-INV-0036: `verifySignedLedgerTransfer` MUST establish trust only from the
+  independently supplied root, verify every event's canonical LedgerEvent
+  shape, typed body for known `t`, CID and signature before reduction, keep
+  unknown `t` events (NES §2.3), recompute object CIDs, and reject the whole
+  file on any failure. Event `status` MUST follow NES §6 (root-only grants,
+  retroactive revoke, conflict ignore-all) after NES §2.4 quarantine. Rust MUST accept every TS-signed
+  event through `cose_verify`, typed `dagcbor_validate` and typed `cid_derive`,
+  and reduce the ledger to the same totals.
+  Tests: `core/ts/grain-sdk/scripts/test-signed-ledger.ts` (verifier rejections,
+  Rust-corpus and Rust-runner cross-checks), `core/ts/grain-sdk/scripts/test-signed-food.ts`.
+  Modules: `core/ts/grain-sdk/src/signed-ledger.ts`, `core/ts/grain-sdk/src/signed-food.ts`
+
 Signed transfer files and their synthetic interoperability corpus contain food
 payloads and public verification material. They are distinct from Food Wallet
 safe reports and safe-summary fixtures covered by SDK-INV-0032.

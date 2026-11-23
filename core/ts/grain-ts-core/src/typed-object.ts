@@ -9,7 +9,7 @@ import { schemaForObjectTypeV1 } from "./object-schema.js";
 import type { ObjectSchemaV1, ObjectTypeV1, PayloadLimitV1 } from "./object-schema.js";
 import { GrainDiagError, LIMITS } from "./types.js";
 import type { CborNode } from "./types.js";
-import { bytesEq, compareBytesLex, decodeUtf8 } from "./utils.js";
+import { bytesEq, compareBytesLex, decodeUtf8, isBlessedCidLinkBstr } from "./utils.js";
 
 type CborMap = Extract<CborNode, { kind: "m" }>;
 type ItemValidator = (value: CborNode) => void;
@@ -17,8 +17,6 @@ type ItemValidator = (value: CborNode) => void;
 const COOK_INPUT_KEYS = ["ing", "amount_g", "note", "ext", "crit"] as const;
 const MAP_DECISION_KEYS = ["ing", "profile", "ext", "crit"] as const;
 const EVENT_REF_KEYS = ["ak", "seq"] as const;
-const CID_LINK_PREFIX = new Uint8Array([0x00, 0x01, 0x71, 0x12, 0x20]);
-const CID_LINK_BSTR_LEN = CID_LINK_PREFIX.length + 32;
 const I64_MIN = -(1n << 63n);
 const I64_MAX = (1n << 63n) - 1n;
 
@@ -410,7 +408,7 @@ function validateCidLink(value: CborNode): void {
     throw new GrainDiagError("GRAIN_ERR_BAD_CID_LINK");
   }
   const bytes = value.inner.value;
-  if (bytes.length !== CID_LINK_BSTR_LEN || !bytesEq(bytes.slice(0, CID_LINK_PREFIX.length), CID_LINK_PREFIX)) {
+  if (!isBlessedCidLinkBstr(bytes)) {
     throw new GrainDiagError("GRAIN_ERR_BAD_CID_LINK");
   }
 }

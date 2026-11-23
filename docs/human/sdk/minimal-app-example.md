@@ -1,13 +1,15 @@
 # Minimal App Example
 
-For actual signed food history with durable Swift storage and an independent
-file verifier, use [Signed Food Ledger](./signed-food-ledger.md). This page keeps
-its existing unsigned reducer-model demonstration.
+This page is the **unsigned reducer model**: it shows ledger semantics, not
+signed records. The identity it creates has a random placeholder key with no
+private key, and its events carry no signature. To write records others can
+verify, use [Signed Ledger](./signed-ledger.md) (TypeScript, any event type) or
+[Signed Food Ledger](./signed-food-ledger.md) (Swift food entries).
 
 This is the smallest Grain app we recommend for a first try.
 
-If you are building a scanner app for iOS, Android, browser, glasses, robots, or
-another camera/sensor client, start with [Scanner app quickstart](./scan-quickstart.md)
+If you are building a scanner app for iOS, Android, browser or another
+camera client, start with [Scanner app quickstart](./scan-quickstart.md)
 instead. This page is a TypeScript ledger demo, not the storage, trust, or
 custody template for scanner clients.
 

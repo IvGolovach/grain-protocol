@@ -9,6 +9,7 @@ use crate::error::{Diag, GrainError, GrainResult};
 pub struct LedgerEvent {
     pub t: String,
     pub ak: String,
+    #[serde(deserialize_with = "deserialize_seq")]
     pub seq: u64,
     pub payload_cid: String,
     pub body: Value,
@@ -97,14 +98,14 @@ pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<Ledg
             .body
             .get("mean")
             .and_then(|m| m.get("kcal"))
-            .and_then(Value::as_i64)
+            .and_then(json_i64)
             .ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
 
         let var_kcal = ev
             .body
             .get("var")
             .and_then(|m| m.get("kcal"))
-            .and_then(Value::as_i64)
+            .and_then(json_i64)
             .ok_or_else(|| GrainError::from_diag(Diag::Schema))?;
 
         if var_kcal < 0 {
@@ -135,6 +136,42 @@ pub fn reduce_ledger(root_kid: &str, events: &[LedgerEvent]) -> GrainResult<Ledg
         sum_var: out_var,
         diag_contains,
     })
+}
+
+/// Runner JSON boundary integer: a JSON integer or a canonical base-10 decimal
+/// string such as `"9007199254740993"` (conformance/SPEC.md "Runner JSON
+/// boundary"). Leading zeros, `-0`, signs other than `-` and non-digits reject.
+fn json_integer(value: &Value) -> Option<i128> {
+    match value {
+        Value::Number(number) => number
+            .as_i64()
+            .map(i128::from)
+            .or_else(|| number.as_u64().map(i128::from)),
+        Value::String(text) => {
+            let digits = text.strip_prefix('-').unwrap_or(text);
+            let canonical = !digits.is_empty()
+                && digits.bytes().all(|byte| byte.is_ascii_digit())
+                && (digits == "0" || !digits.starts_with('0'))
+                && text != "-0";
+            if canonical {
+                text.parse::<i128>().ok()
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
+}
+
+fn json_i64(value: &Value) -> Option<i64> {
+    json_integer(value).and_then(|n| i64::try_from(n).ok())
+}
+
+fn deserialize_seq<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<u64, D::Error> {
+    let value = Value::deserialize(deserializer)?;
+    json_integer(&value)
+        .and_then(|n| u64::try_from(n).ok())
+        .ok_or_else(|| serde::de::Error::custom("seq must be a non-negative u64 integer"))
 }
 
 fn collect_conflicted_sequences(events: &[LedgerEvent]) -> BTreeSet<(String, u64)> {

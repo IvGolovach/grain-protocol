@@ -1,4 +1,5 @@
 use crate::cbor::{encode_canonical, CborValue};
+use crate::cid::is_blessed_cid_link_bstr;
 use crate::dagcbor::{parse_strict_dagcbor_encoding, validate_tstr_set_array};
 use crate::error::{Diag, GrainError, GrainResult};
 use crate::limits::Limits;
@@ -9,8 +10,6 @@ type CborMap = [(CborValue, CborValue)];
 const COOK_INPUT_KEYS: &[&str] = &["ing", "amount_g", "note", "ext", "crit"];
 const MAP_DECISION_KEYS: &[&str] = &["ing", "profile", "ext", "crit"];
 const EVENT_REF_KEYS: &[&str] = &["ak", "seq"];
-const CID_LINK_PREFIX: [u8; 5] = [0x00, 0x01, 0x71, 0x12, 0x20];
-const CID_LINK_BSTR_LEN: usize = CID_LINK_PREFIX.len() + 32;
 
 pub fn validate_typed_object_v1(bytes: &[u8], object_type: &str) -> GrainResult<CborValue> {
     let schema = schema_for_object_type(object_type);
@@ -347,7 +346,7 @@ fn validate_cid_link(value: &CborValue) -> GrainResult<()> {
     let Some(bytes) = inner.as_bytes() else {
         return Err(GrainError::from_diag(Diag::BadCidLink));
     };
-    if bytes.len() != CID_LINK_BSTR_LEN || bytes[..CID_LINK_PREFIX.len()] != CID_LINK_PREFIX {
+    if !is_blessed_cid_link_bstr(bytes) {
         return Err(GrainError::from_diag(Diag::BadCidLink));
     }
     Ok(())

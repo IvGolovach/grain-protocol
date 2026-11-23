@@ -26,7 +26,15 @@ export function opDagCborValidate(input: Record<string, Json>): OperationActual 
 
 export function opCidDerive(input: Record<string, Json>): OperationActual {
   const bytes = decodeB64(input.bytes_b64);
-  validateDagCborStrict(bytes);
+  // Same optional typed context as dagcbor_validate: a LedgerEvent's `t` is
+  // its event type, so only the caller knows the production (NES §2.3.1).
+  if (input.object_type === undefined) {
+    validateDagCborStrict(bytes);
+  } else if (typeof input.object_type === "string") {
+    validateTypedObjectV1(bytes, input.object_type);
+  } else {
+    throw new GrainDiagError("GRAIN_ERR_SCHEMA");
+  }
   return {
     accepted: true,
     diag: [],

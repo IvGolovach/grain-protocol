@@ -175,6 +175,7 @@ def check_public_sdk_api(*, root: Path = ROOT, snapshot_path: Path | None = None
     for surface, path in {
         "swift_signed_food": "sdk/swift/Sources/GrainSignedFood/GrainSignedFoodWallet.swift",
         "typescript_signed_food": "core/ts/grain-sdk/src/signed-food.ts",
+        "typescript_signed_ledger": "core/ts/grain-sdk/src/signed-ledger.ts",
     }.items():
         if surface in surfaces:
             sources[surface] = (root / path).read_text(encoding="utf-8")

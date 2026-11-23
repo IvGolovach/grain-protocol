@@ -1,6 +1,6 @@
 import { GrainDiagError, LIMITS } from "./types.js";
 import type { CborNode, ParseOptions } from "./types.js";
-import { compareBytesLex, compareCanonicalMapKey, decodeUtf8 } from "./utils.js";
+import { compareBytesLex, compareCanonicalMapKey, decodeUtf8, isBlessedCidLinkBstr } from "./utils.js";
 
 type ParseResult = {
   node: CborNode;
@@ -261,7 +261,7 @@ function parseItem(st: ParserState, depth: number): CborNode {
     }
     const inner = parseItem(st, depth + 1);
     if (st.options.dagCborStrict && tag === 42n) {
-      if (inner.kind !== "b" || inner.value.length === 0 || inner.value[0] !== 0x00) {
+      if (inner.kind !== "b" || !isBlessedCidLinkBstr(inner.value)) {
         throw new GrainDiagError("GRAIN_ERR_BAD_CID_LINK");
       }
     }

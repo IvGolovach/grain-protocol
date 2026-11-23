@@ -1,0 +1,62 @@
+{
+  "expect": {
+    "out": {
+      "sum_mean": {
+        "kcal": 35
+      },
+      "sum_var": {
+        "kcal": 1
+      }
+    },
+    "pass": true
+  },
+  "input": {
+    "events": [
+      {
+        "ak": "root",
+        "body": {
+          "mean": {
+            "kcal": 35
+          },
+          "var": {
+            "kcal": 1
+          }
+        },
+        "payload_cid": "meal",
+        "seq": 1,
+        "t": "IntakeEvent"
+      },
+      {
+        "ak": "root",
+        "body": 42,
+        "payload_cid": "count-0",
+        "seq": 2,
+        "t": "InventoryCount"
+      },
+      {
+        "ak": "root",
+        "body": null,
+        "payload_cid": "count-1",
+        "seq": 3,
+        "t": "InventoryCount"
+      },
+      {
+        "ak": "root",
+        "body": [
+          "shelf",
+          7
+        ],
+        "payload_cid": "count-2",
+        "seq": 4,
+        "t": "InventoryCount"
+      }
+    ],
+    "root_kid": "root"
+  },
+  "meta": {
+    "desc": "Opaque event bodies may be scalars, null or arrays. They leave totals unchanged (NES 2.3 and 6.9)."
+  },
+  "op": "ledger_reduce",
+  "strict": true,
+  "vector_id": "POS-LED-006"
+}

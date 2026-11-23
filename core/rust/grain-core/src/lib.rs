@@ -94,7 +94,17 @@ fn op_dagcbor_validate(input: &Value) -> Result<(Value, Vec<Diag>), GrainError> 
 
 fn op_cid_derive(input: &Value) -> Result<(Value, Vec<Diag>), GrainError> {
     let bytes = decode_b64_field(input, "bytes_b64")?;
-    let _ = validate_strict_dagcbor(&bytes)?;
+    // Same optional typed context as dagcbor_validate: a LedgerEvent's `t` is
+    // its event type, so only the caller knows the production (NES §2.3.1).
+    match input.get("object_type") {
+        None => {
+            let _ = validate_strict_dagcbor(&bytes)?;
+        }
+        Some(Value::String(object_type)) => {
+            let _ = validate_typed_object_v1(&bytes, object_type)?;
+        }
+        Some(_) => return Err(GrainError::from_diag(Diag::Schema)),
+    }
     let cid = derive_cid_v1_dag_cbor_sha256(&bytes)?;
     Ok((json!({ "cid": cid }), Vec::new()))
 }

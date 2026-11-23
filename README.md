@@ -1,170 +1,99 @@
 # Grain Protocol
 
 Portable, verifiable records for real-world events.
-Food is the first production profile in v0.1.
 
-For a signed food entry that survives app restart and can be independently
-verified from a file, see [Signed Food Ledger](docs/human/sdk/signed-food-ledger.md).
-This additive Swift/Rust/Node workflow requires app-owned signing keys and storage.
+Grain is a protocol and a conformance suite. A Grain record is an event signed
+with Ed25519, encoded as canonical DAG-CBOR and addressed by its content hash.
+Anyone holding the author's public key can check two things offline: who wrote
+the record, and that not one byte changed afterwards. Food is the first
+production profile in v0.1. Other domains add their own event types without
+touching the core.
 
-Grain is a protocol plus a conformance suite.
-It is not an app, not a hosted platform, and not a global registry.
+Grain is not an app, a hosted platform or a global registry.
 
-The short version:
-if two independent implementations read the same valid input, they should agree on the bytes, the verdict, and the result.
+## What Grain guarantees, and what it does not
 
-## New here?
+Guarantees:
+- one canonical byte encoding per protocol object, and one CID for it
+- offline verification through CID + COSE_Sign1 (Ed25519 only)
+- deterministic ledger rules: root-only grants, retroactive revoke, conflict ignore-all
+- private sync through E2E-encrypted, capability-addressed objects
+- a strict conformance suite that any implementation can run
 
-Pick one path and get a quick win first:
+Does not guarantee:
+- that a record's content is true; a signature proves authorship, not facts
+- that any server or vendor is the source of truth
+- interoperability outside Strict Conformance Mode
 
-- See the repo quickly: `docs/human/start-here.md`
-- Run one command first: `./scripts/demo`
-- Run one happy-path demo: `docs/human/quickstart.md`
-- Inspect repo-native fixtures: `examples/reference-fixtures/README.md`
-- Build the smallest possible app: `docs/human/sdk/minimal-app-example.md`
-- Run local reference apps without paid accounts: `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`
-- Run a local scanner flow: `scripts/sdk/run_local_scanner_flow.sh`, then `docs/human/sdk/scan-quickstart.md`
-- Start from app templates: `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`
-- Hand one SDK SHA to another team: `docs/human/sdk/source-sdk-handoff.md`
-- Prove external npm-style imports without publishing: `fixtures/external-consumers/npm-sdk`
-- Build an app on top of Grain: `docs/human/building-on-grain.md`
-- Use the SDK path: `docs/human/sdk/start-here.md`
-- Understand the public/private product boundary: `COMMERCIAL_BOUNDARY.md`
-- Implement Grain itself: `docs/human/implementing-grain.md`
-- Maintain the repo: `docs/human/maintainer-start-here.md`
-- Run release-grade verification: `docs/human/portability-pack.md`
+## Status
 
-## Project areas
+| Area | State |
+| --- | --- |
+| Protocol v0.1 (`spec/`) | Frozen core. Additive changes only, each with an ADR and vectors |
+| Conformance suite (`conformance/`) | 212 strict vectors; the release gate |
+| Implementations | Rust (`core/rust`) and TypeScript (`core/ts/grain-ts-core`) pass all vectors with zero divergence. Both have the same author, so the strong interoperability claim in `spec/INTEROP-CLAIM.md` is **not** made |
+| Signed records | TypeScript [Signed Ledger](docs/human/sdk/signed-ledger.md) for any event type (Node). Rust + Swift [Signed Food Ledger](docs/human/sdk/signed-food-ledger.md) for iOS food entries. Kotlin and WASM cannot sign yet |
+| Reducer model (`GrainSdk`, generated Swift/Kotlin/WASM workflows) | Unsigned. Models authorization, sync and storage state with placeholder keys. Not evidence |
+| Scanner reference apps, issuer kit, starter templates | Local reference code for development, not products |
+| Distribution | Source only. No npm, SwiftPM or Maven packages are published. The Swift package links the Rust core through `unsafeFlags`, which SwiftPM restricts for remote dependencies |
+| Releases | Latest tag `repo-v0.4.4` (May 2026). `main` is ahead of it |
+| Maintainers | One (@IvGolovach). No protocol stewards are appointed; see `GOVERNANCE.md` |
 
-- Onboarding: `docs/human/start-here.md`, `docs/human/quickstart.md`, `docs/human/overview.md`, `examples/reference-fixtures/README.md`
-- Build: `docs/human/building-on-grain.md`, `docs/human/sdk/start-here.md`, `docs/human/sdk/scan-quickstart.md`, `docs/human/sdk/quickstart-ios-reference-app.md`, `docs/human/sdk/quickstart-android-reference-app.md`, `docs/human/sdk/device-abstraction.md`, `docs/human/sdk/local-publication.md`, `docs/human/sdk/certification.md`, `docs/human/sdk/source-sdk-handoff.md`, `docs/human/sdk/minimal-app-example.md`, `COMMERCIAL_BOUNDARY.md`, `sdk/README.md`, `examples/README.md`, `fixtures/external-consumers/npm-sdk`, `templates/ios-starter`, `templates/android-starter`, `templates/web-wasm-starter`, `core/ts/grain-sdk/README.md`
-- Implement: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
-- Operate: `docs/human/portability-pack.md`, `docs/human/repro-checklist.md`, `docs/human/release-process.md`
-- Maintain: `docs/human/maintainer-start-here.md`, `CONTRIBUTING.md`, `docs/human/repository-settings.md`, `docs/human/maintainer-writing.md`
-- Vision: `docs/human/future-vision.md`
-
-## What Grain guarantees
-
-- Stable, canonical bytes for protocol objects
-- Portable verification through CID + COSE
-- Deterministic ledger and manifest behavior
-- Private sync semantics for encrypted objects
-- Strict conformance checks that independent implementations can run
-
-## What Grain does not guarantee
-
-- That the content is true
-- That one server or vendor is the source of truth
-- That Grain itself is a hosted product platform
-- That this repo contains a production app, account backend, App Store lane, or commercial product implementation
-- That anything outside strict conformance semantics will interoperate
-
-## Status snapshot
-
-- v0.1 core rules are stable inside protocol major version 1.
-- The conformance suite in this repo is the release gate.
-- Rust Core in `core/rust` passes the strict suite.
-- The full TypeScript engine in `runner/typescript` is checked against the same suite plus drift checks.
-- The shared TypeScript protocol core in `core/ts/grain-ts-core` keeps the runner and SDK on the same execution logic.
-- The TypeScript SDK in `core/ts/grain-sdk` gives app builders a safer layer on top of the same protocol rules.
-- Portable client SDKs, workflow contracts, templates, and local reference apps live under `sdk/`, `templates/`, and `examples/`.
-- The optional AI sidecar in `core/ts/grain-sdk-ai` stays outside the core SDK surface and is wired in explicitly.
-- CI evidence is tied to commit SHA on `main` and on release tags.
-- Release-grade verification is available through `./scripts/certify`.
-- Repo-native developer-product checks cover `./scripts/demo`, reference fixtures,
-  profile registry, security regressions, and the Rust/TS/WASM interop matrix.
-
-## Verification paths
-
-Blessed local bootstrap:
+## Try it
 
 ```bash
-./scripts/bootstrap
+./scripts/bootstrap   # pinned toolchains via mise
+./scripts/demo        # one-command demo
+./scripts/verify      # full developer verification
 ```
 
-Quick repo health view:
+Sign and verify a record in Node:
 
-```bash
-./scripts/doctor
+```ts
+import { ed25519SignerFromSeed, InMemorySignedLedgerStore, SignedLedgerWriter, verifySignedLedgerTransfer } from "grain-sdk-ts";
+
+const root = ed25519SignerFromSeed(rootSeed); // your key custody supplies the seed
+const ledger = await SignedLedgerWriter.open({ trustedRootPublicKey: root.publicKey, store: new InMemorySignedLedgerStore() });
+await ledger.initialize(root);
+await ledger.append(root, { operationId: "note-1", t: "FieldNote", body: { text: "fence repaired", observed_at_ms: Date.now() } });
+
+const result = verifySignedLedgerTransfer(await ledger.exportTransfer(), rootPublicKeyBase64);
 ```
 
-One-command demo:
+## Where to go next
 
-```bash
-./scripts/demo
-```
-
-Fast local verification on the pinned local toolchain:
-
-```bash
-./scripts/verify
-```
-
-Release-grade certification with deterministic evidence:
-
-```bash
-./scripts/certify
-```
-
-Compatibility alias:
-
-```bash
-./scripts/ops/run_verification_pack_v1.sh
-```
-
-If you generate evidence, use the exact Node patch version pinned in `.nvmrc`.
-Evidence records `node -v`, so floating `22.x` resolution changes `inputs-hashes.json` and the final evidence hash.
-
-Optional fuzz smoke:
-
-```bash
-./scripts/certify --fuzz-smoke
-```
-
-Conformance statement:
-- Passing the full suite in Strict Conformance Mode is the conformance criterion for Grain v0.1.
-- A strong interoperability claim only makes sense after two independent full implementations pass the full suite.
+- New here: `docs/human/start-here.md`, then `docs/human/quickstart.md`
+- Build an app: `docs/human/sdk/start-here.md` (which path signs, which only models state)
+- Implement Grain in another language: `docs/human/implementing-grain.md`, `conformance/SPEC.md`, `conformance/contract/runner_v1.md`
+- Understand the design: `docs/human/design-in-one-page.md`, `docs/human/threat-model.md`
+- Maintain the repo: `docs/human/maintainer-start-here.md`, `CONTRIBUTING.md`
+- Release-grade verification: `./scripts/certify`, `docs/human/portability-pack.md`
+- Public protocol vs private products: `COMMERCIAL_BOUNDARY.md`
+- Where this could go: `docs/human/future-vision.md` (direction, not commitments)
 
 ## If docs disagree
-
-Check these first:
-
-- `spec/NES-v0.1.md` for the protocol rules
-- `spec/schemas/grain-v0.1.cddl` for machine-readable structure
-- `conformance/vectors/` for the release gate and expected behavior
-
-Full precedence order:
 
 1. `spec/NES-v0.1.md` (normative MUST/SHOULD/MAY)
 2. `spec/schemas/grain-v0.1.cddl` (machine-readable schemas)
 3. `conformance/vectors/` (conformance criterion; release gate)
-4. `spec/profiles/` (CBOR/COSE/E2E/QR profiles)
+4. `spec/profiles/` (CBOR/COSE/E2E/QR and domain profiles)
 5. `spec/FREEZE-v0.1.md`, `spec/FREEZE-CONFIRMATION-v0.1.md`, `spec/SCOPE-v0.1.md`, `spec/INTEROP-v0.1.md`, `spec/RC-POLICY.md`, `spec/INTEROP-CLAIM.md`, `spec/rc/**`
 6. `docs/llm/`
 7. `adr/`
 8. `core/rust/`, `core/ts/grain-ts-core/`, `runner/typescript/`, `core/` and `sdk/`
 
-## Deeper references
+A pull request that changes core protocol rules needs an ADR
+(`adr/0000-template.md`). Such changes are usually breaking.
 
-- `conformance/README.md`
-- `conformance/SPEC.md`
-- `conformance/contract/runner_v1.md`
-- `docs/llm/README.md`
-- `docs/llm/CONFORMANCE.md`
-- `docs/llm/INVARIANTS.md`
-- `docs/llm/EDGE_CASES.md`
-- `core/ts/grain-sdk/README.md`
+## Verification details
 
-## Contributing
+If you generate evidence, use the exact Node version pinned in `.nvmrc`.
+Evidence records `node -v`, so a floating `22.x` changes `inputs-hashes.json`
+and the final evidence hash. `./scripts/certify --fuzz-smoke` adds a fuzz smoke
+run. `./scripts/ops/run_verification_pack_v1.sh` is a compatibility alias.
 
-- `CONTRIBUTING.md`
-- `SECURITY.md`
-- `docs/human/maintainer-start-here.md`
-- `docs/human/maintainer-writing.md`
-- `docs/llm/CHANGE_POLICY.md`
-- `adr/0000-template.md`
-
-If a PR changes core protocol rules, add an ADR. Those changes are usually breaking.
+Passing the full suite in Strict Conformance Mode is the conformance criterion
+for Grain v0.1.
 
 ## License
 

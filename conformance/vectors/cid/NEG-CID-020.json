@@ -1,0 +1,17 @@
+{
+  "expect": {
+    "diag_contains": [
+      "GRAIN_ERR_NONCANONICAL"
+    ],
+    "pass": false
+  },
+  "input": {
+    "bytes_b64": "omJhYgJhdgE="
+  },
+  "meta": {
+    "desc": "CID derivation MUST reject non-canonical map key order instead of hashing the given bytes."
+  },
+  "op": "cid_derive",
+  "strict": true,
+  "vector_id": "NEG-CID-020"
+}

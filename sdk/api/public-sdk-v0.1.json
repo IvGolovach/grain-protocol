@@ -25,6 +25,24 @@
         {"kind": "type", "name": "SignedFoodVerification"}
       ]
     },
+    "typescript_signed_ledger": {
+      "symbols": [
+        {"kind": "type", "name": "SignedLedgerWriter"},
+        {"kind": "function", "name": "verifySignedLedgerTransfer"},
+        {"kind": "type", "name": "GrainSigner"},
+        {"kind": "type", "name": "SignedLedgerStore"},
+        {"kind": "type", "name": "InMemorySignedLedgerStore"},
+        {"kind": "type", "name": "GrainValue"},
+        {"kind": "type", "name": "CidLink"},
+        {"kind": "function", "name": "encodeGrainValue"},
+        {"kind": "function", "name": "ed25519SignerFromSeed"},
+        {"kind": "function", "name": "generateEd25519Signer"},
+        {"kind": "function", "name": "kidHex"},
+        {"kind": "type", "name": "SignedLedgerReceipt"},
+        {"kind": "type", "name": "SignedLedgerVerification"},
+        {"kind": "constant", "name": "SIGNED_LEDGER_ERR"}
+      ]
+    },
     "swift": {
       "symbols": [
         {"kind": "method", "name": "GrainClient.scanPreview(qrString:trustPubB64:)"},

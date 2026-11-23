@@ -1,0 +1,18 @@
+{
+  "expect": {
+    "out": {
+      "cid": "bafyreiegsgjcatv6yjuvvezvbanomaffxmpqjiqavj6tzrzst2ual4ffbi"
+    },
+    "pass": true
+  },
+  "input": {
+    "bytes_b64": "pWF0bUxlZGdlckdlbmVzaXNhdgFiYWtQY+2V1mDgfLmP8OFj24HhZWNzZXEAZGJvZHmkYXRtTGVkZ2VyR2VuZXNpc2F2AWhyb290X2tpZFBj7ZXWYOB8uY/w4WPbgeFlaHJvb3RfcHViWCDiiolwdTMyvXL+9BPmsLLvG0qt2nqiwUHyM3EqaHazUQ==",
+    "object_type": "LedgerEvent"
+  },
+  "meta": {
+    "desc": "cid_derive with object_type LedgerEvent derives the payload CID of a ledger event whose t names a known production (LedgerGenesis)."
+  },
+  "op": "cid_derive",
+  "strict": true,
+  "vector_id": "POS-CID-003"
+}

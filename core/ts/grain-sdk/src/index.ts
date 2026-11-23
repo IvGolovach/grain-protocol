@@ -29,3 +29,24 @@ export type {
 } from "./food-wallet.js";
 export { verifySignedFoodTransfer } from "./signed-food.js";
 export type { SignedFoodVerification } from "./signed-food.js";
+export {
+  CidLink,
+  ed25519SignerFromSeed,
+  encodeGrainValue,
+  generateEd25519Signer,
+  InMemorySignedLedgerStore,
+  kidHex,
+  SIGNED_LEDGER_ERR,
+  SignedLedgerWriter,
+  verifySignedLedgerTransfer
+} from "./signed-ledger.js";
+export type {
+  AppendSignedEventInput,
+  GrainSigner,
+  GrainValue,
+  SignedLedgerEvent,
+  SignedLedgerEventStatus,
+  SignedLedgerReceipt,
+  SignedLedgerStore,
+  SignedLedgerVerification
+} from "./signed-ledger.js";

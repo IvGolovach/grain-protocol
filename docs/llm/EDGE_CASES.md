@@ -46,6 +46,12 @@ and the context-selected LedgerEvent envelope.
 
 ## CID links
 - NEG-CID-010: tag42 CID link missing 0x00 prefix -> REJECT
+- POS-CID-002: blessed links nested anywhere in an untyped object -> ACCEPT
+- NEG-CID-011 through NEG-CID-015: CID version 2, sha2-512, raw codec, truncated digest, CIDv0 shape inside tag42 (untyped path) -> GRAIN_ERR_BAD_CID_LINK
+- NEG-CID-020 / NEG-CID-021: `cid_derive` over non-canonical or duplicate-key bytes -> REJECT, no CID
+- NEG-CID-022: `cid_derive` over an object with a non-blessed link -> GRAIN_ERR_BAD_CID_LINK
+- POS-CID-003: `cid_derive` with `object_type: LedgerEvent` over a LedgerGenesis event payload -> payload CID
+- NEG-CID-030: same payload without typed context -> GRAIN_ERR_UNKNOWN_TOPLEVEL_KEY (read as a LedgerGenesis object)
 
 ## COSE
 - NEG-COSE-001: unprotected header not {} -> REJECT
@@ -66,6 +72,13 @@ and the context-selected LedgerEvent envelope.
 - NEG-LED-010: revoked ak events -> UNAUTHORIZED (ignored)
 - NEG-LED-020: duplicate (ak,seq) different payload -> IGNORE ALL + SEQ_CONFLICT
 - NEG-LED-030: reducer overflow -> GRAIN_ERR_OVERFLOW
+- POS-LED-006 covers opaque scalar, null and array bodies alongside a counted intake.
+- POS-LED-003: unknown `t` with kcal-shaped body -> retained, no totals effect
+- NEG-LED-050: unknown `t` and IntakeEvent share `(ak,seq)` with different payloads -> IGNORE BOTH + SEQ_CONFLICT
+- POS-LED-004: VoidEvent / CorrectionEvent -> recorded, no v0.1 totals effect (the target still counts)
+- POS-LED-005: decimal-string `seq` and unsafe `kcal` inputs -> exact totals
+- NEG-LED-060: decimal-string integer with a leading zero -> GRAIN_ERR_SCHEMA
+- NEG-LED-061: `seq` of 2^64 -> GRAIN_ERR_SCHEMA
 
 ## Ledger stream framing (raw CBOR-seq)
 - NEG-LED-WA-0001: truncated final item -> GRAIN_ERR_CBORSEQ_TRUNCATED
@@ -109,6 +122,9 @@ and the context-selected LedgerEvent envelope.
 
 ## Limits
 - NEG-LIM-001: baseline limits exceeded in strict mode -> GRAIN_ERR_LIMIT
+- POS-LIM-001 through POS-LIM-004: tstr 1024 bytes, depth 32, 4096 map pairs, 4096 array items -> ACCEPT (exact boundary)
+- NEG-LIM-002 through NEG-LIM-004: depth 33, 4097 map pairs, 4097 array items -> GRAIN_ERR_LIMIT
+- Depth counting: top-level item is depth 0; children are parent depth + 1
 
 See actual vector files under `conformance/vectors/`.
 

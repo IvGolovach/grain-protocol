@@ -8,6 +8,19 @@ large u63 values, pending-operation restart, uncertain save acknowledgement and
 failed reload. Cold stale backups cannot reveal unknown later signatures.
 See SDK ADR-0013 and `sdk/workflows/contract/signed_food_v1.md`.
 
+TypeScript Signed Ledger v1 (SDK ADR-0014) rejects, without mutating state:
+missing intake kcal, overflowing totals, oversized projected transfers, occupied pending slots,
+writes before genesis, genesis by a non-root key, root-only types through
+`append`, known types whose body misses its CDDL production, unauthorized or
+revoked signers, re-grant of a revoked key, revoking root, malformed operation
+IDs, a second operation while one is pending, and changed input under a used
+operation ID. Signer failure or an invalid returned signature keeps the
+reservation. A stored pending payload that no longer matches the retried
+input rejects as INVALID without a signer call. Floats, NaN, lone UTF-16 surrogates, non-plain objects and
+non-blessed CID text reject at value encoding. The verifier rejects tampered
+signatures, a mismatched trust root, unknown container keys, missing genesis,
+object bytes that do not match their CID, and events from keys no root grant binds.
+
 Hi teammate LLM. Use this as the SDK reject-path checklist.
 
 - SDK-NEG-0001: append with revoked/unauthorized `ak` -> `SDK_ERR_UNAUTHORIZED_AK`
